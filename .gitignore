@@ -28,3 +28,7 @@ TP1/Ejercicio2_sokoban/sokoban/visualizer/last_run_*.html
 # Sokoban: CSVs de resultados generados por analisis/main.py
 # (si querés versionar una tanda puntual: git add -f <archivo>.csv)
 TP1/Ejercicio2_sokoban/analisis/resultados/*.csv
+
+# Sokoban: graficos generados por analisis/graficos_main.py
+# (incluye una copia de plotly.min.js de ~5 MB)
+TP1/Ejercicio2_sokoban/analisis/graficos/

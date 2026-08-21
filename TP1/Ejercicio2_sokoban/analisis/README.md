@@ -8,14 +8,20 @@ El esquema del CSV está documentado en [`SCHEMA.md`](SCHEMA.md).
 
 ```
 analisis/
-  config.json       config del runner (editá esto)
-  main.py           CLI
-  config.py         BenchmarkConfig + load_benchmark_config
-  runner.py         orquestador paralelo (backends process / thread)
-  worker.py         una ejecución: parsear -> resolver -> verificar
-  records.py        RunRecord (esquema del CSV) + writer incremental
-  resultados/       CSVs generados (gitignoreados)
-  SCHEMA.md         documentación de cada columna
+  config.json          config del runner (editá esto)
+  main.py              CLI del runner
+  config.py            BenchmarkConfig + load_benchmark_config
+  runner.py            orquestador paralelo (backends process / thread)
+  worker.py            una ejecución: parsear -> resolver -> verificar
+  records.py           RunRecord (esquema del CSV) + writer incremental
+  resultados/          CSVs generados (gitignoreados)
+  SCHEMA.md            documentación de cada columna
+
+  graficos_main.py     CLI de los gráficos: qué generar y de qué CSV
+  graficos_datos.py    carga del CSV y agregación por (nivel, algoritmo)
+  graficos_estilo.py   paleta validada y layout base
+  graficos/            HTMLs generados (gitignoreados)
+  requirements.txt     plotly (solo hace falta para los gráficos)
 ```
 
 ## Correrlo
@@ -69,42 +75,12 @@ un mensaje concreto, en vez de fallar media hora después.
 La heurística solo aplica a los algoritmos informados (`astar`, `greedy`); en el
 resto se ignora y sale vacía en el CSV, para no sugerir que influyó.
 
-## Threads vs. procesos
-
-El pedido original era usar threads, y `executor: thread` está implementado. Pero
-los algoritmos de búsqueda son **Python puro y CPU-bound**, así que el GIL los
-serializa: no hay speedup, y peor todavía, las corridas concurrentes se roban
-tiempo entre sí y **contaminan justo la métrica que se quiere medir**.
-
-Medido en esta máquina (11 CPUs), mismo nivel `level_01_ufo`, 4 workers:
-
-| algoritmo | `elapsed_seconds` con `process` | con `thread` |
-|---|---|---|
-| dfs | 0.039 s | 0.140 s (3.6x) |
-| bfs | 0.091 s | 0.292 s (3.2x) |
-| astar | 0.178 s | 0.431 s (2.4x) |
-
-La tanda con threads corrió al 94% de CPU (un solo core): no hubo paralelismo,
-solo interferencia. Por eso el default es `process`, donde cada búsqueda corre
-aislada en su propio proceso y los tiempos son limpios. La concurrencia se acota
-con un pool de threads en el padre que solo *esperan* a los hijos, sin competir
-por el GIL.
-
-**Además**: un thread de Python no se puede matar. Con `executor: thread`, una
-ejecución que se pasa del `timeout_seconds` se marca como `timeout` en el CSV
-pero **sigue corriendo de fondo**, quemando CPU y ensuciando lo que venga
-después. El runner fuerza la salida del proceso al terminar la tanda (si no, el
-intérprete se colgaría esperando a esos threads). Con `executor: process` el
-timeout mata el worker de verdad.
-
-En resumen: usá `thread` solo para mostrar el punto; usá `process` para medir.
-
 ## Timeouts, memoria y algoritmos que no terminan
 
 No todas las combinaciones terminan. Verificado en esta máquina:
 
 - `iddfs` sobre `level_01_ufo`: no termina (>30 s).
-- `greedy` y `astar` sobre `level_69` (5 cajas): no terminan en 25 s.
+- `greedy` y `astar` sobre `level_69` (6 cajas): no terminan en 25 s.
 - `bfs` sobre `level_69` resuelve en ~16 s, pero expandiendo **4.044.079 nodos**,
   con una frontera máxima de ~107k. Eso es varios GB de RAM en un solo worker.
 
@@ -144,6 +120,55 @@ Salida típica:
 20 ejecuciones -> analisis/resultados/demo_full.csv
   ok=12  sin_solucion=0  timeout=8  error=0
 ```
+
+## Gráficos
+
+`graficos_main.py` lee un CSV de `resultados/` y genera gráficos Plotly, uno por
+archivo HTML, más un `index.html` que los enlaza.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r analisis/requirements.txt   # plotly
+
+python analisis/graficos_main.py                    # último CSV, gráficos activos
+python analisis/graficos_main.py --listar           # qué CSVs y qué gráficos hay
+python analisis/graficos_main.py --archivo analisis/resultados/demo_full.csv
+python analisis/graficos_main.py --solo costo_solucion,tabla_resumen
+python analisis/graficos_main.py --tema dark --abrir
+```
+
+**Qué se genera** se elige con el diccionario `GRAFICOS` arriba de
+`graficos_main.py` (un `True`/`False` por gráfico), o con `--solo` / `--todos`
+sin tocar el archivo. **De qué CSV** se elige con `ARCHIVO` o `--archivo`; por
+defecto toma el más reciente de `resultados/` (salteando los que quedaron sin
+filas por una corrida interrumpida).
+
+| Gráfico | Qué muestra |
+|---|---|
+| `tiempo_por_algoritmo` | Tiempo medio por algoritmo y nivel (escala log) |
+| `dispersion_tiempos` | Box plot de las N repeticiones: cuánto varía el tiempo |
+| `costo_solucion` | Largo de la solución, con la línea del óptimo por nivel |
+| `nodos_expandidos` | Esfuerzo de búsqueda, independiente de la máquina |
+| `frontera_maxima` | Pico de la frontera: el proxy de memoria |
+| `tradeoff_costo_nodos` | Optimalidad vs. esfuerzo, todo en un plano |
+| `tasa_exito` | Qué combinaciones terminaron y cuáles dieron timeout |
+| `composicion_movimientos` | Empujes vs. pasos simples de cada solución |
+| `tabla_resumen` | Los números crudos en tabla |
+
+Tres decisiones que vale la pena conocer al leerlos:
+
+- **Las filas con `status != "ok"` nunca entran en un promedio.** Un `timeout`
+  tiene `wall_seconds ≈ timeout_seconds`, que es un piso artificial. Las
+  combinaciones que no terminaron aparecen marcadas como "no terminó" en el
+  lugar donde iría la barra, para que la ausencia no se lea como un cero.
+- **El color identifica el nivel, no el algoritmo** (el algoritmo ya está en el
+  eje). La paleta está validada para daltonismo y contraste en claro y oscuro;
+  con 2 series pasa también en el scatter, donde 5 colores no pasaban.
+- **`repetitions` solo sirve para los tiempos.** Los algoritmos son
+  deterministas: costo, nodos y frontera se repiten idénticos, y los gráficos
+  los toman de la primera corrida exitosa. Si llegaran a variar, el runner de
+  gráficos avisa por stderr.
 
 ## Uso programático
 

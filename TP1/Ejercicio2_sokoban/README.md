@@ -24,7 +24,7 @@ sokoban/
   levels/
     level_01_ufo.txt              nivel de referencia
     level_01_ufo.solution.txt     solución de 86 movimientos (golden)
-    level_69.txt                  nivel de 5 cajas (más pesado)
+    level_69.txt                  nivel de 6 cajas (más pesado)
   visualizer/
     sokoban_visualizer.html       template del visor, autocontenido
     last_run_<level>_<algo>_<heuristic>.html   generado por run.py (gitignored)
@@ -33,7 +33,8 @@ sokoban/
     test_config.py                 config.json -> RunConfig -> Agent
     test_visualizer_export.py      render_visualizer inyecta el run-data
     test_replay_known_solution.py  golden test end-to-end
-analisis/               runner paralelo de experimentos -> CSV (ver analisis/README.md)
+analisis/               runner paralelo de experimentos -> CSV + gráficos Plotly
+                        (ver analisis/README.md)
 ```
 
 ## Arranque rápido
@@ -163,6 +164,18 @@ Se configura por `analisis/config.json` (niveles, algoritmos, repeticiones,
 workers, timeout, directorio de salida) — distinto del `config.json` de la raíz,
 que es el de `run.py`. El esquema del CSV está en
 [`analisis/SCHEMA.md`](analisis/SCHEMA.md).
+
+Sobre ese CSV, `analisis/graficos_main.py` genera los gráficos del informe
+(Plotly, un HTML por gráfico más un índice):
+
+```bash
+pip install -r analisis/requirements.txt
+python analisis/graficos_main.py --listar   # qué CSVs y qué gráficos hay
+python analisis/graficos_main.py            # genera los activos
+```
+
+Qué gráficos se generan se elige con el diccionario `GRAFICOS` de ese archivo
+(True/False), o con `--solo`/`--todos`.
 
 Dos cosas a tener en cuenta antes de correrlo:
 

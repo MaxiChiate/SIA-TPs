@@ -151,7 +151,7 @@ la consigna está `analisis/`, que corre cada (nivel x algoritmo) N veces y deja
 Tres cosas que condicionan el diseño, verificadas en esta máquina:
 
 - **No todas las combinaciones terminan**: `iddfs` no resuelve `level_01_ufo`,
-  y `greedy`/`astar` no resuelven `level_69` (5 cajas). Por eso
+  y `greedy`/`astar` no resuelven `level_69` (6 cajas). Por eso
   `timeout_seconds` es prácticamente obligatorio.
 - **Los threads no paralelizan acá**: los algoritmos son Python puro y
   CPU-bound, así que el GIL los serializa y los tiempos concurrentes se inflan
@@ -166,3 +166,41 @@ Tres cosas que condicionan el diseño, verificadas en esta máquina:
 El runner no tiene su propia lista de algoritmos: los lee de
 `sokoban.search.ALGORITHMS`/`HEURISTICS`, así que lo que se dé de alta en
 `registry.py` queda disponible acá automáticamente.
+
+## Estado real: gráficos del análisis (`analisis/graficos_main.py`)
+
+Sobre el CSV que produce el runner, `graficos_main.py` genera gráficos Plotly
+(un HTML por gráfico + un `index.html`) en `analisis/graficos/` (gitignoreado,
+porque incluye una copia de `plotly.min.js` de ~5 MB).
+
+- `graficos_main.py`: el diccionario `GRAFICOS` (True/False por gráfico) decide
+  qué se genera, y `ARCHIVO` de qué CSV; los dos se pueden pisar por CLI
+  (`--solo`, `--todos`, `--archivo`, `--tema`, `--salida`, `--listar`). Cada
+  gráfico es una función registrada en `REGISTRO`: agregar uno es escribir la
+  función y sumar una entrada.
+- `graficos_datos.py`: carga tipada del CSV y agregación por (nivel,
+  algoritmo). Solo stdlib, sin pandas.
+- `graficos_estilo.py`: paleta y layout base.
+- Única dependencia: `plotly` (`analisis/requirements.txt`). El runner sigue sin
+  dependencias.
+
+Decisiones que no son obvias leyendo el código:
+
+- **Nada con `status != "ok"` entra en un promedio.** Un `timeout` tiene
+  `wall_seconds ≈ timeout_seconds`, un piso artificial. Las combinaciones que no
+  terminaron se anotan como "no terminó" en el lugar de la barra faltante, para
+  que la ausencia no se lea como cero, y `tasa_exito` las muestra aparte.
+- **El color codifica el nivel, no el algoritmo** (el algoritmo ya está en el eje
+  x). No es estético: la paleta se validó para daltonismo/contraste, y con 5
+  colores el par magenta/naranja queda por debajo del piso de distinción en el
+  scatter (donde cuentan todos los pares, no solo los adyacentes). Con 2 series
+  pasa en todos los tipos de gráfico y en los dos temas.
+- **Las métricas no temporales se toman de la primera corrida exitosa**, porque
+  los algoritmos son deterministas. Si variaran entre repeticiones sería un bug,
+  y `graficos_main.py` lo avisa por stderr (`métricas no deterministas`).
+- `nota()` corta las líneas con `textwrap`: la propiedad `width` de las
+  anotaciones de Plotly **recorta** el texto que no entra, no lo envuelve.
+- Los gráficos se revisaron renderizados (Chrome headless), no solo generados:
+  así aparecieron el título de eje duplicado (los dos ejes compartían el mismo
+  sub-dict `title` por copia superficial), las etiquetas encimadas de BFS/A* en
+  el scatter y las etiquetas recortadas de la tabla.
