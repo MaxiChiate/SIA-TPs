@@ -26,7 +26,7 @@ sokoban/
     level_01_ufo.solution.txt     solución de 86 movimientos (golden)
   visualizer/
     sokoban_visualizer.html       template del visor, autocontenido
-    last_run.html                 generado por run.py (gitignored)
+    last_run_<level>_<algo>_<heuristic>.html   generado por run.py (gitignored)
   tests/
     test_engine.py                 parser + reglas del motor
     test_config.py                 config.json -> RunConfig -> Agent
@@ -69,7 +69,9 @@ del visualizador que generó (ver [El visualizador](#el-visualizador)).
   validar, y si se omite A*/Greedy usan `manhattan_sum` por default.
 - `visualize`: bool, default `true`. Si es `false`, `run.py` no genera el HTML.
 - `visualizer_output`: ruta de salida del HTML generado. Default:
-  `sokoban/visualizer/last_run.html`.
+  `sokoban/visualizer/last_run_<nivel>_<algoritmo>_<heurística>.html` (ej.
+  `last_run_level_01_ufo_astar_manhattan_sum.html`), para no pisar el archivo
+  de una corrida anterior con otra combinación.
 
 Programáticamente, el mismo flujo sin pasar por el CLI:
 
@@ -104,8 +106,8 @@ el estado final cumple `is_goal`.
 
 ## El visualizador
 
-Cada corrida de `run.py` genera `sokoban/visualizer/last_run.html` (path
-configurable con `visualizer_output`): una copia standalone de
+Cada corrida de `run.py` genera `sokoban/visualizer/last_run_<nivel>_<algoritmo>_<heurística>.html`
+(path configurable con `visualizer_output`): una copia standalone de
 `sokoban/visualizer/sokoban_visualizer.html` con los datos de esa corrida
 incrustados. Se abre con doble clic (o `python3 -m http.server` y navegar),
 no necesita build ni servidor real.

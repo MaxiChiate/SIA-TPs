@@ -288,7 +288,9 @@ solución, `SearchResult`, `algorithm`, `heuristic`, el `config_path` usado,
 `generated_at` (UTC ISO) y dos bloques extra: `board`
 (`width`/`height`/`boxes`/`goals`) y `moves` (`pushes`/`steps`, desglosando
 `cost` en empujes vs. pasos simples). Lo escribe en `config.visualizer_output`
-(default `sokoban/visualizer/last_run.html`, gitignored) e imprime la ruta.
+(default `sokoban/visualizer/last_run_<nivel>_<algoritmo>_<heurística>.html`
+vía `_default_visualizer_output` en `config.py`, gitignored) e imprime la
+ruta.
 
 El template (`sokoban_visualizer.html`) sigue teniendo datos default de
 Fase 0 embebidos en ese mismo bloque JSON, para que siga siendo abrible
