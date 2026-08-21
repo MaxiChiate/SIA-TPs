@@ -9,7 +9,7 @@ import time
 from ..agent import SearchResult
 from ..engine import apply_move, is_goal, legal_moves
 from ..state import Level, State
-from .heuristics import Heuristic, manhattan_sum
+from .heuristics import Heuristic, is_deadlock, manhattan_sum
 
 
 class AStarAgent:
@@ -64,6 +64,8 @@ class AStarAgent:
             for move in legal_moves(current, level):
                 neighbor = apply_move(current, level, move)
                 if neighbor in closed:
+                    continue
+                if is_deadlock(neighbor, level):
                     continue
                 tentative_g = current_g + 1
                 if tentative_g < g_score.get(neighbor, float("inf")):

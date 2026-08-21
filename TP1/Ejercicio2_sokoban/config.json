@@ -1,5 +1,5 @@
 {
-  "level": "level_01_ufo",
-  "algorithm": "astar",
+  "level": "level_69",
+  "algorithm": "bfs",
   "heuristic": "manhattan_sum"
 }
