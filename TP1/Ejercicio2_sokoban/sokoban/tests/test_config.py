@@ -10,6 +10,7 @@ import json
 
 import pytest
 
+from ..agent import HardcodedAgent
 from ..config import ConfigError, load_config
 from ..search import build_agent
 from ..search.astar import AStarAgent
@@ -75,3 +76,17 @@ def test_build_agent_heuristica_desconocida():
 def test_build_agent_algoritmo_no_implementado_da_mensaje_claro():
     with pytest.raises(NotImplementedError):
         build_agent("bfs", None)
+
+
+def test_build_agent_hardcoded_devuelve_hardcoded_agent():
+    agent = build_agent("hardcoded", None)
+
+    assert isinstance(agent, HardcodedAgent)
+
+
+def test_build_agent_algoritmo_no_informado_ignora_heuristica_invalida():
+    # hardcoded no usa heurística, así que un nombre inválido no debería
+    # frenar la corrida (a diferencia de astar/greedy).
+    agent = build_agent("hardcoded", "no_existe")
+
+    assert isinstance(agent, HardcodedAgent)
