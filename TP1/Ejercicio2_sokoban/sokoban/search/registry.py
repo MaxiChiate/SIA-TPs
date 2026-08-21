@@ -6,6 +6,11 @@ from typing import Callable
 
 from ..agent import Agent, HardcodedAgent
 from .astar import AStarAgent
+from .bfs import BFSAgent
+from .dfs import DFSAgent
+from .greedy import GreedyAgent
+from .iddfs import IDDFSAgent
+
 from .heuristics import HEURISTICS, Heuristic
 
 
@@ -31,10 +36,10 @@ def _not_implemented(name: str) -> Callable[[Heuristic | None], Agent]:
 ALGORITHMS: dict[str, Callable[[Heuristic | None], Agent]] = {
     "astar": _build_astar,
     "hardcoded": _build_hardcoded,
-    "bfs": _not_implemented("bfs"),
-    "dfs": _not_implemented("dfs"),
-    "greedy": _not_implemented("greedy"),
-    "iddfs": _not_implemented("iddfs"),
+    "bfs": lambda heuristic: BFSAgent(),
+    "dfs": lambda heuristic: DFSAgent(),
+    "greedy": lambda heuristic: GreedyAgent(heuristic), 
+    "iddfs": lambda heuristic: IDDFSAgent(), 
 }
 
 INFORMED_ALGORITHMS = {"astar", "greedy"}
