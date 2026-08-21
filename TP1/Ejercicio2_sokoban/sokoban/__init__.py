@@ -7,14 +7,19 @@ punta a punta.
 """
 
 from .agent import Agent, HardcodedAgent, SearchResult
+from .config import ConfigError, RunConfig, load_config
 from .engine import MoveError, apply_move, initial_state, is_goal, legal_moves, replay
 from .parser import parse_level
+from .search import build_agent
 from .state import Level, State
 
 __all__ = [
     "Agent",
     "HardcodedAgent",
     "SearchResult",
+    "ConfigError",
+    "RunConfig",
+    "load_config",
     "MoveError",
     "apply_move",
     "initial_state",
@@ -22,6 +27,7 @@ __all__ = [
     "legal_moves",
     "replay",
     "parse_level",
+    "build_agent",
     "Level",
     "State",
 ]
