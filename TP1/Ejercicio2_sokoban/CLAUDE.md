@@ -241,12 +241,16 @@ heurística sea un archivo, no un cambio de código (pedido explícito, con
   claves requeridas, tira `ConfigError` con mensaje claro si algo falta.
 - `sokoban/search/registry.py`: único lugar que mapea nombres de
   `config.json` a clases de Python. `ALGORITHMS` (nombre -> fábrica que recibe
-  la heurística ya resuelta), `HEURISTICS` (reexportado de `heuristics.py`),
-  `INFORMED_ALGORITHMS` (qué algoritmos sí usan la heurística), y
-  `build_agent(algorithm, heuristic) -> Agent`. Algoritmos no implementados
-  (`bfs`, `dfs`, `greedy`, `iddfs`) están registrados como placeholders que
-  tiran `NotImplementedError` con la lista de disponibles — agregar el
-  algoritmo real es escribir la clase + una entrada acá, sin tocar `run.py`.
+  la heurística ya resuelta, o `None` si el algoritmo no es informado),
+  `HEURISTICS` (reexportado de `heuristics.py`), `INFORMED_ALGORITHMS` (qué
+  algoritmos sí usan la heurística — solo `astar`/`greedy`; para el resto
+  `heuristic` en config.json ni siquiera se valida), y
+  `build_agent(algorithm, heuristic) -> Agent`. Implementados: `astar` (real)
+  y `hardcoded` (Fase 0, devuelve `HardcodedAgent()`). Algoritmos no
+  implementados (`bfs`, `dfs`, `greedy`, `iddfs`) están registrados como
+  placeholders que tiran `NotImplementedError` con la lista de disponibles —
+  agregar el algoritmo real es escribir la clase + una entrada acá, sin tocar
+  `run.py`.
 - `sokoban/search/astar.py`: `AStarAgent` ahora recibe `heuristic` inyectada
   en el constructor (default `manhattan_sum`) en vez de importarla hardcodeada,
   para que `registry.py` pueda instanciarlo con la heurística que pida el
@@ -261,8 +265,9 @@ heurística sea un archivo, no un cambio de código (pedido explícito, con
   (default de heurística, algoritmo/heurística desconocidos, algoritmo no
   implementado).
 
-`HardcodedAgent` (Fase 0) sigue existiendo tal cual en `agent.py`, no lo usa
-`run.py`/`config.json` — queda como referencia/fixture para el golden test.
+`HardcodedAgent` (Fase 0) sigue existiendo tal cual en `agent.py`, y ahora
+también se puede seleccionar desde `config.json` con `"algorithm": "hardcoded"`
+(vía `registry.py`) además de seguir siendo el fixture del golden test.
 
 Falta (equipo, cuando implementen los algoritmos que quedan): sumar
 `bfs.py`/`dfs.py`/`greedy.py`/`iddfs.py` siguiendo el patrón de `astar.py`, y

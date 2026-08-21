@@ -54,12 +54,15 @@ Imprime `success`, `cost`, `nodes_expanded`, `frontier_nodes`,
 
 - `level`: stem de un archivo en `sokoban/levels/` (ej. `"level_01_ufo"`) o una
   ruta explícita a un `.txt`. Opcional: `"levels_dir"` para apuntar a otra carpeta.
-- `algorithm`: uno de `sokoban.search.ALGORITHMS` (hoy solo `"astar"` está
-  implementado; `"bfs"`/`"dfs"`/`"greedy"`/`"iddfs"` tiran `NotImplementedError`
-  con un mensaje claro hasta que el equipo los sume a `search/registry.py`).
+- `algorithm`: uno de `sokoban.search.ALGORITHMS`. Hoy implementados:
+  `"astar"` (búsqueda real) y `"hardcoded"` (Fase 0, `HardcodedAgent`, solo
+  conoce `level_01_ufo`). `"bfs"`/`"dfs"`/`"greedy"`/`"iddfs"` tiran
+  `NotImplementedError` con un mensaje claro hasta que el equipo los sume a
+  `search/registry.py`.
 - `heuristic`: uno de `sokoban.search.HEURISTICS` (hoy solo `"manhattan_sum"`).
-  Se ignora en algoritmos no informados; si se omite, A*/Greedy usan
-  `manhattan_sum` por default.
+  Solo aplica a algoritmos en `sokoban.search.INFORMED_ALGORITHMS`
+  (`astar`/`greedy`); en el resto (incluido `hardcoded`) se ignora sin
+  validar, y si se omite A*/Greedy usan `manhattan_sum` por default.
 
 Programáticamente, el mismo flujo sin pasar por el CLI:
 
