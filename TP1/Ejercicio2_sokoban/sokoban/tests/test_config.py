@@ -1,8 +1,4 @@
-"""Config-driven agent selection: `load_config` + `build_agent`.
-
-Cubre el enchufe que usa `run.py`: `config.json` -> `RunConfig` -> `Agent`,
-sin tener que tocar código para cambiar de algoritmo/heurística.
-"""
+"""Config-driven agent selection: `load_config` + `build_agent`."""
 
 from __future__ import annotations
 
@@ -85,8 +81,6 @@ def test_build_agent_hardcoded_devuelve_hardcoded_agent():
 
 
 def test_build_agent_algoritmo_no_informado_ignora_heuristica_invalida():
-    # hardcoded no usa heurística, así que un nombre inválido no debería
-    # frenar la corrida (a diferencia de astar/greedy).
     agent = build_agent("hardcoded", "no_existe")
 
     assert isinstance(agent, HardcodedAgent)

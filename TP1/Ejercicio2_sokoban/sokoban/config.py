@@ -1,9 +1,4 @@
-"""Carga de `config.json`: qué nivel resolver, con qué algoritmo y heurística.
-
-Reemplaza la necesidad de tocar código para probar otra combinación
-algoritmo/heurística -- `run.py` solo lee `RunConfig` y le pide el `Agent`
-correspondiente a `sokoban.search.build_agent`.
-"""
+"""Carga de `config.json`: qué nivel resolver, con qué algoritmo y heurística."""
 
 from __future__ import annotations
 
@@ -28,8 +23,7 @@ class RunConfig:
     levels_dir: Path
 
     def level_path(self) -> Path:
-        """Ruta al archivo del nivel: `level` puede ser el stem (busca en
-        `levels_dir`) o una ruta explícita a un `.txt`."""
+        """`level` puede ser el stem (busca en `levels_dir`) o una ruta a un `.txt`."""
         as_path = Path(self.level)
         if as_path.suffix == ".txt":
             return as_path
@@ -37,9 +31,7 @@ class RunConfig:
 
 
 def load_config(path: str | Path) -> RunConfig:
-    """Lee y valida `config.json`. Tira `ConfigError` con un mensaje claro
-    si falta el archivo, el JSON es inválido, o falta la clave `algorithm`/
-    `level`."""
+    """Lee y valida `config.json`; tira `ConfigError` si algo falta."""
     config_path = Path(path)
     try:
         raw = json.loads(config_path.read_text())

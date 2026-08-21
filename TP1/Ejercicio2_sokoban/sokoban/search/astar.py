@@ -1,11 +1,4 @@
-"""A* sobre `legal_moves`/`apply_move`/`is_goal`, con heurística inyectable
-(default `heuristics.manhattan_sum`; ver `search/registry.py` para elegirla
-desde `config.json`).
-
-Nodo = `State` (`player`, `boxes`), que ya es hasheable de fábrica (ver
-`state.py`). Costo de cada movimiento (empuje o paso simple) = 1, así que
-`cost` en `SearchResult` termina siendo `len(solution)`, como pide la consigna.
-"""
+"""A* sobre `legal_moves`/`apply_move`/`is_goal`, con heurística inyectable."""
 
 from __future__ import annotations
 
