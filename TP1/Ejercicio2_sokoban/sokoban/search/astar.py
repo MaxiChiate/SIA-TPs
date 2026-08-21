@@ -1,4 +1,6 @@
-"""A* sobre `legal_moves`/`apply_move`/`is_goal`, usando `heuristics.manhattan_sum`.
+"""A* sobre `legal_moves`/`apply_move`/`is_goal`, con heurística inyectable
+(default `heuristics.manhattan_sum`; ver `search/registry.py` para elegirla
+desde `config.json`).
 
 Nodo = `State` (`player`, `boxes`), que ya es hasheable de fábrica (ver
 `state.py`). Costo de cada movimiento (empuje o paso simple) = 1, así que
@@ -14,11 +16,19 @@ import time
 from ..agent import SearchResult
 from ..engine import apply_move, is_goal, legal_moves
 from ..state import Level, State
-from .heuristics import manhattan_sum
+from .heuristics import Heuristic, manhattan_sum
 
 
 class AStarAgent:
-    """Implementa el protocolo `Agent` con A* + `manhattan_sum`."""
+    """Implementa el protocolo `Agent` con A*.
+
+    La heurística es inyectable (default `manhattan_sum`) para que
+    `search/registry.py` pueda instanciar este agente con la heurística que
+    pida `config.json` sin tocar esta clase.
+    """
+
+    def __init__(self, heuristic: Heuristic = manhattan_sum) -> None:
+        self._heuristic = heuristic
 
     def solve(self, level: Level) -> SearchResult:
         start_time = time.perf_counter()
@@ -31,7 +41,7 @@ class AStarAgent:
         closed: set[State] = set()
 
         open_heap: list[tuple[int, int, State]] = [
-            (manhattan_sum(start_state, level), next(counter), start_state)
+            (self._heuristic(start_state, level), next(counter), start_state)
         ]
 
         nodes_expanded = 0
@@ -66,7 +76,7 @@ class AStarAgent:
                 if tentative_g < g_score.get(neighbor, float("inf")):
                     g_score[neighbor] = tentative_g
                     came_from[neighbor] = (current, move)
-                    f_score = tentative_g + manhattan_sum(neighbor, level)
+                    f_score = tentative_g + self._heuristic(neighbor, level)
                     heapq.heappush(open_heap, (f_score, next(counter), neighbor))
 
         return SearchResult(
