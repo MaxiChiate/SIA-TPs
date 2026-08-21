@@ -1,0 +1,28 @@
+{
+  "executor": "process",
+  "workers": 4,
+  "repetitions": 5,
+  "timeout_seconds": 60,
+  "memory_limit_mb": 4096,
+  "levels": [
+    "level_01_ufo",
+    "level_69"
+  ],
+  "levels_dir": "sokoban/levels",
+  "algorithms": [
+    "bfs",
+    "dfs",
+    "iddfs",
+    {
+      "name": "greedy",
+      "heuristic": "manhattan_sum"
+    },
+    {
+      "name": "astar",
+      "heuristic": "manhattan_sum"
+    }
+  ],
+  "output_dir": "analisis/resultados",
+  "output_file": null,
+  "include_solution": true
+}

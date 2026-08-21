@@ -1,4 +1,4 @@
-"""Fase 1 (equipo): bfs.py, dfs.py, greedy.py, iddfs.py -- astar.py, pendiente.
+"""Fase 1: bfs.py, dfs.py, greedy.py, iddfs.py y astar.py -- los cinco implementados.
 
 Cada uno implementa el protocolo `Agent` de `sokoban.agent` usando
 `legal_moves`/`apply_move`/`is_goal` de `sokoban.engine`, y llena
