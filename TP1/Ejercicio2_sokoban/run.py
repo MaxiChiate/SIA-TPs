@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sokoban import ConfigError, build_agent, is_goal, load_config, replay
-from sokoban.parser import LevelParseError, parse_level
+from sokoban.parser import LevelParseError, level_to_lines, parse_level
+from sokoban.visualizer_export import render_visualizer
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -63,6 +65,34 @@ def main(argv: list[str]) -> int:
         trace = replay(level, result.solution)
         assert is_goal(trace[-1], level)
         print(f"solución:         {result.solution}")
+
+    if config.visualize:
+        pushes = sum(1 for move in result.solution if move.isupper())
+        run_data = {
+            "level_name": level.name,
+            "level_lines": level_to_lines(level),
+            "solution": result.solution,
+            "result": {
+                "success": result.success,
+                "cost": result.cost,
+                "nodes_expanded": result.nodes_expanded,
+                "frontier_nodes": result.frontier_nodes,
+                "elapsed_seconds": result.elapsed_seconds,
+            },
+            "algorithm": config.algorithm,
+            "heuristic": config.heuristic,
+            "config_path": str(config_path),
+            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "board": {
+                "width": level.width,
+                "height": level.height,
+                "boxes": len(level.initial_boxes),
+                "goals": len(level.goals),
+            },
+            "moves": {"pushes": pushes, "steps": len(result.solution) - pushes},
+        }
+        render_visualizer(run_data, config.visualizer_output)
+        print(f"visualizador:     {config.visualizer_output}")
 
     return 0 if result.success else 1
 
