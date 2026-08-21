@@ -98,6 +98,30 @@ def parse_level(text: str, name: str = "") -> Level:
     )
 
 
+def level_to_lines(level: Level) -> list[str]:
+    """Inverso de `parse_level`: reconstruye el ASCII (estado inicial) de un
+    `Level` ya parseado, para pasárselo al visualizador sin guardar el texto
+    original."""
+    lines = []
+    for y in range(level.height):
+        row = []
+        for x in range(level.width):
+            pos = (x, y)
+            on_goal = pos in level.goals
+            if pos in level.walls:
+                row.append(_WALL)
+            elif pos == level.initial_player:
+                row.append(_PLAYER_ON_GOAL if on_goal else _PLAYER)
+            elif pos in level.initial_boxes:
+                row.append(_BOX_ON_GOAL if on_goal else _BOX)
+            elif on_goal:
+                row.append(_GOAL)
+            else:
+                row.append(_FLOOR)
+        lines.append("".join(row))
+    return lines
+
+
 def parse_level_file(path: str) -> Level:
     """Lee un nivel desde un archivo y usa el nombre del archivo como `Level.name`."""
     from pathlib import Path

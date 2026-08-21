@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from ..engine import MoveError, apply_move, initial_state, is_goal, legal_moves
-from ..parser import LevelParseError, parse_level
+from ..parser import LevelParseError, level_to_lines, parse_level
 
 # Nivel mínimo para probar cada regla en aislamiento:
 #
@@ -28,6 +28,11 @@ def test_parse_level_ragged_lines_se_rellenan():
     level = parse_level(text, name="ragged")
     assert level.width == 7
     assert level.height == 4
+
+
+def test_level_to_lines_es_inverso_de_parse_level():
+    level = _mini()
+    assert level_to_lines(level) == ["#####", "#@$.#", "#####"]
 
 
 def test_parse_level_falta_jugador():
