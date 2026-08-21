@@ -18,12 +18,13 @@ sokoban/
   visualizer_export.py render_visualizer(run_data, output_path)
   search/
     registry.py        ALGORITHMS/HEURISTICS por nombre, build_agent(algorithm, heuristic)
-    astar.py            AStarAgent(heuristic=...) -- implementado
+    astar.py            AStarAgent(heuristic=...)
+    bfs.py/dfs.py/greedy.py/iddfs.py  BFS/DFS/Greedy/IDDFS
     heuristics.py       manhattan_sum (admisible) + registro HEURISTICS
-    bfs.py/dfs.py/greedy.py/iddfs.py  -- pendientes (equipo), ver abajo
   levels/
     level_01_ufo.txt              nivel de referencia
     level_01_ufo.solution.txt     solución de 86 movimientos (golden)
+    level_69.txt                  nivel de 5 cajas (más pesado)
   visualizer/
     sokoban_visualizer.html       template del visor, autocontenido
     last_run_<level>_<algo>_<heuristic>.html   generado por run.py (gitignored)
@@ -32,6 +33,7 @@ sokoban/
     test_config.py                 config.json -> RunConfig -> Agent
     test_visualizer_export.py      render_visualizer inyecta el run-data
     test_replay_known_solution.py  golden test end-to-end
+analisis/               runner paralelo de experimentos -> CSV (ver analisis/README.md)
 ```
 
 ## Arranque rápido
@@ -58,11 +60,9 @@ del visualizador que generó (ver [El visualizador](#el-visualizador)).
 
 - `level`: stem de un archivo en `sokoban/levels/` (ej. `"level_01_ufo"`) o una
   ruta explícita a un `.txt`. Opcional: `"levels_dir"` para apuntar a otra carpeta.
-- `algorithm`: uno de `sokoban.search.ALGORITHMS`. Hoy implementados:
-  `"astar"` (búsqueda real) y `"hardcoded"` (Fase 0, `HardcodedAgent`, solo
-  conoce `level_01_ufo`). `"bfs"`/`"dfs"`/`"greedy"`/`"iddfs"` tiran
-  `NotImplementedError` con un mensaje claro hasta que el equipo los sume a
-  `search/registry.py`.
+- `algorithm`: uno de `sokoban.search.ALGORITHMS`. Implementados:
+  `"bfs"`, `"dfs"`, `"iddfs"`, `"greedy"`, `"astar"`, y `"hardcoded"`
+  (Fase 0, `HardcodedAgent`, solo conoce `level_01_ufo`).
 - `heuristic`: uno de `sokoban.search.HEURISTICS` (hoy solo `"manhattan_sum"`).
   Solo aplica a algoritmos en `sokoban.search.INFORMED_ALGORITHMS`
   (`astar`/`greedy`); en el resto (incluido `hardcoded`) se ignora sin
@@ -148,26 +148,44 @@ turno a turno (`player`, `boxes`) — pensado para que la Fase 1 use
 `(player, boxes)` como clave del `visited`/`closed set` en BFS/A* sin cargar
 con nada de más.
 
-## Para la Fase 1 (equipo)
+## Correr experimentos en lote
 
-`sokoban/search/astar.py` ya implementa el protocolo `Agent`. Los que faltan
-(`bfs.py`, `dfs.py`, `greedy.py`, `iddfs.py`) siguen el mismo patrón: una
-clase con `solve(self, level) -> SearchResult`, construida solo con
-`legal_moves`/`apply_move`/`is_goal` de `engine.py`, llenando
-`nodes_expanded`/`frontier_nodes` con los valores reales de cada búsqueda (el
-motor solo define el molde de `SearchResult`, no puede contarlos por
-ustedes).
+`run.py` corre **una** combinación. Para medir y comparar algoritmos está el
+runner paralelo en [`analisis/`](analisis/README.md): corre cada
+(nivel x algoritmo) N veces y deja un CSV con una fila por ejecución.
 
-Para que `config.json` pueda seleccionarlos, hay que sumarlos a
-`sokoban/search/registry.py`:
+```bash
+python analisis/main.py --dry-run     # lista qué correría
+python analisis/main.py               # usa analisis/config.yaml
+```
+
+Se configura por `analisis/config.yaml` (niveles, algoritmos, repeticiones,
+workers, timeout, directorio de salida). El esquema del CSV está en
+[`analisis/SCHEMA.md`](analisis/SCHEMA.md).
+
+Dos cosas a tener en cuenta antes de correrlo:
+
+- **El timeout no es opcional.** `iddfs` no termina en `level_01_ufo`, y
+  `greedy`/`astar` no terminan en `level_69`.
+- **Usá `executor: process` (el default) para medir tiempos.** Los algoritmos
+  son Python puro y CPU-bound: con threads el GIL los serializa y los tiempos
+  se inflan 2-4x. El detalle está en el README del runner.
+
+## Agregar un algoritmo o una heurística
+
+`sokoban/search/registry.py` es el único lugar que hay que tocar: `ALGORITHMS`
+mapea nombre -> fábrica de `Agent`, e `INFORMED_ALGORITHMS` marca cuáles usan
+heurística.
 
 ```python
 from .bfs import BFSAgent
-...
 ALGORITHMS["bfs"] = lambda heuristic: BFSAgent()  # ignora heuristic, no es informado
 ```
 
-Si el algoritmo es informado (greedy), la fábrica sí usa el parámetro
-`heuristic` que le pasa `build_agent`, igual que `_build_astar` en ese mismo
-archivo, y hay que sumarlo a `INFORMED_ALGORITHMS`. Ver el detalle completo en
-[`CLAUDE.md`](CLAUDE.md).
+Si el algoritmo es informado, la fábrica usa el parámetro `heuristic` que le
+pasa `build_agent` (igual que `_build_astar`) y hay que sumarlo a
+`INFORMED_ALGORITHMS`. Las heurísticas nuevas van en `heuristics.py` y se dan de
+alta en el dict `HEURISTICS`.
+
+Dado de alta ahí, el algoritmo queda disponible en `config.json` **y** en el
+runner de `analisis/` sin tocar nada más: los dos leen del mismo registro.

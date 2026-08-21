@@ -228,7 +228,7 @@ Para la Fase 1, el equipo escribe en `sokoban/search/` usando únicamente
 `legal_moves`/`apply_move`/`is_goal` de `engine.py` — no hace falta tocar el
 parser, el motor ni el visualizador.
 
-## Estado real de la Fase 1 (parcial: A* + selección por config.json)
+## Estado real de la Fase 1 (completa: los 5 algoritmos + selección por config.json)
 
 Se sumó una capa de configuración para que la elección de algoritmo y
 heurística sea un archivo, no un cambio de código (pedido explícito, con
@@ -245,16 +245,18 @@ heurística sea un archivo, no un cambio de código (pedido explícito, con
   `HEURISTICS` (reexportado de `heuristics.py`), `INFORMED_ALGORITHMS` (qué
   algoritmos sí usan la heurística — solo `astar`/`greedy`; para el resto
   `heuristic` en config.json ni siquiera se valida), y
-  `build_agent(algorithm, heuristic) -> Agent`. Implementados: `astar` (real)
-  y `hardcoded` (Fase 0, devuelve `HardcodedAgent()`). Algoritmos no
-  implementados (`bfs`, `dfs`, `greedy`, `iddfs`) están registrados como
-  placeholders que tiran `NotImplementedError` con la lista de disponibles —
-  agregar el algoritmo real es escribir la clase + una entrada acá, sin tocar
-  `run.py`.
+  `build_agent(algorithm, heuristic) -> Agent`. Implementados los cinco:
+  `bfs`, `dfs`, `iddfs`, `greedy` y `astar`, más `hardcoded` (Fase 0, devuelve
+  `HardcodedAgent()`). Sumar un algoritmo nuevo es escribir la clase + una
+  entrada acá, sin tocar `run.py` ni el runner de `analisis/`.
 - `sokoban/search/astar.py`: `AStarAgent` ahora recibe `heuristic` inyectada
   en el constructor (default `manhattan_sum`) en vez de importarla hardcodeada,
   para que `registry.py` pueda instanciarlo con la heurística que pida el
-  config.
+  config. `greedy.py` sigue el mismo patrón; `bfs`/`dfs`/`iddfs` no son
+  informados y su fábrica ignora el parámetro.
+- `sokoban/search/_common.py`: `Node` (estado + puntero al padre + movimiento)
+  y `reconstruct_path`, compartidos por los cinco algoritmos para no arrastrar
+  el string completo de la solución en cada nodo de la frontera.
 - `run.py` (raíz): CLI (`python run.py [config.json]`) que encadena
   `load_config` → `parse_level` → `build_agent` → `agent.solve(level)` →
   imprime el `SearchResult` y confirma con `replay`/`is_goal` que la solución
@@ -269,10 +271,9 @@ heurística sea un archivo, no un cambio de código (pedido explícito, con
 también se puede seleccionar desde `config.json` con `"algorithm": "hardcoded"`
 (vía `registry.py`) además de seguir siendo el fixture del golden test.
 
-Falta (equipo, cuando implementen los algoritmos que quedan): sumar
-`bfs.py`/`dfs.py`/`greedy.py`/`iddfs.py` siguiendo el patrón de `astar.py`, y
-darlos de alta en `ALGORITHMS`/`INFORMED_ALGORITHMS` en `registry.py` (un
-ejemplo de cómo hacerlo está en el README).
+Única heurística implementada: `manhattan_sum` (admisible; recorre las
+permutaciones caja->goal, así que es factorial en cantidad de cajas).
+`is_deadlock` en `heuristics.py` sigue siendo un `TODO`.
 
 ## Estado real: `run.py` genera el visualizador de cada corrida
 
@@ -297,3 +298,48 @@ Fase 0 embebidos en ese mismo bloque JSON, para que siga siendo abrible
 directo sin pasar por `run.py`. Tests: `test_visualizer_export.py`
 (round-trip del JSON incrustado) y `test_engine.py::
 test_level_to_lines_es_inverso_de_parse_level`.
+
+## Estado real: runner paralelo de experimentos (`analisis/`)
+
+`run.py` corre una sola combinación. Para la comparación de algoritmos que pide
+la consigna está `analisis/`, que corre cada (nivel x algoritmo) N veces y deja
+**un CSV con una fila por ejecución** para el análisis posterior.
+
+- `analisis/config.yaml` (+ `config.json` espejo, para correr sin PyYAML):
+  `executor`, `workers`, `repetitions`, `timeout_seconds`, `memory_limit_mb`,
+  `levels` (lista o `"all"`), `levels_dir`, `algorithms` (string o
+  `{name, heuristic}`), `output_dir`, `output_file`, `include_solution`.
+- `analisis/config.py`: `BenchmarkConfig` + `load_benchmark_config`. Valida
+  todo **antes** de correr nada (niveles inexistentes, algoritmos/heurísticas
+  desconocidas, claves con typo) y tira `BenchmarkConfigError`. Las rutas
+  relativas se resuelven contra la raíz del proyecto, no contra el cwd.
+- `analisis/runner.py`: dos backends. `process` (default) usa un proceso por
+  ejecución con la concurrencia acotada por un pool de threads que solo
+  esperan; `thread` es un `ThreadPoolExecutor` puro. `run_benchmark` es un
+  generador, así que el CSV se escribe en streaming.
+- `analisis/worker.py`: una ejecución (parsear -> resolver -> **verificar la
+  solución con `replay`/`is_goal`**). Nunca propaga excepciones: todo fallo
+  sale como una fila con `status="error"`.
+- `analisis/records.py`: `RunRecord` (30 columnas) + writer CSV incremental
+  que flushea fila por fila, para no perder una tanda larga que se corta.
+- `analisis/SCHEMA.md`: documentación de cada columna, para el sistema de
+  análisis que consume el CSV.
+
+Tres cosas que condicionan el diseño, verificadas en esta máquina:
+
+- **No todas las combinaciones terminan**: `iddfs` no resuelve `level_01_ufo`,
+  y `greedy`/`astar` no resuelven `level_69` (5 cajas). Por eso
+  `timeout_seconds` es prácticamente obligatorio.
+- **Los threads no paralelizan acá**: los algoritmos son Python puro y
+  CPU-bound, así que el GIL los serializa y los tiempos concurrentes se inflan
+  2-4x (bfs 0.091s -> 0.292s con 4 workers, al 94% de CPU = un solo core).
+  Además un thread no se puede matar: con `executor: thread` el timeout marca
+  la fila pero la búsqueda sigue de fondo, y el runner fuerza la salida al
+  final para no colgarse esperándola. Para medir, `executor: process`.
+- **`memory_limit_mb` solo funciona en Linux** (`RLIMIT_AS`); en macOS/Windows
+  no tiene efecto y el runner avisa al arrancar. Importa porque BFS sobre
+  `level_69` expande ~4M nodos (varios GB por worker).
+
+El runner no tiene su propia lista de algoritmos: los lee de
+`sokoban.search.ALGORITHMS`/`HEURISTICS`, así que lo que se dé de alta en
+`registry.py` queda disponible acá automáticamente.

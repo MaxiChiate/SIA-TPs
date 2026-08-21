@@ -24,3 +24,7 @@ Thumbs.db
 
 # Sokoban: visualizadores generados por run.py
 TP1/Ejercicio2_sokoban/sokoban/visualizer/last_run_*.html
+
+# Sokoban: CSVs de resultados generados por analisis/main.py
+# (si querés versionar una tanda puntual: git add -f <archivo>.csv)
+TP1/Ejercicio2_sokoban/analisis/resultados/*.csv
