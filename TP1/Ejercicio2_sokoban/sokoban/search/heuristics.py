@@ -11,8 +11,11 @@ heurística no admisible (para comparar en el informe), déjenlo documentado.
 from __future__ import annotations
 
 from itertools import permutations
+from typing import Callable
 
 from ..state import Coord, Level, State
+
+Heuristic = Callable[[State, Level], int]
 
 
 def manhattan_sum(state: State, level: Level) -> int:
@@ -57,3 +60,10 @@ def is_deadlock(state: State, level: Level) -> bool:
 def _manhattan(a: Coord, b: Coord) -> int:
     """Distancia Manhattan entre dos coordenadas. Helper para las de arriba."""
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+
+# Nombre -> función, para que `config.json` pueda seleccionar la heurística
+# por string (ver `sokoban/search/registry.py`).
+HEURISTICS: dict[str, Heuristic] = {
+    "manhattan_sum": manhattan_sum,
+}
