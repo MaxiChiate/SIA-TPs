@@ -227,3 +227,44 @@ cd TP1/Ejercicio2_sokoban && ../../<ruta al venv>/bin/python -m pytest sokoban/t
 Para la Fase 1, el equipo escribe en `sokoban/search/` usando únicamente
 `legal_moves`/`apply_move`/`is_goal` de `engine.py` — no hace falta tocar el
 parser, el motor ni el visualizador.
+
+## Estado real de la Fase 1 (parcial: A* + selección por config.json)
+
+Se sumó una capa de configuración para que la elección de algoritmo y
+heurística sea un archivo, no un cambio de código (pedido explícito, con
+`config.json`/`config.yml` de referencia en el material de la materia):
+
+- `config.json` (raíz del proyecto): `{"level", "algorithm", "heuristic"}`.
+  `level` es el stem de un archivo en `sokoban/levels/` o una ruta a un
+  `.txt`; `levels_dir` es opcional para apuntar a otra carpeta.
+- `sokoban/config.py`: `RunConfig` + `load_config(path)`, valida JSON y
+  claves requeridas, tira `ConfigError` con mensaje claro si algo falta.
+- `sokoban/search/registry.py`: único lugar que mapea nombres de
+  `config.json` a clases de Python. `ALGORITHMS` (nombre -> fábrica que recibe
+  la heurística ya resuelta), `HEURISTICS` (reexportado de `heuristics.py`),
+  `INFORMED_ALGORITHMS` (qué algoritmos sí usan la heurística), y
+  `build_agent(algorithm, heuristic) -> Agent`. Algoritmos no implementados
+  (`bfs`, `dfs`, `greedy`, `iddfs`) están registrados como placeholders que
+  tiran `NotImplementedError` con la lista de disponibles — agregar el
+  algoritmo real es escribir la clase + una entrada acá, sin tocar `run.py`.
+- `sokoban/search/astar.py`: `AStarAgent` ahora recibe `heuristic` inyectada
+  en el constructor (default `manhattan_sum`) en vez de importarla hardcodeada,
+  para que `registry.py` pueda instanciarlo con la heurística que pida el
+  config.
+- `run.py` (raíz): CLI (`python run.py [config.json]`) que encadena
+  `load_config` → `parse_level` → `build_agent` → `agent.solve(level)` →
+  imprime el `SearchResult` y confirma con `replay`/`is_goal` que la solución
+  es jugable. Maneja `ConfigError`/`ValueError`/`NotImplementedError`/
+  `LevelParseError` con mensajes por stderr y exit code 1.
+- `sokoban/tests/test_config.py`: cubre `load_config` (nivel por stem,
+  heurística opcional, archivo inexistente, clave faltante) y `build_agent`
+  (default de heurística, algoritmo/heurística desconocidos, algoritmo no
+  implementado).
+
+`HardcodedAgent` (Fase 0) sigue existiendo tal cual en `agent.py`, no lo usa
+`run.py`/`config.json` — queda como referencia/fixture para el golden test.
+
+Falta (equipo, cuando implementen los algoritmos que quedan): sumar
+`bfs.py`/`dfs.py`/`greedy.py`/`iddfs.py` siguiendo el patrón de `astar.py`, y
+darlos de alta en `ALGORITHMS`/`INFORMED_ALGORITHMS` en `registry.py` (un
+ejemplo de cómo hacerlo está en el README).
