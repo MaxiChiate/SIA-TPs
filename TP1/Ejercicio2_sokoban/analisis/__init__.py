@@ -3,7 +3,7 @@
 Corre cada combinación (nivel x algoritmo) N veces y vuelca una fila por
 ejecución en un CSV, pensado para que otro sistema haga el análisis después.
 
-Punto de entrada: `python analisis/main.py [config.yaml]`.
+Punto de entrada: `python analisis/main.py [config.json]`.
 """
 
 from .config import AlgorithmSpec, BenchmarkConfig, BenchmarkConfigError, load_benchmark_config

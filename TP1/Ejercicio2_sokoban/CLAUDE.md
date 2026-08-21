@@ -127,7 +127,8 @@ test_level_to_lines_es_inverso_de_parse_level`.
 la consigna está `analisis/`, que corre cada (nivel x algoritmo) N veces y deja
 **un CSV con una fila por ejecución** para el análisis posterior.
 
-- `analisis/config.yaml` (+ `config.json` espejo, para correr sin PyYAML):
+- `analisis/config.json` (JSON puro, sin dependencias; distinto del
+  `config.json` de la raíz, que es el de `run.py`). Claves:
   `executor`, `workers`, `repetitions`, `timeout_seconds`, `memory_limit_mb`,
   `levels` (lista o `"all"`), `levels_dir`, `algorithms` (string o
   `{name, heuristic}`), `output_dir`, `output_file`, `include_solution`.

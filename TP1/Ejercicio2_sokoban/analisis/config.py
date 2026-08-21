@@ -1,11 +1,11 @@
-"""Carga y validación del config del runner (`config.yaml` o `config.json`).
+"""Carga y validación de `analisis/config.json`, el config del runner.
 
 El config describe una *tanda* de experimentos: qué niveles, qué algoritmos,
 cuántas repeticiones, con cuánto paralelismo y dónde dejar el CSV.
 
-Formato preferido: YAML (necesita PyYAML). Si PyYAML no está instalado y el
-config es `.yaml`/`.yml`, se busca automáticamente un `.json` hermano con el
-mismo nombre -- el esquema de claves es idéntico en los dos formatos.
+JSON puro, sin dependencias: es el mismo formato que usa `config.json` de la
+raíz para `run.py`, aunque el esquema es distinto (acá todo es en plural, más
+las opciones de paralelismo).
 """
 
 from __future__ import annotations
@@ -88,38 +88,6 @@ def _resolve_path(raw: str | Path, default: Path) -> Path:
         return default
     path = Path(raw)
     return path if path.is_absolute() else PROJECT_ROOT / path
-
-
-def _load_raw(config_path: Path) -> tuple[dict, Path]:
-    """Lee el config como dict; devuelve también el archivo realmente usado.
-
-    El path de vuelta puede diferir del pedido cuando cae el fallback de
-    YAML -> JSON, y es el que queda registrado en el CSV.
-    """
-    if config_path.suffix in (".yaml", ".yml"):
-        try:
-            import yaml  # type: ignore[import-untyped]
-        except ImportError:
-            # Fallback documentado: mismo esquema de claves, en JSON.
-            sibling = config_path.with_suffix(".json")
-            if sibling.is_file():
-                return _load_json(sibling), sibling
-            raise BenchmarkConfigError(
-                f"{config_path} es YAML pero PyYAML no está instalado. "
-                f"Instalá con `pip install pyyaml` (ver analisis/requirements.txt), "
-                f"o dejá el mismo config en {sibling.name}."
-            ) from None
-        try:
-            raw = yaml.safe_load(config_path.read_text())
-        except FileNotFoundError:
-            raise BenchmarkConfigError(f"No se encontró el config: {config_path}") from None
-        except yaml.YAMLError as exc:
-            raise BenchmarkConfigError(f"{config_path} no es YAML válido: {exc}") from exc
-        if raw is None:
-            raise BenchmarkConfigError(f"{config_path} está vacío")
-        return raw, config_path
-
-    return _load_json(config_path), config_path
 
 
 def _load_json(config_path: Path) -> dict:
@@ -220,16 +188,19 @@ def load_benchmark_config(path: str | Path) -> BenchmarkConfig:
     """Lee y valida el config del runner. Tira `BenchmarkConfigError` si algo no cierra."""
     config_path = Path(path)
     if not config_path.is_absolute() and not config_path.is_file():
-        # Permite `python analisis/main.py config.yaml` desde cualquier cwd.
+        # Permite `python analisis/main.py config.json` desde cualquier cwd.
         candidate = PROJECT_ROOT / "analisis" / config_path
         if candidate.is_file():
             config_path = candidate
 
-    raw, config_path = _load_raw(config_path)
+    raw = _load_json(config_path)
     if not isinstance(raw, dict):
         raise BenchmarkConfigError(f"{config_path} tiene que ser un mapping en la raíz")
 
-    unknown = set(raw) - {
+    # `_comment` (y cualquier clave con guion bajo adelante) se ignora: JSON no
+    # tiene comentarios, así que es la forma de anotar el config sin que la
+    # validación estricta lo rechace.
+    unknown = {key for key in raw if not key.startswith("_")} - {
         "executor", "workers", "repetitions", "timeout_seconds", "memory_limit_mb",
         "levels", "levels_dir", "algorithms", "output_dir", "output_file",
         "include_solution",

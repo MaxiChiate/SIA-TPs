@@ -156,11 +156,12 @@ runner paralelo en [`analisis/`](analisis/README.md): corre cada
 
 ```bash
 python analisis/main.py --dry-run     # lista qué correría
-python analisis/main.py               # usa analisis/config.yaml
+python analisis/main.py               # usa analisis/config.json
 ```
 
-Se configura por `analisis/config.yaml` (niveles, algoritmos, repeticiones,
-workers, timeout, directorio de salida). El esquema del CSV está en
+Se configura por `analisis/config.json` (niveles, algoritmos, repeticiones,
+workers, timeout, directorio de salida) — distinto del `config.json` de la raíz,
+que es el de `run.py`. El esquema del CSV está en
 [`analisis/SCHEMA.md`](analisis/SCHEMA.md).
 
 Dos cosas a tener en cuenta antes de correrlo:

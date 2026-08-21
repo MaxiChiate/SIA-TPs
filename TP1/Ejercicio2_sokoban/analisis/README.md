@@ -8,8 +8,7 @@ El esquema del CSV está documentado en [`SCHEMA.md`](SCHEMA.md).
 
 ```
 analisis/
-  config.yaml       config del runner (editá esto)
-  config.json       mismo config en JSON, para correr sin PyYAML
+  config.json       config del runner (editá esto)
   main.py           CLI
   config.py         BenchmarkConfig + load_benchmark_config
   runner.py         orquestador paralelo (backends process / thread)
@@ -17,23 +16,22 @@ analisis/
   records.py        RunRecord (esquema del CSV) + writer incremental
   resultados/       CSVs generados (gitignoreados)
   SCHEMA.md         documentación de cada columna
-  requirements.txt  pyyaml
 ```
 
 ## Correrlo
 
-```bash
-pip install -r analisis/requirements.txt   # solo pyyaml; ver "Sin PyYAML" abajo
+Sin dependencias: solo la librería estándar.
 
-python analisis/main.py                    # usa analisis/config.yaml
-python analisis/main.py otro_config.yaml
+```bash
+python analisis/main.py                    # usa analisis/config.json
+python analisis/main.py otro_config.json
 python analisis/main.py --dry-run          # lista qué correría, sin correr nada
 ```
 
 Las rutas relativas del config se resuelven contra la raíz del proyecto
 (`Ejercicio2_sokoban/`), así que el runner anda igual desde cualquier directorio.
 
-Flags para barrer sin editar el YAML (pisan el config):
+Flags para barrer sin editar el config (lo pisan):
 
 ```bash
 python analisis/main.py --repetitions 10 --workers 8
@@ -41,15 +39,9 @@ python analisis/main.py --executor thread --timeout 30
 python analisis/main.py --output-file corrida_final.csv --quiet
 ```
 
-### Sin PyYAML
-
-Si PyYAML no está instalado y el config es `.yaml`, el loader busca
-automáticamente el `.json` hermano (mismo nombre, mismas claves) y usa ese. Por
-eso el repo trae `config.yaml` **y** `config.json` con el mismo contenido. La
-columna `config` que imprime el runner al arrancar dice cuál usó de verdad.
-
-> Si editás uno de los dos, acordate de reflejar el cambio en el otro, o
-> instalá PyYAML y quedate solo con el YAML.
+> No confundir con el `config.json` de la **raíz**, que es el de `run.py` y
+> tiene otro esquema (una sola corrida: `level`/`algorithm`/`heuristic`). El del
+> runner es `analisis/config.json`, en plural y con las opciones de paralelismo.
 
 ## Configuración
 
@@ -66,6 +58,9 @@ columna `config` que imprime el runner al arrancar dice cuál usó de verdad.
 | `output_dir` | `analisis/resultados` | Dónde dejar el CSV. |
 | `output_file` | `null` | Nombre del CSV. `null` = `results_<run_id>.csv`, así cada tanda va a su archivo. |
 | `include_solution` | `true` | Incluir la columna `solution` (el string completo de movimientos). |
+
+JSON no tiene comentarios, así que **las claves que empiezan con `_` se ignoran**:
+`config.json` las usa (`_comment_timeout`, etc.) para documentarse a sí mismo.
 
 El config se valida entero **antes** de correr nada: niveles inexistentes,
 algoritmos o heurísticas desconocidas y claves con typo cortan al instante con
@@ -158,7 +153,7 @@ from analisis.records import write_csv
 
 
 def main():
-    config = load_benchmark_config("analisis/config.yaml")
+    config = load_benchmark_config("analisis/config.json")
     records = list(run_benchmark(config))
     write_csv(config.output_dir / "mi_tanda.csv", records)
 

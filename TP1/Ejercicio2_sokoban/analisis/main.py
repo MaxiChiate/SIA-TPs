@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """CLI del runner de experimentos.
 
-    python analisis/main.py                      # usa analisis/config.yaml
-    python analisis/main.py mi_config.yaml
+    python analisis/main.py                      # usa analisis/config.json
+    python analisis/main.py mi_config.json
     python analisis/main.py --repetitions 10 --workers 8
     python analisis/main.py --dry-run            # lista qué correría, sin correr
 
@@ -36,7 +36,7 @@ from analisis.records import (  # noqa: E402
 from analisis.runner import make_run_id, build_tasks, run_benchmark  # noqa: E402
 from analisis.worker import memory_limit_supported  # noqa: E402
 
-DEFAULT_CONFIG = PROJECT_ROOT / "analisis" / "config.yaml"
+DEFAULT_CONFIG = PROJECT_ROOT / "analisis" / "config.json"
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -46,7 +46,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "config", nargs="?", default=None,
-        help=f"config YAML/JSON del runner (default: {DEFAULT_CONFIG.name})",
+        help=f"config JSON del runner (default: {DEFAULT_CONFIG.name})",
     )
     parser.add_argument("--executor", choices=("process", "thread"),
                         help="pisa `executor` del config")
@@ -64,7 +64,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def _apply_overrides(config, args):
-    """Los flags de CLI pisan el config; útil para barridos sin editar el YAML."""
+    """Los flags de CLI pisan el config; útil para barridos sin editar el JSON."""
     from dataclasses import replace
 
     changes = {}
