@@ -220,6 +220,16 @@
     </div>
 
     <div class="panel">
+      <h2>corrida</h2>
+      <dl class="stats-grid">
+        <dt>algoritmo</dt><dd id="stat-algorithm">-</dd>
+        <dt>heurística</dt><dd id="stat-heuristic">-</dd>
+        <dt>config</dt><dd id="stat-config">-</dd>
+        <dt>generado</dt><dd id="stat-generated-at">-</dd>
+      </dl>
+    </div>
+
+    <div class="panel">
       <h2>resultado (SearchResult)</h2>
       <dl class="stats-grid">
         <dt>success</dt><dd id="stat-success">-</dd>
@@ -229,39 +239,55 @@
         <dt>elapsed_seconds</dt><dd id="stat-elapsed">-</dd>
       </dl>
     </div>
+
+    <div class="panel">
+      <h2>nivel / movimientos</h2>
+      <dl class="stats-grid">
+        <dt>tablero</dt><dd id="stat-board">-</dd>
+        <dt>cajas / goals</dt><dd id="stat-boxes">-</dd>
+        <dt>empujes / pasos</dt><dd id="stat-moves">-</dd>
+      </dl>
+    </div>
   </div>
 </div>
 
+<script type="application/json" id="run-data">
+{
+  "level_name": "level_01_ufo",
+  "level_lines": [
+    "      ###",
+    "      #.#",
+    "  #####.#####",
+    " ##         ##",
+    "##  # # # #  ##",
+    "#  ##     ##  #",
+    "# ##  # #  ## #",
+    "#     $@$     #",
+    "####  ###  ####",
+    "   #### ####"
+  ],
+  "solution": "LruulldlddrUUUUdddlllluurururRRlddrruUUdrrddllddRluurrdrddlUUUUddrdrrruulululLLrddlluU",
+  "result": {
+    "success": true,
+    "cost": 86,
+    "nodes_expanded": 0,
+    "frontier_nodes": 0,
+    "elapsed_seconds": 0.0000011
+  },
+  "algorithm": "hardcoded",
+  "heuristic": null,
+  "config_path": null,
+  "generated_at": null,
+  "board": { "width": 15, "height": 10, "boxes": 2, "goals": 2 },
+  "moves": { "pushes": 17, "steps": 69 }
+}
+</script>
 <script>
-// ---------------------------------------------------------------------------
-// Fase 0: datos embebidos a mano para el único nivel de referencia.
-// Para visualizar otro nivel/resultado, reemplazar LEVEL_LINES, SOLUTION y
-// RESULT por lo que devuelva el Agent correspondiente (ver sokoban/agent.py).
-// ---------------------------------------------------------------------------
-const LEVEL_NAME = "level_01_ufo";
-
-const LEVEL_LINES = [
-  "      ###",
-  "      #.#",
-  "  #####.#####",
-  " ##         ##",
-  "##  # # # #  ##",
-  "#  ##     ##  #",
-  "# ##  # #  ## #",
-  "#     $@$     #",
-  "####  ###  ####",
-  "   #### ####",
-];
-
-const SOLUTION = "LruulldlddrUUUUdddlllluurururRRlddrruUUdrrddllddRluurrdrddlUUUUddrdrrruulululLLrddlluU";
-
-const RESULT = {
-  success: true,
-  cost: SOLUTION.length,
-  nodes_expanded: 0,
-  frontier_nodes: 0,
-  elapsed_seconds: 0.0000011,
-};
+const RUN = JSON.parse(document.getElementById("run-data").textContent);
+const LEVEL_NAME = RUN.level_name;
+const LEVEL_LINES = RUN.level_lines;
+const SOLUTION = RUN.solution;
+const RESULT = RUN.result;
 
 // ---------------------------------------------------------------------------
 // Charset de game-sokoban.com: '#' pared, ' ' piso, '.' goal, '$' caja,
@@ -464,12 +490,23 @@ window.addEventListener("keydown", (e) => {
 
 // stats
 document.getElementById("level-name").textContent = LEVEL_NAME;
+document.getElementById("stat-algorithm").textContent = RUN.algorithm ?? "-";
+document.getElementById("stat-heuristic").textContent = RUN.heuristic ?? "n/a";
+document.getElementById("stat-config").textContent = RUN.config_path ?? "-";
+document.getElementById("stat-generated-at").textContent = RUN.generated_at ?? "-";
 document.getElementById("stat-success").textContent = RESULT.success ? "true" : "false";
 document.getElementById("stat-success").className = RESULT.success ? "ok" : "fail";
 document.getElementById("stat-cost").textContent = RESULT.cost;
 document.getElementById("stat-nodes").textContent = RESULT.nodes_expanded;
 document.getElementById("stat-frontier").textContent = RESULT.frontier_nodes;
 document.getElementById("stat-elapsed").textContent = RESULT.elapsed_seconds.toExponential(3) + " s";
+if (RUN.board) {
+  document.getElementById("stat-board").textContent = `${RUN.board.width} x ${RUN.board.height}`;
+  document.getElementById("stat-boxes").textContent = `${RUN.board.boxes} / ${RUN.board.goals}`;
+}
+if (RUN.moves) {
+  document.getElementById("stat-moves").textContent = `${RUN.moves.pushes} / ${RUN.moves.steps}`;
+}
 
 const finalOk = isGoal(trace[trace.length - 1], level);
 if (!finalOk) {
