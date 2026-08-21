@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from ..agent import Agent
+from ..agent import Agent, HardcodedAgent
 from .astar import AStarAgent
 from .heuristics import HEURISTICS, Heuristic
 
@@ -19,12 +19,17 @@ from .heuristics import HEURISTICS, Heuristic
 # entrada del registro (algoritmos + heurísticas).
 
 
-def _build_astar(heuristic: Heuristic) -> Agent:
+def _build_astar(heuristic: Heuristic | None) -> Agent:
     return AStarAgent(heuristic=heuristic)
 
 
-def _not_implemented(name: str) -> Callable[[Heuristic], Agent]:
-    def _factory(heuristic: Heuristic) -> Agent:
+def _build_hardcoded(heuristic: Heuristic | None) -> Agent:
+    # Fase 0: no busca nada, así que ignora la heurística por completo.
+    return HardcodedAgent()
+
+
+def _not_implemented(name: str) -> Callable[[Heuristic | None], Agent]:
+    def _factory(heuristic: Heuristic | None) -> Agent:
         raise NotImplementedError(
             f"El algoritmo {name!r} todavía no está implementado en "
             f"sokoban/search/{name}.py. Algoritmos disponibles: "
@@ -35,19 +40,22 @@ def _not_implemented(name: str) -> Callable[[Heuristic], Agent]:
 
 
 # Nombre (config.json: "algorithm") -> fábrica que recibe la heurística ya
-# resuelta y devuelve un `Agent` listo para `.solve(level)`. Los algoritmos no
-# informados (bfs/dfs/iddfs) ignoran la heurística; queda documentado acá para
-# cuando el equipo los implemente.
-ALGORITHMS: dict[str, Callable[[Heuristic], Agent]] = {
+# resuelta (o `None` si el algoritmo no es informado) y devuelve un `Agent`
+# listo para `.solve(level)`. `hardcoded` es la Fase 0 (`HardcodedAgent`, solo
+# conoce `level_01_ufo`); bfs/dfs/iddfs son placeholders para cuando el equipo
+# los implemente.
+ALGORITHMS: dict[str, Callable[[Heuristic | None], Agent]] = {
     "astar": _build_astar,
+    "hardcoded": _build_hardcoded,
     "bfs": _not_implemented("bfs"),
     "dfs": _not_implemented("dfs"),
     "greedy": _not_implemented("greedy"),
     "iddfs": _not_implemented("iddfs"),
 }
 
-# Algoritmos que efectivamente usan la heurística (para validar config.json:
-# si algorithm no está acá, "heuristic" es ignorado y no hace falta pedirlo).
+# Algoritmos que efectivamente usan la heurística. Los que no están acá
+# (hardcoded/bfs/dfs/iddfs) reciben `heuristic=None` sin validar el nombre
+# que haya en config.json, porque para ellos ese campo no aplica.
 INFORMED_ALGORITHMS = {"astar", "greedy"}
 
 
@@ -56,7 +64,8 @@ def build_agent(algorithm: str, heuristic: str | None) -> Agent:
 
     `algorithm` y `heuristic` son los strings crudos de `config.json` (ver
     `sokoban.config.RunConfig`). Tira `ValueError` con nombres disponibles si
-    alguno no matchea.
+    alguno no matchea. Para algoritmos no informados, `heuristic` no se
+    valida (es irrelevante para ellos).
     """
     try:
         factory = ALGORITHMS[algorithm]
@@ -64,6 +73,9 @@ def build_agent(algorithm: str, heuristic: str | None) -> Agent:
         raise ValueError(
             f"Algoritmo desconocido {algorithm!r}. Disponibles: {sorted(ALGORITHMS)}."
         ) from exc
+
+    if algorithm not in INFORMED_ALGORITHMS:
+        return factory(None)
 
     heuristic_name = heuristic or "manhattan_sum"
     try:
