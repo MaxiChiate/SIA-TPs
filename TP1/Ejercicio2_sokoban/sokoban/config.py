@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DEFAULT_LEVELS_DIR = Path(__file__).resolve().parent / "levels"
+DEFAULT_VISUALIZER_OUTPUT = Path(__file__).resolve().parent / "visualizer" / "last_run.html"
 
 
 class ConfigError(ValueError):
@@ -21,6 +22,8 @@ class RunConfig:
     algorithm: str
     heuristic: str | None
     levels_dir: Path
+    visualize: bool
+    visualizer_output: Path
 
     def level_path(self) -> Path:
         """`level` puede ser el stem (busca en `levels_dir`) o una ruta a un `.txt`."""
@@ -48,10 +51,15 @@ def load_config(path: str | Path) -> RunConfig:
         raise ConfigError(f"{config_path}: faltan las claves {missing}")
 
     levels_dir = Path(raw["levels_dir"]) if "levels_dir" in raw else DEFAULT_LEVELS_DIR
+    visualizer_output = (
+        Path(raw["visualizer_output"]) if "visualizer_output" in raw else DEFAULT_VISUALIZER_OUTPUT
+    )
 
     return RunConfig(
         level=raw["level"],
         algorithm=raw["algorithm"],
         heuristic=raw.get("heuristic"),
         levels_dir=levels_dir,
+        visualize=bool(raw.get("visualize", True)),
+        visualizer_output=visualizer_output,
     )
