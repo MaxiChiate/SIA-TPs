@@ -1,0 +1,5 @@
+{
+  "level": "level_01_ufo",
+  "algorithm": "astar",
+  "heuristic": "manhattan_sum"
+}
