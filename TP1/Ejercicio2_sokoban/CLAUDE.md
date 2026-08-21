@@ -273,3 +273,25 @@ Falta (equipo, cuando implementen los algoritmos que quedan): sumar
 `bfs.py`/`dfs.py`/`greedy.py`/`iddfs.py` siguiendo el patrón de `astar.py`, y
 darlos de alta en `ALGORITHMS`/`INFORMED_ALGORITHMS` en `registry.py` (un
 ejemplo de cómo hacerlo está en el README).
+
+## Estado real: `run.py` genera el visualizador de cada corrida
+
+`sokoban/parser.py::level_to_lines(level)` es el inverso de `parse_level`
+(reconstruye el ASCII desde `Level`). `sokoban/visualizer_export.py::
+render_visualizer(run_data, output_path)` toma un dict y una copia de
+`visualizer/sokoban_visualizer.html`, y reemplaza el `<script
+type="application/json" id="run-data">` del template por ese dict
+serializado; el resto del HTML/JS no cambia.
+
+`run.py`, si `config.visualize` (default `true`), arma `run_data` con nivel,
+solución, `SearchResult`, `algorithm`, `heuristic`, el `config_path` usado,
+`generated_at` (UTC ISO) y dos bloques extra: `board`
+(`width`/`height`/`boxes`/`goals`) y `moves` (`pushes`/`steps`, desglosando
+`cost` en empujes vs. pasos simples). Lo escribe en `config.visualizer_output`
+(default `sokoban/visualizer/last_run.html`, gitignored) e imprime la ruta.
+
+El template (`sokoban_visualizer.html`) sigue teniendo datos default de
+Fase 0 embebidos en ese mismo bloque JSON, para que siga siendo abrible
+directo sin pasar por `run.py`. Tests: `test_visualizer_export.py`
+(round-trip del JSON incrustado) y `test_engine.py::
+test_level_to_lines_es_inverso_de_parse_level`.

@@ -15,6 +15,7 @@ sokoban/
   engine.py           apply_move, replay, is_goal, legal_moves
   agent.py            Agent (Protocol), SearchResult, HardcodedAgent
   config.py           RunConfig, load_config(path) -> lee config.json
+  visualizer_export.py render_visualizer(run_data, output_path)
   search/
     registry.py        ALGORITHMS/HEURISTICS por nombre, build_agent(algorithm, heuristic)
     astar.py            AStarAgent(heuristic=...) -- implementado
@@ -24,10 +25,12 @@ sokoban/
     level_01_ufo.txt              nivel de referencia
     level_01_ufo.solution.txt     solución de 86 movimientos (golden)
   visualizer/
-    sokoban_visualizer.html       visor autocontenido, sin dependencias
+    sokoban_visualizer.html       template del visor, autocontenido
+    last_run.html                 generado por run.py (gitignored)
   tests/
     test_engine.py                 parser + reglas del motor
     test_config.py                 config.json -> RunConfig -> Agent
+    test_visualizer_export.py      render_visualizer inyecta el run-data
     test_replay_known_solution.py  golden test end-to-end
 ```
 
@@ -50,7 +53,8 @@ python run.py otra_config.json
 ```
 
 Imprime `success`, `cost`, `nodes_expanded`, `frontier_nodes`,
-`elapsed_seconds` y, si encontró solución, el string de movimientos.
+`elapsed_seconds`, el string de movimientos (si encontró solución) y la ruta
+del visualizador que generó (ver [El visualizador](#el-visualizador)).
 
 - `level`: stem de un archivo en `sokoban/levels/` (ej. `"level_01_ufo"`) o una
   ruta explícita a un `.txt`. Opcional: `"levels_dir"` para apuntar a otra carpeta.
@@ -63,6 +67,9 @@ Imprime `success`, `cost`, `nodes_expanded`, `frontier_nodes`,
   Solo aplica a algoritmos en `sokoban.search.INFORMED_ALGORITHMS`
   (`astar`/`greedy`); en el resto (incluido `hardcoded`) se ignora sin
   validar, y si se omite A*/Greedy usan `manhattan_sum` por default.
+- `visualize`: bool, default `true`. Si es `false`, `run.py` no genera el HTML.
+- `visualizer_output`: ruta de salida del HTML generado. Default:
+  `sokoban/visualizer/last_run.html`.
 
 Programáticamente, el mismo flujo sin pasar por el CLI:
 
@@ -97,10 +104,11 @@ el estado final cumple `is_goal`.
 
 ## El visualizador
 
-`sokoban/visualizer/sokoban_visualizer.html` se abre con doble clic (o
-`python3 -m http.server` y navegar), no necesita build ni servidor real.
-Reimplementa el parser y el motor en JS (misma lógica que `parser.py`/
-`engine.py`) para no depender de un paso de exportación en Python.
+Cada corrida de `run.py` genera `sokoban/visualizer/last_run.html` (path
+configurable con `visualizer_output`): una copia standalone de
+`sokoban/visualizer/sokoban_visualizer.html` con los datos de esa corrida
+incrustados. Se abre con doble clic (o `python3 -m http.server` y navegar),
+no necesita build ni servidor real.
 
 - play / pause / paso a paso / velocidad, con teclado (`←` `→` `espacio`
   `Home` `End`);
@@ -108,13 +116,22 @@ Reimplementa el parser y el motor en JS (misma lógica que `parser.py`/
   actual resaltado (clic en un carácter salta a ese paso);
 - tablero con paredes, piso, goals (aro tenue), cajas (ámbar; verdes si están
   sobre un goal) y jugador;
-- barra de stats leída directo de `SearchResult`: `success`, `cost`,
-  `nodes_expanded`, `frontier_nodes`, `elapsed_seconds`.
+- panel **corrida**: `algorithm`, `heuristic`, el `config.json` usado y cuándo
+  se generó;
+- panel **resultado (SearchResult)**: `success`, `cost`, `nodes_expanded`,
+  `frontier_nodes`, `elapsed_seconds`;
+- panel **nivel / movimientos**: tamaño del tablero, cantidad de cajas/goals,
+  y el desglose de la solución en empujes vs. pasos simples.
 
-Para la Fase 0 el nivel y la solución están embebidos a mano al principio del
-`<script>` (`LEVEL_LINES`, `SOLUTION`, `RESULT`). Cuando el equipo tenga
-resultados reales de búsqueda, alcanza con reemplazar esos tres valores por
-los de otro `Level`/`SearchResult`.
+Mecánica: el template tiene un `<script type="application/json"
+id="run-data">` con los datos de Fase 0 (`level_01_ufo` + `HardcodedAgent`)
+como default, así el archivo sigue siendo visualizable si se abre directo sin
+pasar por `run.py`. `sokoban/visualizer_export.py::render_visualizer` arma un
+`run_data` dict (nivel, solución, `SearchResult`, algoritmo, heurística, etc.)
+y reemplaza ese bloque JSON en una copia del template — el resto del HTML
+(parser/motor reimplementados en JS, UI) no cambia. El parser/motor en JS
+replica la misma lógica que `parser.py`/`engine.py`, sin depender de un paso
+de exportación en Python más allá de ese reemplazo de texto.
 
 ## Motor de reglas
 

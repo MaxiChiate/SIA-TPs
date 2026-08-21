@@ -21,3 +21,6 @@ Thumbs.db
 
 # LLM
 .claude
+
+# Sokoban: visualizador generado por run.py
+TP1/Ejercicio2_sokoban/sokoban/visualizer/last_run.html
