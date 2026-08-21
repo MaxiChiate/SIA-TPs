@@ -7,7 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DEFAULT_LEVELS_DIR = Path(__file__).resolve().parent / "levels"
-DEFAULT_VISUALIZER_OUTPUT = Path(__file__).resolve().parent / "visualizer" / "last_run.html"
+DEFAULT_VISUALIZER_DIR = Path(__file__).resolve().parent / "visualizer"
+
+
+def _default_visualizer_output(level: str, algorithm: str, heuristic: str | None) -> Path:
+    level_stem = Path(level).stem
+    heuristic_part = heuristic or "sin-heuristica"
+    return DEFAULT_VISUALIZER_DIR / f"last_run_{level_stem}_{algorithm}_{heuristic_part}.html"
 
 
 class ConfigError(ValueError):
@@ -51,9 +57,12 @@ def load_config(path: str | Path) -> RunConfig:
         raise ConfigError(f"{config_path}: faltan las claves {missing}")
 
     levels_dir = Path(raw["levels_dir"]) if "levels_dir" in raw else DEFAULT_LEVELS_DIR
-    visualizer_output = (
-        Path(raw["visualizer_output"]) if "visualizer_output" in raw else DEFAULT_VISUALIZER_OUTPUT
-    )
+    if "visualizer_output" in raw:
+        visualizer_output = Path(raw["visualizer_output"])
+    else:
+        visualizer_output = _default_visualizer_output(
+            raw["level"], raw["algorithm"], raw.get("heuristic")
+        )
 
     return RunConfig(
         level=raw["level"],

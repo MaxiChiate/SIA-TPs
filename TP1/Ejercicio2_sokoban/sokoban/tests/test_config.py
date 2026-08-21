@@ -40,6 +40,24 @@ def test_load_config_heuristic_es_opcional(tmp_path):
     assert config.heuristic is None
 
 
+def test_load_config_visualizer_output_por_default_incluye_nivel_algoritmo_y_heuristica(tmp_path):
+    path = _write_config(
+        tmp_path, {"level": "level_01_ufo", "algorithm": "astar", "heuristic": "manhattan_sum"}
+    )
+
+    config = load_config(path)
+
+    assert config.visualizer_output.name == "last_run_level_01_ufo_astar_manhattan_sum.html"
+
+
+def test_load_config_visualizer_output_sin_heuristica(tmp_path):
+    path = _write_config(tmp_path, {"level": "level_01_ufo", "algorithm": "hardcoded"})
+
+    config = load_config(path)
+
+    assert config.visualizer_output.name == "last_run_level_01_ufo_hardcoded_sin-heuristica.html"
+
+
 def test_load_config_archivo_inexistente():
     with pytest.raises(ConfigError):
         load_config("no_existe.json")
