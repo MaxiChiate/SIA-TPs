@@ -20,8 +20,8 @@ y el visualizador andan de punta a punta (parseo → replay → animación).
 
 ## 8. Fases siguientes
 
-- **Fase 1** (equipo) ✅ HECHA: BFS/DFS/Greedy/A*/IDDFS + heurísticas, sobre `legal_moves`/`apply_move`.
-  Falta la 2da heurística admisible (distancia de empuje real con BFS desde los goals).
+- **Fase 1** (equipo) ✅ HECHA: BFS/DFS/Greedy/A*/IDDFS + las 2 heurísticas admisibles
+  (`manhattan_sum` y `push_distance_sum`), sobre `legal_moves`/`apply_move`.
 - **Fase 2** (equipo) ✅ HECHA: `nodes_expanded`/`frontier_nodes` reales ya están
   instrumentados en los cinco algoritmos (cada uno los cuenta y los devuelve en su `SearchResult`).
 - **Fase 3**: sumar más niveles / más cajas (la consigna permite variar la complejidad).
@@ -95,12 +95,19 @@ heurística sea un archivo, no un cambio de código (pedido explícito, con
 también se puede seleccionar desde `config.json` con `"algorithm": "hardcoded"`
 (vía `registry.py`) además de seguir siendo el fixture del golden test.
 
-Única heurística implementada: `manhattan_sum` (admisible; resuelve la
-asignación caja->goal con el algoritmo húngaro / matching de costo mínimo
-—O(cajas²·goals)—, no por fuerza bruta factorial). Falta una segunda
-heurística admisible que pide el enunciado (y que el informe ya describe):
-la distancia de empuje real, precalculada con BFS desde cada goal
-respetando paredes, que domina a `manhattan_sum`.
+Dos heurísticas admisibles implementadas, ambas con la misma estructura
+(distancia caja->goal + matching de costo mínimo por algoritmo húngaro,
+O(cajas²·goals), no fuerza bruta factorial); lo único que cambia es cómo
+miden la distancia:
+
+- `manhattan_sum`: distancia Manhattan (`|Δx|+|Δy|`), que ignora las paredes.
+- `push_distance_sum`: distancia real esquivando paredes, precalculada con un
+  BFS desde cada goal (cacheado por nivel con `lru_cache`). Domina a
+  `manhattan_sum` (al respetar las paredes cada distancia es >= la Manhattan) y
+  sigue admisible. Si una caja no alcanza ningún goal, el costo se dispara.
+
+Ambas están en `heuristics.py` y registradas en `HEURISTICS`; las usan los
+algoritmos informados (`astar`/`greedy`).
 
 `is_deadlock` en `heuristics.py` está implementado (detecta deadlocks de
 rincón: caja fuera de goal trabada entre dos paredes perpendiculares; no
