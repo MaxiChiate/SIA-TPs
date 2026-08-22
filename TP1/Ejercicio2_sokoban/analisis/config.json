@@ -27,7 +27,9 @@
     "dfs",
     "iddfs",
     { "name": "greedy", "heuristic": "manhattan_sum" },
-    { "name": "astar", "heuristic": "manhattan_sum" }
+    { "name": "greedy", "heuristic": "push_distance_sum" },
+    { "name": "astar", "heuristic": "manhattan_sum" },
+    { "name": "astar", "heuristic": "push_distance_sum" }
   ],
 
   "_comment_output": "output_file null = results_<run_id>.csv, asi cada tanda va a su propio archivo. include_solution agrega la columna con el string de movimientos.",
