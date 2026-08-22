@@ -20,11 +20,13 @@ y el visualizador andan de punta a punta (parseo → replay → animación).
 
 ## 8. Fases siguientes
 
-- **Fase 1** (equipo): BFS/DFS/Greedy/A*/IDDFS + heurísticas, sobre `legal_moves`/`apply_move`.
-- **Fase 2** (equipo): instrumentar `nodes_expanded`/`frontier_nodes` reales en cada
-  algoritmo — el motor no puede hacerlo por ustedes, es parte de cada implementación.
+- **Fase 1** (equipo) ✅ HECHA: BFS/DFS/Greedy/A*/IDDFS + heurísticas, sobre `legal_moves`/`apply_move`.
+  Falta la 2da heurística admisible (distancia de empuje real con BFS desde los goals).
+- **Fase 2** (equipo) ✅ HECHA: `nodes_expanded`/`frontier_nodes` reales ya están
+  instrumentados en los cinco algoritmos (cada uno los cuenta y los devuelve en su `SearchResult`).
 - **Fase 3**: sumar más niveles / más cajas (la consigna permite variar la complejidad).
-- **Fase 4**: README de cómo correrlo + presentación.
+  Hay 2 niveles (`level_01_ufo`, `level_69`).
+- **Fase 4**: README de cómo correrlo + presentación. (Existe `README.md`; falta la presentación.)
 
 ## Cómo arrancar con Claude Code
 
@@ -93,9 +95,18 @@ heurística sea un archivo, no un cambio de código (pedido explícito, con
 también se puede seleccionar desde `config.json` con `"algorithm": "hardcoded"`
 (vía `registry.py`) además de seguir siendo el fixture del golden test.
 
-Única heurística implementada: `manhattan_sum` (admisible; recorre las
-permutaciones caja->goal, así que es factorial en cantidad de cajas).
-`is_deadlock` en `heuristics.py` sigue siendo un `TODO`.
+Única heurística implementada: `manhattan_sum` (admisible; resuelve la
+asignación caja->goal con el algoritmo húngaro / matching de costo mínimo
+—O(cajas²·goals)—, no por fuerza bruta factorial). Falta una segunda
+heurística admisible que pide el enunciado (y que el informe ya describe):
+la distancia de empuje real, precalculada con BFS desde cada goal
+respetando paredes, que domina a `manhattan_sum`.
+
+`is_deadlock` en `heuristics.py` está implementado (detecta deadlocks de
+rincón: caja fuera de goal trabada entre dos paredes perpendiculares; no
+detecta todos los deadlocks posibles) y lo usa `astar.py` para podar esos
+estados irrecuperables antes de encolarlos. Los otros cuatro algoritmos no
+lo aplican.
 
 ## Estado real: `run.py` genera el visualizador de cada corrida
 
