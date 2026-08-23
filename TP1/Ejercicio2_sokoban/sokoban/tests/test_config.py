@@ -10,7 +10,8 @@ from ..agent import HardcodedAgent
 from ..config import ConfigError, load_config
 from ..search import build_agent
 from ..search.astar import AStarAgent
-from ..search.heuristics import manhattan_sum
+from ..search.bfs import BFSAgent
+from ..search.heuristics import manhattan_sum, push_distance_sum
 
 
 def _write_config(tmp_path, data: dict) -> str:
@@ -87,9 +88,17 @@ def test_build_agent_heuristica_desconocida():
         build_agent("astar", "no_existe")
 
 
-def test_build_agent_algoritmo_no_implementado_da_mensaje_claro():
-    with pytest.raises(NotImplementedError):
-        build_agent("bfs", None)
+def test_build_agent_bfs_esta_implementado():
+    agent = build_agent("bfs", None)
+
+    assert isinstance(agent, BFSAgent)
+
+
+def test_build_agent_astar_acepta_push_distance_sum():
+    agent = build_agent("astar", "push_distance_sum")
+
+    assert isinstance(agent, AStarAgent)
+    assert agent._heuristic is push_distance_sum
 
 
 def test_build_agent_hardcoded_devuelve_hardcoded_agent():
