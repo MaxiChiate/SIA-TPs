@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections import deque
+from functools import lru_cache
 from typing import Callable
 
 from ..state import Coord, Level, State
@@ -102,6 +104,54 @@ def _manhattan(a: Coord, b: Coord) -> int:
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
+@lru_cache(maxsize=None)
+def _push_distance_tables(level: Level) -> dict[Coord, dict[Coord, int]]:
+    """Para cada goal, la distancia mínima (en celdas, esquivando paredes)
+    desde el goal a cada celda alcanzable, calculada con BFS.
+
+    Se precalcula una sola vez por nivel (goals y paredes son fijos). Es una
+    cota inferior de la cantidad de empujes para llevar una caja desde esa celda
+    hasta el goal: ignora las otras cajas (relajación), pero respeta las paredes,
+    así que siempre es >= la distancia Manhattan.
+    """
+    tables: dict[Coord, dict[Coord, int]] = {}
+    for goal in level.goals:
+        dist: dict[Coord, int] = {goal: 0}
+        cola = deque([goal])
+        while cola:
+            x, y = cola.popleft()
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                vecino = (x + dx, y + dy)
+                if not (0 <= vecino[0] < level.width and 0 <= vecino[1] < level.height):
+                    continue
+                if vecino in level.walls or vecino in dist:
+                    continue
+                dist[vecino] = dist[(x, y)] + 1
+                cola.append(vecino)
+        tables[goal] = dist
+    return tables
+
+
+def push_distance_sum(state: State, level: Level) -> int:
+    """Igual que `manhattan_sum`, pero con la distancia real esquivando paredes
+    (precalculada con BFS desde cada goal) en lugar de la Manhattan directa.
+
+    Admisible y **domina** a `manhattan_sum`: al respetar las paredes, cada
+    distancia caja->goal es >= la Manhattan, así que el matching de costo mínimo
+    nunca da menos. Si una caja no alcanza ningún goal (quedó encerrada por
+    paredes), el estado es irrecuperable y el costo se dispara.
+    """
+    boxes = list(state.boxes)
+    goals = list(level.goals)
+    if not boxes:
+        return 0
+    tables = _push_distance_tables(level)
+    inalcanzable = level.width * level.height + 1  # mayor que cualquier camino real
+    cost = [[tables[goal].get(box, inalcanzable) for goal in goals] for box in boxes]
+    return _min_cost_assignment(cost)
+
+
 HEURISTICS: dict[str, Heuristic] = {
     "manhattan_sum": manhattan_sum,
+    "push_distance_sum": push_distance_sum,
 }

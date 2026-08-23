@@ -16,6 +16,8 @@
 
   "_comment_levels": "Lista de stems de archivo, o \"all\" para todos los .txt de levels_dir.",
   "levels": [
+    "microban_08",
+    "aenigma_03",
     "level_01_ufo",
     "level_69"
   ],
@@ -27,7 +29,9 @@
     "dfs",
     "iddfs",
     { "name": "greedy", "heuristic": "manhattan_sum" },
-    { "name": "astar", "heuristic": "manhattan_sum" }
+    { "name": "greedy", "heuristic": "push_distance_sum" },
+    { "name": "astar", "heuristic": "manhattan_sum" },
+    { "name": "astar", "heuristic": "push_distance_sum" }
   ],
 
   "_comment_output": "output_file null = results_<run_id>.csv, asi cada tanda va a su propio archivo. include_solution agrega la columna con el string de movimientos.",
