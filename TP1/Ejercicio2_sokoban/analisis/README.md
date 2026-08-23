@@ -134,7 +134,7 @@ pip install -r analisis/requirements.txt   # plotly
 python analisis/graficos_main.py                    # último CSV, gráficos activos
 python analisis/graficos_main.py --listar           # qué CSVs y qué gráficos hay
 python analisis/graficos_main.py --archivo analisis/resultados/demo_full.csv
-python analisis/graficos_main.py --solo costo_solucion,tabla_resumen
+python analisis/graficos_main.py --solo costo_vs_nivel,tiempo_vs_nivel
 python analisis/graficos_main.py --tema dark --abrir
 ```
 
@@ -144,27 +144,35 @@ sin tocar el archivo. **De qué CSV** se elige con `ARCHIVO` o `--archivo`; por
 defecto toma el más reciente de `resultados/` (salteando los que quedaron sin
 filas por una corrida interrumpida).
 
-| Gráfico | Qué muestra |
-|---|---|
-| `tiempo_por_algoritmo` | Tiempo medio por algoritmo y nivel (escala log) |
-| `dispersion_tiempos` | Box plot de las N repeticiones: cuánto varía el tiempo |
-| `costo_solucion` | Largo de la solución, con la línea del óptimo por nivel |
-| `nodos_expandidos` | Esfuerzo de búsqueda, independiente de la máquina |
-| `frontera_maxima` | Pico de la frontera: el proxy de memoria |
-| `tradeoff_costo_nodos` | Optimalidad vs. esfuerzo, todo en un plano |
-| `tasa_exito` | Qué combinaciones terminaron y cuáles dieron timeout |
-| `composicion_movimientos` | Empujes vs. pasos simples de cada solución |
-| `tabla_resumen` | Los números crudos en tabla |
+Son **cuatro gráficos con la misma estructura**: el eje x es el **nivel**
+(ordenado por dificultad creciente, medida en cantidad de cajas) y cada color es
+un **algoritmo + heurística**. Dentro de cada nivel se comparan los algoritmos
+entre sí; de nivel a nivel se ve cómo escala cada uno.
 
-Tres decisiones que vale la pena conocer al leerlos:
+| Gráfico | Qué muestra | Escala |
+|---|---|---|
+| `costo_vs_nivel` | Largo de la solución: qué tan lejos del óptimo queda cada algoritmo | lineal |
+| `tiempo_vs_nivel` | Tiempo medio de resolución | log |
+| `nodos_vs_nivel` | Nodos expandidos: el esfuerzo de búsqueda, independiente de la máquina | log |
+| `frontera_vs_nivel` | Pico de la frontera: el proxy de memoria | log |
+
+Cuatro decisiones que vale la pena conocer al leerlos:
 
 - **Las filas con `status != "ok"` nunca entran en un promedio.** Un `timeout`
   tiene `wall_seconds ≈ timeout_seconds`, que es un piso artificial. Las
-  combinaciones que no terminaron aparecen marcadas como "no terminó" en el
-  lugar donde iría la barra, para que la ausencia no se lea como un cero.
-- **El color identifica el nivel, no el algoritmo** (el algoritmo ya está en el
-  eje). La paleta está validada para daltonismo y contraste en claro y oscuro;
-  con 2 series pasa también en el scatter, donde 5 colores no pasaban.
+  combinaciones que no terminaron aparecen marcadas como "no terminó · <motivo>"
+  en el lugar exacto donde iría la barra, para que la ausencia no se lea como un
+  cero.
+- **El color identifica al algoritmo, no al nivel** (el nivel ya está en el eje
+  x): es la serie que se sigue de grupo a grupo. La paleta está validada para
+  daltonismo y contraste en claro y oscuro, y los slots se asignan **en orden
+  fijo**, porque los pares validados son los adyacentes — que en barras
+  agrupadas son los que quedan pegados. Hay 8 colores; con más algoritmos que
+  eso los extras van a gris y el programa avisa por stderr.
+- **El costo va en escala lineal y las otras tres en log.** El costo importa
+  como proporción real (una solución 10x más larga es 10x peor); las demás
+  métricas abarcan 4-6 órdenes de magnitud y en lineal el nivel más caro
+  aplastaría a todos los demás contra el eje.
 - **`repetitions` solo sirve para los tiempos.** Los algoritmos son
   deterministas: costo, nodos y frontera se repiten idénticos, y los gráficos
   los toman de la primera corrida exitosa. Si llegaran a variar, el runner de

@@ -6,7 +6,8 @@ justifican traer pandas.
 La regla de oro del módulo: **las filas con `status != "ok"` nunca entran en un
 promedio**. Un `timeout` tiene `wall_seconds ≈ timeout_seconds`, que es un piso
 artificial; promediarlo con las corridas exitosas inventa un número que no
-significa nada. Se cuentan aparte, en `tasa_exito`.
+significa nada. Esas combinaciones se marcan como "no terminó" en el lugar donde
+iría la barra, así la ausencia no se lee como un cero.
 """
 
 from __future__ import annotations
@@ -76,8 +77,6 @@ class Resumen:
     cost: int | None = None
     nodes_expanded: int | None = None
     frontier_nodes: int | None = None
-    pushes: int | None = None
-    simple_steps: int | None = None
     metricas_estables: bool = True
 
     @property
@@ -105,9 +104,10 @@ class Datos:
     @property
     def niveles(self) -> list[str]:
         vistos = {f.level for f in self.filas}
-        return sorted(vistos, key=lambda n: (self._cajas(n) or 0, n))
+        return sorted(vistos, key=lambda n: (self.cajas(n) or 0, n))
 
-    def _cajas(self, level: str) -> int | None:
+    def cajas(self, level: str) -> int | None:
+        """Cantidad de cajas del nivel; es el proxy de dificultad del eje x."""
         for f in self.filas:
             if f.level == level and f.boxes is not None:
                 return f.boxes
@@ -156,8 +156,6 @@ class Datos:
             cost=primero.cost if primero else None,
             nodes_expanded=primero.nodes_expanded if primero else None,
             frontier_nodes=primero.frontier_nodes if primero else None,
-            pushes=primero.pushes if primero else None,
-            simple_steps=primero.simple_steps if primero else None,
             metricas_estables=estables,
         )
 

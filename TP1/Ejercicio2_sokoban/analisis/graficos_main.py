@@ -4,7 +4,13 @@
     python analisis/graficos_main.py                  # último CSV de resultados/
     python analisis/graficos_main.py --listar         # qué CSVs y qué gráficos hay
     python analisis/graficos_main.py --archivo analisis/resultados/demo_full.csv
-    python analisis/graficos_main.py --solo tiempo_por_algoritmo,tabla_resumen
+    python analisis/graficos_main.py --solo tiempo_vs_nivel
+
+Son cuatro gráficos, todos con la misma estructura: **el eje x es el nivel**
+(ordenado por dificultad creciente, medida en cantidad de cajas) y **cada color
+es un algoritmo + heurística**. Es decir: la comparación que se lee de un
+vistazo es "qué algoritmo gana en este nivel", y lo que se sigue de grupo a
+grupo es cómo se degrada cada algoritmo al subir la dificultad.
 
 Qué gráficos se generan se elige con el diccionario `GRAFICOS` de abajo
 (True/False por gráfico), o con `--solo` / `--todos` desde la línea de comandos.
@@ -33,10 +39,8 @@ from analisis.graficos_datos import (  # noqa: E402
     listar_csvs,
 )
 from analisis.graficos_estilo import (  # noqa: E402
-    ESTADO_COLOR,
-    ESTADO_ORDEN,
     TEMAS,
-    color_nivel,
+    color_algoritmo,
     layout_base,
     nota,
 )
@@ -55,15 +59,10 @@ ARCHIVO: str | None = None
 
 # Qué gráficos generar. Poné False para saltear uno.
 GRAFICOS: dict[str, bool] = {
-    "tiempo_por_algoritmo":   True,   # cuánto tarda cada algoritmo
-    "dispersion_tiempos":     True,   # cuánto varía el tiempo entre repeticiones
-    "costo_solucion":         True,   # calidad: largo de la solución encontrada
-    "nodos_expandidos":       True,   # esfuerzo de búsqueda
-    "frontera_maxima":        True,   # memoria: pico de la frontera
-    "tradeoff_costo_nodos":   True,   # optimalidad vs esfuerzo, todo junto
-    "tasa_exito":             True,   # qué combinaciones terminaron y cuáles no
-    "composicion_movimientos": True,  # empujes vs pasos simples
-    "tabla_resumen":          True,   # los números crudos, en tabla
+    "costo_vs_nivel":     True,   # calidad: largo de la solución encontrada
+    "tiempo_vs_nivel":    True,   # cuánto tarda
+    "nodos_vs_nivel":     True,   # esfuerzo de búsqueda
+    "frontera_vs_nivel":  True,   # memoria: pico de la frontera
 }
 
 # "light" o "dark". Las dos paletas están validadas por separado.
@@ -96,8 +95,9 @@ def _fmt_int(v: int) -> str:
 
 
 def _nombre_nivel(datos: Datos, level: str) -> str:
-    cajas = datos._cajas(level)
-    return f"{level} ({cajas} cajas)" if cajas else level
+    """Etiqueta del eje x. Las cajas van en una segunda línea: son el orden."""
+    cajas = datos.cajas(level)
+    return f"{level}<br>({cajas} cajas)" if cajas else level
 
 
 def _subtitulo(datos: Datos) -> str:
@@ -112,8 +112,8 @@ def _subtitulo(datos: Datos) -> str:
 
 # Geometría de las barras agrupadas. Se usa también para ubicar las
 # anotaciones de "no terminó" justo donde iría la barra que falta.
-BARGAP = 0.28
-BARGROUPGAP = 0.06
+BARGAP = 0.30
+BARGROUPGAP = 0.04
 
 
 def _offset_barra(i: int, n: int) -> float:
@@ -123,8 +123,32 @@ def _offset_barra(i: int, n: int) -> float:
     return -ancho_grupo / 2 + (i + 0.5) * slot
 
 
+# Proporción del alto del eje que se reserva arriba para la etiqueta de valor.
+AIRE_ARRIBA = 0.20
+
+
+def _rango_con_aire(valores: list[float], *, log: bool) -> list[float] | None:
+    """Rango del eje y con lugar para la etiqueta que va encima de la barra más alta.
+
+    En log el rango se expresa en potencias de 10 (es lo que espera plotly) y el
+    piso baja a la década entera de abajo, para que la barra más chica no quede
+    como una rayita pegada al eje.
+    """
+    valores = [v for v in valores if v is not None]
+    if not log:
+        return [0, max(valores) * (1 + AIRE_ARRIBA + 0.12)] if valores else None
+
+    positivos = [v for v in valores if v > 0]
+    if not positivos:
+        return None
+    piso = math.floor(math.log10(min(positivos)))
+    techo = math.log10(max(positivos))
+    alto = max(techo - piso, 1.0)        # con un solo dato el span sería 0
+    return [piso, techo + AIRE_ARRIBA * alto]
+
+
 # ============================================================================
-# Gráfico genérico de barras por (algoritmo x nivel)
+# Gráfico genérico de barras: x = nivel, un color por algoritmo
 # ============================================================================
 
 def _barras(
@@ -135,70 +159,87 @@ def _barras(
     y_titulo: str,
     valor,
     texto,
-    hover_extra: str = "",
+    hover_extra=None,
     log: bool = False,
     pie: str = "",
 ):
-    """Barras agrupadas: x = algoritmo, un color por nivel.
+    """Barras agrupadas: x = nivel (por dificultad), un color por algoritmo.
 
-    `valor(resumen)` devuelve la altura (o None si esa combinación no resolvió).
+    `valor(resumen)` devuelve la altura (o None si esa combinación no resolvió)
+    y `texto(resumen)` la etiqueta que se dibuja sobre la barra. Esa etiqueta no
+    es decorativa: es el "relief" de contraste de los slots claros de la paleta,
+    y el único lugar donde se lee el número exacto sin pasar el mouse.
+
     Las combinaciones sin barra se anotan explícitamente como "no terminó", para
     que una ausencia no se lea como un cero.
+
+    `hover_extra(resumen)` puede devolver líneas extra para el tooltip.
     """
     import plotly.graph_objects as go
 
     niveles = datos.niveles
     algoritmos = datos.algoritmos
-    colores = color_nivel(tema, niveles)
+    colores = color_algoritmo(tema, algoritmos)
     matriz = datos.matriz()
+
+    etiquetas_x = [_nombre_nivel(datos, lv) for lv in niveles]
 
     fig = go.Figure()
     anotaciones = []
+    todos_los_valores: list[float] = []
 
-    for i, level in enumerate(niveles):
-        ys, textos, customs = [], [], []
-        for al in algoritmos:
+    for i, al in enumerate(algoritmos):
+        ys, textos, hovers = [], [], []
+        for level in niveles:
             r = matriz[(level, al)]
             v = valor(r)
             ys.append(v)
             textos.append(texto(r) if v is not None else "")
-            customs.append(r.exitosas)
+            if v is not None:
+                todos_los_valores.append(v)
+
+            extra = hover_extra(r) if (hover_extra and v is not None) else ""
+            hovers.append(
+                f"<b>{al}</b><br>{level} ({datos.cajas(level)} cajas)<br>"
+                f"{y_titulo}: {texto(r) if v is not None else '—'}"
+                f"{extra}<br>corridas exitosas: {r.exitosas}/{r.corridas}"
+            )
+
             if v is None:
                 estados = datos.conteo_estados(level, al)
                 motivo = max(estados, key=estados.get) if estados else "sin datos"
                 anotaciones.append(
                     dict(
-                        x=algoritmos.index(al) + _offset_barra(i, len(niveles)),
+                        x=niveles.index(level) + _offset_barra(i, len(algoritmos)),
                         y=0.02,
                         xref="x", yref="paper",
-                        text=f"no terminó<br>({motivo})",
+                        text=f"no terminó · {motivo}",
                         showarrow=False,
                         textangle=-90,
-                        font=dict(color=tema["muted"], size=10),
-                        align="center",
+                        font=dict(color=tema["muted"], size=9),
+                        xanchor="center",
+                        yanchor="bottom",
                     )
                 )
 
         fig.add_trace(
             go.Bar(
-                name=_nombre_nivel(datos, level),
-                x=algoritmos,
+                name=al,
+                x=etiquetas_x,
                 y=ys,
                 text=textos,
                 textposition="outside",
-                textfont=dict(color=tema["ink_secondary"], size=11),
+                textangle=-90,          # 7 series por grupo: la barra es angosta
+                textfont=dict(color=tema["ink_secondary"], size=10),
                 cliponaxis=False,
                 marker=dict(
-                    color=colores[level],
+                    color=colores[al],
+                    # 1px de superficie por barra = los 2px de separación entre
+                    # dos barras pegadas que pide la spec de marcas
                     line=dict(color=tema["surface"], width=1),
                 ),
-                customdata=customs,
-                hovertemplate=(
-                    f"<b>%{{x}}</b><br>{_nombre_nivel(datos, level)}<br>"
-                    f"{y_titulo}: %{{text}}<br>"
-                    f"corridas exitosas: %{{customdata}}"
-                    f"{hover_extra}<extra></extra>"
-                ),
+                hovertext=hovers,
+                hovertemplate="%{hovertext}<extra></extra>",
             )
         )
 
@@ -207,11 +248,19 @@ def _barras(
     layout["bargap"] = BARGAP
     layout["bargroupgap"] = BARGROUPGAP
     layout["xaxis"]["type"] = "category"
+    layout["xaxis"]["title"]["text"] = "nivel — dificultad creciente →"
     layout["yaxis"]["title"]["text"] = y_titulo + (" — escala log" if log else "")
     if log:
         layout["yaxis"]["type"] = "log"
         layout["yaxis"]["dtick"] = 1        # una marca por década; sin esto plotly
         layout["yaxis"]["minor"] = dict(showgrid=False)   # llena el eje de ticks
+
+    # Aire arriba para la etiqueta de valor de la barra más alta. El autorange de
+    # plotly ajusta al dato, no al texto rotado que va *encima* del dato, así que
+    # sin esto la barra más alta se come su propio número contra el techo.
+    rango = _rango_con_aire(todos_los_valores, log=log)
+    if rango:
+        layout["yaxis"]["range"] = rango
     anotaciones.append(nota(tema, pie or "Solo se grafican las corridas con status=ok."))
     layout["annotations"] = anotaciones
     fig.update_layout(**layout)
@@ -219,428 +268,79 @@ def _barras(
 
 
 # ============================================================================
-# Los gráficos
+# Los cuatro gráficos
 # ============================================================================
 
-def g_tiempo_por_algoritmo(datos: Datos, tema: dict):
-    """Tiempo medio de resolución por algoritmo y nivel."""
+def g_costo_vs_nivel(datos: Datos, tema: dict):
+    """Largo de la solución: la métrica que la consigna pide optimizar."""
     return _barras(
         datos, tema,
-        titulo="Tiempo de resolución por algoritmo",
-        y_titulo="segundos",
-        valor=lambda r: r.tiempo_medio,
-        texto=lambda r: _fmt_seg(r.tiempo_medio),
-        log=True,
-        pie=("Media de las corridas exitosas (columna elapsed_seconds, medida por el "
-             "agente). Escala logarítmica: los tiempos abarcan varios órdenes de magnitud."),
-    )
-
-
-def g_costo_solucion(datos: Datos, tema: dict):
-    """Largo de la solución encontrada — la métrica que la consigna pide optimizar."""
-    import plotly.graph_objects as go
-
-    fig = _barras(
-        datos, tema,
-        titulo="Costo de la solución (cantidad de movimientos)",
+        titulo="Costo de la solución por nivel",
         y_titulo="movimientos",
         valor=lambda r: r.cost,
         texto=lambda r: _fmt_int(r.cost),
-        pie=("Menos es mejor. BFS, A* e IDDFS garantizan el óptimo; Greedy y DFS no, "
-             "y se ve en la diferencia de altura."),
+        log=False,
+        pie=("Cantidad de movimientos de la solución encontrada (menos es mejor). Escala lineal: "
+             "acá la diferencia importa como proporción real, no como orden de magnitud — una "
+             "solución 10 veces más larga es 10 veces peor. BFS, IDDFS y A* con heurística "
+             "admisible devuelven el óptimo, así que empatan en la barra más baja de cada nivel; "
+             "DFS y Greedy no garantizan optimalidad y ahí se ve cuánto se pasan."),
     )
 
-    # Marcamos el óptimo de cada nivel: es la referencia contra la que se lee
-    # todo lo demás, y sin ella un costo alto no dice nada por sí solo.
-    matriz = datos.matriz()
-    colores = color_nivel(tema, datos.niveles)
-    for level in datos.niveles:
-        costos = [
-            matriz[(level, al)].cost
-            for al in datos.algoritmos
-            if matriz[(level, al)].cost is not None
-        ]
-        if not costos:
-            continue
-        # La etiqueta va en el margen derecho, fuera del área de barras: a la
-        # izquierda se superponía con el valor de la primera barra, y pegada al
-        # borde sin margen se recortaba.
-        fig.add_hline(
-            y=min(costos),
-            line=dict(color=colores[level], width=1, dash="dot"),
-            annotation_text=f"óptimo {level}: {min(costos)}",
-            annotation_position="right",
-            annotation_xshift=6,
-            annotation_font=dict(color=colores[level], size=11),
-        )
-    fig.update_layout(margin=dict(l=70, r=185, t=110, b=110))
-    return fig
 
-
-def g_nodos_expandidos(datos: Datos, tema: dict):
-    """Esfuerzo de búsqueda: cuántos estados tuvo que expandir cada algoritmo."""
+def g_tiempo_vs_nivel(datos: Datos, tema: dict):
+    """Tiempo medio de resolución."""
     return _barras(
         datos, tema,
-        titulo="Nodos expandidos por algoritmo",
-        y_titulo="nodos",
+        titulo="Tiempo de resolución por nivel",
+        y_titulo="segundos",
+        valor=lambda r: r.tiempo_medio,
+        texto=lambda r: _fmt_seg(r.tiempo_medio),
+        hover_extra=lambda r: f"<br>desvío: {_fmt_seg(r.tiempo_desvio)}",
+        log=True,
+        pie=("Media de las corridas exitosas (columna elapsed_seconds, medida por el agente). "
+             "Escala logarítmica: los tiempos abarcan varios órdenes de magnitud, así que en "
+             "lineal el nivel más caro aplastaría a todos los demás contra el eje. El desvío "
+             "entre repeticiones está en el tooltip."),
+    )
+
+
+def g_nodos_vs_nivel(datos: Datos, tema: dict):
+    """Nodos expandidos: el esfuerzo de búsqueda, independiente de la máquina."""
+    return _barras(
+        datos, tema,
+        titulo="Nodos expandidos por nivel",
+        y_titulo="nodos expandidos",
         valor=lambda r: r.nodes_expanded,
         texto=lambda r: _fmt_int(r.nodes_expanded),
         log=True,
-        pie=("Cuántos estados sacó de la frontera y expandió. Es el trabajo real de la "
-             "búsqueda, independiente de la velocidad de la máquina."),
+        pie=("Estados que el algoritmo sacó de la frontera y expandió. Es la medida de esfuerzo "
+             "que no depende de la máquina ni de la implementación, así que es la que conviene "
+             "mirar para comparar algoritmos; el tiempo la sigue de cerca. Escala logarítmica."),
     )
 
 
-def g_frontera_maxima(datos: Datos, tema: dict):
-    """Pico de la frontera — el proxy de consumo de memoria."""
+def g_frontera_vs_nivel(datos: Datos, tema: dict):
+    """Pico de la frontera: el proxy de memoria."""
     return _barras(
         datos, tema,
-        titulo="Frontera máxima (proxy de memoria)",
-        y_titulo="nodos en la frontera",
+        titulo="Frontera máxima por nivel",
+        y_titulo="nodos en frontera (pico)",
         valor=lambda r: r.frontier_nodes,
         texto=lambda r: _fmt_int(r.frontier_nodes),
         log=True,
-        pie=("Tamaño máximo que alcanzó la frontera. Acá se ve la ventaja de IDDFS: "
-             "resuelve con una frontera mínima, a cambio de reexpandir muchísimos nodos."),
+        pie=("Máximo de nodos que la frontera llegó a tener a la vez: el proxy de consumo de "
+             "memoria. Es donde se ve la diferencia estructural entre los algoritmos que guardan "
+             "un nivel entero del árbol (BFS) y los que solo guardan un camino (DFS, IDDFS). "
+             "Escala logarítmica."),
     )
 
 
-def g_composicion_movimientos(datos: Datos, tema: dict):
-    """Desglose de la solución en empujes vs. pasos simples."""
-    import plotly.graph_objects as go
-
-    algoritmos = datos.algoritmos
-    matriz = datos.matriz()
-    fig = go.Figure()
-
-    # Un subeje por nivel sería excesivo: mostramos el nivel en el eje x
-    # combinado, que además deja comparar el mismo algoritmo entre niveles.
-    etiquetas_x, empujes, pasos, hover = [], [], [], []
-    for level in datos.niveles:
-        for al in algoritmos:
-            r = matriz[(level, al)]
-            if not r.resolvio or r.pushes is None:
-                continue
-            etiquetas_x.append(f"{al}<br>{level}")
-            empujes.append(r.pushes)
-            pasos.append(r.simple_steps)
-            hover.append(f"{al} · {level}")
-
-    if not etiquetas_x:
-        return None
-
-    for nombre, valores, color in (
-        ("empujes (mayúsculas)", empujes, tema["moves"][0]),
-        ("pasos simples (minúsculas)", pasos, tema["moves"][1]),
-    ):
-        fig.add_trace(
-            go.Bar(
-                name=nombre,
-                x=etiquetas_x,
-                y=valores,
-                marker=dict(color=color, line=dict(color=tema["surface"], width=1)),
-                customdata=hover,
-                hovertemplate=f"<b>%{{customdata}}</b><br>{nombre}: %{{y}}<extra></extra>",
-            )
-        )
-
-    layout = layout_base(
-        tema,
-        "Composición de la solución: empujes vs. pasos simples",
-        _subtitulo(datos),
-    )
-    layout["barmode"] = "stack"
-    layout["bargap"] = BARGAP
-    layout["xaxis"]["type"] = "category"
-    layout["yaxis"]["title"]["text"] = "movimientos"
-    layout["annotations"] = [nota(
-        tema,
-        "El costo total que se optimiza incluye los dos. Los empujes son casi constantes "
-        "entre algoritmos: lo que se dispara en las soluciones malas son los pasos en vano.",
-    )]
-    layout["margin"]["b"] = 120
-    fig.update_layout(**layout)
-    return fig
-
-
-def _posiciones_etiquetas(puntos: list[tuple[float, float]]) -> list[str]:
-    """Ubica cada etiqueta evitando que dos puntos casi encimados se pisen.
-
-    Pasa seguido: BFS y A* expanden casi los mismos nodos para el mismo costo,
-    así que sus etiquetas se superponían hasta volverse ilegibles ("abfsar").
-    El primero de un grupo encimado va arriba, el segundo abajo, el resto a los
-    costados.
-    """
-    alternativas = ["top center", "bottom center", "middle right", "middle left"]
-    ys = [y for _, y in puntos] or [0]
-    rango_y = (max(ys) - min(ys)) or 1
-
-    posiciones: list[str] = []
-    colocados: list[tuple[float, float, int]] = []
-    for x, y in puntos:
-        lx = math.log10(x) if x > 0 else 0.0
-        usadas = {
-            idx for px, py, idx in colocados
-            if abs(lx - px) < 0.06 and abs(y - py) / rango_y < 0.06
-        }
-        idx = next((i for i in range(len(alternativas)) if i not in usadas), 0)
-        posiciones.append(alternativas[idx])
-        colocados.append((lx, y, idx))
-    return posiciones
-
-
-def g_tradeoff_costo_nodos(datos: Datos, tema: dict):
-    """Optimalidad vs. esfuerzo: el gráfico que resume la comparación."""
-    import plotly.graph_objects as go
-
-    niveles = datos.niveles
-    colores = color_nivel(tema, niveles)
-    matriz = datos.matriz()
-    fig = go.Figure()
-
-    for level in niveles:
-        xs, ys, textos, custom = [], [], [], []
-        for al in datos.algoritmos:
-            r = matriz[(level, al)]
-            if not r.resolvio or r.nodes_expanded is None or r.cost is None:
-                continue
-            xs.append(r.nodes_expanded)
-            ys.append(r.cost)
-            textos.append(al.split(":")[0])
-            custom.append([_fmt_seg(r.tiempo_medio), _fmt_int(r.frontier_nodes or 0)])
-
-        if not xs:
-            continue
-
-        fig.add_trace(
-            go.Scatter(
-                name=_nombre_nivel(datos, level),
-                x=xs, y=ys,
-                mode="markers+text",
-                text=textos,
-                textposition=_posiciones_etiquetas(list(zip(xs, ys))),
-                textfont=dict(color=tema["ink_secondary"], size=12),
-                marker=dict(
-                    color=colores[level],
-                    size=13,
-                    line=dict(color=tema["surface"], width=2),
-                ),
-                customdata=custom,
-                hovertemplate=(
-                    "<b>%{text}</b><br>"
-                    "nodos expandidos: %{x:,}<br>"
-                    "costo: %{y} movimientos<br>"
-                    "tiempo: %{customdata[0]}<br>"
-                    "frontera máx.: %{customdata[1]}<extra></extra>"
-                ),
-            )
-        )
-
-    layout = layout_base(
-        tema,
-        "Optimalidad vs. esfuerzo de búsqueda",
-        _subtitulo(datos),
-    )
-    layout["xaxis"]["type"] = "log"
-    layout["xaxis"]["dtick"] = 1
-    layout["xaxis"]["minor"] = dict(showgrid=False)
-    layout["xaxis"]["title"]["text"] = "nodos expandidos — escala log"
-    layout["yaxis"]["title"]["text"] = "costo de la solución (movimientos)"
-    layout["annotations"] = [nota(
-        tema,
-        "Abajo a la izquierda es lo ideal: solución corta con poco trabajo. Cada punto "
-        "está etiquetado con su algoritmo; el color distingue el nivel. Solo aparecen "
-        "las combinaciones que terminaron.",
-    )]
-    fig.update_layout(**layout)
-    return fig
-
-
-def g_tasa_exito(datos: Datos, tema: dict):
-    """Qué combinaciones terminaron y cuáles no. Contexto obligatorio del resto."""
-    import plotly.graph_objects as go
-
-    # Horizontal: son 10 combinaciones con nombres largos ("greedy:manhattan_sum
-    # level_69"); en vertical las etiquetas salen rotadas, se pisan entre sí y se
-    # recortan contra el borde.
-    etiquetas = []
-    for level in datos.niveles:
-        for al in datos.algoritmos:
-            etiquetas.append(f"{al} · {level}")
-
-    fig = go.Figure()
-    presentes = set()
-    for level in datos.niveles:
-        for al in datos.algoritmos:
-            presentes.update(datos.conteo_estados(level, al))
-
-    for estado in ESTADO_ORDEN:
-        if estado not in presentes:
-            continue
-        valores = []
-        for level in datos.niveles:
-            for al in datos.algoritmos:
-                valores.append(datos.conteo_estados(level, al).get(estado, 0))
-        fig.add_trace(
-            go.Bar(
-                name=estado,
-                y=etiquetas,
-                x=valores,
-                orientation="h",
-                marker=dict(
-                    color=ESTADO_COLOR[estado],
-                    line=dict(color=tema["surface"], width=1),
-                ),
-                hovertemplate=f"<b>%{{y}}</b><br>{estado}: %{{x}} corridas<extra></extra>",
-            )
-        )
-
-    layout = layout_base(
-        tema,
-        "Resultado de cada corrida por combinación",
-        _subtitulo(datos),
-    )
-    layout["barmode"] = "stack"
-    layout["bargap"] = 0.35
-    layout["yaxis"]["type"] = "category"
-    layout["yaxis"]["autorange"] = "reversed"   # primera combinación arriba
-    layout["yaxis"]["showgrid"] = False
-    layout["xaxis"]["title"]["text"] = "corridas"
-    layout["xaxis"]["dtick"] = 1
-    layout["annotations"] = [nota(
-        tema,
-        "Este gráfico es el contexto de todos los demás: una combinación en amarillo "
-        "no aparece en los gráficos de tiempo/costo porque nunca terminó, no porque "
-        "haya dado cero.",
-    )]
-    layout["margin"] = dict(l=245, r=40, t=110, b=110)
-    fig.update_layout(**layout)
-    return fig
-
-
-def g_dispersion_tiempos(datos: Datos, tema: dict):
-    """Distribución del tiempo entre repeticiones: para qué sirvió correr N veces."""
-    import plotly.graph_objects as go
-
-    niveles = datos.niveles
-    colores = color_nivel(tema, niveles)
-    fig = go.Figure()
-
-    for level in niveles:
-        xs, ys = [], []
-        for al in datos.algoritmos:
-            for f in datos.filas:
-                if (f.level == level and f.algorithm_label == al
-                        and f.status == "ok" and f.elapsed_seconds is not None):
-                    xs.append(al)
-                    ys.append(f.elapsed_seconds)
-        if not ys:
-            continue
-        fig.add_trace(
-            go.Box(
-                name=_nombre_nivel(datos, level),
-                x=xs, y=ys,
-                marker=dict(color=colores[level], size=7),
-                line=dict(width=2),
-                fillcolor="rgba(0,0,0,0)",
-                boxpoints="all",
-                jitter=0.5,
-                pointpos=0,
-                hovertemplate="<b>%{x}</b><br>%{y:.4f} s<extra></extra>",
-            )
-        )
-
-    layout = layout_base(
-        tema,
-        "Dispersión del tiempo entre repeticiones",
-        _subtitulo(datos),
-    )
-    layout["boxmode"] = "group"
-    layout["xaxis"]["type"] = "category"
-    layout["yaxis"]["type"] = "log"
-    layout["yaxis"]["dtick"] = 1
-    layout["yaxis"]["minor"] = dict(showgrid=False)
-    layout["yaxis"]["title"]["text"] = "segundos — escala log"
-    layout["annotations"] = [nota(
-        tema,
-        "Los algoritmos son deterministas: costo y nodos se repiten idénticos entre "
-        "repeticiones. Lo único que varía es el tiempo, y esto muestra cuánto.",
-    )]
-    fig.update_layout(**layout)
-    return fig
-
-
-def g_tabla_resumen(datos: Datos, tema: dict):
-    """Los números crudos. Es también la 'vista de tabla' que acompaña a los gráficos."""
-    import plotly.graph_objects as go
-
-    matriz = datos.matriz()
-    filas = []
-    for level in datos.niveles:
-        for al in datos.algoritmos:
-            r = matriz[(level, al)]
-            if r.resolvio:
-                filas.append([
-                    level, al,
-                    f"{r.exitosas}/{r.corridas}",
-                    _fmt_int(r.cost),
-                    _fmt_int(r.nodes_expanded),
-                    _fmt_int(r.frontier_nodes),
-                    _fmt_seg(r.tiempo_medio),
-                    f"± {_fmt_seg(r.tiempo_desvio)}" if r.tiempo_desvio else "—",
-                ])
-            else:
-                estados = datos.conteo_estados(level, al)
-                motivo = max(estados, key=estados.get) if estados else "sin datos"
-                filas.append([level, al, f"0/{r.corridas}", "—", "—", "—", motivo, "—"])
-
-    encabezados = ["nivel", "algoritmo", "éxitos", "costo", "nodos exp.",
-                   "frontera máx.", "tiempo medio", "desvío"]
-    columnas = list(zip(*filas)) if filas else [[] for _ in encabezados]
-
-    # Anchos relativos: con el reparto automático la columna de algoritmo
-    # recortaba "greedy:manhattan_sum".
-    anchos = [1.1, 1.7, 0.7, 0.8, 1.1, 1.0, 1.0, 0.9]
-
-    fig = go.Figure(
-        go.Table(
-            columnwidth=anchos,
-            header=dict(
-                values=[f"<b>{h}</b>" for h in encabezados],
-                fill_color=tema["page"],
-                font=dict(color=tema["ink"], size=12),
-                align="left",
-                line=dict(color=tema["grid"], width=1),
-                height=32,
-            ),
-            cells=dict(
-                values=columnas,
-                fill_color=tema["surface"],
-                font=dict(color=tema["ink_secondary"], size=12),
-                align="left",
-                line=dict(color=tema["grid"], width=1),
-                height=28,
-            ),
-        )
-    )
-    layout = layout_base(tema, "Resumen numérico", _subtitulo(datos))
-    layout.pop("xaxis"), layout.pop("yaxis")
-    layout["margin"] = dict(l=20, r=20, t=100, b=60)
-    fig.update_layout(**layout)
-    return fig
-
-
-# Registro: nombre -> (función, descripción para --listar y el index)
 REGISTRO = {
-    "tiempo_por_algoritmo": (g_tiempo_por_algoritmo, "Tiempo medio de resolución por algoritmo y nivel"),
-    "dispersion_tiempos": (g_dispersion_tiempos, "Distribución del tiempo entre repeticiones"),
-    "costo_solucion": (g_costo_solucion, "Largo de la solución encontrada, contra el óptimo"),
-    "nodos_expandidos": (g_nodos_expandidos, "Nodos expandidos: el esfuerzo real de búsqueda"),
-    "frontera_maxima": (g_frontera_maxima, "Pico de la frontera: proxy de consumo de memoria"),
-    "tradeoff_costo_nodos": (g_tradeoff_costo_nodos, "Optimalidad vs. esfuerzo, todo en un plano"),
-    "tasa_exito": (g_tasa_exito, "Qué corridas terminaron y cuáles dieron timeout"),
-    "composicion_movimientos": (g_composicion_movimientos, "Empujes vs. pasos simples de cada solución"),
-    "tabla_resumen": (g_tabla_resumen, "Los números crudos en tabla"),
+    "costo_vs_nivel": (g_costo_vs_nivel, "Costo de la solución: qué tan lejos del óptimo queda cada algoritmo"),
+    "tiempo_vs_nivel": (g_tiempo_vs_nivel, "Tiempo de resolución en cada nivel"),
+    "nodos_vs_nivel": (g_nodos_vs_nivel, "Nodos expandidos: el esfuerzo real de búsqueda"),
+    "frontera_vs_nivel": (g_frontera_vs_nivel, "Pico de la frontera: proxy de consumo de memoria"),
 }
 
 
@@ -666,6 +366,8 @@ def _escribir_index(destino: Path, generados: list[tuple[str, Path]], datos: Dat
     filas_meta = [
         ("archivo", datos.archivo.name),
         ("run_id", meta.get("run_id", "")),
+        ("niveles", ", ".join(f"{lv} ({datos.cajas(lv)} cajas)" for lv in datos.niveles)),
+        ("algoritmos", ", ".join(datos.algoritmos)),
         ("repeticiones", str(datos.repeticiones)),
         ("timeout", f"{meta['timeout_seconds']:.0f} s" if meta.get("timeout_seconds") else "sin límite"),
         ("executor", f"{meta.get('executor', '')} ({meta.get('workers', '')} workers)"),
@@ -710,7 +412,8 @@ def _escribir_index(destino: Path, generados: list[tuple[str, Path]], datos: Dat
   }}
   main {{ max-width: 760px; margin: 0 auto; }}
   h1 {{ font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }}
-  p.sub {{ color: var(--ink2); margin: 0 0 32px; }}
+  p.sub {{ color: var(--ink2); margin: 0 0 24px; }}
+  p.lead {{ color: var(--ink2); margin: 0 0 32px; font-size: 14px; }}
   .aviso {{
     background: rgba(208,59,59,0.08); border-left: 3px solid #d03b3b;
     padding: 12px 16px; border-radius: 4px; color: var(--ink2); font-size: 14px;
@@ -725,7 +428,7 @@ def _escribir_index(destino: Path, generados: list[tuple[str, Path]], datos: Dat
   li span {{ display: block; padding-bottom: 14px; color: var(--ink2); font-size: 13px; }}
   table {{ border-collapse: collapse; width: 100%; font-size: 14px; }}
   th, td {{ text-align: left; padding: 7px 12px 7px 0; border-bottom: 1px solid var(--grid); }}
-  th {{ color: var(--muted); font-weight: 500; width: 150px; }}
+  th {{ color: var(--muted); font-weight: 500; width: 150px; vertical-align: top; }}
   td {{ color: var(--ink2); font-variant-numeric: tabular-nums; }}
   h2 {{ font-size: 15px; color: var(--muted); font-weight: 500;
         text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 8px; }}
@@ -735,6 +438,9 @@ def _escribir_index(destino: Path, generados: list[tuple[str, Path]], datos: Dat
   <main>
     <h1>Análisis de algoritmos de búsqueda</h1>
     <p class="sub">Sokoban · TP1 Ejercicio 2 — {len(generados)} gráficos</p>
+    <p class="lead">Los cuatro comparten estructura: el eje x es el nivel, ordenado por
+    dificultad creciente, y cada color es un algoritmo con su heurística. Dentro de cada
+    nivel se comparan los algoritmos entre sí; de nivel a nivel se ve cómo escala cada uno.</p>
     {aviso}
     <h2>Gráficos</h2>
     <ul>
@@ -824,7 +530,7 @@ def _listar() -> int:
     print("\nGráficos disponibles:")
     for nombre, (_, desc) in REGISTRO.items():
         estado = "on " if GRAFICOS.get(nombre) else "off"
-        print(f"  [{estado}] {nombre:24} {desc}")
+        print(f"  [{estado}] {nombre:20} {desc}")
     return 0
 
 
@@ -870,6 +576,13 @@ def main(argv: list[str]) -> int:
     print(f"salida:  {salida}")
     print(f"tema:    {args.tema or TEMA}\n")
 
+    # La paleta está validada slot por slot hasta 8 series; más algoritmos que
+    # eso caen a gris tenue y dejan de distinguirse entre sí.
+    if len(datos.algoritmos) > len(tema["series"]):
+        print(f"ATENCIÓN: {len(datos.algoritmos)} algoritmos y solo "
+              f"{len(tema['series'])} colores validados: los últimos van todos en gris. "
+              f"Recortá la lista de algoritmos del CSV.", file=sys.stderr)
+
     if datos.invalidas:
         print(f"ATENCIÓN: {len(datos.invalidas)} corrida(s) con solution_valid=False "
               f"(el algoritmo devolvió una solución que el motor no pudo reproducir).",
@@ -896,7 +609,7 @@ def main(argv: list[str]) -> int:
             continue
         destino = _guardar(fig, salida / f"{nombre}.html", plotly_js)
         generados.append((nombre, destino))
-        print(f"  [ok]    {nombre:24} -> {destino.name}")
+        print(f"  [ok]    {nombre:20} -> {destino.name}")
 
     if not generados:
         print("\nNo se generó ningún gráfico.", file=sys.stderr)

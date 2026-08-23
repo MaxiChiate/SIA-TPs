@@ -191,11 +191,24 @@ Sobre el CSV que produce el runner, `graficos_main.py` genera gráficos Plotly
 (un HTML por gráfico + un `index.html`) en `analisis/graficos/` (gitignoreado,
 porque incluye una copia de `plotly.min.js` de ~5 MB).
 
+**Son cuatro gráficos y los cuatro tienen la misma estructura**: el eje x es el
+**nivel** (ordenado por dificultad creciente = cantidad de cajas) y cada color
+es un **algoritmo + heurística**. Es decir, dentro de cada nivel se comparan los
+algoritmos entre sí, y de grupo a grupo se ve cómo escala cada uno al subir la
+dificultad.
+
+| Gráfico | Métrica | Escala |
+|---|---|---|
+| `costo_vs_nivel` | `cost` — largo de la solución | lineal |
+| `tiempo_vs_nivel` | media de `elapsed_seconds` | log |
+| `nodos_vs_nivel` | `nodes_expanded` | log |
+| `frontera_vs_nivel` | `frontier_nodes` (pico) | log |
+
 - `graficos_main.py`: el diccionario `GRAFICOS` (True/False por gráfico) decide
   qué se genera, y `ARCHIVO` de qué CSV; los dos se pueden pisar por CLI
-  (`--solo`, `--todos`, `--archivo`, `--tema`, `--salida`, `--listar`). Cada
-  gráfico es una función registrada en `REGISTRO`: agregar uno es escribir la
-  función y sumar una entrada.
+  (`--solo`, `--todos`, `--archivo`, `--tema`, `--salida`, `--listar`). Los
+  cuatro gráficos son la misma función `_barras` con distinto `valor`/`texto`:
+  cambiar la forma de todos es tocar un solo lugar.
 - `graficos_datos.py`: carga tipada del CSV y agregación por (nivel,
   algoritmo). Solo stdlib, sin pandas.
 - `graficos_estilo.py`: paleta y layout base.
@@ -206,19 +219,38 @@ Decisiones que no son obvias leyendo el código:
 
 - **Nada con `status != "ok"` entra en un promedio.** Un `timeout` tiene
   `wall_seconds ≈ timeout_seconds`, un piso artificial. Las combinaciones que no
-  terminaron se anotan como "no terminó" en el lugar de la barra faltante, para
-  que la ausencia no se lea como cero, y `tasa_exito` las muestra aparte.
-- **El color codifica el nivel, no el algoritmo** (el algoritmo ya está en el eje
-  x). No es estético: la paleta se validó para daltonismo/contraste, y con 5
-  colores el par magenta/naranja queda por debajo del piso de distinción en el
-  scatter (donde cuentan todos los pares, no solo los adyacentes). Con 2 series
-  pasa en todos los tipos de gráfico y en los dos temas.
+  terminaron se anotan como "no terminó · <motivo>" en el lugar exacto donde
+  iría la barra faltante (por eso existe `_offset_barra`), para que la ausencia
+  no se lea como un cero.
+- **El color codifica el algoritmo, no el nivel** (el nivel ya está en el eje x).
+  Es lo que hay que seguir de grupo a grupo. Los 8 slots de `series` están
+  validados para daltonismo y contraste **en el orden en que están**: los pares
+  que valen son los *adyacentes*, que en barras agrupadas son justamente los que
+  quedan pegados. Con más de 8 algoritmos los extras van a gris y el runner
+  avisa por stderr — no se cicla la paleta, porque repetir un color es peor que
+  no distinguir.
+- **La etiqueta de valor sobre cada barra no es decorativa**: es el "relief" de
+  contraste obligatorio de los tres slots que en modo claro quedan por debajo de
+  3:1 (aqua, amarillo, magenta), y el único lugar donde se lee el número exacto
+  sin pasar el mouse. Va rotada -90° porque con 7 series la barra es angosta.
+- **`costo_vs_nivel` es el único lineal.** El costo importa como proporción real
+  (una solución 10x más larga es 10x peor), no como orden de magnitud. Las otras
+  tres métricas abarcan 4-6 órdenes de magnitud y en lineal el nivel más caro
+  aplastaría a todos los demás contra el eje.
+- **El rango del eje y se calcula a mano** (`_rango_con_aire`): el autorange de
+  Plotly ajusta al dato, no al texto rotado que va *encima* del dato, así que
+  sin eso la barra más alta se come su propio número contra el techo.
+- **La nota al pie se desplaza en píxeles, no en fracción de `paper`**
+  (`DESPLAZAMIENTO_NOTA`): `paper` es relativo al alto del área de ploteo, que
+  cambia con el tamaño de la ventana, así que una fracción fija la deja pegada
+  al eje en una ventana chica y fuera del canvas en una grande.
 - **Las métricas no temporales se toman de la primera corrida exitosa**, porque
   los algoritmos son deterministas. Si variaran entre repeticiones sería un bug,
   y `graficos_main.py` lo avisa por stderr (`métricas no deterministas`).
 - `nota()` corta las líneas con `textwrap`: la propiedad `width` de las
   anotaciones de Plotly **recorta** el texto que no entra, no lo envuelve.
-- Los gráficos se revisaron renderizados (Chrome headless), no solo generados:
-  así aparecieron el título de eje duplicado (los dos ejes compartían el mismo
-  sub-dict `title` por copia superficial), las etiquetas encimadas de BFS/A* en
-  el scatter y las etiquetas recortadas de la tabla.
+- Los gráficos se revisan renderizados (Chrome headless), no solo generados: así
+  aparecieron la nota al pie clipeada fuera del canvas y las etiquetas de las
+  barras más altas cortadas contra el techo del área de ploteo. Antes, con la
+  orientación vieja, así habían aparecido el título de eje duplicado (los dos
+  ejes compartían el mismo sub-dict `title` por copia superficial).

@@ -6,14 +6,29 @@ luminosidad, en modo claro y oscuro. No cambiar un hex suelto sin revalidar.
 
 Reglas que sostiene este módulo:
 
-- **El color identifica al nivel, no al algoritmo.** El algoritmo ya está en el
-  eje x. Con solo 2 series de color la paleta pasa la validación en todos los
-  tipos de gráfico, incluido el scatter (donde con 5 colores el par
-  magenta/naranja queda por debajo del piso de distinción).
-- **Los estados (`ok`/`timeout`/...) usan la paleta de estado**, reservada, que
-  nunca se reutiliza como color de serie.
-- **Nada depende solo del color**: siempre hay leyenda, etiquetas de valor en
-  las barras y una tabla resumen.
+- **El color identifica al algoritmo (+ heurística), no al nivel.** El nivel ya
+  está en el eje x: cada gráfico compara los algoritmos *dentro* de un nivel y
+  después mira cómo se mueve esa comparación al subir la dificultad. El color
+  tiene que ser la serie que se sigue de grupo a grupo, y esa es el algoritmo.
+- **Los slots se asignan en orden fijo y no ciclan.** El orden de `SERIES` es el
+  mecanismo de seguridad CVD, no decoración: los pares *adyacentes* (que en
+  barras agrupadas son los que quedan pegados) están validados en ese orden.
+  Con más de 8 algoritmos los extras caen a gris tenue en vez de inventar hues.
+- **Nada depende solo del color**: siempre hay leyenda y etiqueta de valor en
+  cada barra. Además de identidad, esa etiqueta es el "relief" obligatorio de
+  los tres slots que en modo claro quedan por debajo de 3:1 de contraste
+  (aqua, amarillo y magenta).
+
+Validado con el script del skill de dataviz, sobre los 7 slots que usa la
+corrida actual (bfs, dfs, iddfs, greedy x2, astar x2):
+
+    node scripts/validate_palette.js \\
+        "#2a78d6,#eb6834,#1baf7a,#eda100,#e87ba4,#008300,#4a3aa7" --mode light
+    node scripts/validate_palette.js \\
+        "#3987e5,#d95926,#199e70,#c98500,#d55181,#008300,#9085e9" --mode dark
+
+    light: peor par adyacente CVD ΔE 9.1 (protan) · visión normal ΔE 19.6
+    dark:  peor par adyacente CVD ΔE 8.4 (protan) · visión normal ΔE 19.3
 """
 
 from __future__ import annotations
@@ -30,10 +45,12 @@ TEMAS = {
         "muted": "#898781",
         "grid": "#e1e0d9",
         "axis": "#c3c2b7",
-        # color por nivel (slots categóricos 1 y 2)
-        "series": ["#2a78d6", "#eb6834"],
-        # par para el desglose de movimientos (empujes / pasos simples)
-        "moves": ["#4a3aa7", "#1baf7a"],
+        # color por algoritmo: azul, naranja, aqua, amarillo, magenta, verde,
+        # violeta, rojo. El orden importa (ver docstring).
+        "series": [
+            "#2a78d6", "#eb6834", "#1baf7a", "#eda100",
+            "#e87ba4", "#008300", "#4a3aa7", "#e34948",
+        ],
     },
     "dark": {
         "surface": "#1a1a19",
@@ -43,34 +60,31 @@ TEMAS = {
         "muted": "#898781",
         "grid": "#2c2c2a",
         "axis": "#383835",
-        "series": ["#3987e5", "#d95926"],
-        "moves": ["#9085e9", "#199e70"],
+        # los mismos 8 hues, re-escalonados para la superficie oscura
+        "series": [
+            "#3987e5", "#d95926", "#199e70", "#c98500",
+            "#d55181", "#008300", "#9085e9", "#e66767",
+        ],
     },
 }
-
-# --- paleta de estado (fija, no se tematiza) ---------------------------------
-ESTADO_COLOR = {
-    "ok": "#0ca30c",           # good
-    "no_solution": "#ec835a",  # serious
-    "timeout": "#fab219",      # warning
-    "error": "#d03b3b",        # critical
-}
-
-ESTADO_ORDEN = ["ok", "no_solution", "timeout", "error"]
 
 FUENTE = 'system-ui, -apple-system, "Segoe UI", sans-serif'
 
 
-def color_nivel(tema: dict, levels: list[str]) -> dict[str, str]:
-    """Asigna un color fijo a cada nivel, en orden y sin ciclar.
+def color_algoritmo(tema: dict, algoritmos: list[str]) -> dict[str, str]:
+    """Asigna un color fijo a cada algoritmo, en orden y sin ciclar.
 
-    Si algún día hay más de 2 niveles, se cae al gris tenue en vez de inventar
-    hues nuevos (la paleta está validada para 2 series en todos los gráficos).
+    `algoritmos` llega en el orden canónico de `Datos.algoritmos` (primero los
+    no informados, después los informados), así que un mismo algoritmo se queda
+    con el mismo color mientras no cambie la lista de la corrida.
+
+    Pasados los 8 slots se cae al gris tenue: ciclar la paleta pintaría dos
+    algoritmos distintos del mismo color, que es peor que no distinguirlos.
     """
     paleta = tema["series"]
     return {
-        level: paleta[i] if i < len(paleta) else tema["muted"]
-        for i, level in enumerate(levels)
+        algoritmo: paleta[i] if i < len(paleta) else tema["muted"]
+        for i, algoritmo in enumerate(algoritmos)
     }
 
 
@@ -118,17 +132,25 @@ def layout_base(tema: dict, titulo: str, subtitulo: str = "") -> dict:
             x=1,
             font=dict(color=tema["ink_secondary"], size=12),
             bgcolor="rgba(0,0,0,0)",
-            # por defecto plotly invierte la leyenda en las barras apiladas,
-            # y queda al revés del orden en que se dibujan las series
             traceorder="normal",
         ),
-        margin=dict(l=70, r=40, t=110, b=110),
+        # b tiene que alcanzar para: etiquetas de nivel en 2 líneas + título del
+        # eje x + la nota al pie (ver DESPLAZAMIENTO_NOTA). Si queda corta, la
+        # nota se dibuja fuera del canvas y desaparece sin avisar.
+        margin=dict(l=70, r=40, t=120, b=185),
         hoverlabel=dict(font=dict(family=FUENTE, size=12)),
         barcornerradius=4,
     )
 
 
 ANCHO_NOTA = 115   # caracteres por línea en la nota al pie
+
+# Píxeles por debajo del eje x. Va en píxeles y no en fracción de `paper`
+# porque `paper` es relativo al **alto del área de ploteo**, que cambia con el
+# tamaño de la ventana: con una fracción fija la nota queda pegada al eje en una
+# ventana chica y se sale del canvas en una grande. Estos ~105px son las dos
+# líneas de la etiqueta de nivel más el título del eje x.
+DESPLAZAMIENTO_NOTA = -105
 
 
 def nota(tema: dict, texto: str, ancho: int = ANCHO_NOTA) -> dict:
@@ -142,7 +164,8 @@ def nota(tema: dict, texto: str, ancho: int = ANCHO_NOTA) -> dict:
     return dict(
         text="<br>".join(lineas),
         xref="paper", yref="paper",
-        x=0, y=-0.20,
+        x=0, y=0,
+        yshift=DESPLAZAMIENTO_NOTA,
         showarrow=False,
         xanchor="left",
         yanchor="top",

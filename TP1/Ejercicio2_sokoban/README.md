@@ -174,8 +174,12 @@ python analisis/graficos_main.py --listar   # qué CSVs y qué gráficos hay
 python analisis/graficos_main.py            # genera los activos
 ```
 
-Qué gráficos se generan se elige con el diccionario `GRAFICOS` de ese archivo
-(True/False), o con `--solo`/`--todos`.
+Son cuatro gráficos —costo, tiempo, nodos expandidos y frontera máxima— y los
+cuatro tienen la misma estructura: el eje x es el **nivel** (ordenado por
+dificultad creciente) y cada color es un **algoritmo + heurística**. Dentro de
+cada nivel se comparan los algoritmos entre sí; de nivel a nivel se ve cómo
+escala cada uno. Cuál se genera se elige con el diccionario `GRAFICOS` de ese
+archivo (True/False), o con `--solo`/`--todos`.
 
 Dos cosas a tener en cuenta antes de correrlo:
 
