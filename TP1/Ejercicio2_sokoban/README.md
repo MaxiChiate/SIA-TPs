@@ -20,11 +20,22 @@ sokoban/
     registry.py        ALGORITHMS/HEURISTICS por nombre, build_agent(algorithm, heuristic)
     astar.py            AStarAgent(heuristic=...)
     bfs.py/dfs.py/greedy.py/iddfs.py  BFS/DFS/Greedy/IDDFS
-    heuristics.py       manhattan_sum (admisible) + registro HEURISTICS
+    heuristics.py       manhattan_sum/push_distance_sum + registro HEURISTICS
   levels/
-    level_01_ufo.txt              nivel de referencia
+    level_01_ufo.txt              nivel de referencia (2 cajas)
     level_01_ufo.solution.txt     solución de 86 movimientos (golden)
-    level_69.txt                  nivel de 6 cajas (más pesado)
+    level_02_soko11.txt           2 cajas, con solución demo (golden)
+    level_02_soko11.solution.txt
+    level_03_soko12.txt           4 cajas, con solución demo (golden)
+    level_03_soko12.solution.txt
+    microban_08.txt               2 cajas (incluido en analisis/config.json)
+    aenigma_03.txt                4 cajas (incluido en analisis/config.json)
+    level_04_soko03.txt           4 cajas
+    level_05_soko15.txt           5 cajas
+    level_06_soko13.txt           6 cajas
+    level_07_soko10.txt           6 cajas, no lo resuelven greedy/dfs/astar en <60s
+    level_08_soko04.txt           8 cajas
+    level_69.txt                  6 cajas (más pesado)
   visualizer/
     sokoban_visualizer.html       template del visor, autocontenido
     last_run_<level>_<algo>_<heuristic>.html   generado por run.py (gitignored)
@@ -33,6 +44,7 @@ sokoban/
     test_config.py                 config.json -> RunConfig -> Agent
     test_visualizer_export.py      render_visualizer inyecta el run-data
     test_replay_known_solution.py  golden test end-to-end
+    test_more_levels.py            golden test de level_02/03 + parseo de level_04..08
 analisis/               runner paralelo de experimentos -> CSV + gráficos Plotly
                         (ver analisis/README.md)
 ```
@@ -64,10 +76,11 @@ del visualizador que generó (ver [El visualizador](#el-visualizador)).
 - `algorithm`: uno de `sokoban.search.ALGORITHMS`. Implementados:
   `"bfs"`, `"dfs"`, `"iddfs"`, `"greedy"`, `"astar"`, y `"hardcoded"`
   (Fase 0, `HardcodedAgent`, solo conoce `level_01_ufo`).
-- `heuristic`: uno de `sokoban.search.HEURISTICS` (hoy solo `"manhattan_sum"`).
-  Solo aplica a algoritmos en `sokoban.search.INFORMED_ALGORITHMS`
-  (`astar`/`greedy`); en el resto (incluido `hardcoded`) se ignora sin
-  validar, y si se omite A*/Greedy usan `manhattan_sum` por default.
+- `heuristic`: uno de `sokoban.search.HEURISTICS` (`"manhattan_sum"` o
+  `"push_distance_sum"`). Solo aplica a algoritmos en
+  `sokoban.search.INFORMED_ALGORITHMS` (`astar`/`greedy`); en el resto
+  (incluido `hardcoded`) se ignora sin validar, y si se omite A*/Greedy usan
+  `manhattan_sum` por default.
 - `visualize`: bool, default `true`. Si es `false`, `run.py` no genera el HTML.
 - `visualizer_output`: ruta de salida del HTML generado. Default:
   `sokoban/visualizer/last_run_<nivel>_<algoritmo>_<heurística>.html` (ej.
