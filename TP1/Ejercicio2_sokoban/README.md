@@ -183,8 +183,11 @@ archivo (True/False), o con `--solo`/`--todos`.
 
 Dos cosas a tener en cuenta antes de correrlo:
 
-- **El timeout no es opcional.** `iddfs` no termina en `level_01_ufo`, y
-  `greedy`/`astar` no terminan en `level_69`.
+- **El timeout no es opcional.** Con 60s de margen, `aenigma_03` (4 cajas) es
+  el que más combinaciones deja afuera —solo `greedy` la resuelve—, y `greedy`
+  tampoco termina en `level_69` (6 cajas). El resto sí resuelve, pero al
+  límite: `iddfs` en `level_01_ufo` y `bfs`/`dfs`/`astar` en `level_69` tardan
+  entre 20 y 45s.
 - **Usá `executor: process` (el default) para medir tiempos.** Los algoritmos
   son Python puro y CPU-bound: con threads el GIL los serializa y los tiempos
   se inflan 2-4x. El detalle está en el README del runner.

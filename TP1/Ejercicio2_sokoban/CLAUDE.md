@@ -168,9 +168,14 @@ la consigna está `analisis/`, que corre cada (nivel x algoritmo) N veces y deja
 
 Tres cosas que condicionan el diseño, verificadas en esta máquina:
 
-- **No todas las combinaciones terminan**: `iddfs` no resuelve `level_01_ufo`,
-  y `greedy`/`astar` no resuelven `level_69` (6 cajas). Por eso
-  `timeout_seconds` es prácticamente obligatorio.
+- **No todas las combinaciones terminan**: con `timeout_seconds: 60`,
+  `aenigma_03` (4 cajas) es el nivel que más rechaza — `bfs`, `dfs`, `iddfs` y
+  las dos `astar` no lo resuelven ahí, solo `greedy` sí. En `level_69`
+  (6 cajas) el que no termina es `greedy`; `bfs`/`dfs`/`astar` sí lo resuelven,
+  pero tardan 20-40s. `iddfs` sobre `level_01_ufo` también resuelve, pero al
+  límite (~45s). Por eso `timeout_seconds` es prácticamente obligatorio: varias
+  de estas combinaciones dependen de tener un timeout generoso (≥60s) para no
+  quedar afuera.
 - **Los threads no paralelizan acá**: los algoritmos son Python puro y
   CPU-bound, así que el GIL los serializa y los tiempos concurrentes se inflan
   2-4x (bfs 0.091s -> 0.292s con 4 workers, al 94% de CPU = un solo core).

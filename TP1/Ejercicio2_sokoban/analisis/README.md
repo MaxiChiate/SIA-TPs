@@ -77,12 +77,18 @@ resto se ignora y sale vacía en el CSV, para no sugerir que influyó.
 
 ## Timeouts, memoria y algoritmos que no terminan
 
-No todas las combinaciones terminan. Verificado en esta máquina:
+No todas las combinaciones terminan. Verificado en esta máquina con
+`timeout_seconds: 60`:
 
-- `iddfs` sobre `level_01_ufo`: no termina (>30 s).
-- `greedy` y `astar` sobre `level_69` (6 cajas): no terminan en 25 s.
-- `bfs` sobre `level_69` resuelve en ~16 s, pero expandiendo **4.044.079 nodos**,
-  con una frontera máxima de ~107k. Eso es varios GB de RAM en un solo worker.
+- `aenigma_03` (4 cajas) es el nivel que más rechaza: `bfs`, `dfs`, `iddfs` y
+  las dos `astar` no la resuelven en 60s. Solo `greedy` (con cualquier
+  heurística) la resuelve, y lo hace casi instantáneo.
+- `greedy` tampoco resuelve `level_69` (6 cajas), con ninguna heurística.
+- El resto sí resuelve `level_69`, pero al límite: `bfs` ~31-33s, `dfs` ~18-20s,
+  `astar` ~37-41s (ambas heurísticas). `bfs` expande **~4.044.079 nodos** ahí,
+  con una frontera máxima de ~107k — varios GB de RAM en un solo worker.
+- `iddfs` sobre `level_01_ufo` también resuelve, pero tarda ~45s: con un
+  timeout menor a ese quedaría afuera igual que `aenigma_03`.
 
 De ahí las dos precauciones del config:
 
