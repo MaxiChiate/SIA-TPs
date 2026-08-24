@@ -1,8 +1,9 @@
 """Paleta y layout base de los gráficos.
 
 Los colores no son arbitrarios: salieron de validar la paleta contra los
-criterios de daltonismo (CVD ΔE), contraste sobre la superficie y banda de
-luminosidad, en modo claro y oscuro. No cambiar un hex suelto sin revalidar.
+criterios de daltonismo (CVD ΔE) y contraste sobre la superficie. No cambiar
+un hex suelto sin revalidar. Solo hay tema claro: el oscuro se sacó porque el
+texto quedaba ilegible.
 
 Reglas que sostiene este módulo:
 
@@ -17,18 +18,16 @@ Reglas que sostiene este módulo:
 - **Nada depende solo del color**: siempre hay leyenda y etiqueta de valor en
   cada barra. Además de identidad, esa etiqueta es el "relief" obligatorio de
   los tres slots que en modo claro quedan por debajo de 3:1 de contraste
-  (aqua, amarillo y magenta).
+  (aqua, amarillo y magenta). Los ejes, la leyenda y los títulos de eje van en
+  negrita para que se lean sin entrecerrar los ojos.
 
 Validado con el script del skill de dataviz, sobre los 7 slots que usa la
 corrida actual (bfs, dfs, iddfs, greedy x2, astar x2):
 
     node scripts/validate_palette.js \\
         "#2a78d6,#eb6834,#1baf7a,#eda100,#e87ba4,#008300,#4a3aa7" --mode light
-    node scripts/validate_palette.js \\
-        "#3987e5,#d95926,#199e70,#c98500,#d55181,#008300,#9085e9" --mode dark
 
     light: peor par adyacente CVD ΔE 9.1 (protan) · visión normal ΔE 19.6
-    dark:  peor par adyacente CVD ΔE 8.4 (protan) · visión normal ΔE 19.3
 """
 
 from __future__ import annotations
@@ -41,29 +40,15 @@ TEMAS = {
         "surface": "#fcfcfb",
         "page": "#f9f9f7",
         "ink": "#0b0b0b",
-        "ink_secondary": "#52514e",
-        "muted": "#898781",
+        "ink_secondary": "#1c1b19",
+        "muted": "#47453f",
         "grid": "#e1e0d9",
-        "axis": "#c3c2b7",
+        "axis": "#726f66",
         # color por algoritmo: azul, naranja, aqua, amarillo, magenta, verde,
         # violeta, rojo. El orden importa (ver docstring).
         "series": [
             "#2a78d6", "#eb6834", "#1baf7a", "#eda100",
             "#e87ba4", "#008300", "#4a3aa7", "#e34948",
-        ],
-    },
-    "dark": {
-        "surface": "#1a1a19",
-        "page": "#0d0d0d",
-        "ink": "#ffffff",
-        "ink_secondary": "#c3c2b7",
-        "muted": "#898781",
-        "grid": "#2c2c2a",
-        "axis": "#383835",
-        # los mismos 8 hues, re-escalonados para la superficie oscura
-        "series": [
-            "#3987e5", "#d95926", "#199e70", "#c98500",
-            "#d55181", "#008300", "#9085e9", "#e66767",
         ],
     },
 }
@@ -105,8 +90,8 @@ def layout_base(tema: dict, titulo: str, subtitulo: str = "") -> dict:
             zeroline=False,
             linecolor=tema["axis"],
             linewidth=1,
-            tickfont=dict(color=tema["muted"], size=12),
-            title=dict(text="", font=dict(color=tema["ink_secondary"], size=12)),
+            tickfont=dict(color=tema["muted"], size=12, weight="bold"),
+            title=dict(text="", font=dict(color=tema["ink_secondary"], size=12, weight="bold")),
         )
 
     return dict(
@@ -130,7 +115,7 @@ def layout_base(tema: dict, titulo: str, subtitulo: str = "") -> dict:
             y=1.02,
             xanchor="right",
             x=1,
-            font=dict(color=tema["ink_secondary"], size=12),
+            font=dict(color=tema["ink_secondary"], size=12, weight="bold"),
             bgcolor="rgba(0,0,0,0)",
             traceorder="normal",
         ),

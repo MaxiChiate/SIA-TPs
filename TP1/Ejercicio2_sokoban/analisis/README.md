@@ -141,7 +141,7 @@ python3 analisis/graficos_main.py                    # último CSV, gráficos ac
 python3 analisis/graficos_main.py --listar           # qué CSVs y qué gráficos hay
 python3 analisis/graficos_main.py --archivo analisis/resultados/demo_full.csv
 python3 analisis/graficos_main.py --solo costo_vs_nivel,tiempo_vs_nivel
-python3 analisis/graficos_main.py --tema dark --abrir
+python3 analisis/graficos_main.py --abrir
 ```
 
 **Qué se genera** se elige con el diccionario `GRAFICOS` arriba de

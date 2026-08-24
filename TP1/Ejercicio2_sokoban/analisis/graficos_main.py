@@ -63,13 +63,13 @@ GRAFICOS: dict[str, bool] = {
     "tiempo_vs_nivel":    True,   # cuánto tarda
     "nodos_vs_nivel":     True,   # esfuerzo de búsqueda
     "frontera_vs_nivel":  True,   # memoria: pico de la frontera
-    "costo_promedio_algoritmo":    True,  # costo pooleado sobre todos los niveles
+    "costo_dispersion_algoritmo":   True,  # dispersión de costo pooleada
     "tiempo_dispersion_algoritmo": True,  # dispersión de tiempo pooleada
     "nodos_dispersion_algoritmo":  True,  # dispersión de nodos pooleada
     "frontera_dispersion_algoritmo": True,  # dispersión de frontera pooleada
 }
 
-# "light" o "dark". Las dos paletas están validadas por separado.
+# Solo "light": el tema oscuro se sacó, el texto quedaba ilegible.
 TEMA = "light"
 
 # Cómo se incluye plotly.js en los HTML:
@@ -370,77 +370,6 @@ def _anotacion_no_termino(datos: Datos, tema: dict, al: str, indice: int) -> dic
     )
 
 
-def g_costo_promedio_algoritmo(datos: Datos, tema: dict):
-    """Costo promedio ± desvío, pooleado sobre nivel × repetición."""
-    import plotly.graph_objects as go
-
-    algoritmos, colores, resumenes = _contexto_pooleado(datos, tema)
-
-    xs, ys, errores, textos, hovers, colores_barra = [], [], [], [], [], []
-    anotaciones = []
-    techos: list[float] = []
-
-    for i, al in enumerate(algoritmos):
-        r = resumenes[al]
-        media = r.costo_medio
-        xs.append(al)
-        if media is None:
-            ys.append(None)
-            errores.append(0)
-            textos.append("")
-            hovers.append(
-                f"<b>{al}</b><br>corridas exitosas: {r.exitosas}/{r.corridas}"
-            )
-            colores_barra.append(colores[al])
-            anotaciones.append(_anotacion_no_termino(datos, tema, al, i))
-            continue
-
-        desvio = r.costo_desvio
-        ys.append(media)
-        errores.append(desvio)
-        textos.append(f"{media:.1f}")
-        hovers.append(
-            f"<b>{al}</b><br>costo promedio: {media:.1f} (±{desvio:.1f})<br>"
-            f"corridas exitosas: {r.exitosas}/{r.corridas}"
-        )
-        colores_barra.append(colores[al])
-        techos.append(media + desvio)
-
-    fig = go.Figure(
-        go.Bar(
-            x=xs, y=ys,
-            error_y=dict(type="data", array=errores, visible=True, color=tema["muted"]),
-            text=textos,
-            textposition="outside",
-            textfont=dict(color=tema["ink_secondary"], size=10),
-            cliponaxis=False,
-            marker=dict(color=colores_barra, line=dict(color=tema["surface"], width=1)),
-            hovertext=hovers,
-            hovertemplate="%{hovertext}<extra></extra>",
-        )
-    )
-
-    layout = layout_base(tema, "Costo promedio por algoritmo", _subtitulo(datos))
-    layout["showlegend"] = False
-    layout["xaxis"]["type"] = "category"
-    layout["xaxis"]["categoryarray"] = algoritmos
-    layout["xaxis"]["categoryorder"] = "array"
-    layout["xaxis"]["title"]["text"] = "algoritmo + heurística"
-    layout["yaxis"]["title"]["text"] = "movimientos (promedio ± desvío)"
-    rango = _rango_con_aire(techos, log=False)
-    if rango:
-        layout["yaxis"]["range"] = rango
-    anotaciones.append(nota(
-        tema,
-        "Promedio pooleado sobre todas las corridas exitosas (nivel × repetición); mezcla "
-        "niveles de distinta dificultad, así que el desvío puede ser grande en algoritmos con "
-        "comportamiento errático (ej. DFS) o con pocas corridas exitosas.",
-    ))
-    layout["annotations"] = anotaciones
-    fig.update_layout(**layout)
-    return fig
-
-
 def _dispersion_pooleada(
     datos: Datos, tema: dict, *, titulo: str, y_titulo: str, campo: str, pie: str,
 ):
@@ -481,7 +410,7 @@ def _dispersion_pooleada(
 
     layout = layout_base(tema, titulo, _subtitulo(datos))
     layout["showlegend"] = False
-    layout["boxmode"] = "group"
+    layout["boxmode"] = "overlay"
     layout["xaxis"]["type"] = "category"
     layout["xaxis"]["categoryarray"] = algoritmos
     layout["xaxis"]["categoryorder"] = "array"
@@ -503,6 +432,17 @@ _PIE_DISPERSION = (
     "Cada punto es una corrida exitosa (nivel × repetición) pooleada. Se usa boxplot en vez de "
     "media ± desvío porque los valores abarcan varios órdenes de magnitud entre niveles."
 )
+
+
+def g_costo_dispersion_algoritmo(datos: Datos, tema: dict):
+    """Dispersión de costo (movimientos), pooleada sobre todos los niveles."""
+    return _dispersion_pooleada(
+        datos, tema,
+        titulo="Dispersión de costo por algoritmo",
+        y_titulo="movimientos",
+        campo="costs",
+        pie=_PIE_DISPERSION,
+    )
 
 
 def g_tiempo_dispersion_algoritmo(datos: Datos, tema: dict):
@@ -543,7 +483,7 @@ REGISTRO = {
     "tiempo_vs_nivel": (g_tiempo_vs_nivel, "Tiempo de resolución en cada nivel", "nivel"),
     "nodos_vs_nivel": (g_nodos_vs_nivel, "Nodos expandidos: el esfuerzo real de búsqueda", "nivel"),
     "frontera_vs_nivel": (g_frontera_vs_nivel, "Pico de la frontera: proxy de consumo de memoria", "nivel"),
-    "costo_promedio_algoritmo": (g_costo_promedio_algoritmo, "Costo promedio ± desvío, pooleado sobre todos los niveles", "algoritmo"),
+    "costo_dispersion_algoritmo": (g_costo_dispersion_algoritmo, "Dispersión de costo, pooleada sobre todos los niveles", "algoritmo"),
     "tiempo_dispersion_algoritmo": (g_tiempo_dispersion_algoritmo, "Dispersión de tiempo, pooleada sobre todos los niveles", "algoritmo"),
     "nodos_dispersion_algoritmo": (g_nodos_dispersion_algoritmo, "Dispersión de nodos expandidos, pooleada sobre todos los niveles", "algoritmo"),
     "frontera_dispersion_algoritmo": (g_frontera_dispersion_algoritmo, "Dispersión de frontera máxima, pooleada sobre todos los niveles", "algoritmo"),
@@ -692,7 +632,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     )
     p.add_argument("--archivo", help="CSV a graficar (default: el más reciente de analisis/resultados)")
     p.add_argument("--salida", help=f"directorio de salida (default: {SALIDA})")
-    p.add_argument("--tema", choices=("light", "dark"), help=f"paleta (default: {TEMA})")
+    p.add_argument("--tema", choices=("light",), help=f"paleta (default: {TEMA})")
     p.add_argument("--solo", help="lista separada por comas: genera solo esos gráficos")
     p.add_argument("--todos", action="store_true", help="genera todos, ignorando GRAFICOS")
     p.add_argument("--listar", action="store_true", help="muestra CSVs y gráficos disponibles, y sale")
