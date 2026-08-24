@@ -63,6 +63,10 @@ GRAFICOS: dict[str, bool] = {
     "tiempo_vs_nivel":    True,   # cuánto tarda
     "nodos_vs_nivel":     True,   # esfuerzo de búsqueda
     "frontera_vs_nivel":  True,   # memoria: pico de la frontera
+    "costo_promedio_algoritmo":    True,  # costo pooleado sobre todos los niveles
+    "tiempo_dispersion_algoritmo": True,  # dispersión de tiempo pooleada
+    "nodos_dispersion_algoritmo":  True,  # dispersión de nodos pooleada
+    "frontera_dispersion_algoritmo": True,  # dispersión de frontera pooleada
 }
 
 # "light" o "dark". Las dos paletas están validadas por separado.
@@ -336,12 +340,220 @@ def g_frontera_vs_nivel(datos: Datos, tema: dict):
     )
 
 
+# ============================================================================
+# Cuatro gráficos más: pooleados sobre TODOS los niveles y repeticiones, un
+# bar/box por algoritmo+heurística (sin agrupar por nivel).
+# ============================================================================
+
+def _contexto_pooleado(datos: Datos, tema: dict):
+    """Algoritmos en orden canónico, su color, y su resumen pooleado."""
+    algoritmos = datos.algoritmos
+    colores = color_algoritmo(tema, algoritmos)
+    resumenes = {al: datos.resumen_pooleado(al) for al in algoritmos}
+    return algoritmos, colores, resumenes
+
+
+def _anotacion_no_termino(datos: Datos, tema: dict, al: str, indice: int) -> dict:
+    """Misma anotación 'no terminó · <motivo>' que usa `_barras`, pero acá cada
+    algoritmo es su propia categoría de x (sin offset fraccionario de grupo)."""
+    estados = datos.conteo_estados_pooleado(al)
+    motivo = max(estados, key=estados.get) if estados else "sin datos"
+    return dict(
+        x=indice, y=0.02,
+        xref="x", yref="paper",
+        text=f"no terminó · {motivo}",
+        showarrow=False,
+        textangle=-90,
+        font=dict(color=tema["muted"], size=9),
+        xanchor="center",
+        yanchor="bottom",
+    )
+
+
+def g_costo_promedio_algoritmo(datos: Datos, tema: dict):
+    """Costo promedio ± desvío, pooleado sobre nivel × repetición."""
+    import plotly.graph_objects as go
+
+    algoritmos, colores, resumenes = _contexto_pooleado(datos, tema)
+
+    xs, ys, errores, textos, hovers, colores_barra = [], [], [], [], [], []
+    anotaciones = []
+    techos: list[float] = []
+
+    for i, al in enumerate(algoritmos):
+        r = resumenes[al]
+        media = r.costo_medio
+        xs.append(al)
+        if media is None:
+            ys.append(None)
+            errores.append(0)
+            textos.append("")
+            hovers.append(
+                f"<b>{al}</b><br>corridas exitosas: {r.exitosas}/{r.corridas}"
+            )
+            colores_barra.append(colores[al])
+            anotaciones.append(_anotacion_no_termino(datos, tema, al, i))
+            continue
+
+        desvio = r.costo_desvio
+        ys.append(media)
+        errores.append(desvio)
+        textos.append(f"{media:.1f}")
+        hovers.append(
+            f"<b>{al}</b><br>costo promedio: {media:.1f} (±{desvio:.1f})<br>"
+            f"corridas exitosas: {r.exitosas}/{r.corridas}"
+        )
+        colores_barra.append(colores[al])
+        techos.append(media + desvio)
+
+    fig = go.Figure(
+        go.Bar(
+            x=xs, y=ys,
+            error_y=dict(type="data", array=errores, visible=True, color=tema["muted"]),
+            text=textos,
+            textposition="outside",
+            textfont=dict(color=tema["ink_secondary"], size=10),
+            cliponaxis=False,
+            marker=dict(color=colores_barra, line=dict(color=tema["surface"], width=1)),
+            hovertext=hovers,
+            hovertemplate="%{hovertext}<extra></extra>",
+        )
+    )
+
+    layout = layout_base(tema, "Costo promedio por algoritmo", _subtitulo(datos))
+    layout["showlegend"] = False
+    layout["xaxis"]["type"] = "category"
+    layout["xaxis"]["categoryarray"] = algoritmos
+    layout["xaxis"]["categoryorder"] = "array"
+    layout["xaxis"]["title"]["text"] = "algoritmo + heurística"
+    layout["yaxis"]["title"]["text"] = "movimientos (promedio ± desvío)"
+    rango = _rango_con_aire(techos, log=False)
+    if rango:
+        layout["yaxis"]["range"] = rango
+    anotaciones.append(nota(
+        tema,
+        "Promedio pooleado sobre todas las corridas exitosas (nivel × repetición); mezcla "
+        "niveles de distinta dificultad, así que el desvío puede ser grande en algoritmos con "
+        "comportamiento errático (ej. DFS) o con pocas corridas exitosas.",
+    ))
+    layout["annotations"] = anotaciones
+    fig.update_layout(**layout)
+    return fig
+
+
+def _dispersion_pooleada(
+    datos: Datos, tema: dict, *, titulo: str, y_titulo: str, campo: str, pie: str,
+):
+    """Boxplot pooleado: un box por algoritmo, valores crudos de `ResumenPooleado.<campo>`."""
+    import plotly.graph_objects as go
+
+    algoritmos, colores, resumenes = _contexto_pooleado(datos, tema)
+
+    fig = go.Figure()
+    anotaciones = []
+    todos_los_valores: list[float] = []
+
+    for i, al in enumerate(algoritmos):
+        r = resumenes[al]
+        valores = getattr(r, campo)
+        if not valores:
+            anotaciones.append(_anotacion_no_termino(datos, tema, al, i))
+            continue
+
+        todos_los_valores.extend(valores)
+        fig.add_trace(
+            go.Box(
+                name=al,
+                x=[al] * len(valores),
+                y=valores,
+                boxpoints="all",
+                jitter=0.5,
+                pointpos=0,
+                fillcolor="rgba(0,0,0,0)",
+                line=dict(width=2, color=colores[al]),
+                marker=dict(color=colores[al], size=7),
+                hovertemplate=(
+                    f"<b>{al}</b><br>%{{y}}<br>"
+                    f"corridas exitosas: {r.exitosas}/{r.corridas}<extra></extra>"
+                ),
+            )
+        )
+
+    layout = layout_base(tema, titulo, _subtitulo(datos))
+    layout["showlegend"] = False
+    layout["boxmode"] = "group"
+    layout["xaxis"]["type"] = "category"
+    layout["xaxis"]["categoryarray"] = algoritmos
+    layout["xaxis"]["categoryorder"] = "array"
+    layout["xaxis"]["title"]["text"] = "algoritmo + heurística"
+    layout["yaxis"]["title"]["text"] = y_titulo + " — escala log"
+    layout["yaxis"]["type"] = "log"
+    layout["yaxis"]["dtick"] = 1
+    layout["yaxis"]["minor"] = dict(showgrid=False)
+    rango = _rango_con_aire(todos_los_valores, log=True)
+    if rango:
+        layout["yaxis"]["range"] = rango
+    anotaciones.append(nota(tema, pie))
+    layout["annotations"] = anotaciones
+    fig.update_layout(**layout)
+    return fig
+
+
+_PIE_DISPERSION = (
+    "Cada punto es una corrida exitosa (nivel × repetición) pooleada. Se usa boxplot en vez de "
+    "media ± desvío porque los valores abarcan varios órdenes de magnitud entre niveles."
+)
+
+
+def g_tiempo_dispersion_algoritmo(datos: Datos, tema: dict):
+    """Dispersión del tiempo, pooleada sobre todos los niveles."""
+    return _dispersion_pooleada(
+        datos, tema,
+        titulo="Dispersión de tiempo por algoritmo",
+        y_titulo="segundos",
+        campo="tiempos",
+        pie=_PIE_DISPERSION,
+    )
+
+
+def g_nodos_dispersion_algoritmo(datos: Datos, tema: dict):
+    """Dispersión de nodos expandidos, pooleada sobre todos los niveles."""
+    return _dispersion_pooleada(
+        datos, tema,
+        titulo="Dispersión de nodos expandidos por algoritmo",
+        y_titulo="nodos expandidos",
+        campo="nodes_expanded",
+        pie=_PIE_DISPERSION,
+    )
+
+
+def g_frontera_dispersion_algoritmo(datos: Datos, tema: dict):
+    """Dispersión de frontera máxima, pooleada sobre todos los niveles."""
+    return _dispersion_pooleada(
+        datos, tema,
+        titulo="Dispersión de frontera máxima por algoritmo",
+        y_titulo="nodos en frontera (pico)",
+        campo="frontier_nodes",
+        pie=_PIE_DISPERSION,
+    )
+
+
 REGISTRO = {
-    "costo_vs_nivel": (g_costo_vs_nivel, "Costo de la solución: qué tan lejos del óptimo queda cada algoritmo"),
-    "tiempo_vs_nivel": (g_tiempo_vs_nivel, "Tiempo de resolución en cada nivel"),
-    "nodos_vs_nivel": (g_nodos_vs_nivel, "Nodos expandidos: el esfuerzo real de búsqueda"),
-    "frontera_vs_nivel": (g_frontera_vs_nivel, "Pico de la frontera: proxy de consumo de memoria"),
+    "costo_vs_nivel": (g_costo_vs_nivel, "Costo de la solución: qué tan lejos del óptimo queda cada algoritmo", "nivel"),
+    "tiempo_vs_nivel": (g_tiempo_vs_nivel, "Tiempo de resolución en cada nivel", "nivel"),
+    "nodos_vs_nivel": (g_nodos_vs_nivel, "Nodos expandidos: el esfuerzo real de búsqueda", "nivel"),
+    "frontera_vs_nivel": (g_frontera_vs_nivel, "Pico de la frontera: proxy de consumo de memoria", "nivel"),
+    "costo_promedio_algoritmo": (g_costo_promedio_algoritmo, "Costo promedio ± desvío, pooleado sobre todos los niveles", "algoritmo"),
+    "tiempo_dispersion_algoritmo": (g_tiempo_dispersion_algoritmo, "Dispersión de tiempo, pooleada sobre todos los niveles", "algoritmo"),
+    "nodos_dispersion_algoritmo": (g_nodos_dispersion_algoritmo, "Dispersión de nodos expandidos, pooleada sobre todos los niveles", "algoritmo"),
+    "frontera_dispersion_algoritmo": (g_frontera_dispersion_algoritmo, "Dispersión de frontera máxima, pooleada sobre todos los niveles", "algoritmo"),
 }
+
+# Título de sección por grupo, en el orden en que aparecen en index.html.
+GRUPOS_INDEX = [
+    ("nivel", "Gráficos"),
+    ("algoritmo", "Gráficos promediados por algoritmo"),
+]
 
 
 # ============================================================================
@@ -383,11 +595,23 @@ def _escribir_index(destino: Path, generados: list[tuple[str, Path]], datos: Dat
             f"el motor no pudo reproducir.</p>"
         )
 
-    items = "\n".join(
-        f'      <li><a href="{ruta.name}">{nombre}</a>'
-        f'<span>{REGISTRO[nombre][1]}</span></li>'
-        for nombre, ruta in generados
-    )
+    por_grupo: dict[str, list[tuple[str, Path]]] = {grupo: [] for grupo, _ in GRUPOS_INDEX}
+    for nombre, ruta in generados:
+        grupo = REGISTRO[nombre][2]
+        por_grupo.setdefault(grupo, []).append((nombre, ruta))
+
+    secciones = []
+    for grupo, titulo_grupo in GRUPOS_INDEX:
+        entradas = por_grupo.get(grupo) or []
+        if not entradas:
+            continue
+        items = "\n".join(
+            f'      <li><a href="{ruta.name}">{nombre}</a>'
+            f'<span>{REGISTRO[nombre][1]}</span></li>'
+            for nombre, ruta in entradas
+        )
+        secciones.append(f"    <h2>{titulo_grupo}</h2>\n    <ul>\n{items}\n    </ul>")
+    items = "\n".join(secciones)
     meta_html = "\n".join(
         f"      <tr><th>{k}</th><td>{v}</td></tr>" for k, v in filas_meta
     )
@@ -438,14 +662,13 @@ def _escribir_index(destino: Path, generados: list[tuple[str, Path]], datos: Dat
   <main>
     <h1>Análisis de algoritmos de búsqueda</h1>
     <p class="sub">Sokoban · TP1 Ejercicio 2 — {len(generados)} gráficos</p>
-    <p class="lead">Los cuatro comparten estructura: el eje x es el nivel, ordenado por
-    dificultad creciente, y cada color es un algoritmo con su heurística. Dentro de cada
-    nivel se comparan los algoritmos entre sí; de nivel a nivel se ve cómo escala cada uno.</p>
+    <p class="lead">"Gráficos": el eje x es el nivel, ordenado por dificultad creciente, y cada
+    color es un algoritmo con su heurística — dentro de cada nivel se comparan los algoritmos
+    entre sí, de nivel a nivel se ve cómo escala cada uno. "Gráficos promediados por algoritmo":
+    poolean todas las corridas exitosas de todos los niveles y repeticiones en un bar/box por
+    algoritmo, sin separar por nivel.</p>
     {aviso}
-    <h2>Gráficos</h2>
-    <ul>
 {items}
-    </ul>
     <h2>Corrida analizada</h2>
     <table>
 {meta_html}
@@ -528,7 +751,7 @@ def _listar() -> int:
         marca = "  <- default (más reciente)" if i == 0 else ""
         print(f"  {p.name}{marca}")
     print("\nGráficos disponibles:")
-    for nombre, (_, desc) in REGISTRO.items():
+    for nombre, (_, desc, _grupo) in REGISTRO.items():
         estado = "on " if GRAFICOS.get(nombre) else "off"
         print(f"  [{estado}] {nombre:20} {desc}")
     return 0
@@ -598,7 +821,7 @@ def main(argv: list[str]) -> int:
 
     generados: list[tuple[str, Path]] = []
     for nombre in seleccion:
-        constructor, descripcion = REGISTRO[nombre]
+        constructor, descripcion, _grupo = REGISTRO[nombre]
         try:
             fig = constructor(datos, tema)
         except Exception as exc:  # noqa: BLE001 - un gráfico roto no corta el resto
