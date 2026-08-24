@@ -7,7 +7,7 @@ en [`CLAUDE.md`](CLAUDE.md).
 
 ```
 config.json            algoritmo + heurística + nivel a correr (edita esto)
-run.py                  CLI: python run.py [config.json]
+run.py                  CLI: python3 run.py [config.json]
 sokoban/
   state.py            Level (estático) y State (player, boxes)
   parser.py           parse_level(text) -> Level, charset de game-sokoban.com
@@ -53,8 +53,8 @@ y corre el agente correspondiente:
 ```
 
 ```bash
-python run.py                 # usa ./config.json
-python run.py otra_config.json
+python3 run.py                 # usa ./config.json
+python3 run.py otra_config.json
 ```
 
 Imprime `success`, `cost`, `nodes_expanded`, `frontier_nodes`,
@@ -101,7 +101,7 @@ No hay `pytest` instalado a nivel de sistema en este entorno; usar un venv:
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install pytest
-.venv/bin/python -m pytest sokoban/tests -v
+.venv/bin/python3 -m pytest sokoban/tests -v
 ```
 
 `test_replay_known_solution.py` es el test dorado: parsea `level_01_ufo.txt`,
@@ -159,8 +159,8 @@ runner paralelo en [`analisis/`](analisis/README.md): corre cada
 (nivel x algoritmo) N veces y deja un CSV con una fila por ejecución.
 
 ```bash
-python analisis/main.py --dry-run     # lista qué correría
-python analisis/main.py               # usa analisis/config.json
+python3 analisis/main.py --dry-run     # lista qué correría
+python3 analisis/main.py               # usa analisis/config.json
 ```
 
 Se configura por `analisis/config.json` (niveles, algoritmos, repeticiones,
@@ -173,8 +173,8 @@ Sobre ese CSV, `analisis/graficos_main.py` genera los gráficos del informe
 
 ```bash
 pip install -r analisis/requirements.txt
-python analisis/graficos_main.py --listar   # qué CSVs y qué gráficos hay
-python analisis/graficos_main.py            # genera los activos
+python3 analisis/graficos_main.py --listar   # qué CSVs y qué gráficos hay
+python3 analisis/graficos_main.py            # genera los activos
 ```
 
 Son cuatro gráficos —costo, tiempo, nodos expandidos y frontera máxima— y los

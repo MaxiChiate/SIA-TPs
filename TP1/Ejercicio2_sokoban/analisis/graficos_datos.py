@@ -93,6 +93,34 @@ class Resumen:
         return self.exitosas > 0
 
 
+@dataclass(frozen=True, slots=True)
+class ResumenPooleado:
+    """Métricas de un algoritmo+heurística pooleadas sobre TODOS los niveles y repeticiones.
+
+    A diferencia de `Resumen` (un nivel a la vez), acá `corridas`/`exitosas` y
+    las listas de valores mezclan todos los niveles: es la base de los
+    gráficos que comparan algoritmos sin separar por dificultad. Las listas
+    son crudas a propósito — quien las use decide si les calcula media/desvío
+    (costo) o se las pasa tal cual a un boxplot (tiempo/nodos/frontera).
+    """
+
+    algorithm_label: str
+    corridas: int
+    exitosas: int
+    costs: list[int] = field(default_factory=list)
+    tiempos: list[float] = field(default_factory=list)
+    nodes_expanded: list[int] = field(default_factory=list)
+    frontier_nodes: list[int] = field(default_factory=list)
+
+    @property
+    def costo_medio(self) -> float | None:
+        return statistics.fmean(self.costs) if self.costs else None
+
+    @property
+    def costo_desvio(self) -> float:
+        return statistics.stdev(self.costs) if len(self.costs) > 1 else 0.0
+
+
 @dataclass
 class Datos:
     """El CSV entero, más los ejes de presentación ya ordenados."""
@@ -171,6 +199,34 @@ class Datos:
         conteo: dict[str, int] = {}
         for f in self.filas:
             if f.level == level and f.algorithm_label == algorithm_label:
+                conteo[f.status] = conteo.get(f.status, 0) + 1
+        return conteo
+
+    def resumen_pooleado(self, algorithm_label: str) -> ResumenPooleado:
+        """Poolea un algoritmo sobre TODOS los niveles y repeticiones.
+
+        Mismo filtro `status == "ok"` que `resumen()`: no se reimplementa la
+        clasificación de éxito, se reusa fila por fila. Si el algoritmo solo
+        resolvió en algunos niveles, `exitosas` refleja nada más esas corridas
+        (no se rellena ni imputa lo que falta).
+        """
+        rs = [f for f in self.filas if f.algorithm_label == algorithm_label]
+        ok = [f for f in rs if f.status == "ok"]
+        return ResumenPooleado(
+            algorithm_label=algorithm_label,
+            corridas=len(rs),
+            exitosas=len(ok),
+            costs=[f.cost for f in ok if f.cost is not None],
+            tiempos=[f.elapsed_seconds for f in ok if f.elapsed_seconds is not None],
+            nodes_expanded=[f.nodes_expanded for f in ok if f.nodes_expanded is not None],
+            frontier_nodes=[f.frontier_nodes for f in ok if f.frontier_nodes is not None],
+        )
+
+    def conteo_estados_pooleado(self, algorithm_label: str) -> dict[str, int]:
+        """Igual que `conteo_estados`, pero pooleado sobre todos los niveles."""
+        conteo: dict[str, int] = {}
+        for f in self.filas:
+            if f.algorithm_label == algorithm_label:
                 conteo[f.status] = conteo.get(f.status, 0) + 1
         return conteo
 
