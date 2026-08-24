@@ -164,6 +164,7 @@ def _barras(
     valor,
     texto,
     hover_extra=None,
+    error=None,
     log: bool = False,
     pie: str = "",
 ):
@@ -178,6 +179,10 @@ def _barras(
     que una ausencia no se lea como un cero.
 
     `hover_extra(resumen)` puede devolver líneas extra para el tooltip.
+
+    `error(resumen)` es opcional: si se pasa, devuelve el desvío estándar entre
+    repeticiones y se dibuja como línea de error sobre la barra (además de
+    seguir en el hover si `hover_extra` también lo menciona).
     """
     import plotly.graph_objects as go
 
@@ -193,14 +198,16 @@ def _barras(
     todos_los_valores: list[float] = []
 
     for i, al in enumerate(algoritmos):
-        ys, textos, hovers = [], [], []
+        ys, textos, hovers, errores = [], [], [], []
         for level in niveles:
             r = matriz[(level, al)]
             v = valor(r)
             ys.append(v)
             textos.append(texto(r) if v is not None else "")
+            e = error(r) if (error and v is not None) else 0
+            errores.append(e)
             if v is not None:
-                todos_los_valores.append(v)
+                todos_los_valores.append(v + e)
 
             extra = hover_extra(r) if (hover_extra and v is not None) else ""
             hovers.append(
@@ -241,6 +248,10 @@ def _barras(
                     # 1px de superficie por barra = los 2px de separación entre
                     # dos barras pegadas que pide la spec de marcas
                     line=dict(color=tema["surface"], width=1),
+                ),
+                error_y=(
+                    dict(type="data", array=errores, visible=True, color=tema["muted"])
+                    if error else None
                 ),
                 hovertext=hovers,
                 hovertemplate="%{hovertext}<extra></extra>",
@@ -301,11 +312,12 @@ def g_tiempo_vs_nivel(datos: Datos, tema: dict):
         valor=lambda r: r.tiempo_medio,
         texto=lambda r: _fmt_seg(r.tiempo_medio),
         hover_extra=lambda r: f"<br>desvío: {_fmt_seg(r.tiempo_desvio)}",
+        error=lambda r: r.tiempo_desvio,
         log=True,
-        pie=("Media de las corridas exitosas (columna elapsed_seconds, medida por el agente). "
-             "Escala logarítmica: los tiempos abarcan varios órdenes de magnitud, así que en "
-             "lineal el nivel más caro aplastaría a todos los demás contra el eje. El desvío "
-             "entre repeticiones está en el tooltip."),
+        pie=("Media de las corridas exitosas (columna elapsed_seconds, medida por el agente); la "
+             "línea de error es el desvío estándar entre repeticiones. Escala logarítmica: los "
+             "tiempos abarcan varios órdenes de magnitud, así que en lineal el nivel más caro "
+             "aplastaría a todos los demás contra el eje."),
     )
 
 
