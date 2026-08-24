@@ -29,9 +29,9 @@ analisis/
 Sin dependencias: solo la librería estándar.
 
 ```bash
-python analisis/main.py                    # usa analisis/config.json
-python analisis/main.py otro_config.json
-python analisis/main.py --dry-run          # lista qué correría, sin correr nada
+python3 analisis/main.py                    # usa analisis/config.json
+python3 analisis/main.py otro_config.json
+python3 analisis/main.py --dry-run          # lista qué correría, sin correr nada
 ```
 
 Las rutas relativas del config se resuelven contra la raíz del proyecto
@@ -40,9 +40,9 @@ Las rutas relativas del config se resuelven contra la raíz del proyecto
 Flags para barrer sin editar el config (lo pisan):
 
 ```bash
-python analisis/main.py --repetitions 10 --workers 8
-python analisis/main.py --executor thread --timeout 30
-python analisis/main.py --output-file corrida_final.csv --quiet
+python3 analisis/main.py --repetitions 10 --workers 8
+python3 analisis/main.py --executor thread --timeout 30
+python3 analisis/main.py --output-file corrida_final.csv --quiet
 ```
 
 > No confundir con el `config.json` de la **raíz**, que es el de `run.py` y
@@ -133,15 +133,15 @@ Salida típica:
 archivo HTML, más un `index.html` que los enlaza.
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r analisis/requirements.txt   # plotly
 
-python analisis/graficos_main.py                    # último CSV, gráficos activos
-python analisis/graficos_main.py --listar           # qué CSVs y qué gráficos hay
-python analisis/graficos_main.py --archivo analisis/resultados/demo_full.csv
-python analisis/graficos_main.py --solo costo_vs_nivel,tiempo_vs_nivel
-python analisis/graficos_main.py --tema dark --abrir
+python3 analisis/graficos_main.py                    # último CSV, gráficos activos
+python3 analisis/graficos_main.py --listar           # qué CSVs y qué gráficos hay
+python3 analisis/graficos_main.py --archivo analisis/resultados/demo_full.csv
+python3 analisis/graficos_main.py --solo costo_vs_nivel,tiempo_vs_nivel
+python3 analisis/graficos_main.py --tema dark --abrir
 ```
 
 **Qué se genera** se elige con el diccionario `GRAFICOS` arriba de
@@ -207,7 +207,7 @@ que se puede consumir en streaming en vez de esperar a que termine la tanda.
 > **El `if __name__ == "__main__":` no es opcional.** Con `executor: process` el
 > start method es `spawn`, y cada proceso hijo reimporta el módulo principal: sin
 > el guard, el hijo vuelve a lanzar la tanda entera en cascada. Si el script se
-> pasa por stdin (`python - <<EOF`) directamente no hay módulo que reimportar y
+> pasa por stdin (`python3 - <<EOF`) directamente no hay módulo que reimportar y
 > **todas las filas salen con `status=error`**. Usá siempre un archivo `.py` con
 > el guard, o el CLI (`analisis/main.py`), que ya lo tiene.
 
