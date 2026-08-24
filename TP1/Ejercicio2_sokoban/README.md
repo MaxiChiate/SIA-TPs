@@ -24,17 +24,8 @@ sokoban/
   levels/
     level_01_ufo.txt              nivel de referencia (2 cajas)
     level_01_ufo.solution.txt     solución de 86 movimientos (golden)
-    level_02_soko11.txt           2 cajas, con solución demo (golden)
-    level_02_soko11.solution.txt
-    level_03_soko12.txt           4 cajas, con solución demo (golden)
-    level_03_soko12.solution.txt
     microban_08.txt               2 cajas (incluido en analisis/config.json)
     aenigma_03.txt                4 cajas (incluido en analisis/config.json)
-    level_04_soko03.txt           4 cajas
-    level_05_soko15.txt           5 cajas
-    level_06_soko13.txt           6 cajas
-    level_07_soko10.txt           6 cajas, no lo resuelven greedy/dfs/astar en <60s
-    level_08_soko04.txt           8 cajas
     level_69.txt                  6 cajas (más pesado)
   visualizer/
     sokoban_visualizer.html       template del visor, autocontenido
@@ -44,7 +35,6 @@ sokoban/
     test_config.py                 config.json -> RunConfig -> Agent
     test_visualizer_export.py      render_visualizer inyecta el run-data
     test_replay_known_solution.py  golden test end-to-end
-    test_more_levels.py            golden test de level_02/03 + parseo de level_04..08
 analisis/               runner paralelo de experimentos -> CSV + gráficos Plotly
                         (ver analisis/README.md)
 ```

@@ -25,8 +25,8 @@ y el visualizador andan de punta a punta (parseo → replay → animación).
 - **Fase 2** (equipo) ✅ HECHA: `nodes_expanded`/`frontier_nodes` reales ya están
   instrumentados en los cinco algoritmos (cada uno los cuenta y los devuelve en su `SearchResult`).
 - **Fase 3** ✅ HECHA: sumar más niveles / más cajas (la consigna permite variar la complejidad).
-  Hay 11 niveles en `sokoban/levels/` (los originales, dos niveles chicos para
-  análisis y siete niveles `level_02`..`level_08` con más cajas).
+  Hay 4 niveles en `sokoban/levels/` (`level_01_ufo` original más
+  `microban_08`, `aenigma_03` y `level_69`, usados en `analisis/config.json`).
 - **Fase 4**: README de cómo correrlo + presentación. (Existe `README.md`; falta la presentación.)
 
 ## Cómo arrancar con Claude Code
@@ -264,38 +264,13 @@ Decisiones que no son obvias leyendo el código:
   tabla — bugs de los gráficos viejos (`tradeoff_costo_nodos`, `tabla_resumen`)
   que ya no existen en el esquema de cuatro gráficos actual.
 
-## Estado real: más niveles (Fase 3)
+## Estado real: niveles (Fase 3)
 
-`sokoban/levels/` sumó 7 niveles (`level_02_soko11` .. `level_08_soko04`, de 2
-a 8 cajas), sacados de la colección "aenigma" de game-sokoban.com (`cid=4`,
-lids 200-249 no contiguos: 200-202, 349-376, 5003-5021) — la misma colección
-de la que ya salía `level_01_ufo` (`lid=200`, "soko 01"; su solución de 86
-movimientos coincide char a char con la que trae el sitio).
+`sokoban/levels/` tiene 4 niveles: `level_01_ufo` (el original, golden test
+de 86 movimientos), y `microban_08`/`aenigma_03`/`level_69`, que son los que
+usa `analisis/config.json` para comparar algoritmos y heurísticas.
 
-El sitio no expone el ASCII del tablero en la página del nivel (se arma con
-`<img>` sobre un canvas); el layout real se pide por AJAX a
-`index.php?mode=getexactdata&lid=<id>`, que devuelve XML con las filas
-codificadas en RLE (`"8v,3w,8v"` = 8+3+8 celdas) usando 4 letras (`v`/`w`
-pared, `f` piso, `a` goal) más `<am>`/`<b>`/`<mv>` con las posiciones
-(índice `fila*ancho+col`) de goals/cajas/jugador. Se decodificó comparando
-contra `level_01_ufo.txt` carácter por carácter hasta que el render coincidió
-exactamente — ese mapeo de letras no está documentado en ningún lado público.
-
-- `level_02_soko11` y `level_03_soko12` traen la solución demo del sitio
-  (`solution="..."` en el XML, en la misma notación `udlrUDLR` que usa este
-  proyecto): son golden tests igual que `level_01_ufo` — ver
-  `sokoban/tests/test_more_levels.py`.
-- `level_04_soko03` .. `level_08_soko04` no tienen solución demo pública
-  (solo algunos niveles del sitio la tienen); se verificó que
-  `GreedyAgent`/`registry.build_agent` los resuelve y que la solución
-  encontrada pasa `replay`/`is_goal`, salvo `level_07_soko10` (6 cajas), que
-  no lo resuelve `greedy`/`dfs`/`astar` en 60s con este motor — se dejó
-  igual, como benchmark "pesado" adicional a `level_69` (la colección está
-  marcada como resuelta 50/50 por jugadores reales del sitio, así que se sabe
-  que tiene solución, solo que no la encuentran estos agentes rápido).
-- `analisis/config.json` quedó con una lista explícita de benchmark que integra
-  ambos lados del merge: `microban_08`, `aenigma_03`, `level_01_ufo` y
-  `level_69`, y compara `manhattan_sum` contra `push_distance_sum` en
-  Greedy/A*. Si se quiere correr también `level_02_soko11` ..
-  `level_08_soko04`, hay que sumarlos a mano en `"levels"` (o poner
-  `"all"`).
+Hubo un intento de sumar 7 niveles más (`level_02_soko11` .. `level_08_soko04`,
+sacados de la colección "aenigma" de game-sokoban.com) que terminaron sin
+usarse en el benchmark de `analisis/` — se quitaron junto con
+`sokoban/tests/test_more_levels.py`, que era el único lugar que los ejercitaba.
