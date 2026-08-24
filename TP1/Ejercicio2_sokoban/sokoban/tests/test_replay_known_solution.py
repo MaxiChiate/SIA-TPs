@@ -1,4 +1,4 @@
-"""Golden test: nivel de referencia (level_01_ufo) + su solución de 86 movimientos.
+"""Golden test: nivel de referencia (aenigma_01) + su solución de 86 movimientos.
 
 Sirve para detectar regresiones en parser/notation/engine de punta a punta:
 si alguien rompe cualquiera de los tres, este test frena la solución conocida.
@@ -16,11 +16,11 @@ LEVELS_DIR = Path(__file__).resolve().parent.parent / "levels"
 
 
 def _load_solution() -> str:
-    return (LEVELS_DIR / "level_01_ufo.solution.txt").read_text().strip()
+    return (LEVELS_DIR / "aenigma_01.solution.txt").read_text().strip()
 
 
 def test_replay_solucion_conocida_llega_a_la_meta():
-    level = parse_level_file(str(LEVELS_DIR / "level_01_ufo.txt"))
+    level = parse_level_file(str(LEVELS_DIR / "aenigma_01.txt"))
     solution = _load_solution()
 
     trace = replay(level, solution)  # no debe tirar MoveError
@@ -30,7 +30,7 @@ def test_replay_solucion_conocida_llega_a_la_meta():
 
 
 def test_hardcoded_agent_devuelve_la_misma_solucion():
-    level = parse_level_file(str(LEVELS_DIR / "level_01_ufo.txt"))
+    level = parse_level_file(str(LEVELS_DIR / "aenigma_01.txt"))
     result = HardcodedAgent().solve(level)
 
     assert result.success

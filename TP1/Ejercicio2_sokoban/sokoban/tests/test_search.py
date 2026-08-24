@@ -26,7 +26,7 @@ LEVELS_DIR = Path(__file__).resolve().parent.parent / "levels"
 
 @pytest.fixture
 def level():
-    return parse_level_file(str(LEVELS_DIR / "level_01_ufo.txt"))
+    return parse_level_file(str(LEVELS_DIR / "aenigma_01.txt"))
 
 
 def _assert_valid_solution(level, result):

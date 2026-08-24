@@ -83,11 +83,11 @@ No todas las combinaciones terminan. Verificado en esta máquina con
 - `aenigma_03` (4 cajas) es el nivel que más rechaza: `bfs`, `dfs`, `iddfs` y
   las dos `astar` no la resuelven en 60s. Solo `greedy` (con cualquier
   heurística) la resuelve, y lo hace casi instantáneo.
-- `greedy` tampoco resuelve `level_69` (6 cajas), con ninguna heurística.
-- El resto sí resuelve `level_69`, pero al límite: `bfs` ~31-33s, `dfs` ~18-20s,
+- `greedy` tampoco resuelve `yasgood_69` (6 cajas), con ninguna heurística.
+- El resto sí resuelve `yasgood_69`, pero al límite: `bfs` ~31-33s, `dfs` ~18-20s,
   `astar` ~37-41s (ambas heurísticas). `bfs` expande **~4.044.079 nodos** ahí,
   con una frontera máxima de ~107k — varios GB de RAM en un solo worker.
-- `iddfs` sobre `level_01_ufo` también resuelve, pero tarda ~45s: con un
+- `iddfs` sobre `aenigma_01` también resuelve, pero tarda ~45s: con un
   timeout menor a ese quedaría afuera igual que `aenigma_03`.
 
 De ahí las dos precauciones del config:
@@ -95,7 +95,7 @@ De ahí las dos precauciones del config:
 - **`timeout_seconds` es prácticamente obligatorio.** Sin él, la tanda se cuelga
   para siempre en la primera combinación que no converge.
 - **Cuidado con `workers` en niveles pesados.** 4 workers corriendo BFS sobre
-  `level_69` son 4 búsquedas de varios GB en simultáneo. Si la máquina empieza a
+  `yasgood_69` son 4 búsquedas de varios GB en simultáneo. Si la máquina empieza a
   swapear, los tiempos dejan de significar algo: bajá `workers`.
 
 `memory_limit_mb` usa `RLIMIT_AS`, que **solo implementa Linux**. En macOS y
@@ -120,8 +120,8 @@ runner lo avisa al final por stderr.
 Salida típica:
 
 ```
-[ 6/20] ok        level_69 / bfs / rep 1   16.539s  cost=164 exp=4044079
-[ 8/20] timeout   level_69 / iddfs / rep 1  25.046s  superó timeout_seconds=25.0
+[ 6/20] ok        yasgood_69 / bfs / rep 1   16.539s  cost=164 exp=4044079
+[ 8/20] timeout   yasgood_69 / iddfs / rep 1  25.046s  superó timeout_seconds=25.0
 
 20 ejecuciones -> analisis/resultados/demo_full.csv
   ok=12  sin_solucion=0  timeout=8  error=0

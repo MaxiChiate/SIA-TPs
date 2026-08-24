@@ -23,7 +23,7 @@ ok.groupby(["level", "algorithm_label"]).elapsed_seconds.agg(["mean", "std"])
 | Columna | Tipo | Descripción |
 |---|---|---|
 | `run_id` | str | Id de la tanda completa (timestamp UTC, ej. `20260821T205430Z`). Igual en todas las filas del mismo CSV; sirve para distinguir tandas al concatenar archivos. |
-| `level` | str | Nombre del nivel (stem del `.txt`, ej. `level_01_ufo`). |
+| `level` | str | Nombre del nivel (stem del `.txt`, ej. `aenigma_01`). |
 | `algorithm` | str | Algoritmo: `bfs`, `dfs`, `iddfs`, `greedy`, `astar`, `hardcoded`. |
 | `heuristic` | str \| NULL | Heurística usada. Solo la tienen los algoritmos informados (`astar`, `greedy`); vacía en el resto. |
 | `algorithm_label` | str | `algorithm` + heurística (`astar:manhattan_sum`, o `bfs` si no es informado). **Es la clave para agrupar series en el análisis**: distingue el mismo algoritmo con distintas heurísticas. |

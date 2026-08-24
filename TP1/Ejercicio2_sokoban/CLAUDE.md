@@ -25,8 +25,8 @@ y el visualizador andan de punta a punta (parseo → replay → animación).
 - **Fase 2** (equipo) ✅ HECHA: `nodes_expanded`/`frontier_nodes` reales ya están
   instrumentados en los cinco algoritmos (cada uno los cuenta y los devuelve en su `SearchResult`).
 - **Fase 3** ✅ HECHA: sumar más niveles / más cajas (la consigna permite variar la complejidad).
-  Hay 4 niveles en `sokoban/levels/` (`level_01_ufo` original más
-  `microban_08`, `aenigma_03` y `level_69`, usados en `analisis/config.json`).
+  Hay 4 niveles en `sokoban/levels/` (`aenigma_01` original más
+  `microban_08`, `aenigma_03` y `yasgood_69`, usados en `analisis/config.json`).
 - **Fase 4**: README de cómo correrlo + presentación. (Existe `README.md`; falta la presentación.)
 
 ## Cómo arrancar con Claude Code
@@ -34,7 +34,7 @@ y el visualizador andan de punta a punta (parseo → replay → animación).
 1. Copiá este archivo como `ROADMAP.md` (o `CLAUDE.md`) en la raíz del repo.
 2. Corré `claude` y pedile: *"Leé ROADMAP.md e implementá la Fase 0 completa: parser,
    engine, notation, HardcodedAgent, visualizador HTML, y el test dorado con
-   level_01_ufo."*
+   aenigma_01."*
 3. Cuando eso ande y veas la animación de las 86 jugadas, seguís con la Fase 1
    (ahí entran BFS/A*/heurísticas, que es la parte que escriben ustedes).
 
@@ -171,9 +171,9 @@ Tres cosas que condicionan el diseño, verificadas en esta máquina:
 
 - **No todas las combinaciones terminan**: con `timeout_seconds: 60`,
   `aenigma_03` (4 cajas) es el nivel que más rechaza — `bfs`, `dfs`, `iddfs` y
-  las dos `astar` no lo resuelven ahí, solo `greedy` sí. En `level_69`
+  las dos `astar` no lo resuelven ahí, solo `greedy` sí. En `yasgood_69`
   (6 cajas) el que no termina es `greedy`; `bfs`/`dfs`/`astar` sí lo resuelven,
-  pero tardan 20-40s. `iddfs` sobre `level_01_ufo` también resuelve, pero al
+  pero tardan 20-40s. `iddfs` sobre `aenigma_01` también resuelve, pero al
   límite (~45s). Por eso `timeout_seconds` es prácticamente obligatorio: varias
   de estas combinaciones dependen de tener un timeout generoso (≥60s) para no
   quedar afuera.
@@ -185,7 +185,7 @@ Tres cosas que condicionan el diseño, verificadas en esta máquina:
   final para no colgarse esperándola. Para medir, `executor: process`.
 - **`memory_limit_mb` solo funciona en Linux** (`RLIMIT_AS`); en macOS/Windows
   no tiene efecto y el runner avisa al arrancar. Importa porque BFS sobre
-  `level_69` expande ~4M nodos (varios GB por worker).
+  `yasgood_69` expande ~4M nodos (varios GB por worker).
 
 El runner no tiene su propia lista de algoritmos: los lee de
 `sokoban.search.ALGORITHMS`/`HEURISTICS`, así que lo que se dé de alta en
@@ -266,8 +266,8 @@ Decisiones que no son obvias leyendo el código:
 
 ## Estado real: niveles (Fase 3)
 
-`sokoban/levels/` tiene 4 niveles: `level_01_ufo` (el original, golden test
-de 86 movimientos), y `microban_08`/`aenigma_03`/`level_69`, que son los que
+`sokoban/levels/` tiene 4 niveles: `aenigma_01` (el original, golden test
+de 86 movimientos), y `microban_08`/`aenigma_03`/`yasgood_69`, que son los que
 usa `analisis/config.json` para comparar algoritmos y heurísticas.
 
 Hubo un intento de sumar 7 niveles más (`level_02_soko11` .. `level_08_soko04`,

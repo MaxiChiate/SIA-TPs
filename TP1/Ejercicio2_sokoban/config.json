@@ -1,5 +1,5 @@
 {
-  "level": "level_69",
-  "algorithm": "bfs",
+  "level": "microban_08",
+  "algorithm": "astar",
   "heuristic": "manhattan_sum"
 }

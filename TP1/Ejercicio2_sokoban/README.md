@@ -22,11 +22,11 @@ sokoban/
     bfs.py/dfs.py/greedy.py/iddfs.py  BFS/DFS/Greedy/IDDFS
     heuristics.py       manhattan_sum/push_distance_sum + registro HEURISTICS
   levels/
-    level_01_ufo.txt              nivel de referencia (2 cajas)
-    level_01_ufo.solution.txt     solución de 86 movimientos (golden)
-    microban_08.txt               2 cajas (incluido en analisis/config.json)
-    aenigma_03.txt                4 cajas (incluido en analisis/config.json)
-    level_69.txt                  6 cajas (más pesado)
+    aenigma_01.txt          nivel de referencia (2 cajas)
+    aenigma_01.solution.txt solución de 86 movimientos (golden)
+    microban_08.txt         2 cajas (incluido en analisis/config.json)
+    aenigma_03.txt          4 cajas (incluido en analisis/config.json)
+    yasgood_69.txt          6 cajas (más pesado)
   visualizer/
     sokoban_visualizer.html       template del visor, autocontenido
     last_run_<level>_<algo>_<heuristic>.html   generado por run.py (gitignored)
@@ -46,7 +46,7 @@ y corre el agente correspondiente:
 
 ```json
 {
-  "level": "level_01_ufo",
+  "level": "aenigma_01",
   "algorithm": "astar",
   "heuristic": "manhattan_sum"
 }
@@ -61,11 +61,11 @@ Imprime `success`, `cost`, `nodes_expanded`, `frontier_nodes`,
 `elapsed_seconds`, el string de movimientos (si encontró solución) y la ruta
 del visualizador que generó (ver [El visualizador](#el-visualizador)).
 
-- `level`: stem de un archivo en `sokoban/levels/` (ej. `"level_01_ufo"`) o una
+- `level`: stem de un archivo en `sokoban/levels/` (ej. `"aenigma_01"`) o una
   ruta explícita a un `.txt`. Opcional: `"levels_dir"` para apuntar a otra carpeta.
 - `algorithm`: uno de `sokoban.search.ALGORITHMS`. Implementados:
   `"bfs"`, `"dfs"`, `"iddfs"`, `"greedy"`, `"astar"`, y `"hardcoded"`
-  (Fase 0, `HardcodedAgent`, solo conoce `level_01_ufo`).
+  (Fase 0, `HardcodedAgent`, solo conoce `aenigma_01`).
 - `heuristic`: uno de `sokoban.search.HEURISTICS` (`"manhattan_sum"` o
   `"push_distance_sum"`). Solo aplica a algoritmos en
   `sokoban.search.INFORMED_ALGORITHMS` (`astar`/`greedy`); en el resto
@@ -74,7 +74,7 @@ del visualizador que generó (ver [El visualizador](#el-visualizador)).
 - `visualize`: bool, default `true`. Si es `false`, `run.py` no genera el HTML.
 - `visualizer_output`: ruta de salida del HTML generado. Default:
   `sokoban/visualizer/last_run_<nivel>_<algoritmo>_<heurística>.html` (ej.
-  `last_run_level_01_ufo_astar_manhattan_sum.html`), para no pisar el archivo
+  `last_run_aenigma_01_astar_manhattan_sum.html`), para no pisar el archivo
   de una corrida anterior con otra combinación.
 
 Programáticamente, el mismo flujo sin pasar por el CLI:
@@ -91,7 +91,7 @@ assert is_goal(trace[-1], level)
 ```
 
 `HardcodedAgent` (Fase 0, en `sokoban/agent.py`) sigue existiendo para
-`level_01_ufo` como cable pelado de referencia, pero `run.py`/`config.json` ya
+`aenigma_01` como cable pelado de referencia, pero `run.py`/`config.json` ya
 no pasan por él salvo que se seleccione explícitamente en código.
 
 ## Tests
@@ -104,7 +104,7 @@ python3 -m venv .venv
 .venv/bin/python3 -m pytest sokoban/tests -v
 ```
 
-`test_replay_known_solution.py` es el test dorado: parsea `level_01_ufo.txt`,
+`test_replay_known_solution.py` es el test dorado: parsea `aenigma_01.txt`,
 reproduce las 86 jugadas sin que `apply_move` tire `MoveError`, y verifica que
 el estado final cumple `is_goal`.
 
@@ -130,7 +130,7 @@ no necesita build ni servidor real.
   y el desglose de la solución en empujes vs. pasos simples.
 
 Mecánica: el template tiene un `<script type="application/json"
-id="run-data">` con los datos de Fase 0 (`level_01_ufo` + `HardcodedAgent`)
+id="run-data">` con los datos de Fase 0 (`aenigma_01` + `HardcodedAgent`)
 como default, así el archivo sigue siendo visualizable si se abre directo sin
 pasar por `run.py`. `sokoban/visualizer_export.py::render_visualizer` arma un
 `run_data` dict (nivel, solución, `SearchResult`, algoritmo, heurística, etc.)
@@ -188,8 +188,8 @@ Dos cosas a tener en cuenta antes de correrlo:
 
 - **El timeout no es opcional.** Con 60s de margen, `aenigma_03` (4 cajas) es
   el que más combinaciones deja afuera —solo `greedy` la resuelve—, y `greedy`
-  tampoco termina en `level_69` (6 cajas). El resto sí resuelve, pero al
-  límite: `iddfs` en `level_01_ufo` y `bfs`/`dfs`/`astar` en `level_69` tardan
+  tampoco termina en `yasgood_69` (6 cajas). El resto sí resuelve, pero al
+  límite: `iddfs` en `aenigma_01` y `bfs`/`dfs`/`astar` en `yasgood_69` tardan
   entre 20 y 45s.
 - **Usá `executor: process` (el default) para medir tiempos.** Los algoritmos
   son Python puro y CPU-bound: con threads el GIL los serializa y los tiempos

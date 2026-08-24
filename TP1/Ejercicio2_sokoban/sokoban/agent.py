@@ -15,7 +15,7 @@ from typing import Protocol
 
 from .state import Level
 
-# Solución de referencia para levels/level_01_ufo.txt (86 movimientos,
+# Solución de referencia para levels/aenigma_01.txt (86 movimientos,
 # verificada por el golden test en tests/test_replay_known_solution.py).
 _UFO_SOLUTION = (
     "LruulldlddrUUUUdddlllluurururRRlddrruUUdrrddllddRluurrdrddl"
@@ -42,11 +42,11 @@ class Agent(Protocol):
 class HardcodedAgent:
     """Fase 0: devuelve una solución hardcodeada conocida de antemano.
 
-    Solo conoce `level_01_ufo` (matchea por `Level.name`). No busca nada:
+    Solo conoce `aenigma_01` (matchea por `Level.name`). No busca nada:
     `nodes_expanded` y `frontier_nodes` son N/A (0) para este agente.
     """
 
-    _SOLUTIONS: dict[str, str] = {"level_01_ufo": _UFO_SOLUTION}
+    _SOLUTIONS: dict[str, str] = {"aenigma_01": _UFO_SOLUTION}
 
     def solve(self, level: Level) -> SearchResult:
         start = time.perf_counter()

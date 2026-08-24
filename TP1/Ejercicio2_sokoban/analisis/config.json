@@ -8,7 +8,7 @@
   "_comment_repetitions": "Cuantas veces corre CADA (nivel x algoritmo). Los algoritmos son deterministas: cost/nodes_expanded/frontier_nodes se repiten identicos; lo que varia es el TIEMPO.",
   "repetitions": 5,
 
-  "_comment_timeout": "Segundos por ejecucion, null = sin limite. Practicamente obligatorio: iddfs no termina en level_01_ufo, y greedy/astar no terminan en level_69.",
+  "_comment_timeout": "Segundos por ejecucion, null = sin limite. Practicamente obligatorio: iddfs no termina en aenigma_01, y greedy/astar no terminan en yasgood_69.",
   "timeout_seconds": 60,
 
   "_comment_memory": "MB por worker, solo con executor=process y SOLO en Linux (RLIMIT_AS). null = sin limite.",
@@ -18,8 +18,8 @@
   "levels": [
     "microban_08",
     "aenigma_03",
-    "level_01_ufo",
-    "level_69"
+    "aenigma_01",
+    "yasgood_69"
   ],
   "levels_dir": "sokoban/levels",
 
