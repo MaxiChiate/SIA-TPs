@@ -110,11 +110,48 @@ miden la distancia:
 Ambas están en `heuristics.py` y registradas en `HEURISTICS`; las usan los
 algoritmos informados (`astar`/`greedy`).
 
-`is_deadlock` en `heuristics.py` está implementado (detecta deadlocks de
-rincón: caja fuera de goal trabada entre dos paredes perpendiculares; no
-detecta todos los deadlocks posibles) y lo usa `astar.py` para podar esos
-estados irrecuperables antes de encolarlos. Los otros cuatro algoritmos no
-lo aplican.
+## Estado real: poda de deadlocks (los cinco algoritmos)
+
+Antes, `is_deadlock` vivía en `heuristics.py` y **solo lo usaba `astar.py`**:
+`bfs`/`dfs`/`iddfs`/`greedy` expandían igual estados ya irrecuperables. Ahora
+la poda es de todos y está en un solo lugar:
+
+- `sokoban/search/deadlock.py::is_deadlock(state, level)`: dos reglas, ambas
+  sobre cajas que no están en un goal. (1) **rincón**: caja entre dos paredes
+  perpendiculares -- el conjunto de esas celdas se precalcula por nivel con
+  `lru_cache` (`_celdas_muertas`), así el chequeo por caja es un `in` de set;
+  (2) **bloque 2x2**: caja dentro de un cuadrado de 2x2 lleno de paredes y/o
+  cajas (se traban mutuamente). La regla 2 solo se evalúa si hay otra caja
+  pegada: un 2x2 lleno con una sola caja ya implica dos paredes
+  perpendiculares, o sea el caso 1.
+- `sokoban/search/_common.py::successors(state, level)`: generador de
+  `(movimiento, estado)` que envuelve `legal_moves`+`apply_move` y saltea los
+  deadlocks. Los cinco agentes generan hijos **solo** por acá, así que la poda
+  no se puede olvidar en uno; en cada agente son 0 líneas de deadlock (el
+  `for move in legal_moves(...)` + `apply_move` pasó a ser un solo
+  `for move, child in successors(...)`).
+
+La detección es conservadora a propósito: no encuentra todos los deadlocks,
+pero **no tiene falsos positivos**. Eso es lo que permite podar sin romper la
+optimalidad de BFS/IDDFS/A* (medido: el costo de la solución no cambia en
+ningún nivel).
+
+Impacto medido (nodos expandidos, sin poda -> con poda; mismo costo):
+
+| Nivel | bfs | dfs | greedy | astar |
+|---|---|---|---|---|
+| `aenigma_01` | 30346 -> 15129 | 13535 -> 3062 | 756 -> 658 | 30316 -> 15113 |
+| `microban_08` | 4101 -> 1697 | 2960 -> 829 | 2210 -> 808 | 3937 -> 1622 |
+
+El tiempo por nodo no empeora (el chequeo es un par de lookups de set), así
+que la mitad de nodos es mitad de tiempo. `aenigma_03` con `astar` +
+`push_distance_sum` ahora termina (83 movimientos, ~9.6M nodos, ~195s en esta
+máquina), pero sigue por encima del `timeout_seconds: 60` de
+`analisis/config.json`.
+
+Tests: `sokoban/tests/test_deadlock.py` (rincón sí / rincón sobre goal no /
+caja libre no / una sola pared no / bloque 2x2 sí / dos cajas juntas no, y que
+`successors` no ofrezca un movimiento legal que mete la caja en un rincón).
 
 ## Estado real: `run.py` genera el visualizador de cada corrida
 

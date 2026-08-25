@@ -29,26 +29,6 @@ def manhattan_sum(state: State, level: Level) -> int:
     return _min_cost_assignment(cost)
 
 
-def is_deadlock(state: State, level: Level) -> bool:
-    """True si algún caja no está sobre un goal y quedó encajonada en un
-    rincón formado por dos paredes perpendiculares -- no se la puede
-    empujar en ningún eje nunca más, así que el estado es irrecuperable.
-
-    No detecta todos los deadlocks posibles (p. ej. dos cajas trabadas
-    entre sí, o contra una pared sin rincón), pero podar estos ya reduce
-    mucho el espacio de búsqueda en niveles con varias cajas, sin nunca dar
-    un falso positivo (si detecta deadlock, realmente lo es).
-    """
-    for x, y in state.boxes:
-        if (x, y) in level.goals:
-            continue
-        blocked_vertical = (x, y - 1) in level.walls or (x, y + 1) in level.walls
-        blocked_horizontal = (x - 1, y) in level.walls or (x + 1, y) in level.walls
-        if blocked_vertical and blocked_horizontal:
-            return True
-    return False
-
-
 def _min_cost_assignment(cost: list[list[int]]) -> int:
     """Algoritmo húngaro (Kuhn-Munkres) para el matching de costo mínimo
     entre `len(cost)` filas y `len(cost[0])` columnas, con filas <= columnas
