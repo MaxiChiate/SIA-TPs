@@ -1,4 +1,7 @@
-"""A* sobre `legal_moves`/`apply_move`/`is_goal`, con heurística inyectable."""
+"""A* sobre `_common.successors`/`is_goal`, con heurística inyectable.
+
+Los hijos salen de `successors`, que ya descarta los estados en deadlock.
+"""
 
 from __future__ import annotations
 
@@ -7,9 +10,10 @@ import itertools
 import time
 
 from ..agent import SearchResult
-from ..engine import apply_move, is_goal, legal_moves
+from ..engine import is_goal
 from ..state import Level, State
-from .heuristics import Heuristic, is_deadlock, manhattan_sum
+from ._common import successors
+from .heuristics import Heuristic, manhattan_sum
 
 
 class AStarAgent:
@@ -61,11 +65,8 @@ class AStarAgent:
                 )
 
             current_g = g_score[current]
-            for move in legal_moves(current, level):
-                neighbor = apply_move(current, level, move)
+            for move, neighbor in successors(current, level):
                 if neighbor in closed:
-                    continue
-                if is_deadlock(neighbor, level):
                     continue
                 tentative_g = current_g + 1
                 if tentative_g < g_score.get(neighbor, float("inf")):

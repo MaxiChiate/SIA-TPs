@@ -13,9 +13,9 @@ from __future__ import annotations
 import time
 
 from ..agent import SearchResult
-from ..engine import apply_move, initial_state, is_goal, legal_moves
+from ..engine import initial_state, is_goal
 from ..state import Level
-from ._common import Node, reconstruct_path
+from ._common import Node, reconstruct_path, successors
 
 
 class DFSAgent:
@@ -37,8 +37,7 @@ class DFSAgent:
             node = stack.pop()
             nodes_expanded += 1
 
-            for move in legal_moves(node.state, level):
-                child_state = apply_move(node.state, level, move)
+            for move, child_state in successors(node.state, level):
                 if child_state in visited:
                     continue
                 visited.add(child_state)
