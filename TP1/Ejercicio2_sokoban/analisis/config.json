@@ -1,0 +1,41 @@
+{
+  "_comment": "Config del runner (analisis/main.py). Ver analisis/README.md para el detalle de cada clave. Las rutas relativas se resuelven contra la raiz del proyecto. Las claves que empiezan con _ se ignoran.",
+
+  "_comment_executor": "process = un proceso por ejecucion: tiempos limpios y el timeout mata al worker. thread = ThreadPoolExecutor: el GIL serializa, los tiempos se inflan 2-4x y el timeout no puede matar el thread.",
+  "executor": "process",
+  "workers": 4,
+
+  "_comment_repetitions": "Cuantas veces corre CADA (nivel x algoritmo). Los algoritmos son deterministas: cost/nodes_expanded/frontier_nodes se repiten identicos; lo que varia es el TIEMPO.",
+  "repetitions": 5,
+
+  "_comment_timeout": "Segundos por ejecucion, null = sin limite. Practicamente obligatorio: iddfs no termina en aenigma_01, y greedy/astar no terminan en yasgood_69.",
+  "timeout_seconds": 60,
+
+  "_comment_memory": "MB por worker, solo con executor=process y SOLO en Linux (RLIMIT_AS). null = sin limite.",
+  "memory_limit_mb": 4096,
+
+  "_comment_levels": "Lista de stems de archivo, o \"all\" para todos los .txt de levels_dir.",
+  "levels": [
+    "microban_08",
+    "aenigma_03",
+    "aenigma_01",
+    "yasgood_69"
+  ],
+  "levels_dir": "sokoban/levels",
+
+  "_comment_algorithms": "Cada item es un string, o un objeto {name, heuristic}. La heuristica solo aplica a astar/greedy.",
+  "algorithms": [
+    "bfs",
+    "dfs",
+    "iddfs",
+    { "name": "greedy", "heuristic": "manhattan_sum" },
+    { "name": "greedy", "heuristic": "push_distance_sum" },
+    { "name": "astar", "heuristic": "manhattan_sum" },
+    { "name": "astar", "heuristic": "push_distance_sum" }
+  ],
+
+  "_comment_output": "output_file null = results_<run_id>.csv, asi cada tanda va a su propio archivo. include_solution agrega la columna con el string de movimientos.",
+  "output_dir": "analisis/resultados",
+  "output_file": null,
+  "include_solution": true
+}

@@ -1,0 +1,5 @@
+{
+  "level": "microban_08",
+  "algorithm": "astar",
+  "heuristic": "manhattan_sum"
+}
