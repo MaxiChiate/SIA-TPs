@@ -1,0 +1,5 @@
+# The GA core (ga/) uses the standard library only.
+# These are for the image domain (problems/triangles/) and the test suite.
+pillow
+numpy
+pytest
