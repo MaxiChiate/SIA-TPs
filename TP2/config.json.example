@@ -1,0 +1,41 @@
+{
+  "seed": 42,
+  "engine": {
+    "n": 100,
+    "k": 100,
+    "pc": 0.85,
+    "pm": 0.05,
+    "max_generations": 500
+  },
+  "operators": {
+    "parent_selection": {
+      "name": "tournament",
+      "params": {"tournament_size": 3}
+    },
+    "crossover": {
+      "name": "block_uniform",
+      "params": {}
+    },
+    "mutation": {
+      "name": "uniform_gene",
+      "params": {"sigma": 0.1}
+    },
+    "survival": {
+      "name": "elitism",
+      "params": {"elite_count": 5}
+    }
+  },
+  "stopping": [
+    {"name": "target_fitness", "params": {"threshold": 0.98}},
+    {"name": "stagnation", "params": {"generations": 50}}
+  ],
+  "problem": {
+    "type": "triangles",
+    "params": {
+      "image_path": "docs/sample.png",
+      "triangle_count": 50,
+      "work_resolution": [128, 128],
+      "background_rgb": [255, 255, 255]
+    }
+  }
+}
