@@ -84,6 +84,7 @@ class Evaluator:
         self._memo: dict[tuple[float, ...], float] = {}
         self.count = 0
         self._pool = None
+        self._workers = workers
         if workers > 1:
             ctx = mp.get_context("spawn")
             self._pool = ctx.Pool(
@@ -128,7 +129,12 @@ class Evaluator:
             return
 
         representatives = [group[0] for group in pending_by_key.values()]
-        results = self._pool.map(_worker_evaluate, representatives)
+        # One chunk per worker per generation instead of Pool.map's default
+        # heuristic (~len/(4*workers)): per-individual work here is uniform
+        # (render + MSE at a fixed resolution), so there is nothing to gain
+        # from finer-grained chunks, only extra IPC round-trips.
+        chunksize = -(-len(representatives) // self._workers)  # ceil division
+        results = self._pool.map(_worker_evaluate, representatives, chunksize=chunksize)
         for representative, value in zip(representatives, results):
             key = representative.key()
             self.count += 1
