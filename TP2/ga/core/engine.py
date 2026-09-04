@@ -143,7 +143,14 @@ class Engine:
         self._rng = rng
         self._evaluator = Evaluator(problem)
 
-    def run(self) -> RunResult:
+    def run(
+        self, on_generation: Callable[[Population], None] | None = None
+    ) -> RunResult:
+        """Run to a stopping criterion. ``on_generation``, if given, is called
+        with each fully-evaluated ``Population`` (including the initial one at
+        generation 0) - e.g. for a caller to print progress or snapshot the
+        current best individual, without the engine knowing anything about it.
+        """
         cfg = self._config
         started = time.perf_counter()
 
@@ -162,6 +169,8 @@ class Engine:
         ]
         best = population.best().copy()
         best_generation = 0
+        if on_generation is not None:
+            on_generation(population)
 
         stop_reason = self._check_stop(population, history, best, best_generation, started)
         while stop_reason is None:
@@ -176,6 +185,9 @@ class Engine:
             if _fitness(generation_best) > _fitness(best):
                 best = generation_best.copy()
                 best_generation = population.generation
+
+            if on_generation is not None:
+                on_generation(population)
 
             stop_reason = self._check_stop(
                 population, history, best, best_generation, started
