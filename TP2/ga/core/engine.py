@@ -24,9 +24,9 @@ from .rng import Rng
 # ----------------------------------------------------------------------------
 # Operator call signatures. Concrete implementations arrive in ga.operators.
 # ``params`` carries per-call context the engine fills in each generation
-# (``generation``, ``max_generations``, ``history``, plus anything from
-# ``EngineConfig.extra_params``); Boltzmann selection and non-uniform mutation
-# read it.
+# (``generation``, ``max_generations``, ``history``, ``pm``, ``pc``, plus
+# anything from ``EngineConfig.extra_params``); Boltzmann selection and
+# non-uniform mutation read it.
 # ----------------------------------------------------------------------------
 ParentSelection = Callable[[Population, int, Rng, dict], list[Individual]]
 Crossover = Callable[[Individual, Individual, Rng, dict], "tuple[Individual, Individual]"]
@@ -251,6 +251,8 @@ class Engine:
             generation=generation,
             max_generations=self._config.max_generations,
             history=tuple(history),
+            pm=self._config.pm,
+            pc=self._config.pc,
         )
         return params
 
