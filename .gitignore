@@ -32,3 +32,7 @@ TP1/Ejercicio2_sokoban/analisis/resultados/*.csv
 # Sokoban: graficos generados por analisis/graficos_main.py
 # (incluye una copia de plotly.min.js de ~5 MB)
 TP1/Ejercicio2_sokoban/analisis/graficos/
+
+# TP2: resultados generados por run.py (imagenes, logs, snapshots por corrida)
+# (si querés versionar una corrida puntual: git add -f resultados/<carpeta>)
+TP2/results/
