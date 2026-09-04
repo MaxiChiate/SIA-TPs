@@ -157,6 +157,7 @@ class EngineConfig:
     stopping: Stopping | None = None
     extra_params: dict = field(default_factory=dict)
     workers: int = 1  # individuals per generation evaluated in parallel processes
+    seed_individual: Individual | None = None  # replaces one random individual at gen 0
 
     def __post_init__(self) -> None:
         if self.n <= 0:
@@ -222,12 +223,13 @@ class Engine:
         cfg = self._config
         started = time.perf_counter()
 
-        population = Population(
-            individuals=[
-                self._problem.random_individual(self._rng) for _ in range(cfg.n)
-            ],
-            generation=0,
-        )
+        random_count = cfg.n - (1 if cfg.seed_individual is not None else 0)
+        individuals = [
+            self._problem.random_individual(self._rng) for _ in range(random_count)
+        ]
+        if cfg.seed_individual is not None:
+            individuals.append(cfg.seed_individual.copy())
+        population = Population(individuals=individuals, generation=0)
         self._evaluator.evaluate_all(population.individuals)
 
         history: list[GenerationRecord] = [
