@@ -41,8 +41,11 @@ tests/                    tests unitarios de los operadores (pytest, determinist
 ## Arranque rápido
 
 ```bash
-cp config.json.example config.json    # ajustá imagen, triangle_count, operadores, etc.
+python3 -m venv .venv                 # crear un entorno virtual
+source .venv/bin/activate             # activarlo (Windows: .venv\Scripts\activate)
 pip install -r requirements.txt       # pillow, numpy, pytest
+
+cp config.json.example config.json    # ajustá imagen, triangle_count, operadores, etc.
 python run.py                         # usa ./config.json
 python run.py otra_config.json
 ```
@@ -77,7 +80,8 @@ Imprime el fitness mejor/promedio de cada generación a medida que corre.
     "k": 100,
     "pc": 0.85,
     "pm": 0.05,
-    "max_generations": 500
+    "max_generations": 500,
+    "processes": 1
   },
   "operators": {
     "parent_selection": {
@@ -116,7 +120,13 @@ Imprime el fitness mejor/promedio de cada generación a medida que corre.
 - **`seed`**: entero obligatorio — misma seed + mismo config ⇒ mismo
   resultado siempre.
 - **`engine`**: `n` (tamaño de población), `k` (hijos por generación), `pc`,
-  `pm`, `max_generations` (tope duro, además de cualquier `stopping`).
+  `pm`, `max_generations` (tope duro, además de cualquier `stopping`),
+  `processes` (opcional, default `1`) — cantidad de procesos en paralelo para
+  evaluar los individuos de una generación; cada individuo sin fitness
+  cacheado se renderiza y evalúa en su propio proceso worker, y el engine
+  espera a que termine toda la tanda antes de avanzar a la siguiente
+  generación. Con `1` corre todo en el proceso principal, sin overhead de
+  `multiprocessing`.
 - **`operators.{parent_selection,crossover,mutation,survival}`**: `name` +
   `params` propios de ese operador, resueltos por nombre vía `ga/registry.py`.
   Los `params` de las cuatro categorías se mergean en un único dict que el

@@ -20,6 +20,7 @@ from .core.rng import Rng, make_rng
 
 _TOP_LEVEL_KEYS = {"seed", "engine", "operators", "stopping", "problem"}
 _ENGINE_KEYS = {"n", "k", "pc", "pm", "max_generations"}
+_ENGINE_OPTIONAL_KEYS = {"processes"}
 _OPERATOR_CATEGORIES = ("parent_selection", "crossover", "mutation", "survival")
 
 
@@ -198,8 +199,13 @@ def _build_engine_config(
     extra_params: dict[str, Any],
 ) -> EngineConfig:
     engine_section = _expect_dict(engine_section, "engine")
-    _check_keys(engine_section, _ENGINE_KEYS, "engine")
+    _check_keys(engine_section, _ENGINE_KEYS | _ENGINE_OPTIONAL_KEYS, "engine")
     kwargs = {key: _require(engine_section, key, "engine") for key in _ENGINE_KEYS}
+    processes = engine_section.get("processes", 1)
+    if not isinstance(processes, int) or isinstance(processes, bool):
+        raise ConfigError(
+            f"engine.processes: expected int, got {type(processes).__name__}"
+        )
     try:
         return EngineConfig(
             n=kwargs["n"],
@@ -213,6 +219,7 @@ def _build_engine_config(
             survival=callables["survival"],
             stopping=stopping,
             extra_params=extra_params,
+            workers=processes,
         )
     except (ValueError, TypeError) as err:
         raise ConfigError(f"engine: {err}") from err

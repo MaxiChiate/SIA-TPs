@@ -11,6 +11,7 @@ so the same seed and config always reproduce the same run.
 
 from __future__ import annotations
 
+import multiprocessing as mp
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -20,6 +21,21 @@ from .individual import Individual
 from .population import Population
 from .problem import Problem
 from .rng import Rng
+
+# Set by ``_init_worker`` once per worker process (spawned fresh, so this
+# module-level global is never shared across processes). Lets pool workers
+# call ``problem.evaluate`` without re-sending the problem on every task.
+_worker_problem: Problem | None = None
+
+
+def _init_worker(problem: Problem) -> None:
+    global _worker_problem
+    _worker_problem = problem
+
+
+def _worker_evaluate(individual: Individual) -> float:
+    assert _worker_problem is not None, "worker pool not initialized with a problem"
+    return _worker_problem.evaluate(individual)
 
 # ----------------------------------------------------------------------------
 # Operator call signatures. Concrete implementations arrive in ga.operators.
@@ -54,12 +70,25 @@ class Evaluator:
     Fitness is cached twice: on the individual itself, and in a shared
     ``genotype -> fitness`` dict so a regenerated identical genotype is free.
     ``count`` only rises on real calls to ``problem.evaluate``.
+
+    With ``workers > 1``, ``evaluate_all`` fans the still-uncached individuals
+    of a generation out across a persistent process pool: rendering is the
+    bottleneck (see ``problems/triangles``), and each individual's evaluation
+    is independent, so this is the parallel unit of work rather than the
+    generation as a whole. ``workers == 1`` keeps the original single-process
+    path with no pool overhead.
     """
 
-    def __init__(self, problem: Problem) -> None:
+    def __init__(self, problem: Problem, workers: int = 1) -> None:
         self._problem = problem
         self._memo: dict[tuple[float, ...], float] = {}
         self.count = 0
+        self._pool = None
+        if workers > 1:
+            ctx = mp.get_context("spawn")
+            self._pool = ctx.Pool(
+                processes=workers, initializer=_init_worker, initargs=(problem,)
+            )
 
     def evaluate(self, individual: Individual) -> float:
         if individual.fitness is not None:
@@ -76,8 +105,43 @@ class Evaluator:
         return value
 
     def evaluate_all(self, individuals: Sequence[Individual]) -> None:
+        if self._pool is None:
+            for individual in individuals:
+                self.evaluate(individual)
+            return
+
+        # Group by genotype so identical individuals within the same batch
+        # (e.g. unmutated crossover children) are only rendered once, same
+        # as the serial path's shared memo would give them for free.
+        pending_by_key: dict[tuple[float, ...], list[Individual]] = {}
         for individual in individuals:
-            self.evaluate(individual)
+            if individual.fitness is not None:
+                continue
+            key = individual.key()
+            cached = self._memo.get(key)
+            if cached is not None:
+                individual.fitness = cached
+                continue
+            pending_by_key.setdefault(key, []).append(individual)
+
+        if not pending_by_key:
+            return
+
+        representatives = [group[0] for group in pending_by_key.values()]
+        results = self._pool.map(_worker_evaluate, representatives)
+        for representative, value in zip(representatives, results):
+            key = representative.key()
+            self.count += 1
+            self._memo[key] = value
+            for member in pending_by_key[key]:
+                member.fitness = value
+
+    def close(self) -> None:
+        """Shut down the process pool, if any. Safe to call more than once."""
+        if self._pool is not None:
+            self._pool.close()
+            self._pool.join()
+            self._pool = None
 
     @property
     def cache_size(self) -> int:
@@ -99,6 +163,7 @@ class EngineConfig:
     survival: Survival
     stopping: Stopping | None = None
     extra_params: dict = field(default_factory=dict)
+    workers: int = 1  # individuals per generation evaluated in parallel processes
 
     def __post_init__(self) -> None:
         if self.n <= 0:
@@ -113,6 +178,8 @@ class EngineConfig:
             raise ValueError(
                 f"max_generations must be > 0, got {self.max_generations}"
             )
+        if self.workers <= 0:
+            raise ValueError(f"workers must be > 0, got {self.workers}")
 
 
 @dataclass(slots=True)
@@ -141,7 +208,7 @@ class Engine:
         self._problem = problem
         self._config = config
         self._rng = rng
-        self._evaluator = Evaluator(problem)
+        self._evaluator = Evaluator(problem, workers=config.workers)
 
     def run(
         self, on_generation: Callable[[Population], None] | None = None
@@ -151,6 +218,14 @@ class Engine:
         generation 0) - e.g. for a caller to print progress or snapshot the
         current best individual, without the engine knowing anything about it.
         """
+        try:
+            return self._run(on_generation)
+        finally:
+            self._evaluator.close()
+
+    def _run(
+        self, on_generation: Callable[[Population], None] | None
+    ) -> RunResult:
         cfg = self._config
         started = time.perf_counter()
 

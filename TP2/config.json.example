@@ -5,7 +5,8 @@
     "k": 100,
     "pc": 0.85,
     "pm": 0.05,
-    "max_generations": 500
+    "max_generations": 500,
+    "processes": 1
   },
   "operators": {
     "parent_selection": {
