@@ -9,20 +9,20 @@
   },
   "operators": {
     "parent_selection": {
-      "name": "tournament",
+      "name": "tournament_deterministic",
       "params": {"tournament_size": 3}
     },
     "crossover": {
-      "name": "block_uniform",
+      "name": "one_point",
       "params": {}
     },
     "mutation": {
-      "name": "uniform_gene",
-      "params": {"sigma": 0.1}
+      "name": "non_uniform",
+      "params": {"b": 2.0}
     },
     "survival": {
-      "name": "elitism",
-      "params": {"elite_count": 5}
+      "name": "additive",
+      "params": {"selection_method": "elite"}
     }
   },
   "stopping": [
