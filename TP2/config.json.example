@@ -32,9 +32,9 @@
   "problem": {
     "type": "triangles",
     "params": {
-      "image_path": "docs/sample.png",
+      "image_path": "images/argentina.png",
       "triangle_count": 50,
-      "work_resolution": [128, 128],
+      "work_resolution": [128, 80],
       "background_rgb": [255, 255, 255]
     }
   }
