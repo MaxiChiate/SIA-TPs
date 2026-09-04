@@ -8,10 +8,18 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from PIL import Image
+
 from ga.core.individual import Individual
 
 from .genotype import triangles_from_alleles
 from .renderer import render_triangles
+
+
+def native_resolution(image_path: str | Path) -> tuple[int, int]:
+    """The source image's own pixel dimensions, for a full-resolution export."""
+    with Image.open(image_path) as img:
+        return img.size
 
 
 def triangles_as_json(
