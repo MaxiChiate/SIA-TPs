@@ -152,7 +152,8 @@ con Pillow. Para fijar el backend en vez de depender de `auto`, poné
       "triangle_count": 50,
       "work_resolution": [128, 80],
       "background_rgb": [255, 255, 255],
-      "color_space": "rgb"
+      "color_space": "rgb",
+      "initial_alpha": 0.2
     }
   }
 }
@@ -179,8 +180,43 @@ con Pillow. Para fijar el backend en vez de depender de `auto`, poné
 - **`problem`**: `type` (hoy solo `"triangles"`) + `params` — `image_path`,
   `triangle_count`, `work_resolution` (resolución chica para evaluar fitness;
   el genotipo es independiente de la resolución), `background_rgb`,
-  `color_space` (opcional, default `"rgb"`) y `renderer` / `threads`
+  `color_space` (opcional, default `"rgb"`), `initial_alpha` (opcional,
+  default `1.0`; ver "El piso de fitness") y `renderer` / `threads`
   (opcionales; ver "Backend de render").
+
+## El piso de fitness (`problem.params.initial_alpha`)
+
+El fitness es `1 - mse/baseline` **recortado en 0**: todo lo que sea peor que el
+canvas vacío vale exactamente 0. Con triángulos opacos al azar eso no es un caso
+borde, es el arranque típico — 50 triángulos opacos sobre la bandera argentina
+dan MSE 1,04x-1,76x el del canvas blanco, o sea **toda** la generación 0 empatada
+en 0. Y con la población entera empatada, la selección no tiene nada que
+ordenar: el "mejor" es el primero de la lista, no cambia nunca, y todas las
+snapshots salen idénticas hasta que una mutación cruza el piso de casualidad.
+Si además hay `stagnation`, la corrida se muere ahí.
+
+`initial_alpha` acota el alpha **solo de la generación 0**: arranca casi
+transparente, del lado útil del piso. No lo ve ningún operador ni ninguna
+generación posterior — el alpha puede volver a subir a 1 por mutación — y como
+se aplica después de sortear el vector, la misma seed sigue dando las mismas
+coordenadas y colores.
+
+Cuánto hace falta depende de la imagen y de cuántos triángulos haya. Individuos
+aleatorios con fitness > 0, sobre 50 muestras:
+
+| `initial_alpha` | argentina, 50 tri / RGB | argentina, 200 tri / HCL | starry_night, 50 tri / RGB |
+|---|---|---|---|
+| `1.0` (sin sesgo) | 0/50 | 0/50 | 50/50 |
+| `0.2` | 50/50 | 4/50 | 50/50 |
+| `0.1` | 50/50 | 39/50 | 50/50 |
+| `0.05` | 50/50 | 50/50 | 50/50 |
+
+Por eso el default es `1.0` (sin sesgo) y no un valor bajo: `starry_night` es
+oscura y saturada, el canvas blanco es un baseline pésimo, y ahí los triángulos
+opacos ya arrancan arriba del piso — bajarle el alpha solo empeora el punto de
+partida (mejor individuo inicial: 0,585 con `1.0` contra 0,153 con `0.05`).
+Regla práctica: si la generación 0 imprime `best=0.000000`, bajalo; si no,
+dejalo en `1.0`.
 
 ## Backend de render
 

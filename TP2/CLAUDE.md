@@ -90,6 +90,14 @@ del problema declara `block_size = 10`.
   `ImageDraw.polygon` pinta el contorno además del interior. La equivalencia se defiende con
   correlación de rangos (0,997–0,999) y con una prueba end-to-end que puntúa al ganador de Rust
   con el oráculo Pillow. Los fitness de ambos backends no son comparables entre sí.
+- **Piso de fitness y `initial_alpha`**: `pixel_similarity` recorta en 0 todo lo que sea peor
+  que el canvas vacío, y una población inicial de triángulos opacos al azar cae entera abajo de
+  ese piso (medido: 0/50 con fitness > 0 en argentina/50/RGB y en argentina/200/HCL). Con todos
+  empatados en 0 la selección no ordena nada y la corrida se queda quieta hasta que una mutación
+  cruza de casualidad — o muere por `stagnation`. Se corrigió **sesgando solo la generación 0**
+  (`problem.params.initial_alpha`, default `1.0` = sin sesgo) y no tocando la métrica: cambiar
+  la normalización volvería incomparables todos los fitness ya medidos. El sesgo se aplica
+  después de sortear el vector, así que la misma seed conserva coordenadas y colores.
 - **Espacio de color configurable** (`problem.params.color_space`: `rgb` default, `hsv`, `hcl`)
   en `problems/triangles/colorspace.py`: cambia cómo se leen los 3 genes de color, no el
   genotipo ni ningún operador — sirve para comparar geometrías del espacio de búsqueda. `hcl`

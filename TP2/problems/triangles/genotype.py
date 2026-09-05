@@ -23,6 +23,10 @@ from .colorspace import DEFAULT as DEFAULT_COLOR_SPACE
 from .colorspace import ColorSpace
 
 GENES_PER_TRIANGLE = 10
+# Alpha is the last locus of a triangle's block. Public because seeding the
+# first generation reaches for it directly, and that layout is this module's
+# business rather than the problem's.
+ALPHA_LOCUS = GENES_PER_TRIANGLE - 1
 _COORD_NAMES = ("x1", "y1", "x2", "y2", "x3", "y3")
 _ALPHA_NAME = "a"
 

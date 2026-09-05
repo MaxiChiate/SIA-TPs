@@ -39,6 +39,7 @@
       "work_resolution": [128, 80],
       "background_rgb": [255, 255, 255],
       "color_space": "rgb",
+      "initial_alpha": 0.2,
       "renderer": "auto",
       "threads": 0
     }

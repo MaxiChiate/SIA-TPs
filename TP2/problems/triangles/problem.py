@@ -15,6 +15,14 @@ close together under mutation and crossover.
 Scoring itself is delegated to a ``Renderer`` (``problems.triangles.renderers``),
 chosen by the optional ``renderer`` param. The problem holds the genotype rules;
 the renderer holds the pixels.
+
+The optional ``initial_alpha`` param caps the alpha of the *first* generation
+only. Fitness floors at 0 for anything worse than the blank canvas, and a
+population of opaque random triangles starts entirely under that floor: every
+individual ties at 0, selection has nothing to rank, and the run stalls until a
+mutation happens to cross back over. Starting nearly transparent puts the
+initial population on the useful side of the floor. It biases only the seed
+draw - no operator, and no later generation, knows about it.
 """
 
 from __future__ import annotations
@@ -31,12 +39,13 @@ from ga.core.rng import Rng
 
 from . import colorspace
 from .export import native_resolution
-from .genotype import GENES_PER_TRIANGLE, schema_for
+from .genotype import ALPHA_LOCUS, GENES_PER_TRIANGLE, schema_for
 from .renderers import DEFAULT_NAME as DEFAULT_RENDERER
 from .renderers import RenderSpec, make_renderer
 
 _DEFAULT_WORK_RESOLUTION = (64, 64)
 _DEFAULT_BACKGROUND_RGB = (255, 255, 255)
+_DEFAULT_INITIAL_ALPHA = 1.0  # the whole [0,1] range, i.e. no bias at all
 
 
 def _clamp01(value: float) -> float:
@@ -54,6 +63,11 @@ class TrianglesProblem(Problem):
         self.color_space = colorspace.get(
             params.get("color_space", colorspace.DEFAULT.name)
         )
+        self.initial_alpha = float(params.get("initial_alpha", _DEFAULT_INITIAL_ALPHA))
+        if not 0.0 < self.initial_alpha <= 1.0:
+            raise ValueError(
+                f"initial_alpha must be in (0, 1], got {self.initial_alpha}"
+            )
 
         self._schema = schema_for(self.triangle_count, self.color_space)
         self._renderer = make_renderer(
@@ -79,7 +93,11 @@ class TrianglesProblem(Problem):
         return self._schema
 
     def random_individual(self, rng: Rng) -> Individual:
-        return Individual(self._schema.random_vector(rng), self._schema)
+        alleles = self._schema.random_vector(rng)
+        if self.initial_alpha < 1.0:
+            for locus in range(ALPHA_LOCUS, len(alleles), GENES_PER_TRIANGLE):
+                alleles[locus] *= self.initial_alpha
+        return Individual(alleles, self._schema)
 
     def evaluate(self, individual: Individual) -> float:
         return self._renderer.score(individual.alleles)
@@ -97,6 +115,7 @@ class TrianglesProblem(Problem):
             "work_resolution": [self.work_width, self.work_height],
             "background_rgb": list(self.background_rgb),
             "color_space": self.color_space.name,
+            "initial_alpha": self.initial_alpha,
             **self._renderer.describe(),
         }
 
