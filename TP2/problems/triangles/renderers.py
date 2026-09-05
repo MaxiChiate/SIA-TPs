@@ -127,6 +127,18 @@ class Renderer(abc.ABC):
         """Fitness of several genotypes, in order. Default: one at a time."""
         return [self.score(alleles) for alleles in genomes]
 
+    def render_rgb(self, alleles: Sequence[float], width: int, height: int) -> Image.Image:
+        """Draw one genotype at an arbitrary size.
+
+        A backend must draw here with the same rasterizer it scores with,
+        otherwise the exported picture is not the picture that was scored.
+        """
+        spec = self.spec
+        triangles = triangles_from_alleles(
+            list(alleles), spec.triangle_count, width, height, spec.color_space
+        )
+        return render_triangles(triangles, width, height, spec.background_rgb)
+
     def owns_parallelism(self) -> bool:
         """True if ``score_batch`` already spreads the batch across cores."""
         return False
@@ -171,7 +183,60 @@ class PillowRenderer(Renderer):
         return mean_squared_error(rendered, self._target_array)
 
 
+class RustRenderer(Renderer):
+    """The ``triangles_native`` extension: one ``Scorer`` per run.
+
+    The target and every decode rule are uploaded once, at construction, so a
+    generation costs one call across the FFI boundary rather than one per pixel
+    buffer.
+    """
+
+    name = "rust"
+
+    def __init__(self, spec: RenderSpec) -> None:
+        super().__init__(spec)
+        if _native is None:  # pragma: no cover - guarded by make_renderer
+            raise ValueError(
+                "the 'rust' renderer needs the triangles_native extension; "
+                "build it with: cd rust && maturin develop --release"
+            )
+        if _native.schema_version() != NATIVE_SCHEMA_VERSION:
+            raise ValueError(
+                f"triangles_native was built from a different revision "
+                f"(schema {_native.schema_version()}, expected "
+                f"{NATIVE_SCHEMA_VERSION}); rebuild it with: "
+                f"cd rust && maturin develop --release"
+            )
+        self._scorer = _native.Scorer(
+            spec.target_rgb,
+            spec.width,
+            spec.height,
+            tuple(spec.background_rgb),
+            spec.triangle_count,
+            spec.color_space.name,
+            spec.baseline_mse,
+        )
+
+    def score(self, alleles: Sequence[float]) -> float:
+        return self._scorer.score(list(alleles))
+
+    def score_batch(self, genomes: Sequence[Sequence[float]]) -> list[float]:
+        return self._scorer.score_batch([list(alleles) for alleles in genomes])
+
+    def mse(self, alleles: Sequence[float]) -> float:
+        return self._scorer.mse(list(alleles))
+
+    def render_rgb(self, alleles: Sequence[float], width: int, height: int) -> Image.Image:
+        raw = self._scorer.render_rgb(list(alleles), width, height)
+        return Image.frombytes("RGB", (width, height), raw)
+
+    def describe(self) -> dict:
+        return {"renderer": self.name, "renderer_build": _native.build_info()}
+
+
 _BY_NAME: dict[str, type[Renderer]] = {PillowRenderer.name: PillowRenderer}
+if NATIVE_AVAILABLE:
+    _BY_NAME[RustRenderer.name] = RustRenderer
 DEFAULT_NAME = "auto"
 
 
@@ -188,6 +253,12 @@ def make_renderer(name: str, spec: RenderSpec, threads: int = 0) -> Renderer:
     """
     if name == "auto":
         return _BY_NAME[available()[0]](spec)
+    if name == RustRenderer.name and not NATIVE_AVAILABLE:
+        raise ValueError(
+            "the 'rust' renderer needs the triangles_native extension, which is "
+            "not importable; build it with 'cd rust && maturin develop --release' "
+            "or use \"renderer\": \"auto\""
+        )
     if name not in _BY_NAME:
         known = ", ".join(sorted(_BY_NAME) + ["auto"])
         raise ValueError(f"unknown renderer {name!r}; known: {known}")
