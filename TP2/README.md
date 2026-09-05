@@ -144,8 +144,102 @@ deja el `progress.gif` de esa corrida en `results/prueba/`.
   combinados por OR entre sí y con `max_generations`.
 - **`problem`**: `type` (hoy solo `"triangles"`) + `params` — `image_path`,
   `triangle_count`, `work_resolution` (resolución chica para evaluar fitness;
-  el genotipo es independiente de la resolución), `background_rgb` y
-  `color_space` (opcional, default `"rgb"`; ver abajo).
+  el genotipo es independiente de la resolución), `background_rgb`,
+  `color_space` (opcional, default `"rgb"`) y `renderer` / `threads`
+  (opcionales; ver "Backend de render").
+
+## Backend de render
+
+Rasterizar y comparar píxeles es ~90% del tiempo de una corrida, así que es el
+único lugar donde hay más de una implementación. Se elige con
+`problem.params.renderer` y nada aguas arriba se entera:
+
+| `renderer` | Qué usa |
+|---|---|
+| `"auto"` (default) | `rust` si la extensión está compilada, `pillow` si no. |
+| `"pillow"` | La implementación original. Es el **oráculo de referencia** contra el que se valida Rust, y el fallback que no necesita toolchain. |
+| `"rust"` | La extensión nativa `triangles_native`. Falla con un error claro si no está compilada. |
+
+`problem.params.threads` (default `0` = uno por core) son los threads de rayon
+que usa el backend nativo. Cuando corre Rust, el motor **no** abre su pool de
+procesos: el backend declara que ya se hace cargo del paralelismo, y apilar
+procesos sobre threads solo sobre-suscribe la CPU. O sea: `engine.processes`
+manda con `pillow`, `problem.params.threads` manda con `rust`.
+
+### Compilar el backend nativo
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # una sola vez
+source .venv/bin/activate                                       # maturin usa el venv activo
+pip install maturin
+cd rust && maturin develop --release                            # desde rust/, ver abajo
+python -c "import triangles_native as n; print(n.version(), n.build_info())"
+```
+
+Dos cosas que arruinan el build en silencio:
+
+- **`--release` no es opcional.** Un build de debug del kernel es más lento que
+  el Pillow que reemplaza.
+- **Hay que correrlo desde `rust/`.** Cargo busca `.cargo/config.toml` desde su
+  directorio de trabajo hacia arriba, no desde el manifest, así que
+  `maturin develop -m rust/Cargo.toml` compila **sin** `target-cpu=x86-64-v3`.
+  `build_info()` reporta las features realmente compiladas: si no dice
+  `avx2`, el flag no se aplicó.
+
+Sin toolchain de Rust no hay que hacer nada: `pip install -r requirements.txt` y
+`python run.py` siguen funcionando con Pillow.
+
+### Equivalencia entre backends
+
+Los dos rasterizadores **no** dan los mismos píxeles: `ImageDraw.polygon` pinta
+el contorno además del interior, así que cubre entre 7% y 30% más área por
+triángulo que una regla top-left estándar. Son dos funciones objetivo parecidas
+pero distintas, y `tests/test_native_parity.py` mide la diferencia en vez de
+disimularla:
+
+- **Decodificación de color: exacta.** Los tres espacios coinciden bit a bit con
+  la implementación Python sobre todo el cubo de alelos (`==`, sin tolerancia).
+- **Puntajes: estadística.** Sobre 120 genomas por espacio, el error cuadrático
+  difiere como máximo 3%, con sesgo medio de −0,4% a −0,9% (Rust cubre un poco
+  menos), y la **correlación de rangos es 0,997–0,999**. Eso último es lo que
+  importa: la selección solo consume el *orden* de los fitness.
+- **Prueba end-to-end.** Misma seed y mismo presupuesto: el mejor individuo que
+  encuentra el motor con Rust, puntuado con el oráculo Pillow, da **0,895**
+  contra **0,879** del que encuentra Pillow — igual de bueno o mejor bajo la
+  métrica original, en 9,5× menos tiempo.
+- **Invariancia de threads: exacta.** El paralelismo es solo *entre* individuos
+  y el kernel por individuo es secuencial, así que el resultado no depende de
+  `threads`. La reproducibilidad por seed se mantiene.
+
+Los fitness de las dos implementaciones no son comparables entre sí: hay que
+generar todo el material de un informe con un solo backend. `summary.json`
+registra cuál corrió.
+
+### Rendimiento medido
+
+25 generaciones, `n=k=100`, resolución de trabajo 128×80, en un Ryzen AI 9 365
+(10 núcleos / 20 hilos):
+
+| Backend | 50 triángulos / RGB | 200 triángulos / HCL |
+|---|---|---|
+| pillow, 1 proceso | 2,05 s | 11,62 s |
+| pillow, 10 procesos | 3,00 s | 5,85 s |
+| rust, 1 thread | 0,32 s | 1,27 s |
+| rust, 20 threads | **0,22 s (9,4×)** | **0,88 s (13,2×)** |
+
+Una corrida completa de 500 generaciones pasó de **52,9 s a 4,57 s**, y con
+mejor fitness (0,976 contra 0,946) porque el rasterizador propio cubre el
+triángulo y no su contorno.
+
+Dos notas honestas sobre estos números:
+
+- **`pillow` con 10 procesos puede ser más lento que con 1.** Con triángulos
+  chicos el costo de `spawn` y de picklear individuos supera lo que gana.
+- **El cuello de botella se movió.** Con Rust, evaluar pasó de 89,7% a 16% del
+  tiempo, y ahora domina la mutación `non_uniform` (53%), que hace ~55.000
+  llamadas a `rng.random()` por generación en Python puro. Moverla a Rust
+  exigiría replicar el Mersenne Twister de CPython para no romper la
+  reproducibilidad por seed; queda fuera de alcance a propósito.
 
 ## Espacio de color (`problem.params.color_space`)
 

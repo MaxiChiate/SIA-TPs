@@ -14,7 +14,10 @@ mejor aproximación a esa imagen dibujando `T` triángulos de color uniforme, tr
   selección, cruza, mutación, reemplazo y corte se escriben a mano.
 - **Core del AG (`ga/`) con stdlib solamente.** Pillow y numpy únicamente en
   `problems/triangles/` (render y fitness). Nada del dominio "imagen/triángulo" puede aparecer
-  dentro de `ga/`.
+  dentro de `ga/`. El backend nativo (`rust/`) también vive detrás de esa frontera: solo lo
+  importa `problems/triangles/renderers.py`, y el crate no contiene **nada** de AG — ni RNG, ni
+  selección, ni cruza, ni mutación. El enunciado permite librerías externas para manejo de
+  imágenes, no para el algoritmo genético.
 - Identificadores, nombres de archivo y **comentarios en inglés**. Type hints y dataclasses.
   `from __future__ import annotations`. Funciones cortas, sin herencia profunda.
 - `seed` obligatorio: misma seed + mismo config ⇒ mismo resultado, siempre. Una sola instancia
@@ -43,7 +46,8 @@ ga/                     # motor genérico — solo stdlib
   config.py             # (pendiente) parseo + validación -> ConfigError
   metrics.py            # GenerationRecord + mean / std / genotypic_diversity + record_for
 problems/
-  triangles/            # (pendiente) genotype, renderer, fitness, problem, export  [Pillow/numpy]
+  triangles/            # genotype, renderer(s), fitness, colorspace, problem, export  [Pillow/numpy]
+rust/                   # crate PyO3 del backend nativo: color, raster, score  (solo pixeles)
 run.py                  # (pendiente) CLI: python TP2/run.py [config.json]
 config.json.example     # (pendiente)
 requirements.txt        # pillow, numpy, pytest  (el core no los usa)
@@ -76,6 +80,16 @@ del problema declara `block_size = 10`.
   (criterios combinables por OR: generaciones, tiempo, fitness aceptable, estructura, contenido).
 - **Diversidad genotípica** = media de los desvíos estándar por locus (O(N·L), comparable
   entre corridas porque los alelos viven en `[0,1]`).
+- **Backend de render intercambiable** (`problem.params.renderer`: `auto` default, `pillow`,
+  `rust`) en `problems/triangles/renderers.py`, con la costura en la ABC `Problem`
+  (`evaluate_batch` + `owns_parallelism`): el engine entrega una generación entera en una
+  llamada y `ga/` no importa nada nuevo. Pillow queda como **oráculo de referencia**, no como
+  camino co-mantenido. Medido: 9,4×–13,2× end-to-end, y la evaluación pasó de 89,7% a 16% del
+  perfil (ahora domina la mutación).
+- **Los dos rasterizadores no son equivalentes bit a bit** y no se pretende que lo sean:
+  `ImageDraw.polygon` pinta el contorno además del interior. La equivalencia se defiende con
+  correlación de rangos (0,997–0,999) y con una prueba end-to-end que puntúa al ganador de Rust
+  con el oráculo Pillow. Los fitness de ambos backends no son comparables entre sí.
 - **Espacio de color configurable** (`problem.params.color_space`: `rgb` default, `hsv`, `hcl`)
   en `problems/triangles/colorspace.py`: cambia cómo se leen los 3 genes de color, no el
   genotipo ni ningún operador — sirve para comparar geometrías del espacio de búsqueda. `hcl`
