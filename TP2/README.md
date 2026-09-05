@@ -40,7 +40,10 @@ analysis/                runner de experimentos (corre muchas configs y compara)
   runner.py                 orquestador paralelo (un proceso por corrida)
   records.py                 esquema de summary.csv e history.csv
   sweep.json                  serie A de ejemplo: los 7 métodos de selección
-  results/                     CSVs generados (gitignoreados)
+  plots_data.py                carga de los CSVs y promedio por seed
+  plots_style.py                paleta validada + layout base
+  plots_main.py                  CLI de los gráficos
+  results/                        CSVs y HTMLs generados (gitignoreados)
 images/                   imágenes de referencia (argentina.png, starry_night.png)
 tests/                    tests unitarios de los operadores (pytest, deterministas)
 ```
@@ -217,6 +220,40 @@ Cada tanda escribe en `analysis/results/<sweep_id>/`:
 
 Los CSVs se van escribiendo a medida que terminan las corridas, así que una
 tanda interrumpida igual deja datos usables.
+
+## Gráficos
+
+Los CSVs de una tanda se dibujan con:
+
+```bash
+python3 analysis/plots_main.py                                  # la tanda más reciente
+python3 analysis/plots_main.py analysis/results/20260905T0251Z  # una en particular
+```
+
+Deja tres HTML autocontenidos (plotly embebido, abren sin internet) al lado de
+los CSVs de esa tanda:
+
+- `fitness.html` — mejor fitness por generación, una línea por variante.
+- `diversity.html` — diversidad genotípica por generación. Es el gráfico que
+  muestra la **convergencia prematura**: si la curva se va a cero antes de que
+  el fitness llegue a algo aceptable, la población se homogeneizó.
+- `comparison.html` — fitness final por variante, con un círculo por seed y un
+  rombo en la media.
+
+Las seeds se promedian por generación, así que una variante es una línea. En
+`comparison.html` no se promedian: se muestran una por una a propósito, porque
+**si las seeds de una variante se dispersan más que la distancia entre dos
+variantes, esa distancia no es un resultado**.
+
+Ese gráfico es un dot plot y no barras por una razón: el fitness vive en una
+franja angosta cerca de 1, así que un gráfico de barras necesitaría un eje
+truncado para mostrar alguna diferencia — y una barra truncada miente sobre la
+magnitud, porque el largo de la barra *es* el valor. Los puntos codifican
+posición, así que un eje con zoom es honesto.
+
+La paleta (`analysis/plots_style.py`) está validada para daltonismo: los colores
+se asignan en orden fijo y cada variante conserva el suyo en los tres gráficos.
+Pasadas 8 variantes conviene partir la tanda en vez de inventar un color nuevo.
 
 ## Agregar un operador nuevo
 
