@@ -38,6 +38,18 @@ from .renderer import render_triangles
 
 _MIN_BASELINE_MSE = 1e-9
 
+# Bumped in lockstep with ``SCHEMA_VERSION`` in rust/src/lib.rs whenever the
+# native kernel's numerics change, so a stale .so left over from an earlier
+# build fails loudly instead of quietly scoring genomes a different way.
+NATIVE_SCHEMA_VERSION = 1
+
+try:
+    import triangles_native as _native
+except ImportError:  # not built, or built against a different interpreter
+    _native = None
+
+NATIVE_AVAILABLE = _native is not None
+
 
 @dataclass(frozen=True, slots=True)
 class RenderSpec:
