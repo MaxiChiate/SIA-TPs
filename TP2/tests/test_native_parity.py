@@ -1,13 +1,15 @@
-"""Parity between the native backend and the Pillow/Python reference.
+"""Native-vs-Python colour parity, and the native kernel's own API contract.
 
-The whole point of keeping the Python implementation around is to have an oracle
-to check the Rust one against. The comparison is split by how exact it can be:
+Colour decoding still has an independent pure-Python implementation
+(``problems.triangles.colorspace``, used by ``export.py``'s JSON enumeration and
+by importing a previous run's ``triangles.json``), so it is still worth
+checking the native kernel's decode against it bit for bit - that comparison
+lives in the first half of this file.
 
-* **Colour decoding is bit-exact.** It is pure scalar float maths on both sides,
-  so these assert equality with ``==`` and no tolerance at all.
-* **Rasterized scores are not**, and cannot be: Pillow's polygon fill and an
-  independent scanline rasterizer disagree on which pixels a triangle covers.
-  Those comparisons live further down and are statistical.
+Rasterizing and scoring, by contrast, now run *only* in the native kernel:
+there is no Pillow oracle left to compare against, so the tests further down
+that exercise those are about the kernel's own API contract (batch scoring,
+thread invariance, malformed input) rather than parity with anything.
 
 Skipped wholesale when the extension is not built, so a checkout with no Rust
 toolchain still runs a green suite.
@@ -42,8 +44,8 @@ def test_the_built_extension_matches_this_source_tree():
 
 
 def test_build_info_reports_an_optimised_build():
-    """A debug build of the kernel is slower than the Pillow path it replaces,
-    which looks like a failed port rather than a wrong build command."""
+    """A debug build of this kernel is slower than pure-Python rendering ever
+    was, which looks like a failed port rather than a wrong build command."""
     assert "release" in native.build_info()
 
 
@@ -79,93 +81,32 @@ def test_an_unknown_color_space_is_rejected():
         native.to_rgb("cmyk", 0.1, 0.2, 0.3)
 
 
-# -- rasterized scores: statistical ------------------------------------------
+# -- native API contract -----------------------------------------------------
 
-_PARITY_SAMPLES = 120
 _TRIANGLES = 40
 _SIZE = (96, 60)
 
 
-def _renderers(space):
-    from problems.triangles.renderers import RenderSpec, make_renderer
+def _rust_renderer(space):
+    from problems.triangles.renderers import RenderSpec, RustRenderer
 
     spec = RenderSpec.build(
         "images/argentina.png", _SIZE[0], _SIZE[1], (255, 255, 255), space, _TRIANGLES
     )
-    return make_renderer("pillow", spec), make_renderer("rust", spec)
+    return RustRenderer(spec)
 
 
 def _genomes():
     from ga.core.rng import make_rng
 
     rng = make_rng(20260905)
-    return [
-        [rng.random() for _ in range(_TRIANGLES * 10)] for _ in range(_PARITY_SAMPLES)
-    ]
-
-
-@pytest.fixture(scope="module", params=_ALL_SPACES, ids=lambda s: s.name)
-def scores(request):
-    """Raw MSE from both backends over the same genomes.
-
-    Compared on MSE rather than fitness: fitness floors at 0 for anything worse
-    than a blank canvas, and every uniformly random genome is - so a fitness
-    comparison here would be 0.0 against 0.0 and would prove nothing.
-    """
-    pillow, rust = _renderers(request.param)
-    genomes = _genomes()
-    return [pillow.mse(g) for g in genomes], [rust.mse(g) for g in genomes]
-
-
-def test_backends_rank_genomes_the_same_way(scores):
-    """The primary criterion. Selection only ever consumes the *order* of
-    fitnesses, so ranking the same way is what "measures the same thing" means
-    operationally."""
-    import statistics
-
-    pillow, rust = scores
-    assert statistics.correlation(pillow, rust, method="ranked") > 0.99
-
-
-def test_no_genome_diverges_wildly(scores):
-    """A wrong blend, winding or colour space moves this by 10x, not by 2x."""
-    pillow, rust = scores
-    assert max(abs(r - p) / p for p, r in zip(pillow, rust)) < 0.05
-
-
-def test_the_systematic_coverage_bias_stays_small(scores):
-    """The native rasterizer covers slightly less than ``ImageDraw.polygon``,
-    which paints a polygon's outline as well as its interior. That bias is
-    inherent to any independent rasterizer; what matters is that it stays an
-    order of magnitude below the fitness differences the GA acts on."""
-    import statistics
-
-    pillow, rust = scores
-    bias = statistics.fmean((r - p) / p for p, r in zip(pillow, rust))
-    assert -0.02 < bias < 0.0
-
-
-def test_fitness_agrees_where_it_is_not_floored():
-    """Fitness parity in the regime a converged run actually occupies: small
-    alphas, so the picture is built from many translucent layers."""
-    from problems.triangles import colorspace
-
-    pillow, rust = _renderers(colorspace.RGB)
-    genomes = [
-        [value * 0.15 if index % 10 == 9 else value for index, value in enumerate(g)]
-        for g in _genomes()[:40]
-    ]
-    deltas = [abs(rust.score(g) - pillow.score(g)) for g in genomes]
-    assert max(deltas) < 0.02
-
-
-# -- native API contract -----------------------------------------------------
+    return [[rng.random() for _ in range(_TRIANGLES * 10)] for _ in range(120)]
 
 
 def test_batch_scoring_agrees_with_scoring_one_at_a_time():
     from problems.triangles import colorspace
 
-    _, rust = _renderers(colorspace.RGB)
+    rust = _rust_renderer(colorspace.RGB)
     genomes = _genomes()[:12]
     assert rust.score_batch(genomes) == [rust.score(g) for g in genomes]
 
@@ -173,7 +114,7 @@ def test_batch_scoring_agrees_with_scoring_one_at_a_time():
 def test_a_genome_of_the_wrong_length_is_rejected():
     from problems.triangles import colorspace
 
-    _, rust = _renderers(colorspace.RGB)
+    rust = _rust_renderer(colorspace.RGB)
     with pytest.raises(ValueError):
         rust.score([0.5] * 7)
 
@@ -183,7 +124,7 @@ def test_rendering_at_export_size_returns_that_many_pixels():
     at export size, not only at the scoring size."""
     from problems.triangles import colorspace
 
-    _, rust = _renderers(colorspace.RGB)
+    rust = _rust_renderer(colorspace.RGB)
     image = rust.render_rgb(_genomes()[0], 200, 125)
     assert image.size == (200, 125)
     assert image.mode == "RGB"

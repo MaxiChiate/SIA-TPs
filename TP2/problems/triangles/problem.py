@@ -12,9 +12,11 @@ are read. It changes no interface: the genotype stays a flat [0,1] vector of the
 same length, so every operator is unaffected - what changes is which colors sit
 close together under mutation and crossover.
 
-Scoring itself is delegated to a ``Renderer`` (``problems.triangles.renderers``),
-chosen by the optional ``renderer`` param. The problem holds the genotype rules;
-the renderer holds the pixels.
+Scoring itself is delegated to ``RustRenderer`` (``problems.triangles.renderers``):
+the problem holds the genotype rules, the renderer holds the pixels and the
+native kernel that scores them. There is no Python-side scoring path to choose
+instead - building the ``triangles_native`` extension is a prerequisite, not an
+option (see the README).
 
 ``work_resolution`` also accepts the string ``"native"``, which resolves to the
 source image's own resolution: fitness then compares every pixel of the target,
@@ -46,8 +48,7 @@ from ga.core.rng import Rng
 from . import colorspace
 from .export import native_resolution
 from .genotype import ALPHA_LOCUS, GENES_PER_TRIANGLE, schema_for
-from .renderers import DEFAULT_NAME as DEFAULT_RENDERER
-from .renderers import RenderSpec, make_renderer
+from .renderers import RenderSpec, RustRenderer
 
 _DEFAULT_WORK_RESOLUTION = (64, 64)
 _DEFAULT_BACKGROUND_RGB = (255, 255, 255)
@@ -94,8 +95,7 @@ class TrianglesProblem(Problem):
             )
 
         self._schema = schema_for(self.triangle_count, self.color_space)
-        self._renderer = make_renderer(
-            params.get("renderer", DEFAULT_RENDERER),
+        self._renderer = RustRenderer(
             RenderSpec.build(
                 self.image_path,
                 width,

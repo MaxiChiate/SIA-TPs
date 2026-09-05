@@ -9,7 +9,7 @@ El detalle de cada decisión de diseño está en [`CLAUDE.md`](CLAUDE.md).
 ```
 run.py                  CLI: python run.py [config.json]
 config.json.example     config de referencia (copiar a config.json)
-requirements.txt        pillow, numpy, pytest (el core de ga/ no los usa)
+requirements.txt        pillow, numpy, pytest, maturin (el core de ga/ no usa nada de esto)
 ga/                      motor genérico — solo stdlib
   core/
     rng.py               Rng = random.Random ; make_rng(seed)
@@ -28,27 +28,52 @@ ga/                      motor genérico — solo stdlib
   config.py                parseo/validación de config.json -> ConfigError
   metrics.py                GenerationRecord + mean/std/diversidad genotípica
 problems/
-  triangles/               plug-in de dominio (Pillow/numpy viven solo acá)
+  triangles/               plug-in de dominio (Pillow solo para I/O de imágenes; el
+                            render+score en sí corre en rust/, no acá)
     genotype.py             alelos [0,1] <-> Triangle, GeneSchema (10 genes/triángulo)
-    renderer.py               pinta triángulos translúcidos sobre un canvas
-    fitness.py                 1 - MSE normalizado contra la imagen objetivo
+    colorspace.py             RGB/HSV/HCL — decodificación de color, en Python puro
+    renderers.py               RustRenderer: sube el target a triangles_native una vez
+                                por corrida y le delega rasterizar + puntuar
     problem.py                  TrianglesProblem(Problem)
     export.py                    render full-res + enumeración JSON + native_resolution
+rust/                     crate PyO3 obligatorio: rasteriza + decodifica color + puntúa
+                          (ver "El backend nativo" más abajo; sin esto no corre nada)
 images/                   imágenes de referencia (argentina.png, starry_night.png)
 tests/                    tests unitarios de los operadores (pytest, deterministas)
 ```
 
 ## Arranque rápido
 
+Corre sobre la extensión nativa de `rust/`: no hay un camino en Python puro
+para rasterizar y puntuar, así que compilarla es parte del setup, no un paso
+opcional de rendimiento (ver ["El backend nativo"](#el-backend-nativo-rust) más
+abajo para el detalle y el porqué).
+
 ```bash
 python3 -m venv .venv                 # crear un entorno virtual
 source .venv/bin/activate             # activarlo (Windows: .venv\Scripts\activate)
-pip install -r requirements.txt       # pillow, numpy, pytest
+pip install -r requirements.txt       # pillow, numpy, pytest, maturin
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # una sola vez
+. "$HOME/.cargo/env"                   # rustup no toca el PATH de la shell ya abierta
+cd rust && maturin develop --release   # desde rust/ y con --release: las dos cosas importan
+cd ..
 
 cp config.json.example config.json    # ajustá imagen, triangle_count, operadores, etc.
 python run.py                         # usa ./config.json
 python run.py otra_config.json
 ```
+
+Para confirmar que la extensión quedó compilada, y con qué flags:
+
+```bash
+python -c "import triangles_native as n; print(n.version(), n.build_info())"
+```
+
+Sin el toolchain de Rust compilado, `import problems.triangles` funciona igual
+(así que, por ejemplo, `pytest tests/test_colorspace.py` sigue en verde), pero
+construir un `TrianglesProblem` — y por lo tanto `python run.py` — falla con un
+error claro pidiendo el `maturin develop --release` de arriba.
 
 `python run.py` a secas escribe la imagen final y las métricas, nada más. Para
 que la corrida genere **todo** — snapshots intermedias y el gif del proceso
@@ -77,8 +102,8 @@ Cada corrida escribe en un directorio de resultados
 - `summary.json` — fitness final, generación en que apareció, criterio de
   corte que disparó, evaluaciones/tiempo totales, config completo + seed, y un
   bloque `problem` con lo que **realmente** corrió: `work_resolution` resuelta,
-  backend elegido, flags con los que se compiló y threads. `config` es lo que se
-  pidió; `problem` es lo que pasó, y difieren en todo lo que sea `"auto"` o
+  flags con los que se compiló el backend nativo y threads usados. `config` es
+  lo que se pidió; `problem` es lo que pasó, y difieren en todo lo que sea
   `"native"`.
 
 Imprime el fitness mejor/promedio de cada generación a medida que corre, y
@@ -88,31 +113,6 @@ Sobre `--export-width`/`--export-height`: sin ellos cada snapshot se renderiza a
 la resolución nativa de la imagen fuente, y en un gif de 20 frames eso se nota
 (`images/starry_night.png` es 1200×950 → gif de varios MB). Achicar el export
 no toca la evaluación, que corre a `work_resolution` y es otra cosa.
-
-### Correr con el backend nativo (Rust)
-
-Opcional, pero es ~10× más rápido (ver [Backend de render](#backend-de-render)).
-Como el default es `"renderer": "auto"`, alcanza con compilar la extensión una
-vez: el `config.json` no cambia y `python run.py` pasa a usarla sola.
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # una sola vez
-. "$HOME/.cargo/env"                   # rustup no toca el PATH de la shell ya abierta
-source .venv/bin/activate              # maturin compila contra el venv activo
-pip install maturin
-cd rust && maturin develop --release   # desde rust/ y con --release: las dos cosas importan
-cd .. && python run.py                 # "auto" ahora resuelve a rust
-```
-
-Para confirmar que quedó compilada, y con qué flags:
-
-```bash
-python -c "import triangles_native as n; print(n.version(), n.build_info())"
-```
-
-Sin toolchain de Rust no hay nada que hacer: `python run.py` sigue funcionando
-con Pillow. Para fijar el backend en vez de depender de `auto`, poné
-`"renderer": "rust"` (o `"pillow"`) en `problem.params`.
 
 ## `config.json`
 
@@ -172,7 +172,13 @@ con Pillow. Para fijar el backend en vez de depender de `auto`, poné
   cacheado se renderiza y evalúa en su propio proceso worker, y el engine
   espera a que termine toda la tanda antes de avanzar a la siguiente
   generación. Con `1` corre todo en el proceso principal, sin overhead de
-  `multiprocessing`.
+  `multiprocessing`. **Es un knob genérico del motor, no del problema
+  triangles**: `TrianglesProblem.owns_parallelism()` siempre da `True` (el
+  renderer nativo ya reparte la corrida entre sus propios threads, ver más
+  abajo), así que el engine nunca abre ese pool acá y `processes` queda sin
+  efecto salvo que conectes un `Problem` distinto que no paralelice por su
+  cuenta. El número que sí importa para triangles es
+  `problem.params.threads`.
 - **`operators.{parent_selection,crossover,mutation,survival}`**: `name` +
   `params` propios de ese operador, resueltos por nombre vía `ga/registry.py`.
   Los `params` de las cuatro categorías se mergean en un único dict que el
@@ -185,8 +191,8 @@ con Pillow. Para fijar el backend en vez de depender de `auto`, poné
   `triangle_count`, `work_resolution` (resolución chica para evaluar fitness;
   el genotipo es independiente de la resolución), `background_rgb`,
   `color_space` (opcional, default `"rgb"`), `initial_alpha` (opcional,
-  default `1.0`; ver "El piso de fitness") y `renderer` / `threads`
-  (opcionales; ver "Backend de render").
+  default `1.0`; ver "El piso de fitness") y `threads` (opcional, default `0`
+  = uno por core; ver ["El backend nativo"](#el-backend-nativo-rust)).
 
 ## Resolución de evaluación (`problem.params.work_resolution`)
 
@@ -302,33 +308,37 @@ partida (mejor individuo inicial: 0,585 con `1.0` contra 0,153 con `0.05`).
 Regla práctica: si la generación 0 imprime `best=0.000000`, bajalo; si no,
 dejalo en `1.0`.
 
-## Backend de render
+## El backend nativo (Rust)
 
-Rasterizar y comparar píxeles es ~90% del tiempo de una corrida, así que es el
-único lugar donde hay más de una implementación. Se elige con
-`problem.params.renderer` y nada aguas arriba se entera:
-
-| `renderer` | Qué usa |
-|---|---|
-| `"auto"` (default) | `rust` si la extensión está compilada, `pillow` si no. |
-| `"pillow"` | La implementación original. Es el **oráculo de referencia** contra el que se valida Rust, y el fallback que no necesita toolchain. |
-| `"rust"` | La extensión nativa `triangles_native`. Falla con un error claro si no está compilada. |
+Rasterizar y comparar píxeles es ~90% del tiempo de una corrida, y corre
+enteramente en la extensión nativa `triangles_native` (`rust/`). No es un
+backend intercambiable entre varios — es el único, y compilarlo
+(`cd rust && maturin develop --release`) es un requisito para correr el
+problema `triangles`, no una opción de rendimiento. `problems/triangles/`
+solo usa Pillow para I/O de imágenes (abrir el target, guardar exports y el
+gif); nada de rasterizar ni de sumar error cuadrático corre en Python.
 
 `problem.params.threads` (default `0` = uno por core) son los threads de rayon
-que usa el backend nativo. Cuando corre Rust, el motor **no** abre su pool de
-procesos: el backend declara que ya se hace cargo del paralelismo, y apilar
-procesos sobre threads solo sobre-suscribe la CPU. O sea: `engine.processes`
-manda con `pillow`, `problem.params.threads` manda con `rust`.
+que usa el kernel. `TrianglesProblem.owns_parallelism()` siempre da `True`
+(el kernel ya reparte la corrida entre esos threads), así que el motor
+**nunca** abre su propio pool de procesos para este problema — apilar
+procesos sobre threads solo sobre-suscribiría la CPU. `engine.processes`
+(la perilla genérica del motor) no tiene efecto acá; el único número que
+gobierna el paralelismo real de una corrida es `threads`.
+
+Importar el paquete no necesita la extensión compilada — `import
+problems.triangles` (y por lo tanto `pytest tests/test_colorspace.py`) anda
+igual sin ella — pero *construir* un `TrianglesProblem` sí, y ahí es donde
+falla con un error claro si no está.
 
 ### Compilar el backend nativo
 
-Los comandos están en
-[Arranque rápido](#correr-con-el-backend-nativo-rust). Dos cosas que arruinan el
-build en silencio:
+Los comandos están en [Arranque rápido](#arranque-rápido). Dos cosas que
+arruinan el build en silencio:
 
-- **`--release` no es opcional.** Un build de debug del kernel es más lento que
-  el Pillow que reemplaza; `build_info()` arranca con `debug` o `release` según
-  cuál quedó instalado.
+- **`--release` no es opcional.** Un build de debug de este kernel es más
+  lento que cualquier alternativa en Python puro alguna vez lo fue;
+  `build_info()` arranca con `debug` o `release` según cuál quedó instalado.
 - **Hay que correrlo desde `rust/`.** Cargo busca `.cargo/config.toml` desde su
   directorio de trabajo hacia arriba, no desde el manifest, así que
   `maturin develop -m rust/Cargo.toml` compila **sin** `target-cpu=x86-64-v3`.
@@ -348,14 +358,16 @@ los cores):
 
 ```bash
 cd rust
-CARGO_BUILD_JOBS=20 maturin develop --profile parallel   # 20 = hilos de la máquina
+CARGO_BUILD_JOBS=$(nproc) maturin develop --profile parallel
 ```
 
-`CARGO_BUILD_JOBS` es opcional: Cargo ya lanza un job por CPU lógica. Los flags
-de [`rust/.cargo/config.toml`](rust/.cargo/config.toml) (`target-cpu`) aplican
+`CARGO_BUILD_JOBS` es opcional: Cargo ya lanza un job por CPU lógica, así que
+`$(nproc)` es lo mismo que omitirlo — queda explícito acá por si alguna vez
+hace falta pedir menos. Los flags de
+[`rust/.cargo/config.toml`](rust/.cargo/config.toml) (`target-cpu`) aplican
 igual, porque no dependen del perfil.
 
-Medido en el mismo Ryzen AI 9 365 (20 hilos), recompilando solo el crate:
+Medido en un Ryzen AI 9 365 (20 hilos), recompilando solo el crate:
 **3,4 s con `--release`** (un core ocupado) contra **2,3 s con `parallel`**
 (~4 cores). Es un crate de cuatro archivos: la diferencia es de ~1,5x, no de un
 orden de magnitud.
@@ -365,36 +377,43 @@ El binario que sale puede ser algo más lento que el de `--release`, y
 `debug_assertions`). Para medir tiempos o generar números de informe, compilá
 con `--release`.
 
-### Equivalencia entre backends
+### Por qué Rust reemplaza a Pillow
 
-Los dos rasterizadores **no** dan los mismos píxeles: `ImageDraw.polygon` pinta
-el contorno además del interior, así que cubre entre 7% y 30% más área por
-triángulo que una regla top-left estándar. Son dos funciones objetivo parecidas
-pero distintas, y `tests/test_native_parity.py` mide la diferencia en vez de
-disimularla:
+La implementación original rasterizaba con `ImageDraw.polygon` y sumaba el
+error con numpy — esa fue la referencia contra la que se validó Rust mientras
+existieron los dos, y una vez validado, el camino Python se sacó por completo
+en vez de mantenerse como una segunda implementación del mismo hot path. Lo
+que sigue son los números de esa migración, medidos entonces:
 
-- **Decodificación de color: exacta.** Los tres espacios coinciden bit a bit con
-  la implementación Python sobre todo el cubo de alelos (`==`, sin tolerancia).
-- **Puntajes: estadística.** Sobre 120 genomas por espacio, el error cuadrático
-  difiere como máximo 3%, con sesgo medio de −0,4% a −0,9% (Rust cubre un poco
-  menos), y la **correlación de rangos es 0,997–0,999**. Eso último es lo que
-  importa: la selección solo consume el *orden* de los fitness.
-- **Prueba end-to-end.** Misma seed y mismo presupuesto: el mejor individuo que
-  encuentra el motor con Rust, puntuado con el oráculo Pillow, da **0,895**
-  contra **0,879** del que encuentra Pillow — igual de bueno o mejor bajo la
-  métrica original, en 9,5× menos tiempo.
-- **Invariancia de threads: exacta.** El paralelismo es solo *entre* individuos
-  y el kernel por individuo es secuencial, así que el resultado no depende de
-  `threads`. La reproducibilidad por seed se mantiene.
+- **Decodificación de color: exacta.** Los tres espacios coincidían bit a bit
+  con la implementación Python sobre todo el cubo de alelos (`==`, sin
+  tolerancia) — y esto sigue siendo cierto y sigue estando probado
+  (`tests/test_native_parity.py`), porque `colorspace.py` no se fue: todavía
+  decodifica color para `export.py` y para importar un `triangles.json`.
+- **Puntajes: estadística.** `ImageDraw.polygon` pinta el contorno además del
+  interior, así que cubre entre 7% y 30% más área por triángulo que la regla
+  top-left del rasterizador propio — son dos funciones objetivo parecidas
+  pero no idénticas. Sobre 120 genomas por espacio, el error cuadrático
+  difería como máximo 3%, con sesgo medio de −0,4% a −0,9% (Rust cubría un
+  poco menos), y la correlación de rangos era 0,997–0,999 — lo que importa,
+  porque la selección solo consume el *orden* de los fitness.
+- **Prueba end-to-end.** Misma seed y mismo presupuesto: el mejor individuo
+  que encontraba el motor con Rust, puntuado con el oráculo Pillow, daba
+  **0,895** contra **0,879** del que encontraba Pillow — igual de bueno o
+  mejor bajo la métrica original, en 9,5× menos tiempo.
+- **Invariancia de threads: exacta**, y esto también sigue probado — el
+  paralelismo es solo *entre* individuos y el kernel por individuo es
+  secuencial, así que el resultado no depende de `threads`. La
+  reproducibilidad por seed se mantiene.
 
-Los fitness de las dos implementaciones no son comparables entre sí: hay que
-generar todo el material de un informe con un solo backend. El bloque `problem`
-de `summary.json` registra cuál corrió, con qué flags y con cuántos threads.
+El bloque `problem` de `summary.json` registra qué build corrió (flags,
+threads) para que un resultado quede atado a cómo se generó, aunque hoy solo
+exista un backend posible.
 
 ### Rendimiento medido
 
 25 generaciones, `n=k=100`, resolución de trabajo 128×80, en un Ryzen AI 9 365
-(10 núcleos / 20 hilos):
+(10 núcleos / 20 hilos) — la comparación que motivó la migración:
 
 | Backend | 50 triángulos / RGB | 200 triángulos / HCL |
 |---|---|---|
@@ -409,8 +428,8 @@ triángulo y no su contorno.
 
 Dos notas honestas sobre estos números:
 
-- **`pillow` con 10 procesos puede ser más lento que con 1.** Con triángulos
-  chicos el costo de `spawn` y de picklear individuos supera lo que gana.
+- **`pillow` con 10 procesos podía ser más lento que con 1.** Con triángulos
+  chicos el costo de `spawn` y de picklear individuos superaba lo que ganaba.
 - **El cuello de botella se movió.** Con Rust, evaluar pasó de 89,7% a 16% del
   tiempo, y ahora domina la mutación `non_uniform` (53%), que hace ~55.000
   llamadas a `rng.random()` por generación en Python puro. Moverla a Rust

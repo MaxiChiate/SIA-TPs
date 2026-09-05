@@ -98,9 +98,9 @@ def _write_summary(
     """``config`` is what was asked for, ``problem`` is what actually ran.
 
     They differ wherever the problem resolves something: ``"work_resolution":
-    "native"`` becomes the image's pixel size, ``"renderer": "auto"`` becomes the
-    backend that was picked. A run has to record the second one, otherwise its
-    numbers cannot be reproduced or compared against another run's.
+    "native"`` becomes the image's pixel size. A run has to record the second
+    one, otherwise its numbers cannot be reproduced or compared against another
+    run's.
     """
     summary = {
         "seed": seed,

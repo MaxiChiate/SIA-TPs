@@ -17,7 +17,6 @@ from ga.core.individual import Individual
 from .colorspace import DEFAULT as DEFAULT_COLOR_SPACE
 from .colorspace import ColorSpace
 from .genotype import triangles_from_alleles
-from .renderer import render_triangles
 
 
 def native_resolution(image_path: str | Path) -> tuple[int, int]:
@@ -57,9 +56,9 @@ def save_image(
 ) -> None:
     """Draw ``individual`` at ``width``x``height`` with the run's own renderer.
 
-    Deliberately the renderer and not ``render_triangles``: the exported picture
-    has to be drawn by whichever rasterizer scored it, or the image being looked
-    at is not the image the fitness refers to.
+    Deliberately through ``renderer.render_rgb`` and not some other rasterizer:
+    the exported picture has to be drawn by whichever kernel scored it, or the
+    image being looked at is not the image the fitness refers to.
     """
     renderer.render_rgb(individual.alleles, width, height).save(path)
 

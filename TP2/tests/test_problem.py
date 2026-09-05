@@ -1,16 +1,24 @@
 """Unit tests for ``TrianglesProblem``'s genotype-level rules.
 
 Scoring lives in ``test_renderers.py``; what is asserted here is how the problem
-seeds a run, which is the part ``initial_alpha`` changes.
+seeds a run, which is the part ``initial_alpha`` changes. Building a
+``TrianglesProblem`` at all needs the native ``triangles_native`` extension
+(there is no Python-only renderer left to construct it with), hence the same
+skip guard as the renderer/parity tests.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from ga.core.rng import make_rng
-from problems.triangles.genotype import ALPHA_LOCUS, GENES_PER_TRIANGLE
-from problems.triangles.problem import TrianglesProblem
+pytest.importorskip(
+    "triangles_native",
+    reason="native backend not built; see README (cd rust && maturin develop --release)",
+)
+
+from ga.core.rng import make_rng  # noqa: E402  (after the skip guard)
+from problems.triangles.genotype import ALPHA_LOCUS, GENES_PER_TRIANGLE  # noqa: E402
+from problems.triangles.problem import TrianglesProblem  # noqa: E402
 
 IMAGE = "images/argentina.png"
 TRIANGLES = 4
@@ -22,7 +30,6 @@ def make_problem(**overrides) -> TrianglesProblem:
         "triangle_count": TRIANGLES,
         "work_resolution": [32, 20],
         "background_rgb": [255, 255, 255],
-        "renderer": "pillow",
     }
     return TrianglesProblem(params | overrides)
 
