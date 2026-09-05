@@ -477,6 +477,12 @@ qué argumentos fue llamado — así cada test verifica un resultado exacto
 que un bloque nunca se parte a mitad en `crossover` con granularidad
 `"block"`) sin depender de la suerte de una semilla.
 
+Los otros 73 cubren el plug-in `triangles`: espacios de color, export, engine y
+métricas. Tres archivos (`test_renderers.py`, `test_problem.py`,
+`test_native_parity.py` — 34 tests) necesitan la extensión nativa compilada y se
+**saltean** en bloque si no está, en vez de romper: sin ella la suite corre
+79 passed, 3 skipped.
+
 ## Agregar un operador nuevo
 
 Cada operador se registra con un decorador en su propio módulo — no hay que
