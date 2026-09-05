@@ -34,6 +34,13 @@ problems/
     fitness.py                 1 - MSE normalizado contra la imagen objetivo
     problem.py                  TrianglesProblem(Problem)
     export.py                    render full-res + enumeración JSON + native_resolution
+analysis/                runner de experimentos (corre muchas configs y compara)
+  main.py                 CLI: python3 analysis/main.py [sweep.json]
+  config.py                SweepConfig + overrides por ruta con puntos
+  runner.py                 orquestador paralelo (un proceso por corrida)
+  records.py                 esquema de summary.csv e history.csv
+  sweep.json                  serie A de ejemplo: los 7 métodos de selección
+  results/                     CSVs generados (gitignoreados)
 images/                   imágenes de referencia (argentina.png, starry_night.png)
 tests/                    tests unitarios de los operadores (pytest, deterministas)
 ```
@@ -153,6 +160,63 @@ qué argumentos fue llamado — así cada test verifica un resultado exacto
 (p. ej. los *weights* que `boltzmann`/`ranking` le pasan a `rng.choices`, o
 que un bloque nunca se parte a mitad en `crossover` con granularidad
 `"block"`) sin depender de la suerte de una semilla.
+
+## Tandas de experimentos
+
+`run.py` corre **una** config. Para comparar métodos entre sí hace falta correr
+muchas y juntar los resultados, y de eso se encarga `analysis/`:
+
+```bash
+python3 analysis/main.py                    # usa analysis/sweep.json
+python3 analysis/main.py serie_cruza.json
+python3 analysis/main.py --dry-run          # valida y muestra el plan, sin correr
+```
+
+El `analysis/sweep.json` que viene es la **serie A**: los 7 métodos de selección,
+3 seeds cada uno, todo lo demás fijo. Un sweep declara una config base, qué
+pisarle, y con qué seeds repetir:
+
+```json
+{
+  "base_config": "config.json",
+  "overrides": {"stopping": [], "engine.max_generations": 150},
+  "seeds": [1, 2, 3],
+  "workers": 4,
+  "sweep": {
+    "path": "operators.crossover.name",
+    "values": ["one_point", "two_point", "uniform", "ring"]
+  }
+}
+```
+
+- **`overrides`**: se aplican a todas las variantes. Las claves son rutas con
+  puntos hacia el config base (`engine.max_generations`,
+  `operators.mutation.params`). Si la ruta no existe, falla al cargar.
+- **`sweep`**: atajo para variar **una** perilla; genera una variante por valor.
+- **`variants`**: la forma general, para cuando una variante necesita cambiar
+  varias claves a la vez (ver `analysis/sweep.json`). Va `sweep` **o**
+  `variants`, no los dos.
+- **`seeds`**: cada variante corre una vez por seed. Con una sola seed no podés
+  distinguir una diferencia real del azar.
+- **`workers`**: corridas en paralelo. Cada corrida usa un proceso propio, así
+  que el runner fuerza `engine.processes = 1` para no anidar pools.
+
+Antes de correr nada valida **todas** las variantes contra `ga.config`, así un
+nombre de operador mal escrito falla en el segundo cero y no a los 40 minutos.
+
+Cada tanda escribe en `analysis/results/<sweep_id>/`:
+
+- `summary.csv` — **una fila por corrida**: variante, seed, fitness final,
+  generación en que apareció, criterio de corte, evaluaciones, tiempo,
+  diversidad final. Es el CSV para comparar variantes entre sí.
+- `history.csv` — **una fila por generación**, en formato largo, con
+  `(variant, seed)` como identificador. Es el CSV para las curvas de fitness y
+  diversidad a lo largo del tiempo.
+- `resolved.json` — el config completo que efectivamente corrió cada variante,
+  para poder reproducir la tanda desde su propia salida.
+
+Los CSVs se van escribiendo a medida que terminan las corridas, así que una
+tanda interrumpida igual deja datos usables.
 
 ## Agregar un operador nuevo
 
