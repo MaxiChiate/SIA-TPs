@@ -1,0 +1,16 @@
+# AVX2 as the baseline (Haswell, 2013+) rather than target-cpu=native: the
+# resulting .so has to run on every machine in the group, not just the one that
+# built it. Scoped to x86_64 so the crate still builds on aarch64, where the
+# CPU name would be rejected outright.
+#
+# Cargo looks for this file from its working directory upwards, NOT from the
+# manifest, so the build has to be run from inside rust/ for it to apply at all:
+#   cd rust && maturin develop --release        # picks this up
+#   maturin develop --release -m rust/Cargo.toml # silently does NOT
+# ``triangles_native.build_info()`` reports the features actually compiled in,
+# which is how to tell the two apart.
+#
+# On an older CPU, override at build time:
+#   RUSTFLAGS="-C target-cpu=x86-64-v2" maturin develop --release
+[target.'cfg(target_arch = "x86_64")']
+rustflags = ["-C", "target-cpu=x86-64-v3"]

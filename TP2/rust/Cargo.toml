@@ -1,0 +1,27 @@
+[package]
+name = "triangles-native"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77"   # f64::round_ties_even, needed to match Python's round()
+description = "Rasterize-and-score kernel for the TP2 triangles problem"
+license = "MIT"
+
+[lib]
+name = "triangles_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["extension-module", "abi3-py312"] }
+rayon = "1.10"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+# A forgotten --release should be merely slow, not useless: an opt-level=0 build
+# of this kernel is slower than the Pillow implementation it replaces.
+[profile.dev]
+opt-level = 2
