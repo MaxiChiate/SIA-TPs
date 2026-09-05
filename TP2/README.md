@@ -56,6 +56,11 @@ Cada corrida escribe en un directorio de resultados
 - `final.png` — mejor individuo, renderizado a la resolución nativa de la
   imagen fuente (o `--export-width`/`--export-height`).
 - `snapshots/gen_NNNNN.png` — solo si se pasa `--snapshot-every N`.
+- `progress.gif` — animación del proceso: un frame por snapshot más
+  `final.png` al cierre, sostenido unos segundos antes de que el loop vuelva a
+  empezar. Se arma solo cuando hay snapshots; `--no-gif` lo desactiva y
+  `--gif-frame-ms` / `--gif-hold-ms` ajustan los tiempos (default 120 ms por
+  frame, 3000 ms de cierre).
 - `triangles.json` — triángulos del mejor individuo (vértices + color RGBA).
 - `history.csv` / `history.json` — una fila por generación: fitness
   mejor/promedio/desvío/peor, diversidad genotípica, evaluaciones y tiempo
@@ -68,7 +73,8 @@ python run.py config.json --out results/prueba --snapshot-every 25 \
   --export-width 800 --export-height 500
 ```
 
-Imprime el fitness mejor/promedio de cada generación a medida que corre.
+Imprime el fitness mejor/promedio de cada generación a medida que corre, y
+deja el `progress.gif` de esa corrida en `results/prueba/`.
 
 ## `config.json`
 
@@ -111,7 +117,8 @@ Imprime el fitness mejor/promedio de cada generación a medida que corre.
       "image_path": "images/argentina.png",
       "triangle_count": 50,
       "work_resolution": [128, 80],
-      "background_rgb": [255, 255, 255]
+      "background_rgb": [255, 255, 255],
+      "color_space": "rgb"
     }
   }
 }
@@ -137,7 +144,34 @@ Imprime el fitness mejor/promedio de cada generación a medida que corre.
   combinados por OR entre sí y con `max_generations`.
 - **`problem`**: `type` (hoy solo `"triangles"`) + `params` — `image_path`,
   `triangle_count`, `work_resolution` (resolución chica para evaluar fitness;
-  el genotipo es independiente de la resolución) y `background_rgb`.
+  el genotipo es independiente de la resolución), `background_rgb` y
+  `color_space` (opcional, default `"rgb"`; ver abajo).
+
+## Espacio de color (`problem.params.color_space`)
+
+Los 3 genes de color de cada triángulo (más el alpha, que siempre es lineal) se
+interpretan según el espacio elegido. **El genotipo no cambia**: sigue siendo el
+mismo vector plano de `10*T` alelos en `[0,1]` y ningún operador se entera. Lo
+que cambia es la *geometría* del espacio de búsqueda — qué colores quedan cerca
+entre sí bajo mutación y cruza.
+
+| `color_space` | Genes | Qué mueve una mutación |
+|---|---|---|
+| `"rgb"` (default) | `r, g, b` | Los tres primarios por separado. |
+| `"hsv"` | `h, s, v` | Tono / saturación / valor. Todo el cubo es válido. |
+| `"hcl"` | `h, c, l` | Tono / colorido / luminosidad **perceptuales**: cambiar el tono no altera la luminosidad que el triángulo ya había encontrado. |
+
+`hcl` es CIE LCh(ab) (forma polar de CIELAB con blanco D65, igual que `lch()` de
+CSS Color 4). Como ~40% de la caja `H x C x L` cae fuera del gamut sRGB, esos
+colores se traen **bajando el croma** a tono y luminosidad constantes (bisección),
+en vez de clampear los canales RGB: clampear distorsiona los tres ejes a la vez y
+colapsa regiones grandes de la caja en el mismo color, aplanando el fitness en
+`H`, `C` y `L` por igual; bajar el croma deja la meseta confinada al eje `C`.
+
+Es transversal a la exportación e importación: `triangles.json` siempre guarda
+colores RGB, así que un export hecho con un espacio se puede importar con otro y
+se re-renderiza idéntico píxel a píxel. Un config sin `color_space` se comporta
+exactamente igual que antes de que existiera la opción.
 
 ## Tests
 
