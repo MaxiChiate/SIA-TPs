@@ -107,6 +107,18 @@ individuo, generación en que apareció, criterio de corte, evaluaciones, tiempo
 Tests (bloque 5, pendiente): `../.venv/bin/python -m pytest` desde `TP2/`.
 Dependencias del dominio y tests: `../.venv/bin/pip install -r requirements.txt`.
 
+## Importar un individuo inicial
+
+El config admite un campo opcional de nivel raíz `"import"`: la ruta a un
+`triangles.json` de un run previo (mismo `triangle_count`). Si se completa, ese
+individuo reemplaza a uno de los `n` individuos aleatorios de la generación 0
+(`EngineConfig.seed_individual`, `ga/core/engine.py`); vacío o ausente (`""`)
+deshabilita la importación. La decodificación (`TrianglesProblem.
+individual_from_export`, `problems/triangles/problem.py`) normaliza los
+vértices en píxeles contra la resolución **nativa** de `image_path` — el
+tamaño con el que `run.py` exporta por defecto. Un `triangles.json` exportado
+con `--export-width`/`--export-height` explícitos no decodifica bien.
+
 ## Salida esperada (bloque 6)
 
 `run.py` corre una config y emite en un directorio de resultados: imagen final (+ snapshots

@@ -1,5 +1,6 @@
 {
   "seed": 42,
+    "import":"results/config_20260904_200921/triangles.json",
   "engine": {
     "n": 100,
     "k": 100,

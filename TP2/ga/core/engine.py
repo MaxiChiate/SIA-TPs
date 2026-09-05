@@ -65,23 +65,27 @@ class StopContext:
 
 
 class Evaluator:
-    """Wraps ``problem.evaluate`` with a genotype memo and an evaluation counter.
+    """Wraps ``problem.evaluate`` with per-individual fitness caching and an
+    evaluation counter.
 
-    Fitness is cached twice: on the individual itself, and in a shared
-    ``genotype -> fitness`` dict so a regenerated identical genotype is free.
-    ``count`` only rises on real calls to ``problem.evaluate``.
+    Fitness is cached on the individual itself, so re-evaluating the same
+    object (e.g. a survivor carried into the next generation) is free.
+    ``count`` only rises on real calls to ``problem.evaluate``. There is no
+    genotype -> fitness memo across individuals: genes are continuous, so two
+    distinct individuals essentially never share an exact genotype, and such
+    a memo would grow without bound over a long run instead of ever paying
+    off.
 
-    With ``workers > 1``, ``evaluate_all`` fans the still-uncached individuals
-    of a generation out across a persistent process pool: rendering is the
-    bottleneck (see ``problems/triangles``), and each individual's evaluation
-    is independent, so this is the parallel unit of work rather than the
-    generation as a whole. ``workers == 1`` keeps the original single-process
-    path with no pool overhead.
+    With ``workers > 1``, ``evaluate_all`` fans the still-unevaluated
+    individuals of a generation out across a persistent process pool:
+    rendering is the bottleneck (see ``problems/triangles``), and each
+    individual's evaluation is independent, so this is the parallel unit of
+    work rather than the generation as a whole. ``workers == 1`` keeps the
+    original single-process path with no pool overhead.
     """
 
     def __init__(self, problem: Problem, workers: int = 1) -> None:
         self._problem = problem
-        self._memo: dict[tuple[float, ...], float] = {}
         self.count = 0
         self._pool = None
         self._workers = workers
@@ -94,14 +98,8 @@ class Evaluator:
     def evaluate(self, individual: Individual) -> float:
         if individual.fitness is not None:
             return individual.fitness
-        key = individual.key()
-        cached = self._memo.get(key)
-        if cached is not None:
-            individual.fitness = cached
-            return cached
         value = self._problem.evaluate(individual)
         self.count += 1
-        self._memo[key] = value
         individual.fitness = value
         return value
 
@@ -111,19 +109,13 @@ class Evaluator:
                 self.evaluate(individual)
             return
 
-        # Group by genotype so identical individuals within the same batch
-        # (e.g. unmutated crossover children) are only rendered once, same
-        # as the serial path's shared memo would give them for free.
+        # Group by genotype so identical individuals within this batch
+        # (e.g. unmutated crossover children) are only rendered once.
         pending_by_key: dict[tuple[float, ...], list[Individual]] = {}
         for individual in individuals:
             if individual.fitness is not None:
                 continue
-            key = individual.key()
-            cached = self._memo.get(key)
-            if cached is not None:
-                individual.fitness = cached
-                continue
-            pending_by_key.setdefault(key, []).append(individual)
+            pending_by_key.setdefault(individual.key(), []).append(individual)
 
         if not pending_by_key:
             return
@@ -138,7 +130,6 @@ class Evaluator:
         for representative, value in zip(representatives, results):
             key = representative.key()
             self.count += 1
-            self._memo[key] = value
             for member in pending_by_key[key]:
                 member.fitness = value
 
@@ -148,10 +139,6 @@ class Evaluator:
             self._pool.close()
             self._pool.join()
             self._pool = None
-
-    @property
-    def cache_size(self) -> int:
-        return len(self._memo)
 
 
 @dataclass(slots=True)
@@ -170,6 +157,7 @@ class EngineConfig:
     stopping: Stopping | None = None
     extra_params: dict = field(default_factory=dict)
     workers: int = 1  # individuals per generation evaluated in parallel processes
+    seed_individual: Individual | None = None  # replaces one random individual at gen 0
 
     def __post_init__(self) -> None:
         if self.n <= 0:
@@ -235,12 +223,13 @@ class Engine:
         cfg = self._config
         started = time.perf_counter()
 
-        population = Population(
-            individuals=[
-                self._problem.random_individual(self._rng) for _ in range(cfg.n)
-            ],
-            generation=0,
-        )
+        random_count = cfg.n - (1 if cfg.seed_individual is not None else 0)
+        individuals = [
+            self._problem.random_individual(self._rng) for _ in range(random_count)
+        ]
+        if cfg.seed_individual is not None:
+            individuals.append(cfg.seed_individual.copy())
+        population = Population(individuals=individuals, generation=0)
         self._evaluator.evaluate_all(population.individuals)
 
         history: list[GenerationRecord] = [

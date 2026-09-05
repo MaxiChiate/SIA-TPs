@@ -9,6 +9,9 @@ the same individual at full size later.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import numpy as np
 from PIL import Image
 
@@ -18,12 +21,18 @@ from ga.core.individual import Individual
 from ga.core.problem import Problem
 from ga.core.rng import Rng
 
-from .fitness import pixel_similarity
-from .genotype import schema_for, triangles_from_alleles
+from .export import native_resolution
+from .fitness import mean_squared_error, pixel_similarity
+from .genotype import GENES_PER_TRIANGLE, schema_for, triangles_from_alleles
 from .renderer import render_triangles
 
 _DEFAULT_WORK_RESOLUTION = (64, 64)
 _DEFAULT_BACKGROUND_RGB = (255, 255, 255)
+_MIN_BASELINE_MSE = 1e-9
+
+
+def _clamp01(value: float) -> float:
+    return min(1.0, max(0.0, value))
 
 
 class TrianglesProblem(Problem):
@@ -39,6 +48,11 @@ class TrianglesProblem(Problem):
         self._target_array = np.asarray(target, dtype=np.uint8)
         self._schema = schema_for(self.triangle_count)
 
+        blank_canvas = render_triangles([], self.work_width, self.work_height, self.background_rgb)
+        self._baseline_mse = max(
+            mean_squared_error(blank_canvas, self._target_array), _MIN_BASELINE_MSE
+        )
+
     def schema(self) -> GeneSchema:
         return self._schema
 
@@ -52,7 +66,7 @@ class TrianglesProblem(Problem):
         rendered = render_triangles(
             triangles, self.work_width, self.work_height, self.background_rgb
         )
-        return pixel_similarity(rendered, self._target_array)
+        return pixel_similarity(rendered, self._target_array, self._baseline_mse)
 
     def describe(self) -> dict:
         return {
@@ -61,6 +75,36 @@ class TrianglesProblem(Problem):
             "work_resolution": [self.work_width, self.work_height],
             "background_rgb": list(self.background_rgb),
         }
+
+    def individual_from_export(self, path: str | Path) -> Individual:
+        """Decode a ``triangles.json`` export back into an individual on this
+        problem's schema.
+
+        The export stores pixel-space vertices with no resolution of its own,
+        so this normalizes them back to ``[0,1]`` against ``self.image_path``'s
+        *native* resolution - the width/height ``run.py`` exports at by default.
+        An export produced with ``--export-width``/``--export-height`` overrides
+        will decode incorrectly; this is a known limitation.
+        """
+        try:
+            data = json.loads(Path(path).read_text(encoding="utf-8"))
+        except OSError as err:
+            raise ValueError(f"cannot read {path}: {err}") from err
+        if len(data) != self.triangle_count:
+            raise ValueError(
+                f"{path} has {len(data)} triangles, expected {self.triangle_count}"
+            )
+        width, height = native_resolution(self.image_path)
+
+        alleles: list[float] = []
+        for triangle in data:
+            for x, y in triangle["vertices"]:
+                alleles.append(_clamp01(x / width))
+                alleles.append(_clamp01(y / height))
+            for channel in triangle["color"]:
+                alleles.append(_clamp01(channel / 255))
+        assert len(alleles) == self.triangle_count * GENES_PER_TRIANGLE
+        return Individual(alleles, self._schema)
 
 
 @registry.register("problem", "triangles")
