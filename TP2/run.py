@@ -118,8 +118,8 @@ def main(argv: list[str] | None = None) -> int:
 
     description = loaded.problem.describe()
     triangle_count = description["triangle_count"]
-    background_rgb = tuple(description["background_rgb"])
     color_space = colorspace.get(description["color_space"])
+    renderer = loaded.problem.renderer
 
     export_width, export_height = args.export_width, args.export_height
     if export_width is None or export_height is None:
@@ -147,19 +147,13 @@ def main(argv: list[str] | None = None) -> int:
         )
         if args.snapshot_every > 0 and generation % args.snapshot_every == 0:
             snapshot_path = snapshots_dir / f"gen_{generation:05d}.png"
-            save_image(
-                best, triangle_count, export_width, export_height, background_rgb,
-                snapshot_path, color_space,
-            )
+            save_image(renderer, best, export_width, export_height, snapshot_path)
             snapshot_paths.append(snapshot_path)
 
     engine = Engine(loaded.problem, loaded.engine_config, loaded.rng)
     result = engine.run(on_generation=on_generation)
 
-    save_image(
-        result.best, triangle_count, export_width, export_height, background_rgb,
-        out_dir / "final.png", color_space,
-    )
+    save_image(renderer, result.best, export_width, export_height, out_dir / "final.png")
     save_triangles_json(
         result.best, triangle_count, export_width, export_height,
         out_dir / "triangles.json", color_space,

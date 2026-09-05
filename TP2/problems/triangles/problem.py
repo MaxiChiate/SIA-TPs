@@ -69,6 +69,12 @@ class TrianglesProblem(Problem):
             threads=params.get("threads", 0),
         )
 
+    @property
+    def renderer(self):
+        """The backend that scores this run - and therefore the one that must
+        also draw its exported images."""
+        return self._renderer
+
     def schema(self) -> GeneSchema:
         return self._schema
 
