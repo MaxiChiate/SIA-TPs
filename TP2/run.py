@@ -3,12 +3,14 @@
 Usage:
     python run.py [config.json] [--out DIR] [--snapshot-every N]
                    [--export-width W] [--export-height H]
+                   [--no-gif] [--gif-frame-ms MS] [--gif-hold-ms MS]
 
 Writes into the results directory: ``final.png`` (the best individual
-rendered full-size), ``snapshots/gen_*.png`` (only if ``--snapshot-every`` is
-set), ``triangles.json`` (the best individual's triangles enumerated),
-``history.csv``/``history.json`` (one row per generation), and
-``summary.json`` (best fitness, stop reason, full config + seed).
+rendered full-size), ``snapshots/gen_*.png`` and ``progress.gif`` (only if
+``--snapshot-every`` is set), ``triangles.json`` (the best individual's
+triangles enumerated), ``history.csv``/``history.json`` (one row per
+generation), and ``summary.json`` (best fitness, stop reason, full config +
+seed).
 """
 
 from __future__ import annotations
@@ -28,7 +30,12 @@ from ga.core.engine import Engine, RunResult
 from ga.core.population import Population
 from ga.metrics import mean as mean_fitness
 from problems.triangles import colorspace
-from problems.triangles.export import native_resolution, save_image, save_triangles_json
+from problems.triangles.export import (
+    native_resolution,
+    save_gif,
+    save_image,
+    save_triangles_json,
+)
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -52,6 +59,18 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--export-height", type=int, default=None,
         help="final render height (default: the source image's native height)",
+    )
+    parser.add_argument(
+        "--no-gif", action="store_true",
+        help="skip progress.gif (it is built whenever --snapshot-every is set)",
+    )
+    parser.add_argument(
+        "--gif-frame-ms", type=int, default=120,
+        help="milliseconds per snapshot frame in progress.gif (default: 120)",
+    )
+    parser.add_argument(
+        "--gif-hold-ms", type=int, default=3000,
+        help="milliseconds to hold the final image in progress.gif (default: 3000)",
     )
     return parser.parse_args(argv)
 
@@ -114,6 +133,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.snapshot_every > 0:
         snapshots_dir.mkdir(exist_ok=True)
 
+    # Collected as they are written rather than globbed afterwards, so a
+    # re-run into a directory that already holds a longer run's snapshots does
+    # not splice those stale frames into this run's gif.
+    snapshot_paths: list[Path] = []
+
     def on_generation(population: Population) -> None:
         generation = population.generation
         best = population.best()
@@ -122,10 +146,12 @@ def main(argv: list[str] | None = None) -> int:
             f"mean={mean_fitness(population.fitnesses()):.6f}"
         )
         if args.snapshot_every > 0 and generation % args.snapshot_every == 0:
+            snapshot_path = snapshots_dir / f"gen_{generation:05d}.png"
             save_image(
                 best, triangle_count, export_width, export_height, background_rgb,
-                snapshots_dir / f"gen_{generation:05d}.png", color_space,
+                snapshot_path, color_space,
             )
+            snapshot_paths.append(snapshot_path)
 
     engine = Engine(loaded.problem, loaded.engine_config, loaded.rng)
     result = engine.run(on_generation=on_generation)
@@ -138,6 +164,16 @@ def main(argv: list[str] | None = None) -> int:
         result.best, triangle_count, export_width, export_height,
         out_dir / "triangles.json", color_space,
     )
+    # ``final.png`` closes the gif: the last snapshot is only the best of its
+    # own generation, while this is the best individual of the whole run.
+    if snapshot_paths and not args.no_gif:
+        save_gif(
+            [*snapshot_paths, out_dir / "final.png"],
+            out_dir / "progress.gif",
+            args.gif_frame_ms,
+            args.gif_hold_ms,
+        )
+
     _write_history(result.history, out_dir)
     _write_summary(result, loaded.raw, loaded.seed, out_dir)
 
