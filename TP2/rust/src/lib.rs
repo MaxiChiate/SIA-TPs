@@ -10,11 +10,15 @@
 //! "how far is the picture these alleles describe from the target?"
 
 mod color;
+mod raster;
+mod score;
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::types::PyBytes;
 
 use color::ColorSpace;
+use score::{ScorerInner, GENES_PER_TRIANGLE};
 
 /// Bumped whenever the scoring kernel's numerics change.
 ///
@@ -69,11 +73,136 @@ fn to_rgb(space: &str, a: f64, b: f64, c: f64) -> PyResult<(u8, u8, u8)> {
     Ok((red, green, blue))
 }
 
+/// Scores allele vectors for one run's target image.
+///
+/// Constructed once per run: the target pixels and every decode rule are
+/// uploaded here, not on every call, which is the whole reason this is an object
+/// rather than a free function.
+#[pyclass(module = "triangles_native", frozen)]
+struct Scorer {
+    inner: ScorerInner,
+}
+
+#[pymethods]
+impl Scorer {
+    #[new]
+    #[pyo3(signature = (
+        target_rgb, width, height, background_rgb, triangle_count, color_space, baseline_mse
+    ))]
+    fn new(
+        target_rgb: &[u8],
+        width: usize,
+        height: usize,
+        background_rgb: (u8, u8, u8),
+        triangle_count: usize,
+        color_space: &str,
+        baseline_mse: f64,
+    ) -> PyResult<Self> {
+        // Every argument is validated here, before any kernel code runs. The
+        // release profile aborts on panic, so a bad length must come back as a
+        // Python exception rather than take the interpreter down with it.
+        if width == 0 || height == 0 {
+            return Err(PyValueError::new_err("canvas must have a positive size"));
+        }
+        if target_rgb.len() != width * height * 3 {
+            return Err(PyValueError::new_err(format!(
+                "target_rgb has {} bytes, expected {} for {}x{} RGB",
+                target_rgb.len(),
+                width * height * 3,
+                width,
+                height
+            )));
+        }
+        if triangle_count == 0 {
+            return Err(PyValueError::new_err("triangle_count must be > 0"));
+        }
+        if !(baseline_mse > 0.0) {
+            return Err(PyValueError::new_err("baseline_mse must be > 0"));
+        }
+        let space = ColorSpace::from_name(color_space).ok_or_else(|| {
+            PyValueError::new_err(format!("unknown color space {color_space:?}"))
+        })?;
+        Ok(Self {
+            inner: ScorerInner::new(
+                target_rgb.to_vec(),
+                width,
+                height,
+                [background_rgb.0, background_rgb.1, background_rgb.2],
+                triangle_count,
+                space,
+                baseline_mse,
+            ),
+        })
+    }
+
+    fn score(&self, alleles: Vec<f64>) -> PyResult<f64> {
+        self.check_len(alleles.len())?;
+        let mut canvas = Vec::new();
+        Ok(self.inner.score(&alleles, &mut canvas))
+    }
+
+    /// Raw mean squared error, before the fitness normalisation.
+    ///
+    /// Exposed for the parity tests: fitness floors at 0 for anything worse
+    /// than a blank canvas, and that floor hides the difference being measured.
+    fn mse(&self, alleles: Vec<f64>) -> PyResult<f64> {
+        self.check_len(alleles.len())?;
+        let mut canvas = Vec::new();
+        Ok(self.inner.mse(&alleles, &mut canvas))
+    }
+
+    fn score_batch(&self, genomes: Vec<Vec<f64>>) -> PyResult<Vec<f64>> {
+        for genome in &genomes {
+            self.check_len(genome.len())?;
+        }
+        let mut canvas = Vec::new();
+        Ok(genomes
+            .iter()
+            .map(|genome| self.inner.score(genome, &mut canvas))
+            .collect())
+    }
+
+    /// Render a genome at an arbitrary resolution, as raw RGB bytes.
+    ///
+    /// The genotype is resolution-independent, so this can draw the same
+    /// individual at export size.
+    fn render_rgb<'py>(
+        &self,
+        py: Python<'py>,
+        alleles: Vec<f64>,
+        width: usize,
+        height: usize,
+    ) -> PyResult<Bound<'py, PyBytes>> {
+        self.check_len(alleles.len())?;
+        if width == 0 || height == 0 {
+            return Err(PyValueError::new_err("canvas must have a positive size"));
+        }
+        let mut canvas = vec![0u8; width * height * 3];
+        self.inner.render_into(&alleles, &mut canvas, width, height);
+        Ok(PyBytes::new(py, &canvas))
+    }
+}
+
+impl Scorer {
+    fn check_len(&self, given: usize) -> PyResult<()> {
+        let expected = self.inner.genome_len();
+        if given != expected {
+            return Err(PyValueError::new_err(format!(
+                "genome has {given} alleles, expected {expected} \
+                 ({} triangles x {GENES_PER_TRIANGLE})",
+                self.inner.triangle_count
+            )));
+        }
+        Ok(())
+    }
+}
+
 #[pymodule]
 fn triangles_native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(version, module)?)?;
     module.add_function(wrap_pyfunction!(schema_version, module)?)?;
     module.add_function(wrap_pyfunction!(build_info, module)?)?;
     module.add_function(wrap_pyfunction!(to_rgb, module)?)?;
+    module.add_class::<Scorer>()?;
     Ok(())
 }
