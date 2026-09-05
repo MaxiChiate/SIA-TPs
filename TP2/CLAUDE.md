@@ -51,8 +51,8 @@ requirements.txt        # pillow, numpy, pytest  (el core no los usa)
 
 ## Genotipo (problema triangles)
 
-Individuo = lista fija de `T` triángulos, cada uno 10 genes `x1,y1,x2,y2,x3,y3,R,G,B,A`.
-Genotipo plano de `10*T` alelos. **Todos los alelos normalizados a `[0,1]`**; el renderer
+Individuo = lista fija de `T` triángulos, cada uno 10 genes `x1,y1,x2,y2,x3,y3` + 3 canales
+de color + `A`. Genotipo plano de `10*T` alelos. **Todos los alelos normalizados a `[0,1]`**; el renderer
 escala a la resolución de trabajo (genotipo independiente de la resolución). El `GeneSchema`
 del problema declara `block_size = 10`.
 
@@ -76,6 +76,12 @@ del problema declara `block_size = 10`.
   (criterios combinables por OR: generaciones, tiempo, fitness aceptable, estructura, contenido).
 - **Diversidad genotípica** = media de los desvíos estándar por locus (O(N·L), comparable
   entre corridas porque los alelos viven en `[0,1]`).
+- **Espacio de color configurable** (`problem.params.color_space`: `rgb` default, `hsv`, `hcl`)
+  en `problems/triangles/colorspace.py`: cambia cómo se leen los 3 genes de color, no el
+  genotipo ni ningún operador — sirve para comparar geometrías del espacio de búsqueda. `hcl`
+  es CIE LCh(ab)/D65; lo que cae fuera del gamut sRGB se resuelve **bajando el croma** a tono
+  y luminosidad constantes (bisección), no clampeando canales, para no aplanar el fitness en
+  los tres ejes a la vez. Conversiones en float escalar sin numpy, portables a C tal cual.
 
 ## Estado
 
