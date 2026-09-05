@@ -281,7 +281,12 @@ class Engine:
         cfg = self._config
         params = self._params(population.generation, history)
 
-        parents = cfg.parent_selection(population, 2 * cfg.k, self._rng, params)
+        # _breed pairs up parents 2-at-a-time and stops once it has cfg.k
+        # children (each pair yields up to 2), so it only ever consumes
+        # ceil(k/2) pairs: cfg.k parents if k is even, cfg.k + 1 if odd.
+        # Asking for more here would just be selection work thrown away.
+        parent_count = cfg.k + (cfg.k % 2)
+        parents = cfg.parent_selection(population, parent_count, self._rng, params)
         if len(parents) < 2:
             raise RuntimeError(
                 f"parent selection returned {len(parents)} individuals, need >= 2"
