@@ -128,7 +128,8 @@ con `--export-width`/`--export-height` explícitos no decodifica bien.
 ## Salida esperada (bloque 6)
 
 `run.py` corre una config y emite en un directorio de resultados: imagen final (+ snapshots
-opcionales cada X generaciones), enumeración de triángulos del mejor individuo (vértices +
+opcionales cada X generaciones, y un `progress.gif` armado con esos snapshots + la imagen
+final sostenida unos segundos), enumeración de triángulos del mejor individuo (vértices +
 color) en JSON, log por generación en CSV/JSON (generación, mejor/promedio/desvío/peor
 fitness, diversidad, evaluaciones acumuladas, tiempo acumulado), y un resumen final (mejor
 fitness, generación en que apareció, criterio de corte que disparó, config completo + seed).

@@ -56,6 +56,11 @@ Cada corrida escribe en un directorio de resultados
 - `final.png` — mejor individuo, renderizado a la resolución nativa de la
   imagen fuente (o `--export-width`/`--export-height`).
 - `snapshots/gen_NNNNN.png` — solo si se pasa `--snapshot-every N`.
+- `progress.gif` — animación del proceso: un frame por snapshot más
+  `final.png` al cierre, sostenido unos segundos antes de que el loop vuelva a
+  empezar. Se arma solo cuando hay snapshots; `--no-gif` lo desactiva y
+  `--gif-frame-ms` / `--gif-hold-ms` ajustan los tiempos (default 120 ms por
+  frame, 3000 ms de cierre).
 - `triangles.json` — triángulos del mejor individuo (vértices + color RGBA).
 - `history.csv` / `history.json` — una fila por generación: fitness
   mejor/promedio/desvío/peor, diversidad genotípica, evaluaciones y tiempo
@@ -68,7 +73,8 @@ python run.py config.json --out results/prueba --snapshot-every 25 \
   --export-width 800 --export-height 500
 ```
 
-Imprime el fitness mejor/promedio de cada generación a medida que corre.
+Imprime el fitness mejor/promedio de cada generación a medida que corre, y
+deja el `progress.gif` de esa corrida en `results/prueba/`.
 
 ## `config.json`
 
