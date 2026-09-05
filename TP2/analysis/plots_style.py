@@ -12,6 +12,7 @@ each line, and value labels on bars.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 # Categorical slots, in fixed order. Colour follows the variant, not its rank.
@@ -48,17 +49,22 @@ def palette_for(variants: tuple[str, ...] | list[str]) -> dict[str, str]:
     return {variant: _SERIES[index] for index, variant in enumerate(variants)}
 
 
-def base_layout(title: str, subtitle: str, x_title: str, y_title: str) -> dict:
-    """Recessive axes and grid, generous margins, legend under the title.
+def base_layout(
+    title: str, subtitles: Sequence[str], x_title: str, y_title: str
+) -> dict:
+    """Recessive axes and grid, generous margins, legend below the plot.
 
-    The subtitle rides inside the title block rather than as a footer annotation:
-    a footer below the axis has to be positioned in paper coordinates, and any
-    margin change silently collides it with the axis title.
+    Subtitles ride inside the title block rather than as footer annotations: a
+    footer below the axis has to be positioned in paper coordinates, and any
+    margin change silently collides it with the axis title or the legend. The top
+    margin grows with the number of subtitle lines, so callers can add context
+    without doing layout arithmetic.
     """
+    lines = [line for line in subtitles if line]
     heading = title
-    if subtitle:
+    for line in lines:
         heading += (
-            f"<br><span style='font-size:12px;color:{TEXT_SECONDARY}'>{subtitle}</span>"
+            f"<br><span style='font-size:11px;color:{TEXT_SECONDARY}'>{line}</span>"
         )
     axis = {
         "showgrid": True,
@@ -72,7 +78,17 @@ def base_layout(title: str, subtitle: str, x_title: str, y_title: str) -> dict:
         "title": {"font": {"color": TEXT_SECONDARY, "size": 13}},
     }
     return {
-        "title": {"text": heading, "font": {"color": TEXT_PRIMARY, "size": 18}, "x": 0},
+        # Anchored to the figure's own top-left corner, not the plotting area's:
+        # a subtitle line then pushes the block down predictably instead of
+        # re-centring over the plot, and a long caption is not clipped by a wide
+        # left margin (the dot plot needs one for its category labels).
+        "title": {
+            "text": heading,
+            "font": {"color": TEXT_PRIMARY, "size": 18},
+            "x": 0, "xref": "container", "xanchor": "left",
+            "y": 1, "yanchor": "top", "yref": "container",
+            "pad": {"t": 20, "l": 20},
+        },
         "paper_bgcolor": SURFACE,
         "plot_bgcolor": SURFACE,
         "font": {"family": FONT_FAMILY, "color": TEXT_PRIMARY, "size": 13},
@@ -89,8 +105,9 @@ def base_layout(title: str, subtitle: str, x_title: str, y_title: str) -> dict:
             "font": {"color": TEXT_SECONDARY, "size": 12},
         },
         # Right margin leaves room for the end-of-line direct labels; bottom for
-        # the axis title plus the (possibly two-row) legend.
-        "margin": {"l": 80, "r": 150, "t": 90, "b": 130},
+        # the axis title plus the (possibly two-row) legend; top grows with the
+        # subtitle lines.
+        "margin": {"l": 80, "r": 150, "t": 62 + 22 * len(lines), "b": 130},
         "hovermode": "x unified",
     }
 

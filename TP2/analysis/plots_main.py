@@ -27,6 +27,7 @@ from analysis.plots_data import (  # noqa: E402
     SweepData,
     SweepDataError,
     final_values,
+    fixed_config,
     latest_sweep,
     load_sweep,
     mean_curve,
@@ -40,6 +41,49 @@ from analysis.plots_style import (  # noqa: E402
 )
 
 DEFAULT_RESULTS = PROJECT_ROOT / "analysis" / "results"
+
+
+# What to show in the "held fixed" caption, in reading order, split into the two
+# lines it is rendered as. Anything the sweep varied never reaches here: it
+# differs between variants, so ``fixed_config`` already dropped it.
+_ENGINE_FIELDS = (
+    ("engine.n", "N"),
+    ("engine.k", "K"),
+    ("engine.pc", "Pc"),
+    ("engine.pm", "Pm"),
+    ("engine.max_generations", "generaciones"),
+    ("operators.parent_selection.name", "selección"),
+    ("operators.crossover.name", "cruza"),
+    ("operators.mutation.name", "mutación"),
+    ("operators.survival.name", "supervivencia"),
+)
+_PROBLEM_FIELDS = (
+    ("problem.params.image_path", "imagen"),
+    ("problem.params.triangle_count", "triángulos"),
+    ("problem.params.work_resolution", "resolución"),
+)
+
+
+def _format_value(key: str, value) -> str:
+    if key == "problem.params.work_resolution" and isinstance(value, tuple):
+        return "×".join(str(part) for part in value)
+    if key == "problem.params.image_path":
+        return Path(str(value)).name
+    return str(value)
+
+
+def _fixed_captions(fixed: dict) -> list[str]:
+    """Two caption lines naming what was held constant across every run."""
+    lines = []
+    for label, fields in (("Fijo", _ENGINE_FIELDS), ("Problema", _PROBLEM_FIELDS)):
+        parts = [
+            f"{name} {_format_value(key, fixed[key])}"
+            for key, name in fields
+            if key in fixed
+        ]
+        if parts:
+            lines.append(f"{label}: " + " · ".join(parts))
+    return lines
 
 
 def _end_labels(
@@ -71,7 +115,7 @@ def _end_labels(
 
 
 def _curve_figure(
-    data: SweepData, column: str, title: str, y_title: str
+    data: SweepData, column: str, title: str, y_title: str, captions: list[str]
 ) -> go.Figure:
     """One line per variant, averaged over seeds, with a direct label at its end."""
     colors = palette_for(data.variants)
@@ -93,29 +137,37 @@ def _curve_figure(
 
     seeds = ", ".join(str(seed) for seed in data.seeds)
     layout = base_layout(
-        title, f"Promedio de {len(data.seeds)} seeds ({seeds})", "Generación", y_title
+        title,
+        [f"Promedio de {len(data.seeds)} seeds ({seeds})", *captions],
+        "Generación",
+        y_title,
     )
     layout["annotations"] = annotations
     figure.update_layout(**layout)
     return figure
 
 
-def fitness_figure(data: SweepData) -> go.Figure:
+def fitness_figure(data: SweepData, captions: list[str]) -> go.Figure:
     return _curve_figure(
-        data, "best_fitness", "Mejor fitness por generación", "Fitness del mejor individuo"
+        data,
+        "best_fitness",
+        "Mejor fitness por generación",
+        "Fitness del mejor individuo",
+        captions,
     )
 
 
-def diversity_figure(data: SweepData) -> go.Figure:
+def diversity_figure(data: SweepData, captions: list[str]) -> go.Figure:
     return _curve_figure(
         data,
         "genotypic_diversity",
         "Diversidad genotípica por generación",
         "Desvío estándar medio por locus",
+        captions,
     )
 
 
-def comparison_figure(data: SweepData) -> go.Figure:
+def comparison_figure(data: SweepData, captions: list[str]) -> go.Figure:
     """Final fitness per variant: one hollow dot per seed plus a filled mean.
 
     A dot plot and not bars on purpose. Fitness here lives in a narrow band near
@@ -166,7 +218,7 @@ def comparison_figure(data: SweepData) -> go.Figure:
 
     layout = base_layout(
         "Fitness final por variante",
-        "Rombo = media de las seeds · círculo = cada seed por separado",
+        ["Rombo = media de las seeds · círculo = cada seed por separado", *captions],
         "Mejor fitness alcanzado",
         "",
     )
@@ -178,7 +230,9 @@ def comparison_figure(data: SweepData) -> go.Figure:
     span = max(flat) - min(flat)
     pad = span * 0.15 if span else 0.01
     layout["xaxis"]["range"] = [min(flat) - pad, max(flat) + pad]
-    layout["margin"] = {"l": 160, "r": 90, "t": 120, "b": 60}
+    # No legend on this one (each row is labelled by the y axis), so the bottom
+    # margin only has to fit the axis title.
+    layout["margin"] = {**layout["margin"], "l": 160, "r": 90, "b": 60}
     figure.update_layout(**layout)
     return figure
 
@@ -209,14 +263,18 @@ def main(argv: list[str]) -> int:
         return 1
 
     out_dir = Path(args.out) if args.out else directory
-    print(f"sweep:    {directory}")
+    captions = _fixed_captions(fixed_config(directory))
+    print(f"sweep:     {directory}")
     print(f"variantes: {', '.join(data.variants)}")
-    print(f"seeds:     {', '.join(str(seed) for seed in data.seeds)}\n")
+    print(f"seeds:     {', '.join(str(seed) for seed in data.seeds)}")
+    for caption in captions:
+        print(f"  {caption}")
+    print()
 
     for name, figure in (
-        ("fitness.html", fitness_figure(data)),
-        ("diversity.html", diversity_figure(data)),
-        ("comparison.html", comparison_figure(data)),
+        ("fitness.html", fitness_figure(data, captions)),
+        ("diversity.html", diversity_figure(data, captions)),
+        ("comparison.html", comparison_figure(data, captions)),
     ):
         print(f"  {write_html(figure, out_dir / name)}")
     return 0

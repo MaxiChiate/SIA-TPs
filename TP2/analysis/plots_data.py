@@ -12,9 +12,11 @@ part (a difference smaller than the seed spread is not a difference).
 from __future__ import annotations
 
 import csv
+import json
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 # Columns whose values are numeric; everything else stays a string.
 _INT_COLUMNS = frozenset({"seed", "generation", "cumulative_evaluations", "evaluations",
@@ -128,6 +130,54 @@ def mean_curve(
             [sum(by_generation[g]) / len(by_generation[g]) for g in generations],
         )
     return curves
+
+
+def _flatten(config: dict, prefix: str, out: dict[str, Any]) -> None:
+    """Config tree -> ``{"engine.n": 100, ...}``; lists become tuples so they compare."""
+    for key, value in config.items():
+        path = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            _flatten(value, path, out)
+        else:
+            out[path] = tuple(value) if isinstance(value, list) else value
+
+
+def fixed_config(directory: Path) -> dict[str, Any]:
+    """The settings every variant of the sweep shared, from ``resolved.json``.
+
+    Read from what actually ran rather than from the sweep config, so a chart's
+    caption cannot drift from the run it describes. Whatever the sweep varied
+    differs between variants and is dropped here - what is left is, by
+    construction, the fixed part of the experiment.
+
+    Returns ``{}`` for a sweep predating ``resolved.json``; the caption is then
+    simply omitted.
+    """
+    path = directory / "resolved.json"
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+    flattened = []
+    for config in payload.get("variants", {}).values():
+        out: dict[str, Any] = {}
+        _flatten(config, "", out)
+        flattened.append(out)
+    if not flattened:
+        return {}
+
+    first, *rest = flattened
+    return {
+        key: value
+        for key, value in first.items()
+        if all(other.get(key, _MISSING) == value for other in rest)
+    }
+
+
+_MISSING = object()
 
 
 def final_values(data: SweepData, column: str) -> dict[str, list[float]]:

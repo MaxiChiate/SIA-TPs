@@ -251,6 +251,12 @@ truncado para mostrar alguna diferencia — y una barra truncada miente sobre la
 magnitud, porque el largo de la barra *es* el valor. Los puntos codifican
 posición, así que un eje con zoom es honesto.
 
+Los tres llevan al pie del título qué se mantuvo **fijo** en toda la tanda (N, K,
+Pc, Pm, generaciones, operadores, imagen, triángulos, resolución). Eso sale del
+`resolved.json` de la propia corrida, no de un texto escrito a mano, así que no
+puede quedar desfasado — y lo que la tanda varió queda afuera solo, porque
+justamente difiere entre variantes.
+
 La paleta (`analysis/plots_style.py`) está validada para daltonismo: los colores
 se asignan en orden fijo y cada variante conserva el suyo en los tres gráficos.
 Pasadas 8 variantes conviene partir la tanda en vez de inventar un color nuevo.
