@@ -27,6 +27,7 @@ from ga.config import ConfigError, load_config
 from ga.core.engine import Engine, RunResult
 from ga.core.population import Population
 from ga.metrics import mean as mean_fitness
+from problems.triangles import colorspace
 from problems.triangles.export import native_resolution, save_image, save_triangles_json
 
 
@@ -99,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
     description = loaded.problem.describe()
     triangle_count = description["triangle_count"]
     background_rgb = tuple(description["background_rgb"])
+    color_space = colorspace.get(description["color_space"])
 
     export_width, export_height = args.export_width, args.export_height
     if export_width is None or export_height is None:
@@ -122,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.snapshot_every > 0 and generation % args.snapshot_every == 0:
             save_image(
                 best, triangle_count, export_width, export_height, background_rgb,
-                snapshots_dir / f"gen_{generation:05d}.png",
+                snapshots_dir / f"gen_{generation:05d}.png", color_space,
             )
 
     engine = Engine(loaded.problem, loaded.engine_config, loaded.rng)
@@ -130,10 +132,11 @@ def main(argv: list[str] | None = None) -> int:
 
     save_image(
         result.best, triangle_count, export_width, export_height, background_rgb,
-        out_dir / "final.png",
+        out_dir / "final.png", color_space,
     )
     save_triangles_json(
-        result.best, triangle_count, export_width, export_height, out_dir / "triangles.json"
+        result.best, triangle_count, export_width, export_height,
+        out_dir / "triangles.json", color_space,
     )
     _write_history(result.history, out_dir)
     _write_summary(result, loaded.raw, loaded.seed, out_dir)

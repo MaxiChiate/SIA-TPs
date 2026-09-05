@@ -12,6 +12,8 @@ from PIL import Image
 
 from ga.core.individual import Individual
 
+from .colorspace import DEFAULT as DEFAULT_COLOR_SPACE
+from .colorspace import ColorSpace
 from .genotype import triangles_from_alleles
 from .renderer import render_triangles
 
@@ -23,11 +25,21 @@ def native_resolution(image_path: str | Path) -> tuple[int, int]:
 
 
 def triangles_as_json(
-    individual: Individual, triangle_count: int, width: int, height: int
+    individual: Individual,
+    triangle_count: int,
+    width: int,
+    height: int,
+    color_space: ColorSpace = DEFAULT_COLOR_SPACE,
 ) -> list[dict]:
     """Enumerate the individual's triangles (pixel vertices + RGBA color) at
-    ``width``x``height``."""
-    triangles = triangles_from_alleles(individual.alleles, triangle_count, width, height)
+    ``width``x``height``.
+
+    Colors are always dumped as RGBA, whatever ``color_space`` the run searched
+    in: the export describes the picture, not the genotype's coordinates.
+    """
+    triangles = triangles_from_alleles(
+        individual.alleles, triangle_count, width, height, color_space
+    )
     return [
         {"vertices": [list(vertex) for vertex in triangle.vertices], "color": list(triangle.color)}
         for triangle in triangles
@@ -41,14 +53,22 @@ def save_image(
     height: int,
     background_rgb: tuple[int, int, int],
     path: str | Path,
+    color_space: ColorSpace = DEFAULT_COLOR_SPACE,
 ) -> None:
-    triangles = triangles_from_alleles(individual.alleles, triangle_count, width, height)
+    triangles = triangles_from_alleles(
+        individual.alleles, triangle_count, width, height, color_space
+    )
     image = render_triangles(triangles, width, height, background_rgb)
     image.save(path)
 
 
 def save_triangles_json(
-    individual: Individual, triangle_count: int, width: int, height: int, path: str | Path
+    individual: Individual,
+    triangle_count: int,
+    width: int,
+    height: int,
+    path: str | Path,
+    color_space: ColorSpace = DEFAULT_COLOR_SPACE,
 ) -> None:
-    data = triangles_as_json(individual, triangle_count, width, height)
+    data = triangles_as_json(individual, triangle_count, width, height, color_space)
     Path(path).write_text(json.dumps(data, indent=2), encoding="utf-8")
