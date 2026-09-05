@@ -193,7 +193,7 @@ class RustRenderer(Renderer):
 
     name = "rust"
 
-    def __init__(self, spec: RenderSpec) -> None:
+    def __init__(self, spec: RenderSpec, threads: int = 0) -> None:
         super().__init__(spec)
         if _native is None:  # pragma: no cover - guarded by make_renderer
             raise ValueError(
@@ -215,7 +215,13 @@ class RustRenderer(Renderer):
             spec.triangle_count,
             spec.color_space.name,
             spec.baseline_mse,
+            threads,
         )
+
+    def owns_parallelism(self) -> bool:
+        """``score_batch`` already uses every thread it was given, so the engine
+        must not also fan the batch out across processes."""
+        return True
 
     def score(self, alleles: Sequence[float]) -> float:
         return self._scorer.score(list(alleles))
@@ -231,7 +237,11 @@ class RustRenderer(Renderer):
         return Image.frombytes("RGB", (width, height), raw)
 
     def describe(self) -> dict:
-        return {"renderer": self.name, "renderer_build": _native.build_info()}
+        return {
+            "renderer": self.name,
+            "renderer_build": _native.build_info(),
+            "renderer_threads": self._scorer.threads,
+        }
 
 
 _BY_NAME: dict[str, type[Renderer]] = {PillowRenderer.name: PillowRenderer}
@@ -252,7 +262,9 @@ def make_renderer(name: str, spec: RenderSpec, threads: int = 0) -> Renderer:
     ``0`` means "one per core".
     """
     if name == "auto":
-        return _BY_NAME[available()[0]](spec)
+        name = available()[0]
+    if name == RustRenderer.name and NATIVE_AVAILABLE:
+        return RustRenderer(spec, threads)
     if name == RustRenderer.name and not NATIVE_AVAILABLE:
         raise ValueError(
             "the 'rust' renderer needs the triangles_native extension, which is "
