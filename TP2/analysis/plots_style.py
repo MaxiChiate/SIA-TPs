@@ -78,17 +78,19 @@ def base_layout(title: str, subtitle: str, x_title: str, y_title: str) -> dict:
         "font": {"family": FONT_FAMILY, "color": TEXT_PRIMARY, "size": 13},
         "xaxis": {**axis, "title": {**axis["title"], "text": x_title}},
         "yaxis": {**axis, "title": {**axis["title"], "text": y_title}},
+        # Legend below the plot: with 7-8 series a horizontal legend wraps to two
+        # rows, and above the plot those rows collide with the title block.
         "legend": {
             "orientation": "h",
-            "yanchor": "bottom",
-            "y": 1.02,
+            "yanchor": "top",
+            "y": -0.18,
             "xanchor": "left",
             "x": 0,
             "font": {"color": TEXT_SECONDARY, "size": 12},
         },
-        # Right margin leaves room for the end-of-line direct labels; the top one
-        # for the title, its subtitle and the legend stacked above the plot.
-        "margin": {"l": 80, "r": 150, "t": 120, "b": 60},
+        # Right margin leaves room for the end-of-line direct labels; bottom for
+        # the axis title plus the (possibly two-row) legend.
+        "margin": {"l": 80, "r": 150, "t": 90, "b": 130},
         "hovermode": "x unified",
     }
 

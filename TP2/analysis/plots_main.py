@@ -42,6 +42,34 @@ from analysis.plots_style import (  # noqa: E402
 DEFAULT_RESULTS = PROJECT_ROOT / "analysis" / "results"
 
 
+def _end_labels(
+    curves: dict[str, tuple[list[int], list[float]]], colors: dict[str, str]
+) -> list[dict]:
+    """Direct labels at the line ends, skipping the ones that would overlap.
+
+    Curves that converge (which is what these runs do) end within a hair of each
+    other, so labelling every line stacks unreadable text. Labelling the ones
+    that are separated enough keeps the relief where it is legible; the legend
+    and the unified hover cover the rest.
+    """
+    if not curves:
+        return []
+    finals = sorted(
+        ((values[-1], generations[-1], variant) for variant, (generations, values) in curves.items()),
+        reverse=True,
+    )
+    all_values = [value for _, values in curves.values() for value in values]
+    minimum_gap = (max(all_values) - min(all_values)) * 0.045
+
+    labels: list[dict] = []
+    last_placed: float | None = None
+    for value, generation, variant in finals:
+        if last_placed is None or abs(last_placed - value) >= minimum_gap:
+            labels.append(end_label(variant, generation, value, colors[variant]))
+            last_placed = value
+    return labels
+
+
 def _curve_figure(
     data: SweepData, column: str, title: str, y_title: str
 ) -> go.Figure:
@@ -50,7 +78,6 @@ def _curve_figure(
     curves = mean_curve(data, column)
 
     figure = go.Figure()
-    annotations = []
     for variant, (generations, values) in curves.items():
         figure.add_trace(
             go.Scatter(
@@ -62,9 +89,7 @@ def _curve_figure(
                 hovertemplate="%{y:.4f}<extra></extra>",
             )
         )
-        annotations.append(
-            end_label(variant, generations[-1], values[-1], colors[variant])
-        )
+    annotations = _end_labels(curves, colors)
 
     seeds = ", ".join(str(seed) for seed in data.seeds)
     layout = base_layout(
