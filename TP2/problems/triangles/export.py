@@ -1,11 +1,13 @@
-"""Export a solved individual: a full-resolution rendered image, and a JSON
-enumeration of its triangles (position + color) - the "output" the assignment
-asks for, independent of whatever small resolution fitness was evaluated at.
+"""Export a solved individual: a full-resolution rendered image, a JSON
+enumeration of its triangles (position + color), and an animated GIF of a run's
+progress - the "output" the assignment asks for, independent of whatever small
+resolution fitness was evaluated at.
 """
 
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
 
 from PIL import Image
@@ -72,3 +74,38 @@ def save_triangles_json(
 ) -> None:
     data = triangles_as_json(individual, triangle_count, width, height, color_space)
     Path(path).write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def save_gif(
+    frame_paths: Sequence[str | Path],
+    path: str | Path,
+    frame_ms: int = 120,
+    hold_ms: int = 3000,
+) -> None:
+    """Assemble already-rendered PNG frames into a looping GIF.
+
+    The last frame is held for ``hold_ms`` instead of ``frame_ms`` (GIF allows a
+    per-frame delay, so the result is held without duplicating the frame), which
+    is what makes the finished image readable before the loop restarts.
+
+    Frames are read back from disk rather than kept in memory during the run:
+    they are full export-resolution renders, and a long run with a small
+    snapshot interval would otherwise hold hundreds of them at once.
+    """
+    frames = []
+    for frame_path in frame_paths:
+        with Image.open(frame_path) as frame:
+            frames.append(frame.convert("RGB"))
+    if not frames:
+        raise ValueError("save_gif needs at least one frame")
+
+    durations = [frame_ms] * (len(frames) - 1) + [hold_ms]
+    first, *rest = frames
+    first.save(
+        path,
+        save_all=True,
+        append_images=rest,
+        duration=durations,
+        loop=0,
+        optimize=True,
+    )
