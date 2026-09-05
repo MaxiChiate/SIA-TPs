@@ -184,6 +184,42 @@ con Pillow. Para fijar el backend en vez de depender de `auto`, poné
   default `1.0`; ver "El piso de fitness") y `renderer` / `threads`
   (opcionales; ver "Backend de render").
 
+## Resolución de evaluación (`problem.params.work_resolution`)
+
+El fitness no se calcula sobre la imagen entera: se calcula sobre el target
+reescalado a `work_resolution`. El genotipo es independiente de la resolución
+(alelos en `[0,1]`), así que subirla no cambia nada del AG — solo cambia cuánto
+detalle *ve* la función objetivo, y cuánto sale cada evaluación.
+
+Medido con el backend Rust (500 generaciones, 50 triángulos, `starry_night.png`,
+20 hilos):
+
+| `work_resolution` | píxeles | ms/generación |
+|---|---|---|
+| `[128, 80]` | 10.240 (1×) | 7,5 |
+| `[320, 253]` | 80.960 (7,9×) | 11,4 |
+| `[512, 405]` | 207.360 (20×) | 17,3 |
+| `[800, 633]` | 506.400 (50×) | 34,4 |
+| `[1200, 950]` (nativo) | 1.140.000 (111×) | 114 |
+
+**El costo crece mucho más despacio que los píxeles**: 20× de resolución cuesta
+2,3× de tiempo. Con el rasterizador nativo el cuello de botella ya no es
+rasterizar, son los operadores en Python — `non_uniform` hace ~55.000 llamadas a
+`rng.random()` por generación y eso no depende de la resolución. Recién a
+resolución nativa vuelve a mandar el render.
+
+O sea que **píxel por píxel es viable**: evaluar a `[1200, 950]` son ~57 s por
+cada 500 generaciones. Lo que no compra es calidad — entre `[128, 80]` y
+`[512, 405]` el RMSE final se mueve dentro del ruido entre seeds. Con 50
+triángulos el techo lo pone la representación, no lo que la métrica alcanza a
+ver. Subir la resolución sirve para que el fitness mida *lo que vas a mirar*:
+a 128×80 el AG puede dejar artefactos que a tamaño de export se notan y la
+métrica nunca penalizó.
+
+Conviene respetar el aspecto de la imagen, para que el muestreo sea parejo en
+los dos ejes: `argentina.png` es 2560×1600 (1,600 → `[128, 80]`, `[512, 320]`),
+`starry_night.png` es 1200×950 (1,263 → `[512, 405]`).
+
 ## El piso de fitness (`problem.params.initial_alpha`)
 
 El fitness es `1 - mse/baseline` **recortado en 0**: todo lo que sea peor que el
