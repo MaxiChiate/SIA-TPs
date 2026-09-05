@@ -84,6 +84,7 @@ vez: el `config.json` no cambia y `python run.py` pasa a usarla sola.
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # una sola vez
+. "$HOME/.cargo/env"                   # rustup no toca el PATH de la shell ya abierta
 source .venv/bin/activate              # maturin compila contra el venv activo
 pip install maturin
 cd rust && maturin develop --release   # desde rust/ y con --release: las dos cosas importan
@@ -204,6 +205,36 @@ build en silencio:
   `maturin develop -m rust/Cargo.toml` compila **sin** `target-cpu=x86-64-v3`.
   `build_info()` reporta las features realmente compiladas: si no dice
   `avx2`, el flag no se aplicó.
+
+#### Compilar más rápido mientras se itera
+
+`release` está al máximo de optimización a propósito (`opt-level = 3`, LTO
+*fat*, una sola unidad de codegen), y esa última parte es **secuencial**: rustc
+termina fundiendo todo en un único módulo LLVM, así que sobre el final del build
+queda un solo core trabajando. El perfil `parallel` de
+[`rust/Cargo.toml`](rust/Cargo.toml) mantiene `opt-level = 3` y reparte la
+optimización global: ThinLTO sobre 16 unidades, que se optimizan en paralelo (un
+poco menos de inlining entre módulos que el LTO *fat*, a cambio de usar todos
+los cores):
+
+```bash
+cd rust
+CARGO_BUILD_JOBS=20 maturin develop --profile parallel   # 20 = hilos de la máquina
+```
+
+`CARGO_BUILD_JOBS` es opcional: Cargo ya lanza un job por CPU lógica. Los flags
+de [`rust/.cargo/config.toml`](rust/.cargo/config.toml) (`target-cpu`) aplican
+igual, porque no dependen del perfil.
+
+Medido en el mismo Ryzen AI 9 365 (20 hilos), recompilando solo el crate:
+**3,4 s con `--release`** (un core ocupado) contra **2,3 s con `parallel`**
+(~4 cores). Es un crate de cuatro archivos: la diferencia es de ~1,5x, no de un
+orden de magnitud.
+
+El binario que sale puede ser algo más lento que el de `--release`, y
+`build_info()` no los distingue (dice `release` en los dos, porque solo mira
+`debug_assertions`). Para medir tiempos o generar números de informe, compilá
+con `--release`.
 
 ### Equivalencia entre backends
 

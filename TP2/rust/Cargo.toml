@@ -21,6 +21,17 @@ codegen-units = 1
 panic = "abort"
 strip = true
 
+# Same optimizations, spread across every core instead of funnelled into one
+# LLVM module: fat LTO plus codegen-units=1 leaves the tail of a release build
+# single-threaded, which is the part that hurts while iterating on the kernel.
+# ThinLTO runs its passes across units in parallel, so this saturates the box at
+# the cost of a slightly slower binary -- benchmark with --release, not here.
+#   cd rust && CARGO_BUILD_JOBS=20 maturin develop --profile parallel
+[profile.parallel]
+inherits = "release"
+lto = "thin"
+codegen-units = 16
+
 # A forgotten --release should be merely slow, not useless: an opt-level=0 build
 # of this kernel is slower than the Pillow implementation it replaces.
 [profile.dev]
