@@ -11,15 +11,17 @@ The optional ``color_space`` param (``rgb`` by default, see
 are read. It changes no interface: the genotype stays a flat [0,1] vector of the
 same length, so every operator is unaffected - what changes is which colors sit
 close together under mutation and crossover.
+
+Scoring itself is delegated to a ``Renderer`` (``problems.triangles.renderers``),
+chosen by the optional ``renderer`` param. The problem holds the genotype rules;
+the renderer holds the pixels.
 """
 
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
-
-import numpy as np
-from PIL import Image
 
 from ga import registry
 from ga.core.gene import GeneSchema
@@ -29,13 +31,12 @@ from ga.core.rng import Rng
 
 from . import colorspace
 from .export import native_resolution
-from .fitness import mean_squared_error, pixel_similarity
-from .genotype import GENES_PER_TRIANGLE, schema_for, triangles_from_alleles
-from .renderer import render_triangles
+from .genotype import GENES_PER_TRIANGLE, schema_for
+from .renderers import DEFAULT_NAME as DEFAULT_RENDERER
+from .renderers import RenderSpec, make_renderer
 
 _DEFAULT_WORK_RESOLUTION = (64, 64)
 _DEFAULT_BACKGROUND_RGB = (255, 255, 255)
-_MIN_BASELINE_MSE = 1e-9
 
 
 def _clamp01(value: float) -> float:
@@ -54,13 +55,18 @@ class TrianglesProblem(Problem):
             params.get("color_space", colorspace.DEFAULT.name)
         )
 
-        target = Image.open(self.image_path).convert("RGB").resize((width, height))
-        self._target_array = np.asarray(target, dtype=np.uint8)
         self._schema = schema_for(self.triangle_count, self.color_space)
-
-        blank_canvas = render_triangles([], self.work_width, self.work_height, self.background_rgb)
-        self._baseline_mse = max(
-            mean_squared_error(blank_canvas, self._target_array), _MIN_BASELINE_MSE
+        self._renderer = make_renderer(
+            params.get("renderer", DEFAULT_RENDERER),
+            RenderSpec.build(
+                self.image_path,
+                width,
+                height,
+                self.background_rgb,
+                self.color_space,
+                self.triangle_count,
+            ),
+            threads=params.get("threads", 0),
         )
 
     def schema(self) -> GeneSchema:
@@ -70,17 +76,13 @@ class TrianglesProblem(Problem):
         return Individual(self._schema.random_vector(rng), self._schema)
 
     def evaluate(self, individual: Individual) -> float:
-        triangles = triangles_from_alleles(
-            individual.alleles,
-            self.triangle_count,
-            self.work_width,
-            self.work_height,
-            self.color_space,
-        )
-        rendered = render_triangles(
-            triangles, self.work_width, self.work_height, self.background_rgb
-        )
-        return pixel_similarity(rendered, self._target_array, self._baseline_mse)
+        return self._renderer.score(individual.alleles)
+
+    def evaluate_batch(self, individuals: Sequence[Individual]) -> list[float]:
+        return self._renderer.score_batch([i.alleles for i in individuals])
+
+    def owns_parallelism(self) -> bool:
+        return self._renderer.owns_parallelism()
 
     def describe(self) -> dict:
         return {
@@ -89,6 +91,7 @@ class TrianglesProblem(Problem):
             "work_resolution": [self.work_width, self.work_height],
             "background_rgb": list(self.background_rgb),
             "color_space": self.color_space.name,
+            **self._renderer.describe(),
         }
 
     def individual_from_export(self, path: str | Path) -> Individual:
