@@ -187,3 +187,44 @@ def test_rendering_at_export_size_returns_that_many_pixels():
     image = rust.render_rgb(_genomes()[0], 200, 125)
     assert image.size == (200, 125)
     assert image.mode == "RGB"
+
+
+# -- thread invariance -------------------------------------------------------
+
+
+def test_scores_do_not_depend_on_the_thread_count():
+    """Reproducibility rests on this: parallelism is across individuals, and the
+    per-individual kernel is sequential, so the thread count is free to change
+    without changing a single result."""
+    from problems.triangles import colorspace
+    from problems.triangles.renderers import RenderSpec, RustRenderer
+
+    spec = RenderSpec.build(
+        "images/argentina.png", _SIZE[0], _SIZE[1], (255, 255, 255), colorspace.HCL,
+        _TRIANGLES,
+    )
+    genomes = _genomes()[:24]
+    single = RustRenderer(spec, threads=1).score_batch(genomes)
+    many = RustRenderer(spec, threads=8).score_batch(genomes)
+    assert single == many
+
+
+def test_the_thread_count_is_honoured():
+    from problems.triangles import colorspace
+    from problems.triangles.renderers import RenderSpec, RustRenderer
+
+    spec = RenderSpec.build(
+        "images/argentina.png", 16, 16, (255, 255, 255), colorspace.RGB, 2
+    )
+    assert RustRenderer(spec, threads=3)._scorer.threads == 3
+
+
+def test_the_rust_backend_claims_ownership_of_parallelism():
+    """Which is what stops the engine from also opening a process pool."""
+    from problems.triangles import colorspace
+    from problems.triangles.renderers import RenderSpec, RustRenderer
+
+    spec = RenderSpec.build(
+        "images/argentina.png", 16, 16, (255, 255, 255), colorspace.RGB, 2
+    )
+    assert RustRenderer(spec).owns_parallelism() is True
