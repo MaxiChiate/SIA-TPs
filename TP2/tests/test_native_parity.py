@@ -77,3 +77,113 @@ def test_hcl_gamut_reduction_agrees_where_it_actually_fires():
 def test_an_unknown_color_space_is_rejected():
     with pytest.raises(ValueError):
         native.to_rgb("cmyk", 0.1, 0.2, 0.3)
+
+
+# -- rasterized scores: statistical ------------------------------------------
+
+_PARITY_SAMPLES = 120
+_TRIANGLES = 40
+_SIZE = (96, 60)
+
+
+def _renderers(space):
+    from problems.triangles.renderers import RenderSpec, make_renderer
+
+    spec = RenderSpec.build(
+        "images/argentina.png", _SIZE[0], _SIZE[1], (255, 255, 255), space, _TRIANGLES
+    )
+    return make_renderer("pillow", spec), make_renderer("rust", spec)
+
+
+def _genomes():
+    from ga.core.rng import make_rng
+
+    rng = make_rng(20260905)
+    return [
+        [rng.random() for _ in range(_TRIANGLES * 10)] for _ in range(_PARITY_SAMPLES)
+    ]
+
+
+@pytest.fixture(scope="module", params=_ALL_SPACES, ids=lambda s: s.name)
+def scores(request):
+    """Raw MSE from both backends over the same genomes.
+
+    Compared on MSE rather than fitness: fitness floors at 0 for anything worse
+    than a blank canvas, and every uniformly random genome is - so a fitness
+    comparison here would be 0.0 against 0.0 and would prove nothing.
+    """
+    pillow, rust = _renderers(request.param)
+    genomes = _genomes()
+    return [pillow.mse(g) for g in genomes], [rust.mse(g) for g in genomes]
+
+
+def test_backends_rank_genomes_the_same_way(scores):
+    """The primary criterion. Selection only ever consumes the *order* of
+    fitnesses, so ranking the same way is what "measures the same thing" means
+    operationally."""
+    import statistics
+
+    pillow, rust = scores
+    assert statistics.correlation(pillow, rust, method="ranked") > 0.99
+
+
+def test_no_genome_diverges_wildly(scores):
+    """A wrong blend, winding or colour space moves this by 10x, not by 2x."""
+    pillow, rust = scores
+    assert max(abs(r - p) / p for p, r in zip(pillow, rust)) < 0.05
+
+
+def test_the_systematic_coverage_bias_stays_small(scores):
+    """The native rasterizer covers slightly less than ``ImageDraw.polygon``,
+    which paints a polygon's outline as well as its interior. That bias is
+    inherent to any independent rasterizer; what matters is that it stays an
+    order of magnitude below the fitness differences the GA acts on."""
+    import statistics
+
+    pillow, rust = scores
+    bias = statistics.fmean((r - p) / p for p, r in zip(pillow, rust))
+    assert -0.02 < bias < 0.0
+
+
+def test_fitness_agrees_where_it_is_not_floored():
+    """Fitness parity in the regime a converged run actually occupies: small
+    alphas, so the picture is built from many translucent layers."""
+    from problems.triangles import colorspace
+
+    pillow, rust = _renderers(colorspace.RGB)
+    genomes = [
+        [value * 0.15 if index % 10 == 9 else value for index, value in enumerate(g)]
+        for g in _genomes()[:40]
+    ]
+    deltas = [abs(rust.score(g) - pillow.score(g)) for g in genomes]
+    assert max(deltas) < 0.02
+
+
+# -- native API contract -----------------------------------------------------
+
+
+def test_batch_scoring_agrees_with_scoring_one_at_a_time():
+    from problems.triangles import colorspace
+
+    _, rust = _renderers(colorspace.RGB)
+    genomes = _genomes()[:12]
+    assert rust.score_batch(genomes) == [rust.score(g) for g in genomes]
+
+
+def test_a_genome_of_the_wrong_length_is_rejected():
+    from problems.triangles import colorspace
+
+    _, rust = _renderers(colorspace.RGB)
+    with pytest.raises(ValueError):
+        rust.score([0.5] * 7)
+
+
+def test_rendering_at_export_size_returns_that_many_pixels():
+    """The genotype is resolution-independent, so the same individual must draw
+    at export size, not only at the scoring size."""
+    from problems.triangles import colorspace
+
+    _, rust = _renderers(colorspace.RGB)
+    image = rust.render_rgb(_genomes()[0], 200, 125)
+    assert image.size == (200, 125)
+    assert image.mode == "RGB"
