@@ -76,6 +76,30 @@ python run.py config.json --out results/prueba --snapshot-every 25 \
 Imprime el fitness mejor/promedio de cada generación a medida que corre, y
 deja el `progress.gif` de esa corrida en `results/prueba/`.
 
+### Correr con el backend nativo (Rust)
+
+Opcional, pero es ~10× más rápido (ver [Backend de render](#backend-de-render)).
+Como el default es `"renderer": "auto"`, alcanza con compilar la extensión una
+vez: el `config.json` no cambia y `python run.py` pasa a usarla sola.
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # una sola vez
+source .venv/bin/activate              # maturin compila contra el venv activo
+pip install maturin
+cd rust && maturin develop --release   # desde rust/ y con --release: las dos cosas importan
+cd .. && python run.py                 # "auto" ahora resuelve a rust
+```
+
+Para confirmar que quedó compilada, y con qué flags:
+
+```bash
+python -c "import triangles_native as n; print(n.version(), n.build_info())"
+```
+
+Sin toolchain de Rust no hay nada que hacer: `python run.py` sigue funcionando
+con Pillow. Para fijar el backend en vez de depender de `auto`, poné
+`"renderer": "rust"` (o `"pillow"`) en `problem.params`.
+
 ## `config.json`
 
 ```json
@@ -168,26 +192,18 @@ manda con `pillow`, `problem.params.threads` manda con `rust`.
 
 ### Compilar el backend nativo
 
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # una sola vez
-source .venv/bin/activate                                       # maturin usa el venv activo
-pip install maturin
-cd rust && maturin develop --release                            # desde rust/, ver abajo
-python -c "import triangles_native as n; print(n.version(), n.build_info())"
-```
-
-Dos cosas que arruinan el build en silencio:
+Los comandos están en
+[Arranque rápido](#correr-con-el-backend-nativo-rust). Dos cosas que arruinan el
+build en silencio:
 
 - **`--release` no es opcional.** Un build de debug del kernel es más lento que
-  el Pillow que reemplaza.
+  el Pillow que reemplaza; `build_info()` arranca con `debug` o `release` según
+  cuál quedó instalado.
 - **Hay que correrlo desde `rust/`.** Cargo busca `.cargo/config.toml` desde su
   directorio de trabajo hacia arriba, no desde el manifest, así que
   `maturin develop -m rust/Cargo.toml` compila **sin** `target-cpu=x86-64-v3`.
   `build_info()` reporta las features realmente compiladas: si no dice
   `avx2`, el flag no se aplicó.
-
-Sin toolchain de Rust no hay que hacer nada: `pip install -r requirements.txt` y
-`python run.py` siguen funcionando con Pillow.
 
 ### Equivalencia entre backends
 
