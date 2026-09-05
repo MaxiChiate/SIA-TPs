@@ -16,6 +16,7 @@ mod score;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
+use rayon::prelude::*;
 
 use color::ColorSpace;
 use score::{ScorerInner, GENES_PER_TRIANGLE};
@@ -81,13 +82,19 @@ fn to_rgb(space: &str, a: f64, b: f64, c: f64) -> PyResult<(u8, u8, u8)> {
 #[pyclass(module = "triangles_native", frozen)]
 struct Scorer {
     inner: ScorerInner,
+    /// A pool of this scorer's own, not rayon's global one: the thread count
+    /// then comes from the config rather than from `RAYON_NUM_THREADS`, and two
+    /// scorers in one process (the parity tests build several) cannot disturb
+    /// each other.
+    pool: rayon::ThreadPool,
 }
 
 #[pymethods]
 impl Scorer {
     #[new]
     #[pyo3(signature = (
-        target_rgb, width, height, background_rgb, triangle_count, color_space, baseline_mse
+        target_rgb, width, height, background_rgb, triangle_count, color_space,
+        baseline_mse, threads = 0
     ))]
     fn new(
         target_rgb: &[u8],
@@ -97,6 +104,7 @@ impl Scorer {
         triangle_count: usize,
         color_space: &str,
         baseline_mse: f64,
+        threads: usize,
     ) -> PyResult<Self> {
         // Every argument is validated here, before any kernel code runs. The
         // release profile aborts on panic, so a bad length must come back as a
@@ -122,6 +130,10 @@ impl Scorer {
         let space = ColorSpace::from_name(color_space).ok_or_else(|| {
             PyValueError::new_err(format!("unknown color space {color_space:?}"))
         })?;
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(threads) // 0 means one per available core
+            .build()
+            .map_err(|err| PyValueError::new_err(format!("cannot build thread pool: {err}")))?;
         Ok(Self {
             inner: ScorerInner::new(
                 target_rgb.to_vec(),
@@ -132,7 +144,14 @@ impl Scorer {
                 space,
                 baseline_mse,
             ),
+            pool,
         })
+    }
+
+    /// How many threads `score_batch` will actually use.
+    #[getter]
+    fn threads(&self) -> usize {
+        self.pool.current_num_threads()
     }
 
     fn score(&self, alleles: Vec<f64>) -> PyResult<f64> {
@@ -151,15 +170,28 @@ impl Scorer {
         Ok(self.inner.mse(&alleles, &mut canvas))
     }
 
-    fn score_batch(&self, genomes: Vec<Vec<f64>>) -> PyResult<Vec<f64>> {
+    /// Score a whole generation, spreading it across this scorer's threads.
+    ///
+    /// The GIL is held only long enough to marshal the genomes in and the
+    /// results out; the rendering itself runs outside it, which is what makes
+    /// the threads real. Parallelism is strictly *across* individuals - the
+    /// per-individual kernel is sequential and there is no accumulation shared
+    /// between them - so a genome's score does not depend on the thread count,
+    /// and `collect` restores input order regardless of completion order.
+    fn score_batch(&self, py: Python<'_>, genomes: Vec<Vec<f64>>) -> PyResult<Vec<f64>> {
         for genome in &genomes {
             self.check_len(genome.len())?;
         }
-        let mut canvas = Vec::new();
-        Ok(genomes
-            .iter()
-            .map(|genome| self.inner.score(genome, &mut canvas))
-            .collect())
+        Ok(py.allow_threads(|| {
+            self.pool.install(|| {
+                genomes
+                    .par_iter()
+                    // One scratch canvas per worker thread, reused across every
+                    // individual it handles: no allocation in the hot loop.
+                    .map_init(Vec::new, |canvas, genome| self.inner.score(genome, canvas))
+                    .collect()
+            })
+        }))
     }
 
     /// Render a genome at an arbitrary resolution, as raw RGB bytes.
