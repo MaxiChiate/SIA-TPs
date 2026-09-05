@@ -36,3 +36,6 @@ TP1/Ejercicio2_sokoban/analisis/graficos/
 # TP2: resultados generados por run.py (imagenes, logs, snapshots por corrida)
 # (si querés versionar una corrida puntual: git add -f resultados/<carpeta>)
 TP2/results/
+
+# TP2: resultados del runner de experimentos (analysis/main.py)
+TP2/analysis/results/

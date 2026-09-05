@@ -1,0 +1,74 @@
+{
+  "_comment": "Serie A: compara los 7 metodos de seleccion de padres. Todo lo demas queda fijo. Las claves que empiezan con _ se ignoran.",
+
+  "_comment_base": "Config de partida. Cada variante lo copia y le pisa solo lo que declara en su 'set'.",
+  "base_config": "config.json",
+
+  "_comment_overrides": "Se aplican a TODAS las variantes, antes que sus overrides propios. stopping vacio = solo corta por max_generations, asi todas las corridas duran lo mismo y son comparables.",
+  "overrides": {
+    "stopping": [],
+    "engine.max_generations": 150
+  },
+
+  "_comment_seeds": "Una corrida por variante por seed. Tres seeds para poder distinguir una diferencia real del azar.",
+  "seeds": [1, 2, 3],
+
+  "_comment_workers": "Corridas en paralelo. Cada corrida usa 1 proceso (el runner fuerza engine.processes=1).",
+  "workers": 4,
+
+  "output_dir": "analysis/results",
+
+  "_comment_variants": "Cada variante trae sus propios params: boltzmann necesita temperaturas, los torneos su tamano/umbral. Elite, ruleta, universal y ranking no toman parametros.",
+  "variants": [
+    {
+      "label": "elite",
+      "set": {
+        "operators.parent_selection.name": "elite",
+        "operators.parent_selection.params": {}
+      }
+    },
+    {
+      "label": "roulette",
+      "set": {
+        "operators.parent_selection.name": "roulette",
+        "operators.parent_selection.params": {}
+      }
+    },
+    {
+      "label": "universal",
+      "set": {
+        "operators.parent_selection.name": "universal",
+        "operators.parent_selection.params": {}
+      }
+    },
+    {
+      "label": "ranking",
+      "set": {
+        "operators.parent_selection.name": "ranking",
+        "operators.parent_selection.params": {}
+      }
+    },
+    {
+      "label": "boltzmann",
+      "_comment": "t0/tmin bajos a proposito: el fitness vive en [0.85, 1.0], asi que con las temperaturas por defecto (t0=20) exp(f/T) da ~1 para todos y la seleccion queda uniforme.",
+      "set": {
+        "operators.parent_selection.name": "boltzmann",
+        "operators.parent_selection.params": {"t0": 0.5, "tmin": 0.02}
+      }
+    },
+    {
+      "label": "tournament_det",
+      "set": {
+        "operators.parent_selection.name": "tournament_deterministic",
+        "operators.parent_selection.params": {"tournament_size": 3}
+      }
+    },
+    {
+      "label": "tournament_prob",
+      "set": {
+        "operators.parent_selection.name": "tournament_probabilistic",
+        "operators.parent_selection.params": {"threshold": 0.75}
+      }
+    }
+  ]
+}
