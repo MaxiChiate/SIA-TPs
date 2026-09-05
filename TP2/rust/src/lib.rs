@@ -9,7 +9,12 @@
 //! The Python side owns the search; this side answers one question, fast:
 //! "how far is the picture these alleles describe from the target?"
 
+mod color;
+
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+
+use color::ColorSpace;
 
 /// Bumped whenever the scoring kernel's numerics change.
 ///
@@ -52,10 +57,23 @@ fn build_info() -> String {
     format!("{} [{}]", profile, features.join(","))
 }
 
+/// Decode three alleles as an sRGB triple, the same way the scoring kernel does.
+///
+/// Exposed purely so the parity tests can compare colour decoding against the
+/// Python implementation directly, with no rasterizer in between.
+#[pyfunction]
+fn to_rgb(space: &str, a: f64, b: f64, c: f64) -> PyResult<(u8, u8, u8)> {
+    let space = ColorSpace::from_name(space)
+        .ok_or_else(|| PyValueError::new_err(format!("unknown color space {space:?}")))?;
+    let [red, green, blue] = space.to_rgb(a, b, c);
+    Ok((red, green, blue))
+}
+
 #[pymodule]
 fn triangles_native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(version, module)?)?;
     module.add_function(wrap_pyfunction!(schema_version, module)?)?;
     module.add_function(wrap_pyfunction!(build_info, module)?)?;
+    module.add_function(wrap_pyfunction!(to_rgb, module)?)?;
     Ok(())
 }
