@@ -50,6 +50,15 @@ python run.py                         # usa ./config.json
 python run.py otra_config.json
 ```
 
+`python run.py` a secas escribe la imagen final y las métricas, nada más. Para
+que la corrida genere **todo** — snapshots intermedias y el gif del proceso
+incluidos — hay que pedirle las snapshots:
+
+```bash
+python run.py config.json --out results/prueba \
+  --snapshot-every 25 --export-width 600 --export-height 475
+```
+
 Cada corrida escribe en un directorio de resultados
 (`results/<config>_<timestamp>/` por default, o `--out DIR`):
 
@@ -68,13 +77,13 @@ Cada corrida escribe en un directorio de resultados
 - `summary.json` — fitness final, generación en que apareció, criterio de
   corte que disparó, evaluaciones/tiempo totales, config completo + seed.
 
-```bash
-python run.py config.json --out results/prueba --snapshot-every 25 \
-  --export-width 800 --export-height 500
-```
-
 Imprime el fitness mejor/promedio de cada generación a medida que corre, y
-deja el `progress.gif` de esa corrida en `results/prueba/`.
+deja los siete artefactos en `results/prueba/`.
+
+Sobre `--export-width`/`--export-height`: sin ellos cada snapshot se renderiza a
+la resolución nativa de la imagen fuente, y en un gif de 20 frames eso se nota
+(`images/starry_night.png` es 1200×950 → gif de varios MB). Achicar el export
+no toca la evaluación, que corre a `work_resolution` y es otra cosa.
 
 ### Correr con el backend nativo (Rust)
 
