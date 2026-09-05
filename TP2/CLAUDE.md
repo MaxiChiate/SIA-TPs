@@ -102,17 +102,32 @@ Agregado después: `analysis/` (runner de experimentos) y el multiprocessing del
 
 ## Pasos a seguir
 
-1. **Correr los experimentos.** `analysis/sweep.json` ya trae la serie A (los 7 métodos de
-   selección). Faltan las series de cruza, mutación (+ barrido de `pm`), supervivencia, tamaño
-   de población y cantidad de triángulos. Regla: **una perilla por vez**, todo lo demás fijo,
-   varias seeds, y `max_generations` fijo sin corte por fitness para que todas las corridas
-   hagan el mismo trabajo.
-2. **Gráficos.** Hoy no hay nada que dibuje los CSVs. Mínimo: curva de fitness por generación,
-   curva de diversidad (la que muestra convergencia prematura) y comparativa de fitness final
-   por variante. Molde en `TP1/Ejercicio2_sokoban/analisis/graficos_*.py` (plotly).
-3. **Ejercicio 1.** El del mapa NxN de caracteres ASCII. No se implementa, se piensa — pero es
+La maquinaria está lista: agregar una serie es escribir un sweep de ~6 líneas y correr dos
+comandos (`analysis/main.py` y después `analysis/plots_main.py`). No hace falta programar nada
+más para las series que faltan — los tres gráficos salen solos de cualquier tanda.
+
+1. **Correr las series que faltan.** Hecha: la **serie A** (los 7 métodos de selección),
+   `analysis/sweep.json`. Faltan cruza (4), mutación (4) + barrido de `pm`, supervivencia (2),
+   tamaño de población y cantidad de triángulos. Regla: **una perilla por vez**, todo lo demás
+   fijo, varias seeds, y `max_generations` fijo sin corte por fitness para que todas las
+   corridas hagan el mismo trabajo. El atajo `sweep` del config alcanza para casi todas.
+2. **Ejercicio 1.** El del mapa NxN de caracteres ASCII. No se implementa, se piensa — pero es
    entregable y hay que responderlo en la presentación.
-4. **Presentación.**
+3. **Presentación.**
+
+### Resultados de la serie A (7 selecciones x 3 seeds, 150 generaciones)
+
+- **En fitness final no hay diferencia concluyente.** El rango entre el mejor y el peor método
+  (0.9849 a 0.9926) es del mismo orden que la dispersión entre las 3 seeds de un mismo método
+  (0.003 a 0.007). Con 3 seeds solo se sostiene `tournament_det` > `universal`. Subir a ~10
+  seeds si se quiere afirmar algo más fuerte.
+- **En diversidad la señal es inequívoca**, con dos órdenes de magnitud entre extremos:
+  `universal` (0.0003) y `elite` (0.0007) la aplastan; `roulette` (0.022) y `boltzmann` (0.017)
+  son los que más conservan.
+- Ese último dato es la **evidencia experimental del problema de escala**: la ruleta conserva
+  más diversidad que nadie porque, con el fitness apretado en `[0.90, 0.99]`, prácticamente no
+  está seleccionando. Se comporta como muestreo aleatorio. Vale como hallazgo para defender,
+  no como algo a esconder.
 
 ### Pendientes técnicos
 
@@ -120,9 +135,14 @@ Detectados en revisión; ninguno bloquea los experimentos, pero conviene resolve
 respuesta lista para la defensa.
 
 - **Escala del fitness.** `1 - MSE/255²` vive en `[0.85, 1.0]`, así que ruleta y Boltzmann —que
-  dependen de las *diferencias absolutas* de fitness— quedan casi uniformes. O se reescala el
-  fitness (sigma scaling / normalización por generación), o se ajustan las temperaturas por
-  defecto de Boltzmann (`t0=20, tmin=1` no sirven para este rango).
+  dependen de las *diferencias absolutas* de fitness— quedan casi uniformes (confirmado por la
+  serie A). O se reescala el fitness (sigma scaling / normalización por generación), o se
+  ajustan las temperaturas por defecto de Boltzmann (`t0=20, tmin=1` no sirven para este rango;
+  `analysis/sweep.json` usa `t0=0.5, tmin=0.02`).
+- **La función de fitness no es elegible por config.** Hay una sola, cableada en
+  `problems/triangles/fitness.py`, y `problem.py` la llama directo. Para poder experimentar
+  sobre ella (MAE vs MSE, reescalado, comparación por bloques de píxeles) hay que resolverla
+  por nombre desde el registry, igual que los operadores. Es un cambio chico.
 - **`exclusive` no cubre `K <= N`.** El PPT define que en ese caso la nueva generación son los K
   hijos + (N−K) de la generación actual; hoy `ga/operators/survival.py` tira `ValueError`.
 - **`stagnation` mal etiquetado.** Su docstring dice "structure-based", pero mide que el mejor
