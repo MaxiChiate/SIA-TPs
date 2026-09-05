@@ -224,6 +224,50 @@ Conviene respetar el aspecto de la imagen, para que el muestreo sea parejo en
 los dos ejes: `argentina.png` es 2560×1600 (1,600 → `[128, 80]`, `[512, 320]`),
 `starry_night.png` es 1200×950 (1,263 → `[512, 405]`).
 
+### Píxel por píxel: `"work_resolution": "native"`
+
+En vez de `[ancho, alto]`, `work_resolution` acepta el string `"native"`: el
+fitness compara contra la imagen **a su resolución original**, sin reescalar
+nada en el medio. Es lo más fiel que la función objetivo puede ser, y también lo
+más caro — el aspecto lo hereda de la imagen, así que tampoco hay que calcularlo.
+
+```json
+"problem": {
+  "type": "triangles",
+  "params": {
+    "image_path": "images/argentina.png",
+    "work_resolution": "native"
+  }
+}
+```
+
+El bloque `problem` de `summary.json` guarda la resolución ya resuelta
+(`[2560, 1600]`, no el string), así que una corrida siempre dice contra cuántos
+píxeles se puntuó.
+
+Los tres casos, con Rust, sobre `argentina.png` (2560×1600), 50 triángulos, 500
+generaciones, seed 42. La columna que compara es el RMSE: son las tres imágenes
+finales re-puntuadas contra el mismo target a 640×400, porque **el fitness no es
+comparable entre resoluciones** (cada una tiene su propio `baseline_mse`).
+
+| `work_resolution` | píxeles | tiempo | ms/gen | fitness | RMSE @640×400 |
+|---|---|---|---|---|---|
+| `[128, 80]` | 10.240 | 3,8 s | 7,6 | 0,9765 | 20,14 |
+| `[512, 320]` | 163.840 | 7,2 s | 14,4 | 0,9256 | 22,62 |
+| `"native"` | 4.096.000 | 208,3 s | 416,7 | 0,9322 | 19,94 |
+
+Antes de leer esa última columna hace falta el control: repitiendo con 5 seeds,
+`[128, 80]` da **20,84 ± 1,45** y `[512, 320]` da **21,74 ± 1,49**. Los tres
+RMSE de la tabla caen adentro de ese ruido. Con 50 triángulos, entonces, la
+resolución de evaluación **no cambia la calidad final de forma medible**, y
+`"native"` cuesta 55× el tiempo para llegar al mismo lugar.
+
+Lo cual tiene sentido: reescalar el target a 128×80 lo *borronea*, y un target
+borroso es justo lo que 50 triángulos planos pueden aproximar. A resolución
+nativa el fitness persigue detalle que la representación no puede representar.
+`"native"` empieza a valer la pena cuando hay triángulos de sobra — es la opción
+honesta para una corrida final, no para iterar.
+
 ## El piso de fitness (`problem.params.initial_alpha`)
 
 El fitness es `1 - mse/baseline` **recortado en 0**: todo lo que sea peor que el

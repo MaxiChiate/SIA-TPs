@@ -98,6 +98,15 @@ del problema declara `block_size = 10`.
   (`problem.params.initial_alpha`, default `1.0` = sin sesgo) y no tocando la métrica: cambiar
   la normalización volvería incomparables todos los fitness ya medidos. El sesgo se aplica
   después de sortear el vector, así que la misma seed conserva coordenadas y colores.
+- **`work_resolution` acepta `"native"`**: el fitness compara contra la imagen a resolución
+  original, sin reescalado intermedio. Es un sentinel en el config y no un flag aparte porque
+  el parámetro que ya existía es exactamente el que se está eligiendo. `describe()` reporta la
+  resolución **resuelta**, y `run.py` ahora vuelca ese `describe()` en `summary.json` (bloque
+  `problem`, al lado del `config` crudo): una corrida tiene que registrar lo que corrió, no lo
+  que se pidió, o sus números no se pueden reproducir ni comparar. Mismo problema que tenía
+  `"renderer": "auto"`, que quedó arreglado por el mismo cambio. Medido: el costo crece con los píxeles pero mucho más despacio (20× de
+  resolución = 2,3× de tiempo) porque con el kernel nativo el cuello de botella son los
+  operadores en Python; recién a resolución nativa vuelve a mandar el render.
 - **Espacio de color configurable** (`problem.params.color_space`: `rgb` default, `hsv`, `hcl`)
   en `problems/triangles/colorspace.py`: cambia cómo se leen los 3 genes de color, no el
   genotipo ni ningún operador — sirve para comparar geometrías del espacio de búsqueda. `hcl`

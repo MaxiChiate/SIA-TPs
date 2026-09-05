@@ -16,6 +16,12 @@ Scoring itself is delegated to a ``Renderer`` (``problems.triangles.renderers``)
 chosen by the optional ``renderer`` param. The problem holds the genotype rules;
 the renderer holds the pixels.
 
+``work_resolution`` also accepts the string ``"native"``, which resolves to the
+source image's own resolution: fitness then compares every pixel of the target,
+with no downscaling in between. It is the most faithful the objective function
+can get, and the most expensive - cost grows with the pixel count, and at native
+size rendering is the bottleneck again.
+
 The optional ``initial_alpha`` param caps the alpha of the *first* generation
 only. Fitness floors at 0 for anything worse than the blank canvas, and a
 population of opaque random triangles starts entirely under that floor: every
@@ -48,15 +54,33 @@ _DEFAULT_BACKGROUND_RGB = (255, 255, 255)
 _DEFAULT_INITIAL_ALPHA = 1.0  # the whole [0,1] range, i.e. no bias at all
 
 
+_NATIVE_WORK_RESOLUTION = "native"
+
+
 def _clamp01(value: float) -> float:
     return min(1.0, max(0.0, value))
+
+
+def _work_resolution(value, image_path: str) -> tuple[int, int]:
+    """``[width, height]``, or ``"native"`` for the source image's own size."""
+    if value == _NATIVE_WORK_RESOLUTION:
+        return native_resolution(image_path)
+    if isinstance(value, str):
+        raise ValueError(
+            f"work_resolution must be [width, height] or "
+            f"{_NATIVE_WORK_RESOLUTION!r}, got {value!r}"
+        )
+    width, height = value
+    return int(width), int(height)
 
 
 class TrianglesProblem(Problem):
     def __init__(self, params: dict) -> None:
         self.image_path = params["image_path"]
         self.triangle_count = params["triangle_count"]
-        width, height = params.get("work_resolution", _DEFAULT_WORK_RESOLUTION)
+        width, height = _work_resolution(
+            params.get("work_resolution", _DEFAULT_WORK_RESOLUTION), self.image_path
+        )
         self.work_width = width
         self.work_height = height
         self.background_rgb = tuple(params.get("background_rgb", _DEFAULT_BACKGROUND_RGB))

@@ -64,6 +64,27 @@ def test_initial_alpha_does_not_touch_later_generations():
     assert problem.evaluate(individual.__class__(grown, problem.schema())) >= 0.0
 
 
+def test_work_resolution_native_uses_the_source_image_size():
+    from problems.triangles.export import native_resolution
+
+    problem = make_problem(work_resolution="native")
+    assert (problem.work_width, problem.work_height) == native_resolution(IMAGE)
+
+
+def test_work_resolution_native_is_reported_resolved():
+    """``describe`` feeds the run summary, so it has to record which pixels were
+    actually compared - not the sentinel that asked for them."""
+    from problems.triangles.export import native_resolution
+
+    described = make_problem(work_resolution="native").describe()["work_resolution"]
+    assert described == list(native_resolution(IMAGE))
+
+
+def test_unknown_work_resolution_string_is_rejected():
+    with pytest.raises(ValueError, match="work_resolution"):
+        make_problem(work_resolution="full")
+
+
 @pytest.mark.parametrize("value", [0.0, -0.1, 1.5])
 def test_initial_alpha_outside_the_unit_interval_is_rejected(value):
     with pytest.raises(ValueError, match="initial_alpha"):
