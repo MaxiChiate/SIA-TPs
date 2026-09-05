@@ -75,7 +75,11 @@ Cada corrida escribe en un directorio de resultados
   mejor/promedio/desvío/peor, diversidad genotípica, evaluaciones y tiempo
   acumulados.
 - `summary.json` — fitness final, generación en que apareció, criterio de
-  corte que disparó, evaluaciones/tiempo totales, config completo + seed.
+  corte que disparó, evaluaciones/tiempo totales, config completo + seed, y un
+  bloque `problem` con lo que **realmente** corrió: `work_resolution` resuelta,
+  backend elegido, flags con los que se compiló y threads. `config` es lo que se
+  pidió; `problem` es lo que pasó, y difieren en todo lo que sea `"auto"` o
+  `"native"`.
 
 Imprime el fitness mejor/promedio de cada generación a medida que corre, y
 deja los siete artefactos en `results/prueba/`.
@@ -340,8 +344,8 @@ disimularla:
   `threads`. La reproducibilidad por seed se mantiene.
 
 Los fitness de las dos implementaciones no son comparables entre sí: hay que
-generar todo el material de un informe con un solo backend. `summary.json`
-registra cuál corrió.
+generar todo el material de un informe con un solo backend. El bloque `problem`
+de `summary.json` registra cuál corrió, con qué flags y con cuántos threads.
 
 ### Rendimiento medido
 

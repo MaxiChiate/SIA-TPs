@@ -9,8 +9,8 @@ Writes into the results directory: ``final.png`` (the best individual
 rendered full-size), ``snapshots/gen_*.png`` and ``progress.gif`` (only if
 ``--snapshot-every`` is set), ``triangles.json`` (the best individual's
 triangles enumerated), ``history.csv``/``history.json`` (one row per
-generation), and ``summary.json`` (best fitness, stop reason, full config +
-seed).
+generation), and ``summary.json`` (best fitness, stop reason, the resolved
+problem description, full config + seed).
 """
 
 from __future__ import annotations
@@ -92,7 +92,16 @@ def _write_history(history: list, out_dir: Path) -> None:
     (out_dir / "history.json").write_text(json.dumps(rows, indent=2), encoding="utf-8")
 
 
-def _write_summary(result: RunResult, config: dict, seed: int, out_dir: Path) -> None:
+def _write_summary(
+    result: RunResult, config: dict, problem: dict, seed: int, out_dir: Path
+) -> None:
+    """``config`` is what was asked for, ``problem`` is what actually ran.
+
+    They differ wherever the problem resolves something: ``"work_resolution":
+    "native"`` becomes the image's pixel size, ``"renderer": "auto"`` becomes the
+    backend that was picked. A run has to record the second one, otherwise its
+    numbers cannot be reproduced or compared against another run's.
+    """
     summary = {
         "seed": seed,
         "best_fitness": result.best.fitness,
@@ -101,6 +110,7 @@ def _write_summary(result: RunResult, config: dict, seed: int, out_dir: Path) ->
         "generations": result.generations,
         "evaluations": result.evaluations,
         "elapsed_seconds": result.elapsed_seconds,
+        "problem": problem,
         "config": config,
     }
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
@@ -169,7 +179,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     _write_history(result.history, out_dir)
-    _write_summary(result, loaded.raw, loaded.seed, out_dir)
+    _write_summary(result, loaded.raw, description, loaded.seed, out_dir)
 
     print(
         f"\nbest fitness {result.best.fitness:.6f} at generation {result.best_generation} "
