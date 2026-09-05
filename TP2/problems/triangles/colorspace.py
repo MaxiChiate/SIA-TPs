@@ -164,7 +164,13 @@ def hcl_to_rgb(h: float, c: float, lightness: float) -> tuple[int, int, int]:
 
     linear = _lch_to_linear_rgb(light, chroma, hue)
     if not _in_gamut(linear):
+        # Start from the achromatic color of this lightness rather than from the
+        # out-of-gamut one: when the in-gamut chroma range is narrower than the
+        # bisection's first step (e.g. at L = 100, where only pure white fits),
+        # no midpoint is ever accepted, and ``linear`` must still hold a real
+        # color instead of falling back to clamping the raw channels.
         low, high = 0.0, chroma
+        linear = _lch_to_linear_rgb(light, 0.0, hue)
         for _ in range(_GAMUT_STEPS):
             middle = (low + high) / 2.0
             candidate = _lch_to_linear_rgb(light, middle, hue)
