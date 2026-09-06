@@ -53,7 +53,7 @@ analysis/               # runner de experimentos + gráficos — capa por encima
   config.py             # SweepConfig + overrides por ruta con puntos
   runner.py             # orquestador paralelo (un proceso por corrida)
   records.py            # esquema de summary.csv (1 fila/corrida) e history.csv (1 fila/generación)
-  main.py               # CLI: corre una tanda
+  main.py               # CLI: corre una serie
   plots_*.py            # CLI + datos + estilo de los tres gráficos
   serie_*.json          # una receta por serie (selección, cruza, mutación, ...)
 build.py                # CLI: compila rust/ y verifica el binario resultante
@@ -150,47 +150,66 @@ gráficos. Es una capa estrictamente por encima de `run.py` — no toca `ga/` ni
 
 ## Pasos a seguir
 
-La maquinaria está lista: agregar una serie es escribir un sweep de ~6 líneas y correr dos
-comandos (`analysis/main.py` y después `analysis/plots_main.py`). No hace falta programar nada
-más para las series que faltan — los tres gráficos salen solos de cualquier tanda.
+La maquinaria está lista: agregar una serie es escribir una receta de ~6 líneas
+(`analysis/serie_*.json`) y correr dos comandos (`analysis/main.py` y después
+`analysis/plots_main.py`). No hace falta programar nada más — los tres gráficos salen solos de
+cualquier serie.
 
-1. **Correr las series que faltan.** Hecha: la **serie A** (los 7 métodos de selección),
-   `analysis/serie_seleccion.json`. Faltan cruza (4), mutación (4) + barrido de `pm`, supervivencia (2),
-   tamaño de población y cantidad de triángulos. Regla: **una perilla por vez**, todo lo demás
-   fijo, varias seeds, y `max_generations` fijo sin corte por fitness para que todas las
-   corridas hagan el mismo trabajo. El atajo `sweep` del config alcanza para casi todas.
+1. **Correr las series que faltan.** Corridas: **cruza** y **mutación** (4 variantes x 10 seeds
+   cada una). Faltan **selección**, **supervivencia**, **triángulos**, **población** y **espacio
+   de color**; las siete recetas ya están escritas y validadas en `analysis/`. Regla: **una
+   perilla por vez**, todo lo demás fijo, varias seeds, y `max_generations` fijo sin corte por
+   fitness para que todas las corridas hagan el mismo trabajo.
 2. **Ejercicio 1.** El del mapa NxN de caracteres ASCII. No se implementa, se piensa — pero es
    entregable y hay que responderlo en la presentación.
 3. **Presentación.**
 
-### Resultados de la serie A (7 selecciones x 3 seeds, 150 generaciones)
+### Resultados hasta ahora
 
-- **En fitness final no hay diferencia concluyente.** El rango entre el mejor y el peor método
-  (0.9849 a 0.9926) es del mismo orden que la dispersión entre las 3 seeds de un mismo método
-  (0.003 a 0.007). Con 3 seeds solo se sostiene `tournament_det` > `universal`. Subir a ~10
-  seeds si se quiere afirmar algo más fuerte.
-- **En diversidad la señal es inequívoca**, con dos órdenes de magnitud entre extremos:
-  `universal` (0.0003) y `elite` (0.0007) la aplastan; `roulette` (0.022) y `boltzmann` (0.017)
-  son los que más conservan.
-- Ese último dato es la **evidencia experimental del problema de escala**: la ruleta conserva
-  más diversidad que nadie porque, con el fitness apretado en `[0.90, 0.99]`, prácticamente no
-  está seleccionando. Se comporta como muestreo aleatorio. Vale como hallazgo para defender,
-  no como algo a esconder.
+> **La serie de selección corrida el 2026-09-05 (3 seeds) quedó invalidada.** Se corrió antes
+> del cambio de fitness (`ff952f9`) y del fix de la selección de padres (`6c9f297`), así que sus
+> números están en otra escala y con otro consumo del RNG. Hay que volver a correrla; la receta
+> ya está en 10 seeds.
+
+**Cruza** (4 métodos x 10 seeds, 150 generaciones):
+
+- `uniform` 0.9565 · `ring` 0.9433 · `two_point` 0.9402 · `one_point` 0.9299.
+- Gana la uniforme, lo que contradice la intuición del teorema de esquemas. La explicación es
+  propia de este problema: **el orden de los triángulos en el genotipo no codifica nada**, así
+  que no hay bloques contiguos que romper y solo queda su ventaja de mezcla. Es la respuesta al
+  "decidir qué método de cruza usarían en diferentes circunstancias y por qué" de la consigna.
+- Hay solape entre seeds: gana en media, no en todas las corridas.
+
+**Mutación** (4 operadores x 10 seeds, igualados en alelos tocados por hijo):
+
+- `non_uniform` 0.9299 · `gene` 0.8202 · `multigene` 0.7139 · `uniform` 0.6873.
+- **Concluyente**: la peor seed de `non_uniform` supera a la mejor de `gene`, y la peor de
+  `gene` a la mejor de `multigene`. No se solapan.
+- Perturbar el alelo le gana a reemplazarlo por lejos: reemplazar 25 alelos por hijo destruye lo
+  que la selección venía construyendo.
+- **`multigene` tiene la diversidad más alta (0.153) y el anteúltimo fitness.** Es el
+  contraejemplo de "más diversidad es mejor": nunca converge, es búsqueda aleatoria cara. Buen
+  material para la presentación junto al extremo opuesto (`one_point`, diversidad 0.0016).
+
+**Control de reproducibilidad, gratis:** la variante `one_point` de la serie de cruza y la
+variante `non_uniform` de la de mutación son la misma configuración, corridas en series
+distintas. Dieron el mismo valor hasta el último decimal.
 
 ### Pendientes técnicos
 
 Detectados en revisión; ninguno bloquea los experimentos, pero conviene resolverlos o tener la
 respuesta lista para la defensa.
 
-- **Escala del fitness.** `1 - MSE/255²` vive en `[0.85, 1.0]`, así que ruleta y Boltzmann —que
-  dependen de las *diferencias absolutas* de fitness— quedan casi uniformes (confirmado por la
-  serie A). O se reescala el fitness (sigma scaling / normalización por generación), o se
-  ajustan las temperaturas por defecto de Boltzmann (`t0=20, tmin=1` no sirven para este rango;
-  `analysis/serie_seleccion.json` usa `t0=0.5, tmin=0.02`).
-- **La función de fitness no es elegible por config.** Hay una sola, cableada en
-  `problems/triangles/fitness.py`, y `problem.py` la llama directo. Para poder experimentar
-  sobre ella (MAE vs MSE, reescalado, comparación por bloques de píxeles) hay que resolverla
-  por nombre desde el registry, igual que los operadores. Es un cambio chico.
+- **Escala del fitness: resuelto** por `ff952f9`. Era `1 - MSE/255²`, que vivía en `[0.85, 1.0]`
+  y dejaba a ruleta y Boltzmann —que dependen de las *diferencias absolutas* de fitness— casi
+  uniformes. Ahora se normaliza contra el error del canvas vacío, así que `0` = "no mejor que no
+  dibujar nada". Queda **revisar las temperaturas de Boltzmann** de
+  `analysis/serie_seleccion.json` (`t0=0.5, tmin=0.02`): se eligieron para la escala vieja y con
+  la nueva pueden no ser las adecuadas.
+- **La función de fitness no es elegible por config.** Hay una sola, en `rust/src/score.rs`.
+  Para poder experimentar sobre ella (MAE vs MSE, comparación por bloques de píxeles) habría que
+  resolverla por nombre desde el registry, igual que los operadores. **La consigna no lo pide**,
+  así que es opcional.
 - **`exclusive` no cubre `K <= N`.** El PPT define que en ese caso la nueva generación son los K
   hijos + (N−K) de la generación actual; hoy `ga/operators/survival.py` tira `ValueError`.
 - **`stagnation` mal etiquetado.** Su docstring dice "structure-based", pero mide que el mejor
@@ -213,9 +232,9 @@ cd TP2
 ../.venv/bin/python build.py                      # compila rust/ y verifica el binario
 ../.venv/bin/python run.py config.json            # simular + dibujar, de un saque
 
-../.venv/bin/python analysis/main.py              # una tanda -> analysis/results/<sweep_id>/
+../.venv/bin/python analysis/main.py              # una serie -> analysis/results/<sweep_id>/
 ../.venv/bin/python analysis/main.py --dry-run    # valida el sweep y muestra el plan
-../.venv/bin/python analysis/plots_main.py        # dibuja la tanda más reciente
+../.venv/bin/python analysis/plots_main.py        # dibuja la serie más reciente
 ```
 
 Una corrida son tres etapas separables (ver "Etapas separadas" abajo):
@@ -302,7 +321,7 @@ como identificador), más `resolved.json` con el config exacto que corrió cada 
 
 `analysis/plots_main.py` dibuja esos CSVs: curva de fitness, curva de diversidad y un dot plot
 de fitness final con un punto por seed. Los tres llevan al pie del título lo que se mantuvo
-fijo en la tanda, derivado de `resolved.json` — lo que la tanda varió se cae solo de ese
+fijo en la serie, derivado de `resolved.json` — lo que la serie varió se cae solo de ese
 cartel, porque difiere entre variantes.
 
 Regla de método: **una perilla por vez**, todo lo demás fijo, varias seeds, y `max_generations`

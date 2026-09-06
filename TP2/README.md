@@ -646,27 +646,37 @@ métricas. Tres archivos (`test_renderers.py`, `test_problem.py`,
 **saltean** en bloque si no está, en vez de romper: sin ella la suite corre
 79 passed, 3 skipped.
 
-## Tandas de experimentos
+## Series de experimentos
 
 `run.py` corre **una** config. Para comparar métodos entre sí hace falta correr
 muchas y juntar los resultados, y de eso se encarga `analysis/`:
 
 ```bash
-python3 analysis/main.py                    # usa analysis/serie_seleccion.json
-python3 analysis/main.py serie_cruza.json
-python3 analysis/main.py --dry-run          # valida y muestra el plan, sin correr
+python3 analysis/main.py                              # usa serie_seleccion.json
+python3 analysis/main.py analysis/serie_cruza.json
+python3 analysis/main.py analysis/serie_cruza.json --dry-run   # solo el plan
 ```
 
-El `analysis/serie_seleccion.json` que viene es la **serie A**: los 7 métodos de selección,
-3 seeds cada uno, todo lo demás fijo. Un sweep declara una config base, qué
-pisarle, y con qué seeds repetir:
+Hay una receta por serie en `analysis/`, y cada una mueve **una sola perilla**:
+
+| Receta | Qué varía | Corridas |
+|---|---|---|
+| `serie_seleccion.json` | los 7 métodos de selección | 70 |
+| `serie_cruza.json` | one_point · two_point · uniform · ring | 40 |
+| `serie_mutacion.json` | gene · multigene · uniform · non_uniform | 40 |
+| `serie_supervivencia.json` | additive · exclusive | 20 |
+| `serie_triangulos.json` | 10 · 50 · 200 · 500 triángulos | 40 |
+| `serie_poblacion.json` | N = 30 · 100 · 300 | 30 |
+| `serie_color.json` | rgb · hsv · hcl | 30 |
+
+Una receta declara de qué config partir, qué pisarle y con qué seeds repetir:
 
 ```json
 {
-  "base_config": "config.json",
+  "base_config": "config.json.example",
   "overrides": {"stopping": [], "engine.max_generations": 150},
-  "seeds": [1, 2, 3],
-  "workers": 4,
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "workers": 1,
   "sweep": {
     "path": "operators.crossover.name",
     "values": ["one_point", "two_point", "uniform", "ring"]
@@ -683,13 +693,16 @@ pisarle, y con qué seeds repetir:
   `variants`, no los dos.
 - **`seeds`**: cada variante corre una vez por seed. Con una sola seed no podés
   distinguir una diferencia real del azar.
-- **`workers`**: corridas en paralelo. Cada corrida usa un proceso propio, así
-  que el runner fuerza `engine.processes = 1` para no anidar pools.
+- **`workers`**: corridas en paralelo. **Dejarlo en 1**: el kernel nativo ya
+  paraleliza cada generación sobre todos los cores (`problem.params.threads`),
+  así que correr varias corridas a la vez sobre-suscribe la CPU y ensucia los
+  tiempos. Cada corrida usa un proceso propio y el runner le fuerza
+  `engine.processes = 1` para no anidar pools.
 
 Antes de correr nada valida **todas** las variantes contra `ga.config`, así un
 nombre de operador mal escrito falla en el segundo cero y no a los 40 minutos.
 
-Cada tanda escribe en `analysis/results/<sweep_id>/`:
+Cada serie escribe en `analysis/results/<sweep_id>/`:
 
 - `summary.csv` — **una fila por corrida**: variante, seed, fitness final,
   generación en que apareció, criterio de corte, evaluaciones, tiempo,
@@ -698,22 +711,22 @@ Cada tanda escribe en `analysis/results/<sweep_id>/`:
   `(variant, seed)` como identificador. Es el CSV para las curvas de fitness y
   diversidad a lo largo del tiempo.
 - `resolved.json` — el config completo que efectivamente corrió cada variante,
-  para poder reproducir la tanda desde su propia salida.
+  para poder reproducir la serie desde su propia salida.
 
 Los CSVs se van escribiendo a medida que terminan las corridas, así que una
-tanda interrumpida igual deja datos usables.
+serie interrumpida igual deja datos usables.
 
 ## Gráficos
 
-Los CSVs de una tanda se dibujan con:
+Los CSVs de una serie se dibujan con:
 
 ```bash
-python3 analysis/plots_main.py                                  # la tanda más reciente
+python3 analysis/plots_main.py                                  # la serie más reciente
 python3 analysis/plots_main.py analysis/results/20260905T0251Z  # una en particular
 ```
 
 Deja tres HTML autocontenidos (plotly embebido, abren sin internet) al lado de
-los CSVs de esa tanda:
+los CSVs de esa serie:
 
 - `fitness.html` — mejor fitness por generación, una línea por variante.
 - `diversity.html` — diversidad genotípica por generación. Es el gráfico que
@@ -733,15 +746,15 @@ truncado para mostrar alguna diferencia — y una barra truncada miente sobre la
 magnitud, porque el largo de la barra *es* el valor. Los puntos codifican
 posición, así que un eje con zoom es honesto.
 
-Los tres llevan al pie del título qué se mantuvo **fijo** en toda la tanda (N, K,
+Los tres llevan al pie del título qué se mantuvo **fijo** en toda la serie (N, K,
 Pc, Pm, generaciones, operadores, imagen, triángulos, resolución). Eso sale del
 `resolved.json` de la propia corrida, no de un texto escrito a mano, así que no
-puede quedar desfasado — y lo que la tanda varió queda afuera solo, porque
+puede quedar desfasado — y lo que la serie varió queda afuera solo, porque
 justamente difiere entre variantes.
 
 La paleta (`analysis/plots_style.py`) está validada para daltonismo: los colores
 se asignan en orden fijo y cada variante conserva el suyo en los tres gráficos.
-Pasadas 8 variantes conviene partir la tanda en vez de inventar un color nuevo.
+Pasadas 8 variantes conviene partir la serie en vez de inventar un color nuevo.
 
 ## Agregar un operador nuevo
 
