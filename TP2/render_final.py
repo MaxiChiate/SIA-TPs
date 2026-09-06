@@ -4,9 +4,10 @@ Usage:
     python render_final.py RESULTS_DIR [--export-width W] [--export-height H]
 
 Reads ``best.json`` (the winning genotype) and ``summary.json`` (the config
-that produced it, so the picture is drawn by the same kernel, colour space and
-triangle count that scored it) out of the results directory. The config file
-itself is not needed, and neither is the machine the run happened on.
+that produced it, so the picture is drawn by the same kernel, colour space,
+shape type and shape count that scored it) out of the results directory. The
+config file itself is not needed, and neither is the machine the run happened
+on.
 
 Defaults to the source image's native resolution. Image paths in the stored
 config are relative, so run this from ``TP2/``.

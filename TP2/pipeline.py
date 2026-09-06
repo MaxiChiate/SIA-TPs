@@ -18,7 +18,7 @@ happen days later, on another machine, without the config that produced it.
 
 Deferred rendering needs the genotypes the pictures are of, which is what
 ``checkpoints.jsonl`` holds: one line per snapshot generation, carrying the
-raw ``[0, 1]`` allele vector rather than ``triangles.json``'s pixel-space
+raw ``[0, 1]`` allele vector rather than ``figures.json``'s pixel-space
 export. That export normalises vertices against the *native* resolution, so
 decoding it is only exact for a default-sized export; alleles are
 resolution-independent by construction and always decode to the individual
@@ -43,14 +43,15 @@ from ga.metrics import mean as mean_fitness
 from problems.triangles import colorspace
 from problems.triangles.export import (
     native_resolution,
+    save_figures_json,
     save_gif,
     save_image,
-    save_triangles_json,
 )
 
 BEST_FILE = "best.json"
 CHECKPOINTS_FILE = "checkpoints.jsonl"
 SUMMARY_FILE = "summary.json"
+FIGURES_FILE = "figures.json"
 FINAL_IMAGE = "final.png"
 GIF_FILE = "progress.gif"
 SNAPSHOTS_DIR = "snapshots"
@@ -114,11 +115,12 @@ def simulate(
     _write_history(result.history, out_dir)
     _write_summary(result, loaded.raw, description, loaded.seed, out_dir)
     _write_best(result, out_dir)
-    save_triangles_json(
+    save_figures_json(
         result.best,
-        description["triangle_count"],
+        description["shape_type"],
+        description["shape_count"],
         *export_size(description, None, None),
-        out_dir / "triangles.json",
+        out_dir / FIGURES_FILE,
         colorspace.get(description["color_space"]),
     )
     if checkpoints:
@@ -208,7 +210,7 @@ def rebuild_problem(summary: dict):
 
     Deliberately through ``load_config`` on the stored config rather than a
     second construction path: the picture has to be drawn by the same kernel,
-    at the same colour space and triangle count, that scored it.
+    at the same colour space, shape type and shape count, that scored it.
     """
     return load_config(summary["config"]).problem
 

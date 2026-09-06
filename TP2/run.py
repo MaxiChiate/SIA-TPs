@@ -13,7 +13,7 @@ implementation of each and no way for the combined path to drift from the
 separate ones.
 
 Writes into the results directory: ``history.csv`` / ``history.json``,
-``summary.json``, ``best.json``, ``triangles.json``, ``final.png``, and - only
+``summary.json``, ``best.json``, ``figures.json``, ``final.png``, and - only
 with ``--snapshot-every`` - ``checkpoints.jsonl``, ``snapshots/gen_*.png`` and
 ``progress.gif``.
 

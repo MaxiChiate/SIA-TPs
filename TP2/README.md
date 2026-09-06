@@ -69,7 +69,7 @@ python build.py                       # compila rust/ y reporta con qué flags q
 python run.py                                             # usa ./config.json
 ```
 
-Ajustá `config.json` a gusto (imagen, `triangle_count`, operadores). Para correr
+Ajustá `config.json` a gusto (imagen, `shape_count`, operadores). Para correr
 otro archivo, pasáselo como argumento: `python run.py otra_config.json`.
 
 Sin el toolchain de Rust compilado, `import problems.triangles` funciona igual
@@ -87,7 +87,7 @@ por partes.
 | script | qué hace | escribe |
 |---|---|---|
 | `build.py` | compila el kernel nativo de `rust/` | la extensión, en el venv activo |
-| `simulate.py` | corre el AG. **No dibuja nada** | `history.csv`/`.json`, `summary.json`, `best.json`, `triangles.json`, `checkpoints.jsonl` |
+| `simulate.py` | corre el AG. **No dibuja nada** | `history.csv`/`.json`, `summary.json`, `best.json`, `figures.json`, `checkpoints.jsonl` |
 | `render_final.py` | dibuja el mejor individuo | `final.png` |
 | `render_snapshots.py` | dibuja la evolución | `snapshots/gen_*.png`, `progress.gif` |
 | `run.py` | las tres etapas de un saque | todo lo de arriba |
@@ -117,7 +117,7 @@ de AG. `--progress-every N` (o `--quiet`) hace lo mismo con los prints, que a
 
 Las etapas de render no necesitan el `config.json`: reconstruyen el problema
 desde el bloque `config` de `summary.json`, para que la imagen la dibuje el
-mismo kernel, espacio de color y `triangle_count` que la puntuó. Se pueden
+mismo kernel, espacio de color, tipo y cantidad de formas que la puntuó. Se pueden
 correr días después, en otra máquina. Los `image_path` del config son
 relativos, así que hay que correrlas desde `TP2/`.
 
@@ -137,8 +137,10 @@ Cada corrida escribe en un directorio de resultados
   `"native"`.
 - `best.json` — el genotipo ganador, alelos crudos en `[0,1]` a precisión
   completa. Vuelve a puntuar bit a bit idéntico al `best_fitness` del summary.
-- `triangles.json` — los mismos triángulos en espacio de píxeles (vértices +
-  color RGBA), que es el formato que pide el enunciado y el que lee `import`.
+- `figures.json` — las mismas formas en espacio de píxeles (vértices o
+  centro+radios+ángulo según el tipo, + color RGBA), que es el formato que pide
+  el enunciado (con `shape_type: "triangle"`) y el que lee `import`. Cada
+  entrada lleva un campo `"type"` (`"triangle"` u `"oval"`).
 - `checkpoints.jsonl` — solo con `--snapshot-every N`: una línea por snapshot
   con el genotipo del mejor de esa generación, redondeado a 8 decimales (a
   4096 px de export eso es 4e-5 de un píxel). Es de lo que dibuja
@@ -193,7 +195,8 @@ no toca la evaluación, que corre a `work_resolution` y es otra cosa.
     "type": "triangles",
     "params": {
       "image_path": "images/argentina.png",
-      "triangle_count": 50,
+      "shape_count": 50,
+      "shape_type": "triangle",
       "work_resolution": [128, 80],
       "background_rgb": [255, 255, 255],
       "color_space": "rgb",
@@ -237,11 +240,14 @@ no toca la evaluación, que corre a `work_resolution` y es otra cosa.
 - **`stopping`**: lista de criterios adicionales, evaluados en orden y
   combinados por OR entre sí y con `max_generations`.
 - **`problem`**: `type` (hoy solo `"triangles"`) + `params` — `image_path`,
-  `triangle_count`, `work_resolution` (resolución chica para evaluar fitness;
-  el genotipo es independiente de la resolución), `background_rgb`,
-  `color_space` (opcional, default `"rgb"`), `initial_alpha` (opcional,
-  default `1.0`; ver "El piso de fitness") y `threads` (opcional, default `0`
-  = uno por core; ver ["El backend nativo"](#el-backend-nativo-rust)).
+  `shape_count`, `shape_type` (opcional, default `"triangle"`: `"triangle"`,
+  `"oval"` o `"both"` — en `"both"` cada figura es triángulo u óvalo según un
+  gen discreto que la mutación cambia sola, generación a generación), `work_resolution`
+  (resolución chica para evaluar fitness; el genotipo es independiente de la
+  resolución), `background_rgb`, `color_space` (opcional, default `"rgb"`),
+  `initial_alpha` (opcional, default `1.0`; ver "El piso de fitness") y
+  `threads` (opcional, default `0` = uno por core; ver
+  ["El backend nativo"](#el-backend-nativo-rust)).
 
 ## Resolución de evaluación (`problem.params.work_resolution`)
 
@@ -339,7 +345,7 @@ honesta para una corrida final, no para iterar.
 `pm` es la probabilidad de **cada tirada**, y salvo `gene`, todos los operadores
 de mutación tiran una vez **por locus** (o por bloque). O sea que el número
 esperado de mutaciones por hijo es `pm × largo del genoma` — y el genotipo de
-este problema mide `10 × triangle_count`. Subir los triángulos sin tocar `pm`
+este problema mide `10 × shape_count` en modo triángulo. Subir los triángulos sin tocar `pm`
 multiplica la violencia de la mutación sin que se note en el config:
 
 | triángulos | alelos | mutaciones/hijo con `pm=0.05` |
@@ -367,7 +373,7 @@ la tabla). Escalándolo, el orden se endereza y la capacidad extra rinde:
 
 `mutations_per_child` dice lo mismo sin la cuenta a mano: es el número esperado
 de mutaciones, y el operador lo convierte a probabilidad por tirada contra el
-largo real del genoma. Cambiás `triangle_count` y no tenés que re-tunear nada.
+largo real del genoma. Cambiás `shape_count` y no tenés que re-tunear nada.
 
 ```json
 "mutation": {"name": "non_uniform", "params": {"b": 2.0, "mutations_per_child": 25}}
@@ -542,7 +548,7 @@ que sigue son los números de esa migración, medidos entonces:
   con la implementación Python sobre todo el cubo de alelos (`==`, sin
   tolerancia) — y esto sigue siendo cierto y sigue estando probado
   (`tests/test_native_parity.py`), porque `colorspace.py` no se fue: todavía
-  decodifica color para `export.py` y para importar un `triangles.json`.
+  decodifica color para `export.py` y para importar un `figures.json`.
 - **Puntajes: estadística.** `ImageDraw.polygon` pinta el contorno además del
   interior, así que cubre entre 7% y 30% más área por triángulo que la regla
   top-left del rasterizador propio — son dos funciones objetivo parecidas
@@ -591,11 +597,12 @@ Dos notas honestas sobre estos números:
 
 ## Espacio de color (`problem.params.color_space`)
 
-Los 3 genes de color de cada triángulo (más el alpha, que siempre es lineal) se
-interpretan según el espacio elegido. **El genotipo no cambia**: sigue siendo el
-mismo vector plano de `10*T` alelos en `[0,1]` y ningún operador se entera. Lo
-que cambia es la *geometría* del espacio de búsqueda — qué colores quedan cerca
-entre sí bajo mutación y cruza.
+Los 3 genes de color de cada figura (más el alpha, que siempre es lineal) se
+interpretan según el espacio elegido, sin importar si la figura es un
+triángulo o un óvalo. **El genotipo no cambia**: sigue siendo el mismo vector
+plano en `[0,1]` (con el tamaño de bloque que le toque a `shape_type`) y ningún
+operador se entera. Lo que cambia es la *geometría* del espacio de búsqueda —
+qué colores quedan cerca entre sí bajo mutación y cruza.
 
 | `color_space` | Genes | Qué mueve una mutación |
 |---|---|---|
@@ -610,10 +617,45 @@ en vez de clampear los canales RGB: clampear distorsiona los tres ejes a la vez 
 colapsa regiones grandes de la caja en el mismo color, aplanando el fitness en
 `H`, `C` y `L` por igual; bajar el croma deja la meseta confinada al eje `C`.
 
-Es transversal a la exportación e importación: `triangles.json` siempre guarda
+Es transversal a la exportación e importación: `figures.json` siempre guarda
 colores RGB, así que un export hecho con un espacio se puede importar con otro y
 se re-renderiza idéntico píxel a píxel. Un config sin `color_space` se comporta
 exactamente igual que antes de que existiera la opción.
+
+## Formas (`problem.params.shape_type`)
+
+Opcional, default `"triangle"` (lo de siempre, sin cambios). Los otros dos
+valores:
+
+| `shape_type` | Genes por figura | Qué es cada una |
+|---|---|---|
+| `"triangle"` (default) | 10: `x1,y1,x2,y2,x3,y3, r,g,b, a` | Sin cambios respecto de antes de esta opción. |
+| `"oval"` | 9: `cx,cy,rx,ry,θ, r,g,b, a` | Una elipse. |
+| `"both"` | 11: `kind, p0..p5, r,g,b, a` | Cada figura es triángulo u óvalo según el gen discreto `kind` (0/1). |
+
+En `"both"`, `kind` es un gen más — lo mutan los mismos operadores que mutan
+cualquier otro gen discreto (`gene`, `multigene`, `uniform`, `non_uniform`), sin
+ningún operador nuevo. Qué proporción de triángulos y óvalos termina teniendo
+el mejor individuo lo decide la búsqueda, generación a generación, no un ratio
+fijo del config. `p0..p5` son 6 slots genéricos: un bloque `kind=0` los lee
+como los 6 vértices del triángulo; un bloque `kind=1` los lee como
+`cx,cy,rx,ry,θ` (el sexto slot queda sin usar mientras el bloque sea un óvalo,
+pero sigue mutando — no se congela). El alpha es siempre el último gen del
+bloque en los tres modos, así que `initial_alpha` funciona igual sin saber qué
+hay en el resto del bloque.
+
+`θ` se lee como `[0, π)`, no `[0, 2π)`: una elipse es igual a sí misma rotada
+180°, así que el giro completo desperdiciaría la mitad del rango de mutación en
+duplicados visuales. `rx`/`ry` escalan igual que cualquier coordenada
+(`allele * ancho` / `allele * alto`) en vez de tener un tope propio.
+
+Cruza y selección no cambian nada: cortan en múltiplos de `block_size` e
+intercambian bloques enteros, así que en `"both"` ya intercambian "una figura
+completa, con su tipo incluido" sin ningún caso especial. `figures.json` marca
+cada figura con `"type": "triangle"` o `"type": "oval"`; `import` acepta un
+export con cualquier mezcla de los dos si la corrida usa `shape_type: "both"`,
+y exige que todas las figuras sean del tipo correspondiente si usa `"triangle"`
+u `"oval"` a secas.
 
 ## Tests
 

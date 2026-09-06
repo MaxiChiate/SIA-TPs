@@ -51,7 +51,8 @@
     "type": "triangles",
     "params": {
       "image_path": "images/argentina.png",
-      "triangle_count": 50,
+      "shape_count": 50,
+      "shape_type": "triangle",
       "work_resolution": [
         128,
         80
