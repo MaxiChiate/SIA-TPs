@@ -39,3 +39,11 @@ TP2/results/
 
 # TP2: resultados del runner de experimentos (analysis/main.py)
 TP2/analysis/results/
+
+# TP2: artefactos de compilacion del backend nativo en Rust (TP2/rust/)
+TP2/rust/target/
+TP2/**/*.so
+
+# TP2: config de trabajo, personal de cada uno (se copia de config.json.example)
+# El que se versiona es el ejemplo; este cambia en cada corrida y no va al repo.
+TP2/config.json

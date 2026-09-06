@@ -1,0 +1,17 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "triangles-native"
+version = "0.1.0"
+description = "Rasterize-and-score kernel for the TP2 triangles problem"
+requires-python = ">=3.12"
+classifiers = ["Programming Language :: Rust"]
+
+[tool.maturin]
+# The crate lives in its own directory and ships nothing but the extension
+# module. Pointing maturin at TP2/ instead would package ga/, problems/ and
+# run.py into the wheel and install a shadowing copy into site-packages.
+module-name = "triangles_native"
+features = ["pyo3/extension-module"]

@@ -5,7 +5,8 @@ Every method shares the signature ``(population, count, rng, params) -> list[Ind
 (matching ``ga.core.engine.ParentSelection``) so ``ga.operators.survival`` can look
 any of them up by name in the registry and reuse it verbatim over a different pool
 (parents+children, or children only). Sampling is always with replacement, since
-callers may ask for more individuals than the pool holds (e.g. ``2k > n``).
+callers may ask for more individuals than the pool holds (e.g. breeding ``k``
+children needs more parents than the population when ``k > n``).
 """
 
 from __future__ import annotations

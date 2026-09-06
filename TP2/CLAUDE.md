@@ -13,8 +13,12 @@ mejor aproximación a esa imagen dibujando `T` triángulos de color uniforme, tr
 - **La implementación de Algoritmos Genéticos es propia.** Nada de DEAP, pygad ni similares:
   selección, cruza, mutación, reemplazo y corte se escriben a mano.
 - **Core del AG (`ga/`) con stdlib solamente.** Pillow y numpy únicamente en
-  `problems/triangles/` (render y fitness). Nada del dominio "imagen/triángulo" puede aparecer
-  dentro de `ga/`.
+  `problems/triangles/`, y solo para I/O de imágenes (abrir el target, export, GIF) y arrays -
+  rasterizar y puntuar corren enteramente en `rust/`, no en Python. Nada del dominio
+  "imagen/triángulo" puede aparecer dentro de `ga/`. El backend nativo (`rust/`) también vive
+  detrás de esa frontera: solo lo importa `problems/triangles/renderers.py`, y el crate no
+  contiene **nada** de AG — ni RNG, ni selección, ni cruza, ni mutación. El enunciado permite
+  librerías externas para manejo de imágenes, no para el algoritmo genético.
 - Identificadores, nombres de archivo y **comentarios en inglés**. Type hints y dataclasses.
   `from __future__ import annotations`. Funciones cortas, sin herencia profunda.
 - `seed` obligatorio: misma seed + mismo config ⇒ mismo resultado, siempre. Una sola instancia
@@ -38,29 +42,34 @@ ga/                     # motor genérico — solo stdlib
     population.py       # Population(individuals, generation) — contenedor fino
     problem.py          # ABC Problem: schema / random_individual / evaluate / describe
     engine.py           # Evaluator (memo + contador), EngineConfig, Engine.run, RunResult, StopContext
-  operators/            # selection (7), crossover (4), mutation (4), survival (2), stopping (2)
-  registry.py           # nombre en config -> implementación, vía decorador @register
-  config.py             # parseo + validación de config.json -> ConfigError
+  operators/            # selection, crossover, mutation, survival, stopping
+  registry.py           # nombre en config -> implementación
+  config.py             # parseo + validación -> ConfigError
   metrics.py            # GenerationRecord + mean / std / genotypic_diversity + record_for
 problems/
-  triangles/            # genotype, renderer, fitness, problem, export  [Pillow/numpy]
-analysis/               # runner de experimentos — capa por encima de run.py
+  triangles/            # genotype, renderers (delega a rust/), colorspace, problem, export  [Pillow: solo I/O]
+rust/                   # crate PyO3 del backend nativo: color, raster, score  (obligatorio, no opcional)
+analysis/               # runner de experimentos + gráficos — capa por encima de run.py
   config.py             # SweepConfig + overrides por ruta con puntos
   runner.py             # orquestador paralelo (un proceso por corrida)
   records.py            # esquema de summary.csv (1 fila/corrida) e history.csv (1 fila/generación)
-  main.py               # CLI: python3 analysis/main.py [sweep.json]
+  main.py               # CLI: corre una tanda
+  plots_*.py            # CLI + datos + estilo de los tres gráficos
   sweep.json            # serie A de ejemplo: los 7 métodos de selección
-tests/                  # unitarios de operadores (pytest, RNG scripteado, deterministas)
-images/                 # imágenes fuente (argentina.png, starry_night.png)
-run.py                  # CLI: python3 run.py [config.json]
-config.json.example     # plantilla — copiar a config.json
-requirements.txt        # pillow, numpy, pytest  (el core no los usa)
+build.py                # CLI: compila rust/ y verifica el binario resultante
+simulate.py             # CLI: corre el AG, escribe solo datos (no dibuja)
+render_final.py         # CLI: final.png desde un directorio de resultados
+render_snapshots.py     # CLI: snapshots/ + progress.gif desde ese directorio
+run.py                  # CLI: las tres etapas juntas
+pipeline.py             # las etapas, implementadas una sola vez
+config.json.example
+requirements.txt        # pillow, numpy, pytest, maturin  (el core no los usa)
 ```
 
 ## Genotipo (problema triangles)
 
-Individuo = lista fija de `T` triángulos, cada uno 10 genes `x1,y1,x2,y2,x3,y3,R,G,B,A`.
-Genotipo plano de `10*T` alelos. **Todos los alelos normalizados a `[0,1]`**; el renderer
+Individuo = lista fija de `T` triángulos, cada uno 10 genes `x1,y1,x2,y2,x3,y3` + 3 canales
+de color + `A`. Genotipo plano de `10*T` alelos. **Todos los alelos normalizados a `[0,1]`**; el renderer
 escala a la resolución de trabajo (genotipo independiente de la resolución). El `GeneSchema`
 del problema declara `block_size = 10`.
 
@@ -84,21 +93,60 @@ del problema declara `block_size = 10`.
   (criterios combinables por OR: generaciones, tiempo, fitness aceptable, estructura, contenido).
 - **Diversidad genotípica** = media de los desvíos estándar por locus (O(N·L), comparable
   entre corridas porque los alelos viven en `[0,1]`).
+- **El render corre solo en Rust, sin alternativa en Python.** Empezó como backend
+  intercambiable (`problem.params.renderer`: `pillow`/`rust`/`auto`) mientras se migraba,
+  validado contra el oráculo Pillow (correlación de rangos 0,997–0,999; medido 9,4×–13,2×
+  end-to-end, evaluación de 89,7% a 16% del perfil). Una vez probada la migración, se sacó
+  `PillowRenderer`, `renderer.py` (`ImageDraw.polygon`) y `fitness.py` (MSE en numpy) del todo
+  en vez de mantenerlos como segunda implementación del mismo hot path — el `problem.params.
+  renderer` de config también desapareció, no queda ninguna opción que elegir. La costura con
+  `ga/` (`Problem.evaluate_batch` + `owns_parallelism`) no cambió: sigue siendo la única forma
+  en que el engine sabe que una generación entera se resuelve en una llamada. `colorspace.py`
+  sí sigue en Python (decodifica color para `export.py`/`individual_from_export`, caminos fríos
+  que no compiten en el hot path), y `tests/test_native_parity.py` lo sigue validando bit a bit
+  contra `triangles_native.to_rgb`.
+- **Tasa de mutación invariante al largo del genoma** (`mutations_per_child` en
+  `operators.mutation.params`): `pm` es la probabilidad por tirada y todos los operadores salvo
+  `gene` tiran una vez por locus, así que las mutaciones esperadas por hijo son
+  `pm × 10 × triangle_count` — subir los triángulos multiplicaba la mutación sin que se viera en
+  el config. Medido (argentina, 1000 generaciones, RMSE @640×400): con `pm=0.05` fijo, 500
+  triángulos daba **peor** que 50 (18,59 contra 16,69); fijando 25 mutaciones/hijo el orden se
+  endereza y 500 pasa a ser el mejor (15,29). La normalización vive en `_rate()`
+  (`ga/operators/mutation.py`) y es genérica — divide por la cantidad de tiradas que ese
+  operador va a hacer (loci, o bloques para `uniform`), sin saber nada de triángulos, así que la
+  frontera `ga/` ↔ dominio se mantiene.
+- **Piso de fitness y `initial_alpha`**: `pixel_similarity` recorta en 0 todo lo que sea peor
+  que el canvas vacío, y una población inicial de triángulos opacos al azar cae entera abajo de
+  ese piso (medido: 0/50 con fitness > 0 en argentina/50/RGB y en argentina/200/HCL). Con todos
+  empatados en 0 la selección no ordena nada y la corrida se queda quieta hasta que una mutación
+  cruza de casualidad — o muere por `stagnation`. Se corrigió **sesgando solo la generación 0**
+  (`problem.params.initial_alpha`, default `1.0` = sin sesgo) y no tocando la métrica: cambiar
+  la normalización volvería incomparables todos los fitness ya medidos. El sesgo se aplica
+  después de sortear el vector, así que la misma seed conserva coordenadas y colores.
+- **`work_resolution` acepta `"native"`**: el fitness compara contra la imagen a resolución
+  original, sin reescalado intermedio. Es un sentinel en el config y no un flag aparte porque
+  el parámetro que ya existía es exactamente el que se está eligiendo. `describe()` reporta la
+  resolución **resuelta**, y `run.py` vuelca ese `describe()` en `summary.json` (bloque
+  `problem`, al lado del `config` crudo): una corrida tiene que registrar lo que corrió, no lo
+  que se pidió, o sus números no se pueden reproducir ni comparar. Medido: el costo crece con
+  los píxeles pero mucho más despacio (20× de resolución = 2,3× de tiempo) porque con el kernel
+  nativo el cuello de botella son los operadores en Python; recién a resolución nativa vuelve a
+  mandar el render.
+- **Espacio de color configurable** (`problem.params.color_space`: `rgb` default, `hsv`, `hcl`)
+  en `problems/triangles/colorspace.py`: cambia cómo se leen los 3 genes de color, no el
+  genotipo ni ningún operador — sirve para comparar geometrías del espacio de búsqueda. `hcl`
+  es CIE LCh(ab)/D65; lo que cae fuera del gamut sRGB se resuelve **bajando el croma** a tono
+  y luminosidad constantes (bisección), no clampeando canales, para no aplanar el fitness en
+  los tres ejes a la vez. Conversiones en float escalar sin numpy, portables a C tal cual.
 
 ## Estado
 
-Los 6 bloques originales están hechos:
+Los seis bloques están hechos: core, config+registry, operadores, plug-in `triangles`, tests
+(118 pasando) y la salida de métricas. El backend nativo de `rust/` reemplazó al camino
+Pillow del todo.
 
-1. **Core** — `ga/core/*`, `ga/metrics.py`
-2. **Config + registry** — `ga/registry.py`, `ga/config.py`, `config.json.example`
-3. **Operadores** — 7 selecciones, 4 cruzas, 4 mutaciones, 2 supervivencias, 2 criterios de corte
-4. **Plug-in `triangles`** — genotype, renderer, fitness, problem, export
-5. **Tests** — 40 unitarios de operadores
-6. **`run.py` + salidas** — imagen final, snapshots, `triangles.json`, `history.csv`/`.json`,
-   `summary.json`
-
-Agregado después: `analysis/` (runner de experimentos) y el multiprocessing del `Evaluator`
-(`engine.processes`, un proceso por individuo sin fitness cacheado).
+Agregado en la rama `dev-ag-analisis`: **`analysis/`**, el runner de experimentos y sus
+gráficos. Es una capa estrictamente por encima de `run.py` — no toca `ga/` ni `problems/`.
 
 ## Pasos a seguir
 
@@ -160,20 +208,18 @@ solo.
 
 ## Cómo correr
 
-Siempre desde `TP2/`: las rutas del config son relativas a ese directorio.
-
 ```bash
-pip3 install -r requirements.txt     # pillow, numpy, pytest
-cp config.json.example config.json   # ajustar imagen, triangle_count, operadores, hiperparámetros
+cd TP2
+../.venv/bin/python build.py                      # compila rust/ y verifica el binario
+../.venv/bin/python run.py config.json            # simular + dibujar, de un saque
 
-python3 run.py                       # una corrida -> results/<config>_<timestamp>/
-python3 run.py config.json --snapshot-every 25
-
-python3 analysis/main.py             # una tanda -> analysis/results/<sweep_id>/
-python3 analysis/main.py --dry-run   # valida el sweep y muestra el plan, sin correr nada
-
-python3 -m pytest tests/ -v          # 40 tests de operadores
+../.venv/bin/python analysis/main.py              # una tanda -> analysis/results/<sweep_id>/
+../.venv/bin/python analysis/main.py --dry-run    # valida el sweep y muestra el plan
+../.venv/bin/python analysis/plots_main.py        # dibuja la tanda más reciente
 ```
+
+Una corrida son tres etapas separables (ver "Etapas separadas" abajo):
+`simulate.py` (solo datos), `render_final.py`, `render_snapshots.py`.
 
 Uso del motor como librería: instanciar un `Problem`, un `EngineConfig` con los callables de
 selección/cruza/mutación/supervivencia + `Pc`/`Pm`/`max_generations`, un `Rng` con
@@ -181,15 +227,83 @@ selección/cruza/mutación/supervivencia + `Pc`/`Pm`/`max_generations`, un `Rng`
 individuo, generación en que apareció, criterio de corte, evaluaciones, tiempo, `history` de
 `GenerationRecord`).
 
-## Salida
+Tests: `../.venv/bin/python -m pytest` desde `TP2/` (118 casos, deterministas).
+Dependencias del dominio y tests: `../.venv/bin/pip install -r requirements.txt`.
 
-`run.py` corre una config y emite en un directorio de resultados: imagen final (+ snapshots
-opcionales cada X generaciones), enumeración de triángulos del mejor individuo (vértices +
-color) en JSON, log por generación en CSV/JSON (generación, mejor/promedio/desvío/peor
-fitness, diversidad, evaluaciones acumuladas, tiempo acumulado), y un resumen final (mejor
-fitness, generación en que apareció, criterio de corte que disparó, config completo + seed).
+## Importar un individuo inicial
 
-`analysis/main.py` corre una tanda entera y emite dos CSVs comparables: `summary.csv` (una fila
-por corrida, para comparar variantes entre sí) e `history.csv` (una fila por generación, formato
-largo con `(variant, seed)` como identificador, para las curvas), más `resolved.json` con el
-config exacto que corrió cada variante.
+El config admite un campo opcional de nivel raíz `"import"`: la ruta a un
+`triangles.json` de un run previo (mismo `triangle_count`). Si se completa, ese
+individuo reemplaza a uno de los `n` individuos aleatorios de la generación 0
+(`EngineConfig.seed_individual`, `ga/core/engine.py`); vacío o ausente (`""`)
+deshabilita la importación. La decodificación (`TrianglesProblem.
+individual_from_export`, `problems/triangles/problem.py`) normaliza los
+vértices en píxeles contra la resolución **nativa** de `image_path` — el
+tamaño con el que las etapas de render exportan por defecto. Un `triangles.json` exportado
+con `--export-width`/`--export-height` explícitos no decodifica bien.
+
+## Perillas que no hacen nada (y por qué no están en el config)
+
+- **`engine.processes` salió de `config.json` y de `config.json.example`.** Sigue existiendo
+  en `EngineConfig.workers` porque es genérico del motor, pero para `triangles` no puede
+  hacer nada: `owns_parallelism()` da `True` y el `Evaluator` nunca abre el pool. Tenerlo en
+  `1` no era más honesto que omitirlo — se leía como si estuviera configurando algo. Pedir
+  más de 1 en un problema que paraleliza solo ahora **avisa** (`UserWarning`) en vez de
+  degradar en silencio: una config que pide paralelismo que no va a recibir tiene que decirlo
+  antes de la corrida, no después.
+- **`problem.params.threads` sí gobierna el paralelismo real** (default `0` = uno por core).
+  Se valida en el dominio (`_threads`, `problems/triangles/problem.py`) para que un valor malo
+  nombre la clave del config en vez de tirar el error crudo de PyO3, y pedir más threads que
+  CPUs lógicas avisa: sobre-suscribir agrega cambios de contexto a un kernel ya limitado por
+  memoria. Medido en 10 cores físicos / 20 lógicos con `k=25`: 12 threads dan 6,2× y 20 dan
+  6,5×, así que los últimos 8 compran 0,3%.
+- **`engine.pm` queda inerte cuando `mutation.params.mutations_per_child` está puesto**
+  (`_rate()` le da prioridad). Ese sí sigue en el config porque otros operadores de mutación
+  (`gene`) lo leen.
+
+## Etapas separadas (`pipeline.py`)
+
+Una corrida se divide en tres etapas, implementadas una sola vez en `pipeline.py`; los cinco
+scripts de `TP2/` son CLIs finitos sobre esas funciones, así que el camino de un comando no
+puede divergir del camino por partes.
+
+- `build.py` — `maturin develop` desde `rust/`, siempre `--release`, con `VIRTUAL_ENV`
+  derivado del intérprete; después importa la extensión **en un subproceso** (el padre puede
+  tener una vieja cargada) y reporta `build_info()`/`schema_version()`. `--check` solo verifica.
+- `simulate.py` — corre el AG y escribe `history.csv`/`.json`, `summary.json`, `best.json`,
+  `triangles.json` y, con `--snapshot-every N`, `checkpoints.jsonl`. **No dibuja nada.**
+- `render_final.py` / `render_snapshots.py` — leen el directorio de resultados y dibujan.
+
+**Por qué se separó**: `on_generation` renderizaba un PNG a resolución nativa *adentro* del
+loop cronometrado, así que `elapsed_seconds` incluía trabajo ajeno al algoritmo (medido:
+31,7 s de AG contra 5,9 s de dibujar 31 snapshots, un 19%). Hoy `simulate.py` solo guarda una
+**referencia** al mejor individuo de cada N generaciones — los operadores nunca mutan in
+place, así que checkpointear no le cuesta nada al loop — y las vuelca al terminar.
+`--progress-every N` / `--quiet` hace lo mismo con los prints.
+
+**`checkpoints.jsonl` guarda alelos crudos, no el export de `triangles.json`**: ese export
+normaliza vértices contra la resolución nativa y solo decodifica exacto para un export de
+tamaño default, mientras que los alelos en `[0,1]` son independientes de la resolución por
+construcción. Se redondean a 8 decimales (a 4096 px de export son 4e-5 de un píxel) porque
+existen para dibujarse; `best.json` va a precisión completa porque es el resultado de la
+corrida y puede volver a entrar por `import`.
+
+**Las etapas de render no necesitan el config**: reconstruyen el problema desde el bloque
+`config` de `summary.json`, para que la imagen la dibuje el mismo kernel, espacio de color y
+`triangle_count` que la puntuó.
+
+## Tandas de experimentos (`analysis/`)
+
+Capa por encima de `run.py`, para comparar variantes entre sí. Un *sweep* declara una config
+base, qué perilla variar y con qué seeds repetir; el runner corre el producto
+`variantes x seeds`, un proceso por corrida, y emite dos CSVs comparables: `summary.csv` (una
+fila por corrida) e `history.csv` (una fila por generación, formato largo con `(variant, seed)`
+como identificador), más `resolved.json` con el config exacto que corrió cada variante.
+
+`analysis/plots_main.py` dibuja esos CSVs: curva de fitness, curva de diversidad y un dot plot
+de fitness final con un punto por seed. Los tres llevan al pie del título lo que se mantuvo
+fijo en la tanda, derivado de `resolved.json` — lo que la tanda varió se cae solo de ese
+cartel, porque difiere entre variantes.
+
+Regla de método: **una perilla por vez**, todo lo demás fijo, varias seeds, y `max_generations`
+fijo sin corte por fitness para que todas las corridas hagan el mismo trabajo.

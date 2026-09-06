@@ -18,7 +18,7 @@ from .core.engine import EngineConfig, StopContext, Stopping
 from .core.problem import Problem
 from .core.rng import Rng, make_rng
 
-_TOP_LEVEL_KEYS = {"seed", "engine", "operators", "stopping", "problem"}
+_TOP_LEVEL_KEYS = {"seed", "engine", "operators", "stopping", "problem", "import"}
 _ENGINE_KEYS = {"n", "k", "pc", "pm", "max_generations"}
 _ENGINE_OPTIONAL_KEYS = {"processes"}
 _OPERATOR_CATEGORIES = ("parent_selection", "crossover", "mutation", "survival")
@@ -60,6 +60,15 @@ def load_config(source: str | Path | dict[str, Any]) -> LoadedConfig:
 
     problem_section = _require(raw, "problem", "")
     problem = _build_problem(problem_section)
+
+    import_path = raw.get("import") or None
+    if import_path is not None:
+        if not isinstance(import_path, str):
+            raise ConfigError(f"import: expected str, got {type(import_path).__name__}")
+        try:
+            engine_config.seed_individual = problem.individual_from_export(import_path)
+        except Exception as err:
+            raise ConfigError(f"import: {err}") from err
 
     return LoadedConfig(
         seed=seed, rng=rng, problem=problem, engine_config=engine_config, raw=raw

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import multiprocessing as mp
 import time
+import warnings
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
@@ -33,9 +34,9 @@ def _init_worker(problem: Problem) -> None:
     _worker_problem = problem
 
 
-def _worker_evaluate(individual: Individual) -> float:
+def _worker_evaluate(individuals: list[Individual]) -> list[float]:
     assert _worker_problem is not None, "worker pool not initialized with a problem"
-    return _worker_problem.evaluate(individual)
+    return _worker_problem.evaluate_batch(individuals)
 
 # ----------------------------------------------------------------------------
 # Operator call signatures. Concrete implementations arrive in ga.operators.
@@ -65,82 +66,89 @@ class StopContext:
 
 
 class Evaluator:
-    """Wraps ``problem.evaluate`` with a genotype memo and an evaluation counter.
+    """Wraps ``problem.evaluate`` with per-individual fitness caching and an
+    evaluation counter.
 
-    Fitness is cached twice: on the individual itself, and in a shared
-    ``genotype -> fitness`` dict so a regenerated identical genotype is free.
-    ``count`` only rises on real calls to ``problem.evaluate``.
+    Fitness is cached on the individual itself, so re-evaluating the same
+    object (e.g. a survivor carried into the next generation) is free.
+    ``count`` only rises on real calls to ``problem.evaluate``. There is no
+    genotype -> fitness memo across individuals: genes are continuous, so two
+    distinct individuals essentially never share an exact genotype, and such
+    a memo would grow without bound over a long run instead of ever paying
+    off.
 
-    With ``workers > 1``, ``evaluate_all`` fans the still-uncached individuals
-    of a generation out across a persistent process pool: rendering is the
-    bottleneck (see ``problems/triangles``), and each individual's evaluation
-    is independent, so this is the parallel unit of work rather than the
-    generation as a whole. ``workers == 1`` keeps the original single-process
-    path with no pool overhead.
+    Every path goes through ``problem.evaluate_batch``: a generation's pending
+    individuals are handed over in one call, so a problem that can amortise
+    setup or parallelise internally gets the chance to. The default
+    ``evaluate_batch`` just loops, which is exactly the old behaviour.
+
+    With ``workers > 1``, ``evaluate_all`` splits that batch across a
+    persistent process pool - one chunk per worker, so a generation costs one
+    round-trip per worker rather than one per individual. A problem that
+    reports ``owns_parallelism()`` gets no pool at all: stacking processes on
+    top of a problem's own threads only oversubscribes the CPU. That case warns
+    rather than quietly clamping to 1 - a config asking for parallelism it will
+    not get should say so before the run, not after it.
     """
 
     def __init__(self, problem: Problem, workers: int = 1) -> None:
         self._problem = problem
-        self._memo: dict[tuple[float, ...], float] = {}
         self.count = 0
         self._pool = None
         self._workers = workers
-        if workers > 1:
+        if workers > 1 and problem.owns_parallelism():
+            # Loudly, not silently: asking for N processes and getting one is
+            # the kind of thing someone benchmarks around for an hour before
+            # noticing. The knob stays generic - a problem that does not
+            # parallelise internally still gets its pool below.
+            warnings.warn(
+                f"engine.processes={workers} ignored: this problem parallelises "
+                f"internally, and stacking processes on its threads would only "
+                f"oversubscribe the CPU",
+                stacklevel=3,
+            )
+            self._workers = 1
+        elif workers > 1:
             ctx = mp.get_context("spawn")
             self._pool = ctx.Pool(
                 processes=workers, initializer=_init_worker, initargs=(problem,)
             )
 
-    def evaluate(self, individual: Individual) -> float:
-        if individual.fitness is not None:
-            return individual.fitness
-        key = individual.key()
-        cached = self._memo.get(key)
-        if cached is not None:
-            individual.fitness = cached
-            return cached
-        value = self._problem.evaluate(individual)
-        self.count += 1
-        self._memo[key] = value
-        individual.fitness = value
-        return value
-
     def evaluate_all(self, individuals: Sequence[Individual]) -> None:
-        if self._pool is None:
-            for individual in individuals:
-                self.evaluate(individual)
-            return
-
-        # Group by genotype so identical individuals within the same batch
-        # (e.g. unmutated crossover children) are only rendered once, same
-        # as the serial path's shared memo would give them for free.
-        pending_by_key: dict[tuple[float, ...], list[Individual]] = {}
+        # Group by genotype so identical individuals within this batch are only
+        # evaluated once. Crossover and mutation make duplicates vanishingly
+        # rare (measured: 0 in 4100 children over 40 generations), but ``elite``
+        # parent selection emits each winner twice, and a pair crossed with
+        # itself yields children identical to the parent - so the guard earns
+        # its ~0.4 ms per generation on exactly the configs that need it.
+        groups: dict[tuple[float, ...], list[Individual]] = {}
         for individual in individuals:
             if individual.fitness is not None:
                 continue
-            key = individual.key()
-            cached = self._memo.get(key)
-            if cached is not None:
-                individual.fitness = cached
-                continue
-            pending_by_key.setdefault(key, []).append(individual)
+            groups.setdefault(individual.key(), []).append(individual)
 
-        if not pending_by_key:
+        if not groups:
             return
 
-        representatives = [group[0] for group in pending_by_key.values()]
-        # One chunk per worker per generation instead of Pool.map's default
-        # heuristic (~len/(4*workers)): per-individual work here is uniform
-        # (render + MSE at a fixed resolution), so there is nothing to gain
-        # from finer-grained chunks, only extra IPC round-trips.
-        chunksize = -(-len(representatives) // self._workers)  # ceil division
-        results = self._pool.map(_worker_evaluate, representatives, chunksize=chunksize)
-        for representative, value in zip(representatives, results):
-            key = representative.key()
-            self.count += 1
-            self._memo[key] = value
-            for member in pending_by_key[key]:
+        representatives = [group[0] for group in groups.values()]
+        values = self._evaluate_batch(representatives)
+        self.count += len(representatives)
+        for group, value in zip(groups.values(), values):
+            for member in group:
                 member.fitness = value
+
+    def _evaluate_batch(self, representatives: list[Individual]) -> list[float]:
+        if self._pool is None:
+            return self._problem.evaluate_batch(representatives)
+        # One chunk per worker per generation: per-individual work is uniform
+        # (render + MSE at a fixed resolution), so finer-grained chunks buy
+        # nothing and cost extra IPC round-trips.
+        size = -(-len(representatives) // self._workers)  # ceil division
+        chunks = [
+            representatives[start : start + size]
+            for start in range(0, len(representatives), size)
+        ]
+        return [value for chunk in self._pool.map(_worker_evaluate, chunks) for value in chunk]
 
     def close(self) -> None:
         """Shut down the process pool, if any. Safe to call more than once."""
@@ -148,10 +156,6 @@ class Evaluator:
             self._pool.close()
             self._pool.join()
             self._pool = None
-
-    @property
-    def cache_size(self) -> int:
-        return len(self._memo)
 
 
 @dataclass(slots=True)
@@ -170,6 +174,7 @@ class EngineConfig:
     stopping: Stopping | None = None
     extra_params: dict = field(default_factory=dict)
     workers: int = 1  # individuals per generation evaluated in parallel processes
+    seed_individual: Individual | None = None  # replaces one random individual at gen 0
 
     def __post_init__(self) -> None:
         if self.n <= 0:
@@ -235,12 +240,13 @@ class Engine:
         cfg = self._config
         started = time.perf_counter()
 
-        population = Population(
-            individuals=[
-                self._problem.random_individual(self._rng) for _ in range(cfg.n)
-            ],
-            generation=0,
-        )
+        random_count = cfg.n - (1 if cfg.seed_individual is not None else 0)
+        individuals = [
+            self._problem.random_individual(self._rng) for _ in range(random_count)
+        ]
+        if cfg.seed_individual is not None:
+            individuals.append(cfg.seed_individual.copy())
+        population = Population(individuals=individuals, generation=0)
         self._evaluator.evaluate_all(population.individuals)
 
         history: list[GenerationRecord] = [
@@ -292,7 +298,12 @@ class Engine:
         cfg = self._config
         params = self._params(population.generation, history)
 
-        parents = cfg.parent_selection(population, 2 * cfg.k, self._rng, params)
+        # _breed pairs up parents 2-at-a-time and stops once it has cfg.k
+        # children (each pair yields up to 2), so it only ever consumes
+        # ceil(k/2) pairs: cfg.k parents if k is even, cfg.k + 1 if odd.
+        # Asking for more here would just be selection work thrown away.
+        parent_count = cfg.k + (cfg.k % 2)
+        parents = cfg.parent_selection(population, parent_count, self._rng, params)
         if len(parents) < 2:
             raise RuntimeError(
                 f"parent selection returned {len(parents)} individuals, need >= 2"
