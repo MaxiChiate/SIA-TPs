@@ -1,5 +1,12 @@
 """``TrianglesProblem``: the ``Problem`` plug-in for approximating an image with
-``triangle_count`` translucent triangles on a solid-color canvas.
+``shape_count`` translucent shapes on a solid-color canvas.
+
+``problem.params.shape_type`` (``triangle`` by default, see
+``problems.triangles.genotype``) picks what those shapes are: all triangles,
+all ovals, or a mix where each shape's kind is itself a gene that mutation can
+flip generation over generation. It changes the genotype's block size and
+decode rules but nothing about how the engine drives the search - selection,
+crossover, mutation and survival stay exactly as generic as they always were.
 
 Fitness is evaluated at a small, configurable ``work_resolution`` (rendering is
 the bottleneck; a small canvas keeps a generation affordable) - the genotype
@@ -7,7 +14,7 @@ itself stays resolution-independent, so ``problems.triangles.export`` can render
 the same individual at full size later.
 
 The optional ``color_space`` param (``rgb`` by default, see
-``problems.triangles.colorspace``) picks how each triangle's three color alleles
+``problems.triangles.colorspace``) picks how each shape's three color alleles
 are read. It changes no interface: the genotype stays a flat [0,1] vector of the
 same length, so every operator is unaffected - what changes is which colors sit
 close together under mutation and crossover.
@@ -26,11 +33,14 @@ size rendering is the bottleneck again.
 
 The optional ``initial_alpha`` param caps the alpha of the *first* generation
 only. Fitness floors at 0 for anything worse than the blank canvas, and a
-population of opaque random triangles starts entirely under that floor: every
+population of opaque random shapes starts entirely under that floor: every
 individual ties at 0, selection has nothing to rank, and the run stalls until a
 mutation happens to cross back over. Starting nearly transparent puts the
 initial population on the useful side of the floor. It biases only the seed
-draw - no operator, and no later generation, knows about it.
+draw - no operator, and no later generation, knows about it. Alpha is always
+the last gene of a shape's block regardless of ``shape_type``, so this bias
+applies the same way in every mode without knowing what is in the rest of the
+block.
 """
 
 from __future__ import annotations
@@ -49,19 +59,22 @@ from ga.core.rng import Rng
 
 from . import colorspace
 from .export import native_resolution
-from .genotype import ALPHA_LOCUS, GENES_PER_TRIANGLE, schema_for
+from .genotype import SHAPE_TYPES, alleles_from_figures, figure_from_export, schema_for
 from .renderers import RenderSpec, RustRenderer
 
 _DEFAULT_WORK_RESOLUTION = (64, 64)
 _DEFAULT_BACKGROUND_RGB = (255, 255, 255)
 _DEFAULT_INITIAL_ALPHA = 1.0  # the whole [0,1] range, i.e. no bias at all
+_DEFAULT_SHAPE_TYPE = "triangle"
 
 
 _NATIVE_WORK_RESOLUTION = "native"
 
 
-def _clamp01(value: float) -> float:
-    return min(1.0, max(0.0, value))
+def _shape_type(value) -> str:
+    if value not in SHAPE_TYPES:
+        raise ValueError(f"shape_type must be one of {SHAPE_TYPES}, got {value!r}")
+    return value
 
 
 def _threads(value) -> int:
@@ -104,7 +117,8 @@ def _work_resolution(value, image_path: str) -> tuple[int, int]:
 class TrianglesProblem(Problem):
     def __init__(self, params: dict) -> None:
         self.image_path = params["image_path"]
-        self.triangle_count = params["triangle_count"]
+        self.shape_count = params["shape_count"]
+        self.shape_type = _shape_type(params.get("shape_type", _DEFAULT_SHAPE_TYPE))
         width, height = _work_resolution(
             params.get("work_resolution", _DEFAULT_WORK_RESOLUTION), self.image_path
         )
@@ -120,7 +134,7 @@ class TrianglesProblem(Problem):
                 f"initial_alpha must be in (0, 1], got {self.initial_alpha}"
             )
 
-        self._schema = schema_for(self.triangle_count, self.color_space)
+        self._schema = schema_for(self.shape_type, self.shape_count, self.color_space)
         self._renderer = RustRenderer(
             RenderSpec.build(
                 self.image_path,
@@ -128,7 +142,8 @@ class TrianglesProblem(Problem):
                 height,
                 self.background_rgb,
                 self.color_space,
-                self.triangle_count,
+                self.shape_count,
+                self.shape_type,
             ),
             threads=_threads(params.get("threads", 0)),
         )
@@ -145,7 +160,8 @@ class TrianglesProblem(Problem):
     def random_individual(self, rng: Rng) -> Individual:
         alleles = self._schema.random_vector(rng)
         if self.initial_alpha < 1.0:
-            for locus in range(ALPHA_LOCUS, len(alleles), GENES_PER_TRIANGLE):
+            block_size = self._schema.block_size
+            for locus in range(block_size - 1, len(alleles), block_size):
                 alleles[locus] *= self.initial_alpha
         return Individual(alleles, self._schema)
 
@@ -161,7 +177,8 @@ class TrianglesProblem(Problem):
     def describe(self) -> dict:
         return {
             "image_path": self.image_path,
-            "triangle_count": self.triangle_count,
+            "shape_count": self.shape_count,
+            "shape_type": self.shape_type,
             "work_resolution": [self.work_width, self.work_height],
             "background_rgb": list(self.background_rgb),
             "color_space": self.color_space.name,
@@ -170,41 +187,38 @@ class TrianglesProblem(Problem):
         }
 
     def individual_from_export(self, path: str | Path) -> Individual:
-        """Decode a ``triangles.json`` export back into an individual on this
-        problem's schema.
+        """Decode a previous run's export (e.g. this problem's
+        ``figures.json``) back into an individual on this problem's schema.
 
-        The export stores pixel-space vertices with no resolution of its own,
-        so this normalizes them back to ``[0,1]`` against ``self.image_path``'s
-        *native* resolution - the width/height ``run.py`` exports at by default.
-        An export produced with ``--export-width``/``--export-height`` overrides
-        will decode incorrectly; this is a known limitation.
+        The export stores pixel-space geometry with no resolution of its own,
+        so this normalizes it back to ``[0,1]`` against ``self.image_path``'s
+        *native* resolution - the width/height ``run.py`` exports at by
+        default. An export produced with ``--export-width``/
+        ``--export-height`` overrides will decode incorrectly; this is a known
+        limitation.
 
+        Every figure must be importable under this problem's ``shape_type``:
+        ``triangle``/``oval`` modes reject an export containing the other
+        kind (there is no block layout to put it in); ``both`` accepts either.
         Colors are stored as plain RGB, so they are re-encoded into whatever
-        color space *this* run uses: an export can be imported under a different
-        ``color_space`` than it was produced with and still render identically.
+        color space *this* run uses: an export can be imported under a
+        different ``color_space`` than it was produced with and still render
+        identically.
         """
         try:
             data = json.loads(Path(path).read_text(encoding="utf-8"))
         except OSError as err:
             raise ValueError(f"cannot read {path}: {err}") from err
-        if len(data) != self.triangle_count:
+        if len(data) != self.shape_count:
             raise ValueError(
-                f"{path} has {len(data)} triangles, expected {self.triangle_count}"
+                f"{path} has {len(data)} figures, expected {self.shape_count}"
             )
+        figures = [figure_from_export(entry) for entry in data]
         width, height = native_resolution(self.image_path)
-
-        alleles: list[float] = []
-        for triangle in data:
-            for x, y in triangle["vertices"]:
-                alleles.append(_clamp01(x / width))
-                alleles.append(_clamp01(y / height))
-            red, green, blue, alpha = triangle["color"]
-            alleles.extend(
-                _clamp01(channel)
-                for channel in self.color_space.from_rgb(red, green, blue)
-            )
-            alleles.append(_clamp01(alpha / 255))
-        assert len(alleles) == self.triangle_count * GENES_PER_TRIANGLE
+        alleles = alleles_from_figures(
+            figures, self.shape_type, width, height, self.color_space
+        )
+        assert len(alleles) == len(self._schema)
         return Individual(alleles, self._schema)
 
 

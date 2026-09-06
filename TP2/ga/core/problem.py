@@ -58,7 +58,7 @@ class Problem(abc.ABC):
         return {}
 
     def individual_from_export(self, path: str | Path) -> Individual:
-        """Decode a previous run's export (e.g. this problem's ``triangles.json``)
+        """Decode a previous run's export (e.g. this problem's ``figures.json``)
         back into an ``Individual`` on this problem's schema, to seed a new run.
 
         Optional: a problem that supports importing overrides this; the default
