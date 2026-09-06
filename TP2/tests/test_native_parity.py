@@ -2,7 +2,7 @@
 
 Colour decoding still has an independent pure-Python implementation
 (``problems.triangles.colorspace``, used by ``export.py``'s JSON enumeration and
-by importing a previous run's ``triangles.json``), so it is still worth
+by importing a previous run's ``figures.json``), so it is still worth
 checking the native kernel's decode against it bit for bit - that comparison
 lives in the first half of this file.
 
