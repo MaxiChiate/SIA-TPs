@@ -268,6 +268,17 @@ RMSE de la tabla caen adentro de ese ruido. Con 50 triángulos, entonces, la
 resolución de evaluación **no cambia la calidad final de forma medible**, y
 `"native"` cuesta 55× el tiempo para llegar al mismo lugar.
 
+> **Los fitness y RMSE de esta sección se midieron antes de `6c9f297`** ("fix
+> engine requesting more parents than breeding needs"), que bajó los padres
+> pedidos por generación de `2k` a `k` y con eso cambió cuántos draws consume
+> el RNG. Volver a correr con la misma seed hoy da otros dígitos (medido:
+> 0,864040 → 0,844010 en una corrida de control de 60 generaciones). Las
+> *conclusiones* no se mueven — la comparación entre resoluciones sigue
+> cayendo dentro del ruido entre seeds — pero los números exactos son
+> pre-fix. Lo mismo aplica a la tabla de "Rendimiento medido"; la de
+> `initial_alpha` no, porque solo muestrea `random_individual` y no pasa por
+> selección de padres.
+
 Lo cual tiene sentido: reescalar el target a 128×80 lo *borronea*, y un target
 borroso es justo lo que 50 triángulos planos pueden aproximar. A resolución
 nativa el fitness persigue detalle que la representación no puede representar.
