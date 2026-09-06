@@ -59,10 +59,12 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # una sola vez
 cd rust && maturin develop --release   # desde rust/ y con --release: las dos cosas importan
 cd ..
 
-cp config.json.example config.json    # ajustá imagen, triangle_count, operadores, etc.
-python run.py                         # usa ./config.json
-python run.py otra_config.json
+[ -f config.json ] || cp config.json.example config.json   # no pisa el tuyo si ya existe
+python run.py                                             # usa ./config.json
 ```
+
+Ajustá `config.json` a gusto (imagen, `triangle_count`, operadores). Para correr
+otro archivo, pasáselo como argumento: `python run.py otra_config.json`.
 
 Para confirmar que la extensión quedó compilada, y con qué flags:
 
