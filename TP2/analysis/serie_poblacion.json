@@ -1,0 +1,27 @@
+{
+  "_comment": "Serie de tamano de poblacion. Hiperparametro clasico: N chico converge prematuro por falta de material genetico, N grande explora mejor pero cada generacion cuesta mas.",
+
+  "base_config": "config.json.example",
+
+  "overrides": {
+    "stopping": [],
+    "engine.max_generations": 150
+  },
+
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "workers": 1,
+
+  "_comment_por_que_variants": "Usa 'variants' y no el atajo 'sweep' porque hay que mover n y k JUNTOS. Si solo se moviera n, tambien cambiaria la relacion k/n, que es la brecha generacional: serian dos perillas a la vez y no se sabria a cual atribuirle el resultado. Manteniendo k = n la brecha queda fija en 1.",
+
+  "_comment_ojo_al_comparar": [
+    "Con N distinto, la misma cantidad de generaciones NO es la misma cantidad de trabajo: N=300 evalua 300 individuos por generacion y N=30 solo 30. A 150 generaciones, N=300 hizo 10x mas evaluaciones.",
+    "O sea que si N grande gana, parte de la ventaja es que le dieron mas presupuesto. La comparacion honesta es fitness contra cumulative_evaluations (esta en history.csv), no contra generacion.",
+    "Vale igual como serie: la pregunta 'a igualdad de generaciones, cuanto rinde agrandar la poblacion' es legitima, pero hay que decir esto al mostrarla."
+  ],
+
+  "variants": [
+    {"label": "n30",  "set": {"engine.n": 30,  "engine.k": 30}},
+    {"label": "n100", "set": {"engine.n": 100, "engine.k": 100}},
+    {"label": "n300", "set": {"engine.n": 300, "engine.k": 300}}
+  ]
+}

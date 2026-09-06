@@ -1,0 +1,22 @@
+{
+  "_comment": "Serie de cantidad de triangulos. Es el PARAMETRO del TP (no un hiperparametro): la consigna dice que los unicos parametros son la imagen y la cantidad de triangulos.",
+
+  "base_config": "config.json.example",
+
+  "overrides": {
+    "stopping": [],
+    "engine.max_generations": 150
+  },
+
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "workers": 1,
+
+  "_comment_limpia_ahora": "Esta serie recien ahora mide una sola cosa. Antes de 41a7414 la tasa de mutacion era pm por locus, asi que mas triangulos = mas genes = mas mutaciones por hijo automaticamente: medir 'que pasa con mas triangulos' media dos cosas mezcladas, y por eso mas triangulos daba PEOR. Con mutations_per_child (que el config base ya trae en 25) la dosis queda fija y el triangle_count queda aislado.",
+  "_comment_tiempo": "500 triangulos es bastante mas lento que 50: esta tanda tarda mas que las otras. Si se quiere una version rapida, sacar el 500.",
+  "_comment_mirar": "Se espera que mas triangulos = mejor techo de fitness, porque hay mas capacidad para aproximar. Ojo con el costo: mirar tambien elapsed_seconds en summary.csv.",
+
+  "sweep": {
+    "path": "problem.params.triangle_count",
+    "values": [10, 50, 200, 500]
+  }
+}
