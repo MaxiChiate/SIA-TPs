@@ -178,6 +178,13 @@ con `--export-width`/`--export-height` explícitos no decodifica bien.
 
 ## Perillas que no hacen nada (y por qué no están en el config)
 
+- **`engine.processes` salió de `config.json` y de `config.json.example`.** Sigue existiendo
+  en `EngineConfig.workers` porque es genérico del motor, pero para `triangles` no puede
+  hacer nada: `owns_parallelism()` da `True` y el `Evaluator` nunca abre el pool. Tenerlo en
+  `1` no era más honesto que omitirlo — se leía como si estuviera configurando algo. Pedir
+  más de 1 en un problema que paraleliza solo ahora **avisa** (`UserWarning`) en vez de
+  degradar en silencio: una config que pide paralelismo que no va a recibir tiene que decirlo
+  antes de la corrida, no después.
 - **`problem.params.threads` sí gobierna el paralelismo real** (default `0` = uno por core).
   Se valida en el dominio (`_threads`, `problems/triangles/problem.py`) para que un valor malo
   nombre la clave del config en vez de tirar el error crudo de PyO3, y pedir más threads que

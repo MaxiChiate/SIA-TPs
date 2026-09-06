@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import multiprocessing as mp
 import time
+import warnings
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
@@ -85,7 +86,9 @@ class Evaluator:
     persistent process pool - one chunk per worker, so a generation costs one
     round-trip per worker rather than one per individual. A problem that
     reports ``owns_parallelism()`` gets no pool at all: stacking processes on
-    top of a problem's own threads only oversubscribes the CPU.
+    top of a problem's own threads only oversubscribes the CPU. That case warns
+    rather than quietly clamping to 1 - a config asking for parallelism it will
+    not get should say so before the run, not after it.
     """
 
     def __init__(self, problem: Problem, workers: int = 1) -> None:
@@ -94,6 +97,16 @@ class Evaluator:
         self._pool = None
         self._workers = workers
         if workers > 1 and problem.owns_parallelism():
+            # Loudly, not silently: asking for N processes and getting one is
+            # the kind of thing someone benchmarks around for an hour before
+            # noticing. The knob stays generic - a problem that does not
+            # parallelise internally still gets its pool below.
+            warnings.warn(
+                f"engine.processes={workers} ignored: this problem parallelises "
+                f"internally, and stacking processes on its threads would only "
+                f"oversubscribe the CPU",
+                stacklevel=3,
+            )
             self._workers = 1
         elif workers > 1:
             ctx = mp.get_context("spawn")

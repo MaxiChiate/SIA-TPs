@@ -165,8 +165,7 @@ no toca la evaluación, que corre a `work_resolution` y es otra cosa.
     "k": 100,
     "pc": 0.85,
     "pm": 0.05,
-    "max_generations": 500,
-    "processes": 1
+    "max_generations": 500
   },
   "operators": {
     "parent_selection": {
@@ -207,18 +206,25 @@ no toca la evaluación, que corre a `work_resolution` y es otra cosa.
 - **`seed`**: entero obligatorio — misma seed + mismo config ⇒ mismo
   resultado siempre.
 - **`engine`**: `n` (tamaño de población), `k` (hijos por generación), `pc`,
-  `pm`, `max_generations` (tope duro, además de cualquier `stopping`),
-  `processes` (opcional, default `1`) — cantidad de procesos en paralelo para
-  evaluar los individuos de una generación; cada individuo sin fitness
-  cacheado se renderiza y evalúa en su propio proceso worker, y el engine
-  espera a que termine toda la tanda antes de avanzar a la siguiente
-  generación. Con `1` corre todo en el proceso principal, sin overhead de
-  `multiprocessing`. **Es un knob genérico del motor, no del problema
+  `pm`, `max_generations` (tope duro, además de cualquier `stopping`).
+- **`engine.processes`** existe pero **no está en el config de referencia, a
+  propósito**. Es la cantidad de procesos en paralelo con la que el motor
+  evalúa una generación, y es un knob **genérico del motor, no del problema
   triangles**: `TrianglesProblem.owns_parallelism()` siempre da `True` (el
   renderer nativo ya reparte la corrida entre sus propios threads, ver más
-  abajo), así que el engine nunca abre ese pool acá y `processes` queda sin
-  efecto salvo que conectes un `Problem` distinto que no paralelice por su
-  cuenta. El número que sí importa para triangles es
+  abajo), así que acá el engine nunca abre ese pool y el valor no tiene ningún
+  efecto. Ponerlo en `1` no era más honesto que omitirlo — era ruido que se
+  leía como si estuviera configurando algo. Sigue aceptándose para un `Problem`
+  distinto que no paralelice por su cuenta, y pedir más de 1 en un problema que
+  sí lo hace ahora **avisa** en vez de degradar en silencio:
+
+  ```
+  UserWarning: engine.processes=8 ignored: this problem parallelises
+  internally, and stacking processes on its threads would only oversubscribe
+  the CPU
+  ```
+
+  El número que sí gobierna el paralelismo de una corrida de triangles es
   `problem.params.threads`.
 - **`operators.{parent_selection,crossover,mutation,survival}`**: `name` +
   `params` propios de ese operador, resueltos por nombre vía `ga/registry.py`.

@@ -8,8 +8,10 @@ and what the evaluation counter means.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Sequence
 
+import pytest
 from conftest import make_individual
 from ga.core.engine import Evaluator
 from ga.core.gene import Gene, GeneSchema
@@ -120,9 +122,17 @@ def test_results_are_matched_back_by_position(schema):
 def test_a_problem_that_owns_parallelism_gets_no_process_pool():
     """Stacking a process pool on top of a problem's own threads only
     oversubscribes the CPU."""
-    evaluator = Evaluator(RecordingProblem(parallel=True), workers=8)
+    with pytest.warns(UserWarning, match="engine.processes=8 ignored"):
+        evaluator = Evaluator(RecordingProblem(parallel=True), workers=8)
     assert evaluator._pool is None
     evaluator.close()
+
+
+def test_asking_for_one_process_never_warns():
+    """The default is 1, so the warning must fire only on a real request."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        Evaluator(RecordingProblem(parallel=True), workers=1).close()
 
 
 def test_close_is_safe_without_a_pool():
