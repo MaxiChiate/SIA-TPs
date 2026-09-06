@@ -8,6 +8,7 @@ higher is better. Everything image-specific stays behind this interface.
 from __future__ import annotations
 
 import abc
+from collections.abc import Sequence
 from pathlib import Path
 
 from .gene import GeneSchema
@@ -33,6 +34,24 @@ class Problem(abc.ABC):
         The engine owns caching and evaluation counting, so this should do the
         raw work every time it is called.
         """
+
+    def evaluate_batch(self, individuals: Sequence[Individual]) -> list[float]:
+        """Fitness of every individual, in order. Same contract as ``evaluate``.
+
+        The default evaluates them one at a time. A problem whose evaluation can
+        share setup across a batch, or parallelise inside itself, overrides this
+        and the engine hands it a whole generation at once. The engine still
+        owns caching and counting, so this must do the raw work every call.
+        """
+        return [self.evaluate(individual) for individual in individuals]
+
+    def owns_parallelism(self) -> bool:
+        """True if ``evaluate_batch`` already spreads a batch across cores.
+
+        The engine then keeps its own worker pool out of the way instead of
+        stacking one form of parallelism on top of another.
+        """
+        return False
 
     def describe(self) -> dict:
         """Optional metadata (image path, metric name, ...) for the run summary."""

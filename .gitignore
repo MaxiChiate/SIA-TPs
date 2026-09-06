@@ -36,3 +36,7 @@ TP1/Ejercicio2_sokoban/analisis/graficos/
 # TP2: resultados generados por run.py (imagenes, logs, snapshots por corrida)
 # (si querés versionar una corrida puntual: git add -f resultados/<carpeta>)
 TP2/results/
+
+# TP2: artefactos de compilacion del backend nativo en Rust (TP2/rust/)
+TP2/rust/target/
+TP2/**/*.so

@@ -13,8 +13,12 @@ mejor aproximación a esa imagen dibujando `T` triángulos de color uniforme, tr
 - **La implementación de Algoritmos Genéticos es propia.** Nada de DEAP, pygad ni similares:
   selección, cruza, mutación, reemplazo y corte se escriben a mano.
 - **Core del AG (`ga/`) con stdlib solamente.** Pillow y numpy únicamente en
-  `problems/triangles/` (render y fitness). Nada del dominio "imagen/triángulo" puede aparecer
-  dentro de `ga/`.
+  `problems/triangles/`, y solo para I/O de imágenes (abrir el target, export, GIF) y arrays -
+  rasterizar y puntuar corren enteramente en `rust/`, no en Python. Nada del dominio
+  "imagen/triángulo" puede aparecer dentro de `ga/`. El backend nativo (`rust/`) también vive
+  detrás de esa frontera: solo lo importa `problems/triangles/renderers.py`, y el crate no
+  contiene **nada** de AG — ni RNG, ni selección, ni cruza, ni mutación. El enunciado permite
+  librerías externas para manejo de imágenes, no para el algoritmo genético.
 - Identificadores, nombres de archivo y **comentarios en inglés**. Type hints y dataclasses.
   `from __future__ import annotations`. Funciones cortas, sin herencia profunda.
 - `seed` obligatorio: misma seed + mismo config ⇒ mismo resultado, siempre. Una sola instancia
@@ -43,10 +47,11 @@ ga/                     # motor genérico — solo stdlib
   config.py             # (pendiente) parseo + validación -> ConfigError
   metrics.py            # GenerationRecord + mean / std / genotypic_diversity + record_for
 problems/
-  triangles/            # (pendiente) genotype, renderer, fitness, problem, export  [Pillow/numpy]
+  triangles/            # genotype, renderers (delega a rust/), colorspace, problem, export  [Pillow: solo I/O]
+rust/                   # crate PyO3 del backend nativo: color, raster, score  (obligatorio, no opcional)
 run.py                  # (pendiente) CLI: python TP2/run.py [config.json]
 config.json.example     # (pendiente)
-requirements.txt        # pillow, numpy, pytest  (el core no los usa)
+requirements.txt        # pillow, numpy, pytest, maturin  (el core no los usa)
 ```
 
 ## Genotipo (problema triangles)
@@ -76,6 +81,35 @@ del problema declara `block_size = 10`.
   (criterios combinables por OR: generaciones, tiempo, fitness aceptable, estructura, contenido).
 - **Diversidad genotípica** = media de los desvíos estándar por locus (O(N·L), comparable
   entre corridas porque los alelos viven en `[0,1]`).
+- **El render corre solo en Rust, sin alternativa en Python.** Empezó como backend
+  intercambiable (`problem.params.renderer`: `pillow`/`rust`/`auto`) mientras se migraba,
+  validado contra el oráculo Pillow (correlación de rangos 0,997–0,999; medido 9,4×–13,2×
+  end-to-end, evaluación de 89,7% a 16% del perfil). Una vez probada la migración, se sacó
+  `PillowRenderer`, `renderer.py` (`ImageDraw.polygon`) y `fitness.py` (MSE en numpy) del todo
+  en vez de mantenerlos como segunda implementación del mismo hot path — el `problem.params.
+  renderer` de config también desapareció, no queda ninguna opción que elegir. La costura con
+  `ga/` (`Problem.evaluate_batch` + `owns_parallelism`) no cambió: sigue siendo la única forma
+  en que el engine sabe que una generación entera se resuelve en una llamada. `colorspace.py`
+  sí sigue en Python (decodifica color para `export.py`/`individual_from_export`, caminos fríos
+  que no compiten en el hot path), y `tests/test_native_parity.py` lo sigue validando bit a bit
+  contra `triangles_native.to_rgb`.
+- **Piso de fitness y `initial_alpha`**: `pixel_similarity` recorta en 0 todo lo que sea peor
+  que el canvas vacío, y una población inicial de triángulos opacos al azar cae entera abajo de
+  ese piso (medido: 0/50 con fitness > 0 en argentina/50/RGB y en argentina/200/HCL). Con todos
+  empatados en 0 la selección no ordena nada y la corrida se queda quieta hasta que una mutación
+  cruza de casualidad — o muere por `stagnation`. Se corrigió **sesgando solo la generación 0**
+  (`problem.params.initial_alpha`, default `1.0` = sin sesgo) y no tocando la métrica: cambiar
+  la normalización volvería incomparables todos los fitness ya medidos. El sesgo se aplica
+  después de sortear el vector, así que la misma seed conserva coordenadas y colores.
+- **`work_resolution` acepta `"native"`**: el fitness compara contra la imagen a resolución
+  original, sin reescalado intermedio. Es un sentinel en el config y no un flag aparte porque
+  el parámetro que ya existía es exactamente el que se está eligiendo. `describe()` reporta la
+  resolución **resuelta**, y `run.py` vuelca ese `describe()` en `summary.json` (bloque
+  `problem`, al lado del `config` crudo): una corrida tiene que registrar lo que corrió, no lo
+  que se pidió, o sus números no se pueden reproducir ni comparar. Medido: el costo crece con
+  los píxeles pero mucho más despacio (20× de resolución = 2,3× de tiempo) porque con el kernel
+  nativo el cuello de botella son los operadores en Python; recién a resolución nativa vuelve a
+  mandar el render.
 - **Espacio de color configurable** (`problem.params.color_space`: `rgb` default, `hsv`, `hcl`)
   en `problems/triangles/colorspace.py`: cambia cómo se leen los 3 genes de color, no el
   genotipo ni ningún operador — sirve para comparar geometrías del espacio de búsqueda. `hcl`
