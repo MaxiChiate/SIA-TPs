@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import random
+
 import pytest
 
 from conftest import ScriptedRandom, make_individual
+from ga.core.gene import Gene, GeneSchema
 from ga.operators.mutation import gene, multigene, non_uniform, uniform
 
 # -- gene ------------------------------------------------------------------
@@ -95,3 +98,65 @@ def test_non_uniform_clamps_to_gene_domain(schema):
         ind, rng, {"pm": 0.5, "generation": 0, "max_generations": 1, "b": 0.0}
     )
     assert result.alleles[0] == 0.0
+
+
+# -- mutations_per_child: rate that survives a change of genome length --------
+
+
+def _long_schema(loci: int) -> GeneSchema:
+    return GeneSchema(
+        genes=tuple(Gene(name=f"g{i}", lower=0.0, upper=1.0) for i in range(loci)),
+        block_size=2,
+    )
+
+
+@pytest.mark.parametrize("loci", [10, 100])
+def test_mutations_per_child_holds_the_count_across_genome_lengths(loci):
+    """The whole point: the same request mutates the same number of loci
+    whether the genotype has 10 alleles or 100."""
+    schema = _long_schema(loci)
+    individual = make_individual(schema, alleles=[0.5] * loci)
+    rng = random.Random(7)
+    params = {"mutations_per_child": 4, "pm": 0.9}
+
+    counts = []
+    for _ in range(400):
+        mutated = multigene(individual, rng, params)
+        counts.append(sum(1 for a, b in zip(individual.alleles, mutated.alleles) if a != b))
+    assert 3.4 < sum(counts) / len(counts) < 4.6
+
+
+def test_mutations_per_child_wins_over_pm():
+    """Both present is not an error - the more specific request takes it."""
+    schema = _long_schema(100)
+    individual = make_individual(schema, alleles=[0.5] * 100)
+    rng = random.Random(7)
+
+    mutated = multigene(individual, rng, {"mutations_per_child": 0, "pm": 1.0})
+    assert mutated.alleles == individual.alleles
+
+
+def test_uniform_counts_blocks_not_loci():
+    """``uniform`` re-randomizes whole blocks, so its unit of "one mutation" is
+    a block - 3 requested out of 5 blocks, not 3 out of 10 loci."""
+    schema = _long_schema(10)  # block_size=2 -> 5 blocks
+    individual = make_individual(schema, alleles=[0.5] * 10)
+    rng = random.Random(7)
+
+    counts = []
+    for _ in range(400):
+        mutated = uniform(individual, rng, {"mutations_per_child": 3})
+        blocks = sum(
+            1
+            for start in range(0, 10, 2)
+            if individual.alleles[start:start + 2] != mutated.alleles[start:start + 2]
+        )
+        counts.append(blocks)
+    assert 2.5 < sum(counts) / len(counts) < 3.5
+
+
+def test_a_negative_mutation_count_is_rejected():
+    schema = _long_schema(10)
+    individual = make_individual(schema, alleles=[0.5] * 10)
+    with pytest.raises(ValueError, match="mutations_per_child"):
+        multigene(individual, random.Random(1), {"mutations_per_child": -1})

@@ -1,6 +1,6 @@
 {
   "seed": 42,
-    "import":"results/config_20260904_200921/triangles.json",
+  "import": "results/config_20260904_200921/triangles.json",
   "engine": {
     "n": 100,
     "k": 100,
@@ -12,7 +12,9 @@
   "operators": {
     "parent_selection": {
       "name": "tournament_deterministic",
-      "params": {"tournament_size": 3}
+      "params": {
+        "tournament_size": 3
+      }
     },
     "crossover": {
       "name": "one_point",
@@ -20,24 +22,46 @@
     },
     "mutation": {
       "name": "non_uniform",
-      "params": {"b": 2.0}
+      "params": {
+        "b": 2.0,
+        "mutations_per_child": 25
+      }
     },
     "survival": {
       "name": "additive",
-      "params": {"selection_method": "elite"}
+      "params": {
+        "selection_method": "elite"
+      }
     }
   },
   "stopping": [
-    {"name": "target_fitness", "params": {"threshold": 0.98}},
-    {"name": "stagnation", "params": {"generations": 50}}
+    {
+      "name": "target_fitness",
+      "params": {
+        "threshold": 0.98
+      }
+    },
+    {
+      "name": "stagnation",
+      "params": {
+        "generations": 50
+      }
+    }
   ],
   "problem": {
     "type": "triangles",
     "params": {
       "image_path": "images/argentina.png",
       "triangle_count": 50,
-      "work_resolution": [128, 80],
-      "background_rgb": [255, 255, 255],
+      "work_resolution": [
+        128,
+        80
+      ],
+      "background_rgb": [
+        255,
+        255,
+        255
+      ],
       "color_space": "rgb",
       "initial_alpha": 0.2,
       "threads": 0

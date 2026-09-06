@@ -93,6 +93,16 @@ del problema declara `block_size = 10`.
   sí sigue en Python (decodifica color para `export.py`/`individual_from_export`, caminos fríos
   que no compiten en el hot path), y `tests/test_native_parity.py` lo sigue validando bit a bit
   contra `triangles_native.to_rgb`.
+- **Tasa de mutación invariante al largo del genoma** (`mutations_per_child` en
+  `operators.mutation.params`): `pm` es la probabilidad por tirada y todos los operadores salvo
+  `gene` tiran una vez por locus, así que las mutaciones esperadas por hijo son
+  `pm × 10 × triangle_count` — subir los triángulos multiplicaba la mutación sin que se viera en
+  el config. Medido (argentina, 1000 generaciones, RMSE @640×400): con `pm=0.05` fijo, 500
+  triángulos daba **peor** que 50 (18,59 contra 16,69); fijando 25 mutaciones/hijo el orden se
+  endereza y 500 pasa a ser el mejor (15,29). La normalización vive en `_rate()`
+  (`ga/operators/mutation.py`) y es genérica — divide por la cantidad de tiradas que ese
+  operador va a hacer (loci, o bloques para `uniform`), sin saber nada de triángulos, así que la
+  frontera `ga/` ↔ dominio se mantiene.
 - **Piso de fitness y `initial_alpha`**: `pixel_similarity` recorta en 0 todo lo que sea peor
   que el canvas vacío, y una población inicial de triángulos opacos al azar cae entera abajo de
   ese piso (medido: 0/50 con fitness > 0 en argentina/50/RGB y en argentina/200/HCL). Con todos

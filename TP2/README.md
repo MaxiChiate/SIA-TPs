@@ -138,7 +138,7 @@ no toca la evaluación, que corre a `work_resolution` y es otra cosa.
     },
     "mutation": {
       "name": "non_uniform",
-      "params": {"b": 2.0}
+      "params": {"b": 2.0, "mutations_per_child": 25}
     },
     "survival": {
       "name": "additive",
@@ -181,6 +181,8 @@ no toca la evaluación, que corre a `work_resolution` y es otra cosa.
   `problem.params.threads`.
 - **`operators.{parent_selection,crossover,mutation,survival}`**: `name` +
   `params` propios de ese operador, resueltos por nombre vía `ga/registry.py`.
+  `mutation.params.mutations_per_child` reemplaza a `engine.pm` con una tasa
+  que no depende del largo del genoma (ver "Carga de mutación").
   Los `params` de las cuatro categorías se mergean en un único dict que el
   engine le pasa a cada operador junto con `generation`/`max_generations`/
   `history` — por eso `boltzmann` puede leer `t0`/`tmin`/`tau` sin que el
@@ -284,6 +286,51 @@ borroso es justo lo que 50 triángulos planos pueden aproximar. A resolución
 nativa el fitness persigue detalle que la representación no puede representar.
 `"native"` empieza a valer la pena cuando hay triángulos de sobra — es la opción
 honesta para una corrida final, no para iterar.
+
+## Carga de mutación (`mutations_per_child`)
+
+`pm` es la probabilidad de **cada tirada**, y salvo `gene`, todos los operadores
+de mutación tiran una vez **por locus** (o por bloque). O sea que el número
+esperado de mutaciones por hijo es `pm × largo del genoma` — y el genotipo de
+este problema mide `10 × triangle_count`. Subir los triángulos sin tocar `pm`
+multiplica la violencia de la mutación sin que se note en el config:
+
+| triángulos | alelos | mutaciones/hijo con `pm=0.05` |
+|---|---|---|
+| 50 | 500 | 25 |
+| 200 | 2000 | 100 |
+| 500 | 5000 | 250 |
+
+Y eso arruina el resultado, porque un hijo que difiere del padre en 250 lugares
+no le da a la selección nada que pueda atribuir: ve el neto de 250 cambios,
+no cuál sirvió. Medido con `argentina.png`, 1000 generaciones, RMSE contra el
+mismo target a 640×400:
+
+| triángulos | `pm` | mutaciones/hijo | RMSE |
+|---|---|---|---|
+| 50 | `0.05` | 25 | 16,69 |
+| 200 | `0.05` | 100 | 16,61 |
+| 200 | `0.0125` | 25 | **15,71** |
+| 500 | `0.05` | 250 | 18,59 |
+| 500 | `0.005` | 25 | **15,29** |
+
+Con `pm` fijo, **más triángulos daba peor** (500 triángulos es la peor fila de
+la tabla). Escalándolo, el orden se endereza y la capacidad extra rinde:
+50 → 200 → 500 mejora siempre.
+
+`mutations_per_child` dice lo mismo sin la cuenta a mano: es el número esperado
+de mutaciones, y el operador lo convierte a probabilidad por tirada contra el
+largo real del genoma. Cambiás `triangle_count` y no tenés que re-tunear nada.
+
+```json
+"mutation": {"name": "non_uniform", "params": {"b": 2.0, "mutations_per_child": 25}}
+```
+
+Detalles: gana sobre `pm` si están los dos (pedir un número exacto es más
+específico que pedir una probabilidad); la unidad es lo que ese operador
+sortea, o sea un locus para `multigene`/`non_uniform` y un **bloque entero**
+para `uniform`; y `gene` no lo usa, porque muta un solo locus por construcción
+y no tiene nada que normalizar.
 
 ## El piso de fitness (`problem.params.initial_alpha`)
 
