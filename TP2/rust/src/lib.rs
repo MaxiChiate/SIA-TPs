@@ -6,6 +6,10 @@
 //! assignment's rule intact — external code may handle images, but the GA
 //! itself is the group's own work, and it stays in Python.
 //!
+//! A genome is `shape_count` fixed-size blocks; `shape_type` (`"triangle"`,
+//! `"oval"` or `"both"`) picks what each block decodes to and how large it is
+//! - see `score.rs`'s module docs for the exact gene layout per mode.
+//!
 //! The Python side owns the search; this side answers one question, fast:
 //! "how far is the picture these alleles describe from the target?"
 
@@ -19,14 +23,17 @@ use pyo3::types::PyBytes;
 use rayon::prelude::*;
 
 use color::ColorSpace;
-use score::{ScorerInner, GENES_PER_TRIANGLE};
+use score::{ScorerInner, ShapeMode};
 
 /// Bumped whenever the scoring kernel's numerics change.
 ///
 /// `RustRenderer` asserts this against a constant on the Python side, so a
 /// stale `.so` left over from an earlier build fails loudly instead of quietly
 /// producing fitness values that no longer match the source tree.
-const SCHEMA_VERSION: u32 = 1;
+///
+/// Bumped to 2: `Scorer::new` gained the `shape_type` parameter and the block
+/// layout now depends on it (see `score.rs`'s module docs).
+const SCHEMA_VERSION: u32 = 2;
 
 #[pyfunction]
 fn version() -> &'static str {
@@ -93,17 +100,19 @@ struct Scorer {
 impl Scorer {
     #[new]
     #[pyo3(signature = (
-        target_rgb, width, height, background_rgb, triangle_count, color_space,
-        baseline_mse, threads = 0
+        target_rgb, width, height, background_rgb, shape_count, color_space,
+        baseline_mse, shape_type = "triangle", threads = 0
     ))]
+    #[allow(clippy::too_many_arguments)]
     fn new(
         target_rgb: &[u8],
         width: usize,
         height: usize,
         background_rgb: (u8, u8, u8),
-        triangle_count: usize,
+        shape_count: usize,
         color_space: &str,
         baseline_mse: f64,
+        shape_type: &str,
         threads: usize,
     ) -> PyResult<Self> {
         // Every argument is validated here, before any kernel code runs. The
@@ -121,14 +130,19 @@ impl Scorer {
                 height
             )));
         }
-        if triangle_count == 0 {
-            return Err(PyValueError::new_err("triangle_count must be > 0"));
+        if shape_count == 0 {
+            return Err(PyValueError::new_err("shape_count must be > 0"));
         }
         if !(baseline_mse > 0.0) {
             return Err(PyValueError::new_err("baseline_mse must be > 0"));
         }
         let space = ColorSpace::from_name(color_space).ok_or_else(|| {
             PyValueError::new_err(format!("unknown color space {color_space:?}"))
+        })?;
+        let mode = ShapeMode::from_name(shape_type).ok_or_else(|| {
+            PyValueError::new_err(format!(
+                "unknown shape_type {shape_type:?}; expected 'triangle', 'oval' or 'both'"
+            ))
         })?;
         let pool = rayon::ThreadPoolBuilder::new()
             .num_threads(threads) // 0 means one per available core
@@ -140,7 +154,8 @@ impl Scorer {
                 width,
                 height,
                 [background_rgb.0, background_rgb.1, background_rgb.2],
-                triangle_count,
+                shape_count,
+                mode,
                 space,
                 baseline_mse,
             ),
@@ -221,8 +236,9 @@ impl Scorer {
         if given != expected {
             return Err(PyValueError::new_err(format!(
                 "genome has {given} alleles, expected {expected} \
-                 ({} triangles x {GENES_PER_TRIANGLE})",
-                self.inner.triangle_count
+                 ({} shapes x {} genes each)",
+                self.inner.shape_count,
+                self.inner.genes_per_shape()
             )));
         }
         Ok(())
