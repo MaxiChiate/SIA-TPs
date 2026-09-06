@@ -42,15 +42,20 @@ ga/                     # motor genérico — solo stdlib
     population.py       # Population(individuals, generation) — contenedor fino
     problem.py          # ABC Problem: schema / random_individual / evaluate / describe
     engine.py           # Evaluator (memo + contador), EngineConfig, Engine.run, RunResult, StopContext
-  operators/            # (pendiente) selection, crossover, mutation, replacement, stopping
-  registry.py           # (pendiente) nombre en config -> implementación
-  config.py             # (pendiente) parseo + validación -> ConfigError
+  operators/            # selection, crossover, mutation, survival, stopping
+  registry.py           # nombre en config -> implementación
+  config.py             # parseo + validación -> ConfigError
   metrics.py            # GenerationRecord + mean / std / genotypic_diversity + record_for
 problems/
   triangles/            # genotype, renderers (delega a rust/), colorspace, problem, export  [Pillow: solo I/O]
 rust/                   # crate PyO3 del backend nativo: color, raster, score  (obligatorio, no opcional)
-run.py                  # (pendiente) CLI: python TP2/run.py [config.json]
-config.json.example     # (pendiente)
+build.py                # CLI: compila rust/ y verifica el binario resultante
+simulate.py             # CLI: corre el AG, escribe solo datos (no dibuja)
+render_final.py         # CLI: final.png desde un directorio de resultados
+render_snapshots.py     # CLI: snapshots/ + progress.gif desde ese directorio
+run.py                  # CLI: las tres etapas juntas
+pipeline.py             # las etapas, implementadas una sola vez
+config.json.example
 requirements.txt        # pillow, numpy, pytest, maturin  (el core no los usa)
 ```
 
@@ -129,10 +134,9 @@ del problema declara `block_size = 10`.
 
 ## Estado
 
-- **Bloque 1 (Core)**: hecho. `ga/core/*`, `ga/metrics.py`, `requirements.txt`.
-- Pendientes: 2) config + registry + validación + `config.json.example`; 3) operadores
-  (selección → supervivencia → cruza → mutación → corte); 4) plug-in `triangles`; 5) tests
-  unitarios de operadores; 6) `run.py` + salida de métricas.
+Los seis bloques están hechos: core, config+registry, operadores, plug-in `triangles`, tests
+(118 pasando) y la salida de métricas. El backend nativo de `rust/` reemplazó al camino
+Pillow del todo.
 
 ## Método de trabajo
 
@@ -142,11 +146,14 @@ solo.
 
 ## Cómo correr
 
-Todavía no hay `run.py` (bloque 6). Por ahora:
-
 ```bash
-cd TP2 && ../.venv/bin/python -c "import ga.core; print('ok')"   # el core importa (solo stdlib)
+cd TP2
+../.venv/bin/python build.py                      # compila rust/ y verifica el binario
+../.venv/bin/python run.py config.json            # simular + dibujar, de un saque
 ```
+
+Una corrida son tres etapas separables (ver "Etapas separadas" abajo):
+`simulate.py` (solo datos), `render_final.py`, `render_snapshots.py`.
 
 Uso del motor como librería: instanciar un `Problem`, un `EngineConfig` con los callables de
 selección/cruza/mutación/supervivencia + `Pc`/`Pm`/`max_generations`, un `Rng` con
@@ -154,7 +161,7 @@ selección/cruza/mutación/supervivencia + `Pc`/`Pm`/`max_generations`, un `Rng`
 individuo, generación en que apareció, criterio de corte, evaluaciones, tiempo, `history` de
 `GenerationRecord`).
 
-Tests (bloque 5, pendiente): `../.venv/bin/python -m pytest` desde `TP2/`.
+Tests: `../.venv/bin/python -m pytest` desde `TP2/` (118 casos, deterministas).
 Dependencias del dominio y tests: `../.venv/bin/pip install -r requirements.txt`.
 
 ## Importar un individuo inicial
@@ -166,14 +173,36 @@ individuo reemplaza a uno de los `n` individuos aleatorios de la generación 0
 deshabilita la importación. La decodificación (`TrianglesProblem.
 individual_from_export`, `problems/triangles/problem.py`) normaliza los
 vértices en píxeles contra la resolución **nativa** de `image_path` — el
-tamaño con el que `run.py` exporta por defecto. Un `triangles.json` exportado
+tamaño con el que las etapas de render exportan por defecto. Un `triangles.json` exportado
 con `--export-width`/`--export-height` explícitos no decodifica bien.
 
-## Salida esperada (bloque 6)
+## Etapas separadas (`pipeline.py`)
 
-`run.py` corre una config y emite en un directorio de resultados: imagen final (+ snapshots
-opcionales cada X generaciones, y un `progress.gif` armado con esos snapshots + la imagen
-final sostenida unos segundos), enumeración de triángulos del mejor individuo (vértices +
-color) en JSON, log por generación en CSV/JSON (generación, mejor/promedio/desvío/peor
-fitness, diversidad, evaluaciones acumuladas, tiempo acumulado), y un resumen final (mejor
-fitness, generación en que apareció, criterio de corte que disparó, config completo + seed).
+Una corrida se divide en tres etapas, implementadas una sola vez en `pipeline.py`; los cinco
+scripts de `TP2/` son CLIs finitos sobre esas funciones, así que el camino de un comando no
+puede divergir del camino por partes.
+
+- `build.py` — `maturin develop` desde `rust/`, siempre `--release`, con `VIRTUAL_ENV`
+  derivado del intérprete; después importa la extensión **en un subproceso** (el padre puede
+  tener una vieja cargada) y reporta `build_info()`/`schema_version()`. `--check` solo verifica.
+- `simulate.py` — corre el AG y escribe `history.csv`/`.json`, `summary.json`, `best.json`,
+  `triangles.json` y, con `--snapshot-every N`, `checkpoints.jsonl`. **No dibuja nada.**
+- `render_final.py` / `render_snapshots.py` — leen el directorio de resultados y dibujan.
+
+**Por qué se separó**: `on_generation` renderizaba un PNG a resolución nativa *adentro* del
+loop cronometrado, así que `elapsed_seconds` incluía trabajo ajeno al algoritmo (medido:
+31,7 s de AG contra 5,9 s de dibujar 31 snapshots, un 19%). Hoy `simulate.py` solo guarda una
+**referencia** al mejor individuo de cada N generaciones — los operadores nunca mutan in
+place, así que checkpointear no le cuesta nada al loop — y las vuelca al terminar.
+`--progress-every N` / `--quiet` hace lo mismo con los prints.
+
+**`checkpoints.jsonl` guarda alelos crudos, no el export de `triangles.json`**: ese export
+normaliza vértices contra la resolución nativa y solo decodifica exacto para un export de
+tamaño default, mientras que los alelos en `[0,1]` son independientes de la resolución por
+construcción. Se redondean a 8 decimales (a 4096 px de export son 4e-5 de un píxel) porque
+existen para dibujarse; `best.json` va a precisión completa porque es el resultado de la
+corrida y puede volver a entrar por `import`.
+
+**Las etapas de render no necesitan el config**: reconstruyen el problema desde el bloque
+`config` de `summary.json`, para que la imagen la dibuje el mismo kernel, espacio de color y
+`triangle_count` que la puntuó.

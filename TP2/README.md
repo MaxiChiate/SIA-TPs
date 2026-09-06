@@ -7,7 +7,12 @@ uniforme sobre un canvas. Enunciado en
 El detalle de cada decisión de diseño está en [`CLAUDE.md`](CLAUDE.md).
 
 ```
-run.py                  CLI: python run.py [config.json]
+build.py                CLI: compila rust/ (maturin develop) y verifica el resultado
+simulate.py             CLI: corre el AG y escribe solo datos — no dibuja nada
+render_final.py         CLI: dibuja final.png desde un directorio de resultados
+render_snapshots.py     CLI: dibuja snapshots/ + progress.gif desde ese directorio
+run.py                  CLI: las tres etapas juntas — python run.py [config.json]
+pipeline.py             las etapas, implementadas una sola vez; los CLI son finitos
 config.json.example     config de referencia (copiar a config.json)
 requirements.txt        pillow, numpy, pytest, maturin (el core de ga/ no usa nada de esto)
 ga/                      motor genérico — solo stdlib
@@ -56,8 +61,9 @@ pip install -r requirements.txt       # pillow, numpy, pytest, maturin
 
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # una sola vez
 . "$HOME/.cargo/env"                   # rustup no toca el PATH de la shell ya abierta
-cd rust && maturin develop --release   # desde rust/ y con --release: las dos cosas importan
-cd ..
+
+cd TP2
+python build.py                       # compila rust/ y reporta con qué flags quedó
 
 [ -f config.json ] || cp config.json.example config.json   # no pisa el tuyo si ya existe
 python run.py                                             # usa ./config.json
@@ -66,38 +72,60 @@ python run.py                                             # usa ./config.json
 Ajustá `config.json` a gusto (imagen, `triangle_count`, operadores). Para correr
 otro archivo, pasáselo como argumento: `python run.py otra_config.json`.
 
-Para confirmar que la extensión quedó compilada, y con qué flags:
-
-```bash
-python -c "import triangles_native as n; print(n.version(), n.build_info())"
-```
-
 Sin el toolchain de Rust compilado, `import problems.triangles` funciona igual
 (así que, por ejemplo, `pytest tests/test_colorspace.py` sigue en verde), pero
-construir un `TrianglesProblem` — y por lo tanto `python run.py` — falla con un
-error claro pidiendo el `maturin develop --release` de arriba.
+construir un `TrianglesProblem` — y por lo tanto cualquier corrida — falla con
+un error claro pidiendo el `python build.py` de arriba.
 
-`python run.py` a secas escribe la imagen final y las métricas, nada más. Para
-que la corrida genere **todo** — snapshots intermedias y el gif del proceso
-incluidos — hay que pedirle las snapshots:
+## Los cinco scripts
+
+Una corrida son tres etapas separables, más el build. Están implementadas una
+sola vez en [`pipeline.py`](pipeline.py); los scripts son CLIs finitos sobre
+esas funciones, así que el camino de un comando no puede divergir del camino
+por partes.
+
+| script | qué hace | escribe |
+|---|---|---|
+| `build.py` | compila el kernel nativo de `rust/` | la extensión, en el venv activo |
+| `simulate.py` | corre el AG. **No dibuja nada** | `history.csv`/`.json`, `summary.json`, `best.json`, `triangles.json`, `checkpoints.jsonl` |
+| `render_final.py` | dibuja el mejor individuo | `final.png` |
+| `render_snapshots.py` | dibuja la evolución | `snapshots/gen_*.png`, `progress.gif` |
+| `run.py` | las tres etapas de un saque | todo lo de arriba |
 
 ```bash
-python run.py config.json --out results/prueba \
-  --snapshot-every 25 --export-width 600 --export-height 475
+python build.py                       # o --profile parallel mientras iterás
+python build.py --check               # no compila: dice qué extensión hay instalada
+
+# analizar números, sin pagar un solo píxel
+python simulate.py config.json --out results/prueba/0003 --quiet
+
+# y después, cuando quieras verlo
+python render_final.py     results/prueba/0003
+python render_snapshots.py results/prueba/0003
 ```
+
+**Por qué separados**: `on_generation` renderizaba un PNG a resolución nativa
+*adentro* del loop cronometrado, así que el `elapsed_seconds` de `summary.json`
+incluía trabajo que no es del algoritmo. Hoy `simulate.py` solo guarda el
+genotipo del mejor de cada N generaciones (una referencia, no una copia: los
+operadores nunca mutan in place, así que al loop no le cuesta nada) y los
+vuelca recién al terminar. Medido con `starry_night`, 2000 triángulos, 300
+generaciones y `--snapshot-every 10`: la simulación son 31,7 s y dibujar esas
+31 snapshots a 1200×950 otros 5,9 s — un 19% que antes se contaba como tiempo
+de AG. `--progress-every N` (o `--quiet`) hace lo mismo con los prints, que a
+30.000 generaciones también suman.
+
+Las etapas de render no necesitan el `config.json`: reconstruyen el problema
+desde el bloque `config` de `summary.json`, para que la imagen la dibuje el
+mismo kernel, espacio de color y `triangle_count` que la puntuó. Se pueden
+correr días después, en otra máquina. Los `image_path` del config son
+relativos, así que hay que correrlas desde `TP2/`.
+
+### Qué escribe una corrida
 
 Cada corrida escribe en un directorio de resultados
 (`results/<config>_<timestamp>/` por default, o `--out DIR`):
 
-- `final.png` — mejor individuo, renderizado a la resolución nativa de la
-  imagen fuente (o `--export-width`/`--export-height`).
-- `snapshots/gen_NNNNN.png` — solo si se pasa `--snapshot-every N`.
-- `progress.gif` — animación del proceso: un frame por snapshot más
-  `final.png` al cierre, sostenido unos segundos antes de que el loop vuelva a
-  empezar. Se arma solo cuando hay snapshots; `--no-gif` lo desactiva y
-  `--gif-frame-ms` / `--gif-hold-ms` ajustan los tiempos (default 120 ms por
-  frame, 3000 ms de cierre).
-- `triangles.json` — triángulos del mejor individuo (vértices + color RGBA).
 - `history.csv` / `history.json` — una fila por generación: fitness
   mejor/promedio/desvío/peor, diversidad genotípica, evaluaciones y tiempo
   acumulados.
@@ -107,9 +135,20 @@ Cada corrida escribe en un directorio de resultados
   flags con los que se compiló el backend nativo y threads usados. `config` es
   lo que se pidió; `problem` es lo que pasó, y difieren en todo lo que sea
   `"native"`.
-
-Imprime el fitness mejor/promedio de cada generación a medida que corre, y
-deja los siete artefactos en `results/prueba/`.
+- `best.json` — el genotipo ganador, alelos crudos en `[0,1]` a precisión
+  completa. Vuelve a puntuar bit a bit idéntico al `best_fitness` del summary.
+- `triangles.json` — los mismos triángulos en espacio de píxeles (vértices +
+  color RGBA), que es el formato que pide el enunciado y el que lee `import`.
+- `checkpoints.jsonl` — solo con `--snapshot-every N`: una línea por snapshot
+  con el genotipo del mejor de esa generación, redondeado a 8 decimales (a
+  4096 px de export eso es 4e-5 de un píxel). Es de lo que dibuja
+  `render_snapshots.py`.
+- `final.png` — mejor individuo a la resolución nativa de la imagen fuente (o
+  `--export-width`/`--export-height`).
+- `snapshots/gen_NNNNN.png` y `progress.gif` — la animación: un frame por
+  checkpoint más `final.png` al cierre, sostenido unos segundos. `--no-gif` lo
+  desactiva y `--gif-frame-ms` / `--gif-hold-ms` ajustan los tiempos (default
+  120 ms por frame, 3000 ms de cierre).
 
 Sobre `--export-width`/`--export-height`: sin ellos cada snapshot se renderiza a
 la resolución nativa de la imagen fuente, y en un gif de 20 frames eso se nota
@@ -384,16 +423,14 @@ que usa el kernel. `TrianglesProblem.owns_parallelism()` siempre da `True`
 **nunca** abre su propio pool de procesos para este problema — apilar
 procesos sobre threads solo sobre-suscribiría la CPU. `engine.processes`
 (la perilla genérica del motor) no tiene efecto acá; el único número que
-gobierna el paralelismo real de una corrida es `threads`.
-
-Importar el paquete no necesita la extensión compilada — `import
+gobierna el paralelismo real de una corrida es `threads`. Importar el paquete no necesita la extensión compilada — `import
 problems.triangles` (y por lo tanto `pytest tests/test_colorspace.py`) anda
 igual sin ella — pero *construir* un `TrianglesProblem` sí, y ahí es donde
 falla con un error claro si no está.
 
 ### Compilar el backend nativo
 
-Los comandos están en [Arranque rápido](#arranque-rápido). Dos cosas que
+`python build.py` es el camino corto, y existe porque hay dos cosas que
 arruinan el build en silencio:
 
 - **`--release` no es opcional.** Un build de debug de este kernel es más
@@ -404,6 +441,21 @@ arruinan el build en silencio:
   `maturin develop -m rust/Cargo.toml` compila **sin** `target-cpu=x86-64-v3`.
   `build_info()` reporta las features realmente compiladas: si no dice
   `avx2`, el flag no se aplicó.
+
+`build.py` hace las dos (`release` por default, siempre desde `rust/`), deriva
+`VIRTUAL_ENV` de su propio intérprete para no exigir que el venv esté activado,
+y al terminar importa la extensión recién compilada **en un subproceso** — el
+proceso padre puede tener una vieja cargada — para reportar `build_info()` y
+`schema_version()`. Si el binario perdió el `avx2` o quedó en `debug`, lo dice
+ahí y no a las cuatro horas de corrida. `python build.py --check` hace solo esa
+verificación, sin compilar:
+
+```bash
+$ python build.py --check
+build_info      release [sse4.2,avx,avx2,fma]
+schema_version  1
+module          .../site-packages/triangles_native/__init__.py
+```
 
 #### Compilar más rápido mientras se itera
 
