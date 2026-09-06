@@ -423,7 +423,42 @@ que usa el kernel. `TrianglesProblem.owns_parallelism()` siempre da `True`
 **nunca** abre su propio pool de procesos para este problema — apilar
 procesos sobre threads solo sobre-suscribiría la CPU. `engine.processes`
 (la perilla genérica del motor) no tiene efecto acá; el único número que
-gobierna el paralelismo real de una corrida es `threads`. Importar el paquete no necesita la extensión compilada — `import
+gobierna el paralelismo real de una corrida es `threads`. Un valor mayor a la
+cantidad de CPUs lógicas se acepta pero avisa: sobre-suscribir agrega cambios
+de contexto a un kernel que ya está limitado por memoria.
+
+#### Cuántos threads conviene pedir
+
+`0` (uno por core) no es lo mismo que el máximo aprovechable. El paralelismo es
+**estrictamente entre individuos**: el kernel por individuo es secuencial, así
+que un batch de `k` individuos es todo lo que hay para repartir. Medido en un
+Ryzen AI 9 365 (10 cores físicos, 20 lógicos), `starry_night` a 512×320, 2000
+triángulos:
+
+| threads | batch=25 | speedup | batch=100 | speedup |
+|---|---|---|---|---|
+| 1 | 319,9 ms | 1,0× | 1292,9 ms | 1,0× |
+| 4 | 104,5 ms | 3,1× | 373,8 ms | 3,5× |
+| 8 | 72,5 ms | 4,4× | 221,3 ms | 5,8× |
+| 10 | 61,2 ms | 5,2× | 188,9 ms | 6,8× |
+| **12** | **52,0 ms** | **6,2×** | 187,1 ms | 6,9× |
+| 16 | 52,0 ms | 6,2× | 176,9 ms | 7,3× |
+| 20 | 49,2 ms | 6,5× | 167,7 ms | 7,7× |
+
+**Los últimos 8 threads compran 0,3×.** De 10 a 20 hay 1,25×, que es lo que
+suele rendir SMT — los 20 lógicos son 10 físicos. La ineficiencia real está
+antes: 5,2× sobre 10 cores físicos con `k=25`, porque 25 ítems sobre 10 threads
+son 3 tandas (10+10+5, 83% de ocupación) y el resto es tráfico de memoria. Con
+`k` chico, entonces, `threads: 12` da prácticamente el mismo throughput que
+`20` y deja 8 CPUs libres para otra cosa.
+
+No es el working set del canvas: barriendo la resolución con 20 threads y
+batch 25, el escalado **mejora** hasta 512×320 (5,6×) y 800×500 (5,6×), y recién
+se cae a 1200×750 (3,8×), donde 20 canvases de 3,5 MB no entran en los 24 MB de
+L3. Abajo de 256×160 el trabajo por ítem es muy chico para amortizar el
+overhead (3,1× a 128×80).
+
+Importar el paquete no necesita la extensión compilada — `import
 problems.triangles` (y por lo tanto `pytest tests/test_colorspace.py`) anda
 igual sin ella — pero *construir* un `TrianglesProblem` sí, y ahí es donde
 falla con un error claro si no está.

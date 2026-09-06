@@ -36,6 +36,8 @@ draw - no operator, and no later generation, knows about it.
 from __future__ import annotations
 
 import json
+import os
+import warnings
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -60,6 +62,30 @@ _NATIVE_WORK_RESOLUTION = "native"
 
 def _clamp01(value: float) -> float:
     return min(1.0, max(0.0, value))
+
+
+def _threads(value) -> int:
+    """``problem.params.threads``: how many threads the native scorer gets.
+
+    ``0`` means one per logical CPU, which is the default and the right answer
+    almost always. It is validated here rather than left to PyO3 so a bad value
+    names the config key it came from, and because oversubscribing is legal but
+    almost never intended: more threads than CPUs adds context switches to a
+    kernel that is already memory-bound, so it is warned about instead of
+    silently obeyed.
+    """
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"threads must be an int, got {value!r}")
+    if value < 0:
+        raise ValueError(f"threads must be >= 0 (0 = one per core), got {value}")
+    available = os.cpu_count() or 1
+    if value > available:
+        warnings.warn(
+            f"threads={value} exceeds the {available} logical CPUs available; "
+            f"the scorer will oversubscribe",
+            stacklevel=3,
+        )
+    return value
 
 
 def _work_resolution(value, image_path: str) -> tuple[int, int]:
@@ -104,7 +130,7 @@ class TrianglesProblem(Problem):
                 self.color_space,
                 self.triangle_count,
             ),
-            threads=params.get("threads", 0),
+            threads=_threads(params.get("threads", 0)),
         )
 
     @property

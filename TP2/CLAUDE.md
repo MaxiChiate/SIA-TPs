@@ -176,6 +176,18 @@ vértices en píxeles contra la resolución **nativa** de `image_path` — el
 tamaño con el que las etapas de render exportan por defecto. Un `triangles.json` exportado
 con `--export-width`/`--export-height` explícitos no decodifica bien.
 
+## Perillas que no hacen nada (y por qué no están en el config)
+
+- **`problem.params.threads` sí gobierna el paralelismo real** (default `0` = uno por core).
+  Se valida en el dominio (`_threads`, `problems/triangles/problem.py`) para que un valor malo
+  nombre la clave del config en vez de tirar el error crudo de PyO3, y pedir más threads que
+  CPUs lógicas avisa: sobre-suscribir agrega cambios de contexto a un kernel ya limitado por
+  memoria. Medido en 10 cores físicos / 20 lógicos con `k=25`: 12 threads dan 6,2× y 20 dan
+  6,5×, así que los últimos 8 compran 0,3%.
+- **`engine.pm` queda inerte cuando `mutation.params.mutations_per_child` está puesto**
+  (`_rate()` le da prioridad). Ese sí sigue en el config porque otros operadores de mutación
+  (`gene`) lo leen.
+
 ## Etapas separadas (`pipeline.py`)
 
 Una corrida se divide en tres etapas, implementadas una sola vez en `pipeline.py`; los cinco
