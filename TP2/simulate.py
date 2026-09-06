@@ -4,8 +4,9 @@ Usage:
     python simulate.py [config.json] [--out DIR] [--snapshot-every N]
                        [--progress-every N | --quiet]
 
-Writes ``history.csv`` / ``history.json`` (one row per generation),
-``summary.json`` (best fitness, stop reason, resolved problem, full config),
+Writes ``history.csv`` / ``history.json`` (one row per generation, skipped when
+the config's ``write_history`` is ``false``), ``summary.json`` (best fitness,
+stop reason, resolved problem, full config),
 ``best.json`` (the winning genotype at full precision) and ``figures.json``
 (that genotype enumerated as shapes + colour). With ``--snapshot-every N`` it
 also writes ``checkpoints.jsonl``, which is what ``render_snapshots.py`` draws

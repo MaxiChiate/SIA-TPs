@@ -166,6 +166,14 @@ del bloque, en los tres modos — ver la entrada de diseño más abajo.
   por individuo completo) y no valía la pena arriesgarlo sin poder correr `cargo test` al
   escribirlo.
 
+- **`write_history` (config raíz, default `true`)**: si es `false`, `simulate()` no escribe
+  `history.csv`/`history.json`. Es una clave de nivel raíz, como `import`, y no
+  `engine.write_history` ni `problem.params`: no configura ni el motor ni el dominio, es una
+  decisión de qué escribe la etapa `simulate` — `_write_history` vuelca `dataclasses.asdict`
+  de cada `GenerationRecord` (`pipeline.py`), y con corridas largas o muchas generaciones ese
+  archivo crece linealmente y nada lo vuelve a leer (`summary.json` y `best.json` ya alcanzan
+  para reproducir o re-renderizar una corrida).
+
 ## Estado
 
 Los seis bloques están hechos: core, config+registry, operadores, plug-in `triangles`

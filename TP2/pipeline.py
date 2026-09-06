@@ -91,6 +91,11 @@ def simulate(
     ``progress_every`` throttles the per-generation print for the same reason:
     30.000 lines of stdout is not free, and it lands inside ``elapsed_seconds``
     exactly like a render would. 0 silences it.
+
+    ``history.csv``/``history.json`` are skipped when the config's root-level
+    ``write_history`` is ``false`` - one row per generation gets heavy on long
+    runs, and nothing downstream reads them back (``summary.json`` and
+    ``best.json`` are enough to reproduce or re-render a run).
     """
     loaded = load_config(config_path)
     description = loaded.problem.describe()
@@ -112,7 +117,8 @@ def simulate(
     engine = Engine(loaded.problem, loaded.engine_config, loaded.rng)
     result = engine.run(on_generation=on_generation)
 
-    _write_history(result.history, out_dir)
+    if loaded.write_history:
+        _write_history(result.history, out_dir)
     _write_summary(result, loaded.raw, description, loaded.seed, out_dir)
     _write_best(result, out_dir)
     save_figures_json(

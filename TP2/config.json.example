@@ -1,6 +1,7 @@
 {
   "seed": 42,
   "import": "",
+  "write_history": true,
   "engine": {
     "n": 100,
     "k": 100,
