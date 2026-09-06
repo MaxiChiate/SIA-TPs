@@ -55,7 +55,7 @@ analysis/               # runner de experimentos + gráficos — capa por encima
   records.py            # esquema de summary.csv (1 fila/corrida) e history.csv (1 fila/generación)
   main.py               # CLI: corre una tanda
   plots_*.py            # CLI + datos + estilo de los tres gráficos
-  sweep.json            # serie A de ejemplo: los 7 métodos de selección
+  serie_*.json          # una receta por serie (selección, cruza, mutación, ...)
 build.py                # CLI: compila rust/ y verifica el binario resultante
 simulate.py             # CLI: corre el AG, escribe solo datos (no dibuja)
 render_final.py         # CLI: final.png desde un directorio de resultados
@@ -155,7 +155,7 @@ comandos (`analysis/main.py` y después `analysis/plots_main.py`). No hace falta
 más para las series que faltan — los tres gráficos salen solos de cualquier tanda.
 
 1. **Correr las series que faltan.** Hecha: la **serie A** (los 7 métodos de selección),
-   `analysis/sweep.json`. Faltan cruza (4), mutación (4) + barrido de `pm`, supervivencia (2),
+   `analysis/serie_seleccion.json`. Faltan cruza (4), mutación (4) + barrido de `pm`, supervivencia (2),
    tamaño de población y cantidad de triángulos. Regla: **una perilla por vez**, todo lo demás
    fijo, varias seeds, y `max_generations` fijo sin corte por fitness para que todas las
    corridas hagan el mismo trabajo. El atajo `sweep` del config alcanza para casi todas.
@@ -186,7 +186,7 @@ respuesta lista para la defensa.
   dependen de las *diferencias absolutas* de fitness— quedan casi uniformes (confirmado por la
   serie A). O se reescala el fitness (sigma scaling / normalización por generación), o se
   ajustan las temperaturas por defecto de Boltzmann (`t0=20, tmin=1` no sirven para este rango;
-  `analysis/sweep.json` usa `t0=0.5, tmin=0.02`).
+  `analysis/serie_seleccion.json` usa `t0=0.5, tmin=0.02`).
 - **La función de fitness no es elegible por config.** Hay una sola, cableada en
   `problems/triangles/fitness.py`, y `problem.py` la llama directo. Para poder experimentar
   sobre ella (MAE vs MSE, reescalado, comparación por bloques de píxeles) hay que resolverla

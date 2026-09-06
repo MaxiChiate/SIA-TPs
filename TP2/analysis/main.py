@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """CLI for the experiment runner.
 
-    python3 analysis/main.py                     # uses analysis/sweep.json
-    python3 analysis/main.py serie_a.json
-    python3 analysis/main.py serie_a.json --workers 8
-    python3 analysis/main.py serie_a.json --dry-run   # show the plan, run nothing
+    python3 analysis/main.py                     # uses analysis/serie_seleccion.json
+    python3 analysis/main.py analysis/serie_cruza.json
+    python3 analysis/main.py analysis/serie_cruza.json --workers 8
+    python3 analysis/main.py analysis/serie_cruza.json --dry-run  # plan only
 
 Writes ``summary.csv`` (one row per run) and ``history.csv`` (one row per
 generation) into ``<output_dir>/<sweep_id>/``, flushing as it goes so a batch
@@ -39,7 +39,7 @@ from analysis.runner import (  # noqa: E402
     write_resolved_configs,
 )
 
-DEFAULT_SWEEP = PROJECT_ROOT / "analysis" / "sweep.json"
+DEFAULT_SWEEP = PROJECT_ROOT / "analysis" / "serie_seleccion.json"
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:

@@ -1,4 +1,4 @@
-"""Parse and validate ``analysis/sweep.json``, the experiment runner's config.
+"""Parse and validate a sweep config (``analysis/serie_*.json``) for the runner.
 
 A sweep config describes a *batch* of runs: one base ``config.json``, a set of
 variants that each override some of its keys, and the seeds to repeat every

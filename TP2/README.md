@@ -44,11 +44,11 @@ problems/
 rust/                     crate PyO3 obligatorio: rasteriza + decodifica color + puntúa
                           (ver "El backend nativo" más abajo; sin esto no corre nada)
 analysis/                 runner de experimentos (corre muchas configs y compara)
-  main.py                  CLI: python3 analysis/main.py [sweep.json]
+  main.py                  CLI: python3 analysis/main.py [serie.json]
   config.py                 SweepConfig + overrides por ruta con puntos
   runner.py                  orquestador paralelo (un proceso por corrida)
   records.py                  esquema de summary.csv e history.csv
-  sweep.json                   serie A de ejemplo: los 7 métodos de selección
+  serie_*.json                 una receta por serie (selección, cruza, mutación, …)
   plots_data.py                 carga de los CSVs y promedio por seed
   plots_style.py                 paleta validada + layout base
   plots_main.py                   CLI de los gráficos
@@ -652,12 +652,12 @@ métricas. Tres archivos (`test_renderers.py`, `test_problem.py`,
 muchas y juntar los resultados, y de eso se encarga `analysis/`:
 
 ```bash
-python3 analysis/main.py                    # usa analysis/sweep.json
+python3 analysis/main.py                    # usa analysis/serie_seleccion.json
 python3 analysis/main.py serie_cruza.json
 python3 analysis/main.py --dry-run          # valida y muestra el plan, sin correr
 ```
 
-El `analysis/sweep.json` que viene es la **serie A**: los 7 métodos de selección,
+El `analysis/serie_seleccion.json` que viene es la **serie A**: los 7 métodos de selección,
 3 seeds cada uno, todo lo demás fijo. Un sweep declara una config base, qué
 pisarle, y con qué seeds repetir:
 
@@ -679,7 +679,7 @@ pisarle, y con qué seeds repetir:
   `operators.mutation.params`). Si la ruta no existe, falla al cargar.
 - **`sweep`**: atajo para variar **una** perilla; genera una variante por valor.
 - **`variants`**: la forma general, para cuando una variante necesita cambiar
-  varias claves a la vez (ver `analysis/sweep.json`). Va `sweep` **o**
+  varias claves a la vez (ver `analysis/serie_seleccion.json`). Va `sweep` **o**
   `variants`, no los dos.
 - **`seeds`**: cada variante corre una vez por seed. Con una sola seed no podés
   distinguir una diferencia real del azar.
