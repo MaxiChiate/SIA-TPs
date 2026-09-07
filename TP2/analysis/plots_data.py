@@ -169,6 +169,7 @@ class Band:
             [self.mean[i] - self.low[i] for i in indices],
         )
 
+
 ValueSpec = str | Callable[[dict], float | None]
 
 
@@ -287,6 +288,21 @@ def _flatten(config: dict, prefix: str, out: dict[str, Any]) -> None:
             out[path] = tuple(value) if isinstance(value, list) else value
 
 
+def _resolved(directory: Path) -> dict:
+    """``resolved.json`` as a dict, or ``{}`` when it is missing or unreadable.
+
+    A sweep predating ``resolved.json`` simply loses the caption and the knob
+    name; nothing that reads this treats an empty payload as an error.
+    """
+    path = directory / "resolved.json"
+    if not path.is_file():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
 def fixed_config(directory: Path) -> dict[str, Any]:
     """The settings every variant of the sweep shared, from ``resolved.json``.
 
@@ -298,14 +314,7 @@ def fixed_config(directory: Path) -> dict[str, Any]:
     Returns ``{}`` for a sweep predating ``resolved.json``; the caption is then
     simply omitted.
     """
-    path = directory / "resolved.json"
-    if not path.is_file():
-        return {}
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-
+    payload = _resolved(directory)
     flattened = []
     for config in payload.get("variants", {}).values():
         out: dict[str, Any] = {}
@@ -323,6 +332,102 @@ def fixed_config(directory: Path) -> dict[str, Any]:
 
 
 _MISSING = object()
+
+
+# What to show in the "held fixed" caption, in reading order, split into the two
+# lines it is rendered as. Anything the sweep varied never reaches here: it
+# differs between variants, so ``fixed_config`` already dropped it.
+_ENGINE_FIELDS = (
+    ("engine.n", "N"),
+    ("engine.k", "K"),
+    ("engine.pc", "Pc"),
+    ("engine.pm", "Pm"),
+    ("engine.max_generations", "generaciones"),
+    ("operators.parent_selection.name", "selección"),
+    ("operators.crossover.name", "cruza"),
+    ("operators.mutation.name", "mutación"),
+    ("operators.survival.name", "supervivencia"),
+)
+_PROBLEM_FIELDS = (
+    ("problem.params.image_path", "imagen"),
+    ("problem.params.triangle_count", "triángulos"),
+    ("problem.params.work_resolution", "resolución"),
+)
+
+# What the sweep varied -> how to name it in a title, in precedence order. A
+# recipe can move a second knob to keep the comparison fair (serie_mutacion sets
+# engine.pm=1.0 so 'gene' mutates one allele like the others), and the title has
+# to name the operator under test, not the compensation. Operators first for
+# exactly that reason. Falls back to the raw dotted path, so an unmapped knob
+# gives an ugly title rather than a wrong one.
+KNOB_NAMES = {
+    "operators.parent_selection.name": "método de selección",
+    "operators.crossover.name": "método de cruza",
+    "operators.mutation.name": "método de mutación",
+    "operators.survival.name": "estrategia de supervivencia",
+    "engine.n": "tamaño de población",
+    "engine.k": "cantidad de hijos",
+    "engine.pc": "probabilidad de cruza",
+    "engine.pm": "probabilidad de mutación",
+    "problem.params.triangle_count": "cantidad de triángulos",
+    "problem.params.color_space": "espacio de color",
+}
+
+
+def _format_value(key: str, value) -> str:
+    if key == "problem.params.work_resolution" and isinstance(value, tuple):
+        return "×".join(str(part) for part in value)
+    if key == "problem.params.image_path":
+        return Path(str(value)).name
+    return str(value)
+
+
+def fixed_captions(fixed: dict) -> list[str]:
+    """Two caption lines naming what was held constant across every run."""
+    lines = []
+    for label, fields in (("Fijo", _ENGINE_FIELDS), ("Problema", _PROBLEM_FIELDS)):
+        parts = [
+            f"{name} {_format_value(key, fixed[key])}"
+            for key, name in fields
+            if key in fixed
+        ]
+        if parts:
+            lines.append(f"{label}: " + " · ".join(parts))
+    return lines
+
+
+def varied_paths(directory: Path) -> list[str]:
+    """The config paths that differ between this sweep's variants.
+
+    The mirror image of ``fixed_config``: whatever is *not* shared by every
+    resolved variant is, by construction, what the sweep varied. Read from what
+    actually ran, so a title cannot drift from the experiment it describes.
+    """
+    payload = _resolved(directory)
+    flattened = []
+    for config in payload.get("variants", {}).values():
+        out: dict[str, Any] = {}
+        _flatten(config, "", out)
+        flattened.append(out)
+    if len(flattened) < 2:
+        return []
+
+    first, *rest = flattened
+    # 'seed' is listed in a resolved config but is a per-run value, not
+    # something the sweep varied between variants.
+    return [
+        key for key, value in first.items()
+        if key != "seed" and any(other.get(key) != value for other in rest)
+    ]
+
+
+def varied_knob(directory: Path) -> str:
+    """Name of what this sweep changed, for the chart titles."""
+    varied = varied_paths(directory)
+    for key, name in KNOB_NAMES.items():
+        if key in varied:
+            return name
+    return varied[0] if varied else "variante"
 
 
 def final_values(data: SweepData, column: str) -> dict[str, list[float]]:
