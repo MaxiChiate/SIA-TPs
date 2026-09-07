@@ -15,6 +15,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 
+import plotly.graph_objects as go
+
 # Categorical slots, in fixed order. Colour follows the variant, not its rank.
 _SERIES = (
     "#2a78d6",  # blue
@@ -50,15 +52,49 @@ def palette_for(variants: tuple[str, ...] | list[str]) -> dict[str, str]:
 
 
 def translucent(color: str, alpha: float) -> str:
-    """``"#2a78d6"`` -> ``"rgba(42,120,214,0.13)"``, for a series' spread band.
+    """``"#2a78d6"`` -> ``"rgba(42,120,214,0.13)"``, a faded fill of a series' colour.
 
-    The band has to carry the series' own colour so it reads as belonging to
-    that line, but faint enough that seven overlapping bands still let every
-    mean line through.
+    A fill has to carry its series' own colour so it reads as belonging to that
+    series, but stay faint enough that whatever sits on top of it - a box's
+    outline, a dot's ring, a bar's edge - is still the part being read.
     """
     hex_digits = color.lstrip("#")
     red, green, blue = (int(hex_digits[i : i + 2], 16) for i in (0, 2, 4))
     return f"rgba({red},{green},{blue},{alpha})"
+
+
+# How many points of each curve carry an error bar. Ten reads as a sample of the
+# spread along the whole run without turning a 150-generation line into a fence.
+ERROR_MARKS = 10
+
+
+def add_error_bars(
+    figure: go.Figure,
+    marks: tuple[list[float], list[float], list[float], list[float]],
+    color: str,
+) -> None:
+    """Mark a curve's spread across seeds at the points ``marks`` samples.
+
+    Takes the four arrays (``x, y, up, down``) rather than the ``Band`` they come
+    from, so this module stays what it says it is - palette and drawing - and
+    does not grow a dependency on the shaping layer.
+
+    Hidden from the legend and from hover: the bars annotate their own line, and
+    seven variants x an extra hover entry would drown the unified tooltip. Add
+    them after the lines so the caps sit on top rather than under.
+    """
+    x, y, up, down = marks
+    figure.add_trace(
+        go.Scatter(
+            x=x, y=y, mode="markers",
+            marker={"color": color, "size": 5},
+            error_y={
+                "type": "data", "symmetric": False, "array": up, "arrayminus": down,
+                "color": color, "thickness": 1.2, "width": 4,
+            },
+            showlegend=False, hoverinfo="skip",
+        )
+    )
 
 
 def base_layout(

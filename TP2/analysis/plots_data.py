@@ -136,6 +136,39 @@ class Band:
         """Widest gap between the extreme seeds, over the whole curve."""
         return max((h - l for l, h in zip(self.low, self.high)), default=0.0)
 
+    def error_marks(
+        self, count: int, phase: float = 0.0
+    ) -> tuple[list[float], list[float], list[float], list[float]]:
+        """``count`` evenly spaced points of the curve as ``(x, y, up, down)``.
+
+        An error bar per generation would be 150 bars per variant - solid ink
+        that hides the very line it annotates - so the spread is marked at a
+        handful of points and read as a sample of it.
+
+        ``phase`` (in [0, 1)) shifts *which* points a variant samples, so several
+        curves put their bars at different x instead of stacking them into an
+        unreadable column. Shifting the sample beats nudging the bars sideways:
+        a bar drawn off its own x is a bar drawn at a value the run never had.
+
+        Up/down are distances from the mean, which is the form plotly's
+        asymmetric ``error_y`` takes, and they preserve the full min-max range -
+        the same quantity the curve's spread has always carried.
+        """
+        total = len(self.x)
+        if total == 0 or count <= 0:
+            return [], [], [], []
+        step = total / min(count, total)
+        indices = sorted({
+            min(total - 1, int(step * (position + phase)))
+            for position in range(min(count, total))
+        } | {total - 1})
+        return (
+            [self.x[i] for i in indices],
+            [self.mean[i] for i in indices],
+            [self.high[i] - self.mean[i] for i in indices],
+            [self.mean[i] - self.low[i] for i in indices],
+        )
+
 ValueSpec = str | Callable[[dict], float | None]
 
 
