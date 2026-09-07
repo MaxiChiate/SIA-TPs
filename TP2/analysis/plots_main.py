@@ -60,10 +60,16 @@ from analysis.plots_data import (  # noqa: E402
     latest_sweep,
     load_rows,
     load_sweep,
+    sweep_catalog,
     varied_knob,
     varied_paths,
 )
-from analysis.plots_index import Chart, IndexPage, write_index  # noqa: E402
+from analysis.plots_index import (  # noqa: E402
+    Chart,
+    IndexPage,
+    catalog_page,
+    write_index,
+)
 from analysis.plots_style import (  # noqa: E402
     ERROR_MARKS,
     TEXT_SECONDARY,
@@ -419,16 +425,18 @@ def _meta_rows(data: SweepData, directory: Path, knob: str, captions: list[str])
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="analysis/plots_main.py",
-        description="Draw every chart of one sweep from its CSVs, plus the index.html "
-                    "that links them.",
+        description="Draw every chart of every sweep, plus the landing page that "
+                    "links them all.",
     )
     parser.add_argument(
         "sweep", nargs="?", default=None,
-        help="sweep results directory (default: the most recent one)",
+        help="only redraw this sweep directory (default: every sweep under "
+             "analysis/results). The landing page is rewritten either way.",
     )
     parser.add_argument(
         "--out", default=None,
-        help="where to write the HTMLs (default: inside the sweep directory)",
+        help="root to write into (default: the results directory itself). Each "
+             "sweep gets its own subdirectory under it.",
     )
     parser.add_argument(
         "--x", dest="x_column", default="generation", choices=sorted(X_COLUMNS),
@@ -439,57 +447,61 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
              "Both versions end up in the same index.",
     )
     parser.add_argument(
+        "--force", action="store_true",
+        help="redraw sweeps whose charts are already newer than their CSVs",
+    )
+    parser.add_argument(
         "--abrir", action="store_true",
-        help="open the index in the browser when it is done",
+        help="open the landing page in the browser when it is done",
     )
     return parser.parse_args(argv[1:])
 
 
-def main(argv: list[str]) -> int:
-    args = _parse_args(argv)
-    try:
-        directory = Path(args.sweep) if args.sweep else latest_sweep(DEFAULT_RESULTS)
-        data = load_sweep(directory)
-    except SweepDataError as err:
-        print(f"error: {err}", file=sys.stderr)
-        return 1
+def is_up_to_date(directory: Path, out_dir: Path) -> bool:
+    """Whether ``out_dir`` already holds charts newer than the sweep's CSVs.
 
+    Redrawing every sweep on every invocation is the price of one command that
+    covers them all, and most of that work is rewriting charts whose data has
+    not moved - each one embeds ~3 MB of plotly.js. Comparing mtimes keeps the
+    common case (one new sweep, six unchanged) fast without asking the caller to
+    remember which is which; --force is the override.
+    """
+    index = out_dir / "index.html"
+    if not index.is_file():
+        return False
+    newest_input = max(
+        (path.stat().st_mtime for name in ("summary.csv", "history.csv", "resolved.json")
+         if (path := directory / name).is_file()),
+        default=0.0,
+    )
+    return index.stat().st_mtime >= newest_input
+
+
+def render_sweep(directory: Path, out_dir: Path, x_column: str) -> tuple[int, str]:
+    """Draw one sweep's charts and its index. Returns ``(chart count, knob)``."""
+    data = load_sweep(directory)
     fixed = fixed_config(directory)
     captions = fixed_captions(fixed)
     knob = varied_knob(directory)
     is_survival = "operators.survival.name" in varied_paths(directory)
-    out_dir = Path(args.out) if args.out else directory
 
-    print(f"sweep:     {directory}")
-    print(f"varía:     {knob}")
-    print(f"variantes: {', '.join(data.variants)}")
-    print(f"seeds:     {', '.join(str(seed) for seed in data.seeds)}")
-    for caption in captions:
-        print(f"  {caption}")
+    # Generations always, plus the requested axis when it is a different one:
+    # writing only the alternate would leave the default-axis charts on disk but
+    # unlinked from the index that is supposed to front them.
+    charts = trajectory_charts(data, captions, "generation")
+    if x_column != "generation":
+        charts += trajectory_charts(data, captions, x_column)
 
-    try:
-        # Generations always, plus the requested axis when it is a different
-        # one: writing only the alternate would leave the default-axis charts on
-        # disk but unlinked from the index that is supposed to front them.
-        charts = trajectory_charts(data, captions, "generation")
-        if args.x_column != "generation":
-            charts += trajectory_charts(data, captions, args.x_column)
-        # A single-variant sweep has a trajectory but nothing to compare, so the
-        # comparison half is skipped instead of failing the whole run.
-        if len(data.variants) > 1:
-            charts += comparison_charts(data, captions, knob, is_survival)
-            tables = summary_tables(data, is_survival)
-        else:
-            print("\naviso: una sola variante, se omite la comparación entre variantes")
-            tables = []
-    except (SweepDataError, ComparisonError) as err:
-        print(f"error: {err}", file=sys.stderr)
-        return 1
+    # A single-variant sweep has a trajectory but nothing to compare, so the
+    # comparison half is skipped instead of failing the whole run.
+    if len(data.variants) > 1:
+        charts += comparison_charts(data, captions, knob, is_survival)
+        tables = summary_tables(data, is_survival)
+    else:
+        tables = []
 
-    print()
     for chart, figure in charts:
-        write_html(figure, out_dir / chart.filename)
-        print(f"  {chart.filename}")
+        write_html(figure, out_dir / chart.href)
 
     page = IndexPage(
         heading=f"TP2 · {knob}",
@@ -503,14 +515,44 @@ def main(argv: list[str]) -> int:
         meta_rows=_meta_rows(data, directory, knob, captions),
         tables=tables,
     )
-    index = write_index(out_dir / "index.html", page, [chart for chart, _ in charts])
-    print(f"\níndice:   {index}")
+    write_index(out_dir / "index.html", page, [chart for chart, _ in charts])
+    return len(charts), knob
 
-    if tables:
-        print_tables(tables)
+
+def main(argv: list[str]) -> int:
+    args = _parse_args(argv)
+    root = Path(args.out) if args.out else DEFAULT_RESULTS
+
+    if args.sweep:
+        targets = [Path(args.sweep)]
+    else:
+        targets = [summary.directory for summary in sweep_catalog(DEFAULT_RESULTS)]
+        if not targets:
+            print(f"error: no sweep under {DEFAULT_RESULTS} - run analysis/main.py first",
+                  file=sys.stderr)
+            return 1
+
+    failures = 0
+    for directory in targets:
+        out_dir = root / directory.name if args.out else directory
+        if not args.force and is_up_to_date(directory, out_dir):
+            print(f"  {directory.name}  al día, se saltea")
+            continue
+        try:
+            count, knob = render_sweep(directory, out_dir, args.x_column)
+        except (SweepDataError, ComparisonError) as err:
+            # One unusable sweep must not cost the landing page or the other six.
+            print(f"  {directory.name}  error: {err}", file=sys.stderr)
+            failures += 1
+            continue
+        print(f"  {directory.name}  {knob} — {count} gráficos")
+
+    page, entries = catalog_page(sweep_catalog(DEFAULT_RESULTS))
+    landing = write_index(root / "index.html", page, entries)
+    print(f"\nlanding: {landing}")
     if args.abrir:
-        webbrowser.open(index.as_uri())
-    return 0
+        webbrowser.open(landing.as_uri())
+    return 1 if failures and failures == len(targets) else 0
 
 
 if __name__ == "__main__":
