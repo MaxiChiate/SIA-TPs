@@ -439,6 +439,60 @@ def varied_knob(directory: Path) -> str:
     return varied[0] if varied else "variante"
 
 
+@dataclass(frozen=True, slots=True)
+class SweepSummary:
+    """One sweep as the catalog page lists it, without loading its history."""
+
+    directory: Path
+    title: str
+    variants: tuple[str, ...]
+    seeds: int
+    runs: int
+    failed: int
+    started: str
+    has_charts: bool
+
+
+def sweep_catalog(root: Path) -> list[SweepSummary]:
+    """Every sweep under ``root``, newest first.
+
+    Reads only ``summary.csv`` and ``resolved.json`` - a catalog that had to
+    parse every history would get slower with every batch, and none of what it
+    shows comes from there. A directory whose summary is unreadable is skipped
+    rather than failing the listing: half a results folder is still worth a page.
+    """
+    if not root.is_dir():
+        return []
+
+    out = []
+    # Sweep ids are UTC timestamps, so lexicographic order is chronological.
+    for directory in sorted(root.iterdir(), reverse=True):
+        if not (directory / "summary.csv").is_file():
+            continue
+        try:
+            rows = load_rows(directory / "summary.csv")
+        except SweepDataError:
+            continue
+        if not rows:
+            continue
+        variants: list[str] = []
+        for row in rows:
+            if row["variant"] not in variants:
+                variants.append(row["variant"])
+        started = sorted(r["started_at_utc"] for r in rows if r.get("started_at_utc"))
+        out.append(SweepSummary(
+            directory=directory,
+            title=varied_knob(directory),
+            variants=tuple(variants),
+            seeds=len({row["seed"] for row in rows}),
+            runs=len(rows),
+            failed=sum(1 for row in rows if row.get("status") != "ok"),
+            started=started[0] if started else "",
+            has_charts=(directory / "index.html").is_file(),
+        ))
+    return out
+
+
 def final_values(data: SweepData, column: str) -> dict[str, list[float]]:
     """Per variant, one value per seed - the raw points behind the comparison."""
     values: dict[str, list[float]] = {variant: [] for variant in data.variants}
