@@ -750,21 +750,35 @@ serie interrumpida igual deja datos usables.
 
 ## Gráficos
 
-Los CSVs de una serie se dibujan con **un solo comando**, que genera todos los
-gráficos y el `index.html` que los enlaza:
+**Un solo comando** dibuja todas las series y arma las páginas para navegarlas:
 
 ```bash
-python3 analysis/plots_main.py                                  # la serie más reciente
-python3 analysis/plots_main.py analysis/results/20260907T193328Z # una en particular
-python3 analysis/plots_main.py --abrir                          # y lo abre en el navegador
+python3 analysis/plots_main.py --abrir                          # todas las series, y abre la landing
+python3 analysis/plots_main.py                                  # ídem, sin abrir nada
+python3 analysis/plots_main.py analysis/results/20260907T193328Z # solo esa (la landing se rearma igual)
+python3 analysis/plots_main.py --force                          # redibuja incluso lo que está al día
 ```
 
-El punto de entrada es el índice: los gráficos de una serie se leen juntos —la
-trayectoria cuenta qué pasó, la comparación dice si eso es un resultado— y
-partirlos en dos comandos solo invita a presentar la mitad. `index.html` lista
-cada gráfico con la pregunta que contesta, repite las tablas de números que el
-script imprime por stdout, y cierra con la configuración que **efectivamente**
-corrió (leída de `summary.csv` y `resolved.json`, no escrita a mano).
+Deja dos niveles de navegación:
+
+- **`analysis/results/index.html`** — la landing. Una fila por serie: qué perilla
+  mueve, sus variantes, cuántas seeds y corridas, cuándo se corrió. Sin esto la
+  carpeta de resultados es una pila de timestamps UTC y saber cuál tiene la serie
+  de cruza es abrirlas hasta que una coincida.
+- **`<serie>/index.html`** — el índice de esa serie. Lista cada gráfico con la
+  pregunta que contesta, repite las tablas de números que el script imprime por
+  stdout, y cierra con la configuración que **efectivamente** corrió (leída de
+  `summary.csv` y `resolved.json`, no escrita a mano).
+
+Los gráficos de una serie se leen juntos —la trayectoria cuenta qué pasó, la
+comparación dice si eso es un resultado— y partirlos en dos comandos solo invita
+a presentar la mitad. Por eso es un comando y no varios.
+
+Redibujar las siete series en cada invocación sería sobre todo reescribir
+gráficos cuyos datos no se movieron, y cada uno lleva ~3 MB de plotly embebido:
+una serie se saltea si su `index.html` es más nuevo que sus CSVs. `--force`
+ignora ese chequeo. Si una serie está rota, se reporta y se sigue con las otras
+— una serie inservible no se lleva puesta a la landing ni a las demás.
 
 Todos los HTML son autocontenidos: llevan plotly embebido y abren sin internet.
 
