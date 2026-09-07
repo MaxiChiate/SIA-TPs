@@ -16,7 +16,7 @@ import json
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 # Columns whose values are numeric; everything else stays a string.
 _INT_COLUMNS = frozenset({"seed", "generation", "cumulative_evaluations", "evaluations",
@@ -105,31 +105,143 @@ def load_sweep(directory: Path) -> SweepData:
     )
 
 
+# What a curve can be plotted against. Generation is the default and is right
+# whenever every variant pays the same per generation; the other two exist for
+# the sweeps where it does not (population size and shape count change the cost
+# of a generation, so equal generations is not equal work).
+X_COLUMNS: dict[str, str] = {
+    "generation": "Generación",
+    "cumulative_evaluations": "Evaluaciones acumuladas",
+    "cumulative_seconds": "Segundos acumulados",
+}
+
+
+@dataclass(frozen=True, slots=True)
+class Band:
+    """One variant's curve: the mean over seeds, plus the spread around it.
+
+    ``low``/``high`` are the full min-max range across seeds, not a standard
+    deviation. With ten runs the question a reader asks is "could these two
+    variants have swapped places on a different seed", and the full range
+    answers exactly that; a 1-sigma ribbon hides the tails that decide it.
+    """
+
+    x: list[float]
+    mean: list[float]
+    low: list[float]
+    high: list[float]
+
+    @property
+    def spread(self) -> float:
+        """Widest gap between the extreme seeds, over the whole curve."""
+        return max((h - l for l, h in zip(self.low, self.high)), default=0.0)
+
+ValueSpec = str | Callable[[dict], float | None]
+
+
+def _value_of(row: dict, value: ValueSpec) -> float | None:
+    return row.get(value) if isinstance(value, str) else value(row)
+
+
+def _series_by_seed(
+    data: SweepData, value: ValueSpec, x_column: str
+) -> dict[str, dict[int, dict[int, tuple[float, float]]]]:
+    """``variant -> seed -> generation -> (x, y)``, dropping unusable rows."""
+    out: dict[str, dict[int, dict[int, tuple[float, float]]]] = defaultdict(
+        lambda: defaultdict(dict)
+    )
+    for row in data.history:
+        y = _value_of(row, value)
+        x = row.get(x_column)
+        if y is None or x is None:
+            continue
+        out[row["variant"]][row["seed"]][row["generation"]] = (float(x), float(y))
+    return out
+
+
+def curve_bands(
+    data: SweepData,
+    value: ValueSpec,
+    x_column: str = "generation",
+    running_max: bool = False,
+) -> dict[str, Band]:
+    """Per variant, the seed-averaged curve of ``value`` with its seed spread.
+
+    ``value`` is a history column, or a callable on a row for a derived
+    quantity (the selective-pressure chart passes ``best - mean``).
+
+    ``running_max`` accumulates the maximum **per seed, before averaging**.
+    That order matters: the cumulative maximum of an average is not the average
+    of the cumulative maxima, and only the latter is "what a run had achieved
+    by generation g", averaged. It is what makes the curve comparable across
+    survival strategies - under ``exclusive`` (mu,lambda) the generation's best
+    can fall, so the raw column and this one are genuinely different questions.
+
+    Generations reached by only some seeds still aggregate over whichever seeds
+    got there, so a curve never breaks; the spread simply narrows.
+    """
+    if x_column not in X_COLUMNS:
+        raise SweepDataError(
+            f"unknown x column {x_column!r}; expected one of {sorted(X_COLUMNS)}"
+        )
+    by_seed = _series_by_seed(data, value, x_column)
+
+    bands: dict[str, Band] = {}
+    for variant in data.variants:
+        seeds = by_seed.get(variant)
+        if not seeds:
+            continue
+
+        # Per seed: walk its own generations in order, optionally accumulating.
+        prepared: dict[int, dict[int, tuple[float, float]]] = {}
+        for seed, points in seeds.items():
+            best_so_far = float("-inf")
+            walked: dict[int, tuple[float, float]] = {}
+            for generation in sorted(points):
+                x, y = points[generation]
+                if running_max:
+                    best_so_far = max(best_so_far, y)
+                    y = best_so_far
+                walked[generation] = (x, y)
+            prepared[seed] = walked
+
+        generations = sorted({g for walked in prepared.values() for g in walked})
+        xs, means, lows, highs = [], [], [], []
+        for generation in generations:
+            found = [
+                walked[generation] for walked in prepared.values() if generation in walked
+            ]
+            ys = [y for _, y in found]
+            xs.append(sum(x for x, _ in found) / len(found))
+            means.append(sum(ys) / len(ys))
+            lows.append(min(ys))
+            highs.append(max(ys))
+        bands[variant] = Band(x=xs, mean=means, low=lows, high=highs)
+    return bands
+
+
+def best_minus_mean(row: dict) -> float | None:
+    """Selective pressure: how far the generation's best sits above its average.
+
+    A population that selection has collapsed onto one individual reads ~0
+    here; one that selection is barely ordering keeps a wide gap. It is the
+    quantity the parent-selection sweep is actually about, and it comes from
+    two columns the CSV already carries.
+    """
+    best, mean = row.get("best_fitness"), row.get("mean_fitness")
+    if best is None or mean is None:
+        return None
+    return best - mean
+
+
 def mean_curve(
     data: SweepData, column: str
-) -> dict[str, tuple[list[int], list[float]]]:
-    """Per variant, ``column`` averaged over seeds at each generation.
-
-    Generations present in only some seeds (a run that stopped early) still
-    average over whatever seeds reached them, so a curve never breaks.
-    """
-    buckets: dict[str, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
-    for row in data.history:
-        value = row.get(column)
-        if value is not None:
-            buckets[row["variant"]][row["generation"]].append(value)
-
-    curves: dict[str, tuple[list[int], list[float]]] = {}
-    for variant in data.variants:
-        by_generation = buckets.get(variant)
-        if not by_generation:
-            continue
-        generations = sorted(by_generation)
-        curves[variant] = (
-            generations,
-            [sum(by_generation[g]) / len(by_generation[g]) for g in generations],
-        )
-    return curves
+) -> dict[str, tuple[list[float], list[float]]]:
+    """Backwards-compatible view of ``curve_bands``: just the mean line."""
+    return {
+        variant: (band.x, band.mean)
+        for variant, band in curve_bands(data, column).items()
+    }
 
 
 def _flatten(config: dict, prefix: str, out: dict[str, Any]) -> None:

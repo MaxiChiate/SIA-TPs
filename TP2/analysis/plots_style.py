@@ -49,6 +49,18 @@ def palette_for(variants: tuple[str, ...] | list[str]) -> dict[str, str]:
     return {variant: _SERIES[index] for index, variant in enumerate(variants)}
 
 
+def translucent(color: str, alpha: float) -> str:
+    """``"#2a78d6"`` -> ``"rgba(42,120,214,0.13)"``, for a series' spread band.
+
+    The band has to carry the series' own colour so it reads as belonging to
+    that line, but faint enough that seven overlapping bands still let every
+    mean line through.
+    """
+    hex_digits = color.lstrip("#")
+    red, green, blue = (int(hex_digits[i : i + 2], 16) for i in (0, 2, 4))
+    return f"rgba({red},{green},{blue},{alpha})"
+
+
 def base_layout(
     title: str, subtitles: Sequence[str], x_title: str, y_title: str
 ) -> dict:
