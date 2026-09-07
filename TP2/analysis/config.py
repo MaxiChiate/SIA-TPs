@@ -23,6 +23,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "analysis" / "results"
 _TOP_LEVEL_KEYS = {
+    "title",
     "base_config",
     "seeds",
     "workers",
@@ -52,6 +53,12 @@ class SweepConfig:
     base_config: dict[str, Any]
     base_config_path: Path
     variants: tuple[Variant, ...]
+    # How the charts should name this series. Optional: the plots derive a name
+    # from whatever the variants differ in, which is right for a one-knob series
+    # and wrong for a grid - a recipe that moves two knobs on purpose has to say
+    # so itself, since nothing downstream can tell a deliberate second axis from
+    # a compensation held to keep the comparison fair.
+    title: str
     seeds: tuple[int, ...]
     workers: int
     output_dir: Path
@@ -252,7 +259,12 @@ def load_sweep_config(path: str | Path) -> SweepConfig:
         else _parse_variants(raw["variants"])
     )
 
+    title = raw.get("title", "")
+    if not isinstance(title, str):
+        raise SweepConfigError("'title' must be a string")
+
     sweep = SweepConfig(
+        title=title,
         base_config=base_config,
         base_config_path=base_config_path,
         variants=tuple(variants),

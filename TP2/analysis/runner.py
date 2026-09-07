@@ -211,6 +211,7 @@ def write_resolved_configs(sweep: SweepConfig, tasks: list[Task], out_dir: Path)
     """Dump what actually ran, so a batch can be reproduced from its own output."""
     payload = {
         "sweep_config": str(sweep.source_path),
+        "title": sweep.title,
         "base_config": str(sweep.base_config_path),
         "seeds": list(sweep.seeds),
         "variants": {

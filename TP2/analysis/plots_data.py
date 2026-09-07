@@ -371,6 +371,7 @@ KNOB_NAMES = {
     "engine.pm": "probabilidad de mutación",
     "problem.params.triangle_count": "cantidad de triángulos",
     "problem.params.color_space": "espacio de color",
+    "engine.max_generations": "presupuesto de generaciones",
 }
 
 
@@ -422,7 +423,15 @@ def varied_paths(directory: Path) -> list[str]:
 
 
 def varied_knob(directory: Path) -> str:
-    """Name of what this sweep changed, for the chart titles."""
+    """Name of what this sweep changed, for the chart titles.
+
+    A recipe's own ``title`` wins when it has one: deriving the name works for a
+    one-knob series but not for a grid, and nothing here can tell a deliberate
+    second axis from a knob moved to keep the comparison fair.
+    """
+    declared = _resolved(directory).get("title")
+    if isinstance(declared, str) and declared:
+        return declared
     varied = varied_paths(directory)
     for key, name in KNOB_NAMES.items():
         if key in varied:
