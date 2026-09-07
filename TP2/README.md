@@ -668,8 +668,31 @@ Hay una receta por serie en `analysis/`, y cada una mueve **una sola perilla**:
 | `serie_mutacion.json` | gene · multigene · uniform · non_uniform | 40 |
 | `serie_supervivencia.json` | additive · exclusive | 20 |
 | `serie_triangulos.json` | 10 · 50 · 200 · 500 triángulos | 40 |
+| `serie_generaciones.json` | 150 · 300 · 600 · 1200 · 2400 generaciones | 50 |
 | `serie_poblacion.json` | N = 30 · 100 · 300 | 30 |
 | `serie_color.json` | rgb · hsv · hcl | 30 |
+
+Con una excepción declarada, que mueve dos:
+
+| Receta | Qué varía | Corridas |
+|---|---|---|
+| `serie_triangulos_generaciones.json` | 10 · 50 · 200 · 500 triángulos **×** 150 · 1200 generaciones | 80 |
+
+Es la serie que hace honesta a `serie_triangulos.json`. Ahí las cuatro
+cantidades de triángulos se comparan a 150 generaciones para todas, y eso
+confunde *cuánta capacidad tiene el genotipo* con *cuánto presupuesto le dieron
+para usarla*: 500 triángulos son 5000 alelos, y a 150 generaciones todavía no
+terminaron de acomodarse — medido, dan **peor** que 10 triángulos. La pregunta
+que se puede contestar no es "cuántos triángulos conviene" sino "cuántos
+triángulos conviene **para este presupuesto**", y esa necesita las dos perillas
+en la misma grilla.
+
+Y `serie_generaciones.json` no es una sola corrida cortada en cinco lugares,
+aunque lo parezca: la mutación `non_uniform` recoce contra `max_generations`
+(`delta = span · (1 − g/G)^b`), así que **G no es solo cuándo parás, es la escala
+del recocido**. Con G=150 la mutación ya casi no perturba en la generación 100;
+con G=2400, en la generación 100 sigue explorando. Declarar más presupuesto
+cambia el comportamiento desde la generación 0.
 
 Una receta declara de qué config partir, qué pisarle y con qué seeds repetir:
 
@@ -693,6 +716,13 @@ Una receta declara de qué config partir, qué pisarle y con qué seeds repetir:
 - **`variants`**: la forma general, para cuando una variante necesita cambiar
   varias claves a la vez (ver `analysis/serie_seleccion.json`). Va `sweep` **o**
   `variants`, no los dos.
+- **`title`** (opcional): cómo nombran los gráficos a la serie. Sin él, el título
+  se deriva de lo que difiere entre las variantes, que es lo correcto para una
+  serie de una perilla y es incompleto para una grilla — nada río abajo puede
+  distinguir un segundo eje deliberado de una perilla movida para compensar (en
+  `serie_mutacion.json`, `engine.pm=1.0` está para que `gene` mute un alelo como
+  los demás, y el título correcto sigue siendo "método de mutación"). Una receta
+  que mueve dos perillas a propósito tiene que decirlo ella.
 - **`seeds`**: cada variante corre una vez por seed. Con una sola seed no podés
   distinguir una diferencia real del azar.
 - **`workers`**: corridas en paralelo. **Dejarlo en 1**: el kernel nativo ya
