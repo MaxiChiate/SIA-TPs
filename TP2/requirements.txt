@@ -1,0 +1,12 @@
+# The GA core (ga/) uses the standard library only.
+# These are for the image domain (problems/triangles/) and the test suite.
+# The scoring hot path itself lives in rust/, not in any of these: maturin
+# builds it, pillow only handles image I/O (loading the target, saving
+# exports/gifs).
+pillow
+numpy
+pytest
+maturin
+
+# Only for the sweep charts (analysis/plots_main.py); nothing else imports it.
+plotly>=5.18

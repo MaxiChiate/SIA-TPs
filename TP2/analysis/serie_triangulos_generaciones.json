@@ -1,0 +1,36 @@
+{
+  "_comment": "Grilla triangulos x presupuesto. Es la serie que hace honesta a serie_triangulos.json: ahi la cantidad de triangulos se compara a 150 generaciones fijas para todos, y eso confunde 'cuanta capacidad tiene el genotipo' con 'cuanto presupuesto le dieron para usarla'.",
+
+  "title": "cantidad de triángulos × presupuesto de generaciones",
+
+  "_comment_por_que_dos_perillas": [
+    "Rompe a proposito la regla de una perilla por vez, y por eso declara 'title': no es un descuido, es el punto de la serie.",
+    "Mas triangulos = genotipo mas grande (10 alelos por triangulo, 5000 alelos con 500) = mas espacio de busqueda que recorrer. Medido a 150 generaciones fijas, mas triangulos da PEOR (0.9197 con 10 contra 0.8312 con 500): a esa altura los 500 todavia no terminaron de acomodarse.",
+    "La pregunta real no es 'cuantos triangulos conviene' sino 'cuantos triangulos conviene PARA ESTE PRESUPUESTO', y esa solo se contesta con las dos perillas en la misma grilla.",
+    "Se espera que el orden se de vuelta: a 150 generaciones ganan los pocos triangulos, a 1200 ganan los muchos."
+  ],
+
+  "base_config": "config.json.example",
+
+  "overrides": {
+    "stopping": []
+  },
+
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+
+  "_comment_workers": "1: ademas de no contaminar elapsed_seconds, en esta serie el tiempo por corrida ES un resultado (500 triangulos cuesta ~12x que 10), asi que tiene que estar medido sin contencion.",
+  "workers": 1,
+
+  "_comment_ocho_variantes": "8 es exactamente el maximo que soporta la paleta validada de plots_style.py. Una tercera columna de presupuesto obliga a partir la serie.",
+
+  "variants": [
+    {"label": "10t·150g",  "set": {"problem.params.shape_count": 10,  "engine.max_generations": 150}},
+    {"label": "50t·150g",  "set": {"problem.params.shape_count": 50,  "engine.max_generations": 150}},
+    {"label": "200t·150g", "set": {"problem.params.shape_count": 200, "engine.max_generations": 150}},
+    {"label": "500t·150g", "set": {"problem.params.shape_count": 500, "engine.max_generations": 150}},
+    {"label": "10t·1200g",  "set": {"problem.params.shape_count": 10,  "engine.max_generations": 1200}},
+    {"label": "50t·1200g",  "set": {"problem.params.shape_count": 50,  "engine.max_generations": 1200}},
+    {"label": "200t·1200g", "set": {"problem.params.shape_count": 200, "engine.max_generations": 1200}},
+    {"label": "500t·1200g", "set": {"problem.params.shape_count": 500, "engine.max_generations": 1200}}
+  ]
+}

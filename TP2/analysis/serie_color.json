@@ -1,0 +1,21 @@
+{
+  "_comment": "Serie de espacio de color. La consigna NO la pide: es un extra que habilitaron los cambios de dev-ag (problem.params.color_space).",
+
+  "base_config": "config.json.example",
+
+  "overrides": {
+    "stopping": [],
+    "engine.max_generations": 150
+  },
+
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "workers": 1,
+
+  "_comment_que_cambia": "Los 3 numeros de color de cada triangulo son siempre los mismos alelos en [0,1]; lo que cambia es como se DECODIFICAN. rgb: cuanto rojo/verde/azul. hsv: tono/saturacion/brillo. hcl: parecido a hsv pero pensado para como percibe el ojo humano.",
+  "_comment_por_que_importa": "Cambia la geometria del espacio de busqueda: mutar un alelo mueve el color en una direccion distinta segun el espacio. En hsv/hcl un delta chico en el tono recorre colores muy distintos manteniendo el brillo; en rgb un delta chico en el rojo cambia poco el color pero siempre en el mismo eje.",
+
+  "sweep": {
+    "path": "problem.params.color_space",
+    "values": ["rgb", "hsv", "hcl"]
+  }
+}

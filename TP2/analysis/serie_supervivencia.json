@@ -1,0 +1,21 @@
+{
+  "_comment": "Serie de supervivencia: aditiva vs exclusiva. Responde el 'implementar ambas estrategias de supervivencia' de la consigna, con evidencia de que hacen cosas distintas.",
+
+  "base_config": "config.json.example",
+
+  "overrides": {
+    "stopping": [],
+    "engine.max_generations": 150
+  },
+
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "workers": 1,
+
+  "_comment_exclusive": "Anda porque el config base tiene k = n = 100: exclusive necesita al menos n hijos para reemplazar la poblacion entera, y con k < n el operador tira ValueError en vez de completar con (n-k) padres como define el PPT. Si se baja k, esta serie deja de correr.",
+  "_comment_esperado": "Aditiva = padres e hijos compiten, el mejor nunca se pierde -> mas presion. Exclusiva = los hijos entran si o si -> sostiene mas la diversidad pero puede perder al mejor. Mirar sobre todo diversity.html.",
+
+  "sweep": {
+    "path": "operators.survival.name",
+    "values": ["additive", "exclusive"]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "_comment": "Serie de cruza: los 4 metodos, todo lo demas fijo. Responde el 'decidir que metodo de cruza usarian en diferentes circunstancias y por que' de la consigna.",
+
+  "_comment_base": "Parte del ejemplo versionado y no de config.json (que es personal y esta gitignoreado), asi la tanda se puede reproducir desde el repo.",
+  "base_config": "config.json.example",
+
+  "_comment_overrides": "stopping vacio + max_generations fijo = todas las corridas hacen el mismo trabajo y son comparables.",
+  "overrides": {
+    "stopping": [],
+    "engine.max_generations": 150
+  },
+
+  "_comment_seeds": "10 seeds. Con 3 la dispersion entre seeds tapaba la diferencia entre metodos; con el kernel en Rust cada corrida cuesta ~10x menos, asi que ahora se puede pagar.",
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+
+  "_comment_workers": "1 a proposito: el kernel de Rust ya paraleliza cada generacion sobre todos los cores (problem.params.threads=0). Correr varias corridas a la vez ademas oversuscribe la CPU (8 logicos aca) y ensucia los tiempos.",
+  "workers": 1,
+
+  "sweep": {
+    "path": "operators.crossover.name",
+    "values": ["one_point", "two_point", "uniform", "ring"]
+  }
+}

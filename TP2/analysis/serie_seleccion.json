@@ -1,0 +1,70 @@
+{
+  "_comment": "Serie de seleccion: los 7 metodos de seleccion de padres. Es el sweep por defecto de analysis/main.py. Todo lo demas queda fijo.",
+
+  "base_config": "config.json.example",
+
+  "overrides": {
+    "stopping": [],
+    "engine.max_generations": 150
+  },
+
+  "_comment_seeds": "10 seeds. Con 3 la dispersion entre seeds era del mismo orden que la diferencia entre metodos y no se podia concluir nada.",
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+
+  "_comment_workers": "1: el kernel de Rust ya paraleliza cada generacion sobre todos los cores.",
+  "workers": 1,
+
+  "_comment_variants": "Cada variante trae sus propios params: boltzmann necesita temperaturas, los torneos su tamano/umbral. Elite, ruleta, universal y ranking no toman parametros.",
+  "variants": [
+    {
+      "label": "elite",
+      "set": {
+        "operators.parent_selection.name": "elite",
+        "operators.parent_selection.params": {}
+      }
+    },
+    {
+      "label": "roulette",
+      "set": {
+        "operators.parent_selection.name": "roulette",
+        "operators.parent_selection.params": {}
+      }
+    },
+    {
+      "label": "universal",
+      "set": {
+        "operators.parent_selection.name": "universal",
+        "operators.parent_selection.params": {}
+      }
+    },
+    {
+      "label": "ranking",
+      "set": {
+        "operators.parent_selection.name": "ranking",
+        "operators.parent_selection.params": {}
+      }
+    },
+    {
+      "label": "boltzmann",
+      "_comment": "t0/tmin: con el fitness nuevo (0 = un canvas en blanco) el rango util es mucho mas ancho que antes, asi que estas temperaturas son un punto de partida a revisar con los resultados en la mano.",
+      "set": {
+        "operators.parent_selection.name": "boltzmann",
+        "operators.parent_selection.params": {"t0": 0.5, "tmin": 0.02}
+      }
+    },
+    {
+      "label": "tournament_det",
+      "set": {
+        "operators.parent_selection.name": "tournament_deterministic",
+        "operators.parent_selection.params": {"tournament_size": 3}
+      }
+    },
+    {
+      "label": "tournament_prob",
+      "set": {
+        "operators.parent_selection.name": "tournament_probabilistic",
+        "operators.parent_selection.params": {"threshold": 0.75}
+      }
+    }
+  ]
+}

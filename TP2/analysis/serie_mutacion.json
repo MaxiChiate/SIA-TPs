@@ -1,0 +1,53 @@
+{
+  "_comment": "Serie de mutacion: los 4 operadores, igualados en cuantos ALELOS tocan por hijo. Responde el 'decidir que metodo de mutacion usarian y por que' de la consigna.",
+
+  "base_config": "config.json.example",
+
+  "overrides": {
+    "stopping": [],
+    "engine.max_generations": 150
+  },
+
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+
+  "_comment_workers": "1: el kernel de Rust ya usa todos los cores por corrida.",
+  "workers": 1,
+
+  "_comment_variants": [
+    "Usa 'variants' y no el atajo 'sweep' porque los 4 operadores no toman los mismos params, y sin igualarlos la serie mediria la TASA de mutacion en vez del operador.",
+    "mutations_per_child cuenta en la unidad en la que cada operador tira el dado: un locus para multigene y non_uniform, un BLOQUE (= 1 triangulo = 10 alelos) para uniform. Por eso uniform lleva 2.5 y no 25: 2.5 bloques x 10 alelos = 25 alelos, la misma dosis que los otros dos.",
+    "gene muta a lo sumo 1 locus por construccion, asi que no tiene nada que normalizar: lee pm y no mutations_per_child. Con engine.pm=1.0 muta exactamente 1 alelo por hijo. Queda como el piso de la comparacion, no como un igual.",
+    "Asi la serie compara el MECANISMO (reemplazar un alelo vs perturbarlo vs re-sortear un triangulo entero) y no cuanto perturba cada uno."
+  ],
+  "variants": [
+    {
+      "label": "multigene",
+      "set": {
+        "operators.mutation.name": "multigene",
+        "operators.mutation.params": {"mutations_per_child": 25}
+      }
+    },
+    {
+      "label": "uniform_bloque",
+      "set": {
+        "operators.mutation.name": "uniform",
+        "operators.mutation.params": {"mutations_per_child": 2.5}
+      }
+    },
+    {
+      "label": "non_uniform",
+      "set": {
+        "operators.mutation.name": "non_uniform",
+        "operators.mutation.params": {"b": 2.0, "mutations_per_child": 25}
+      }
+    },
+    {
+      "label": "gene_1_alelo",
+      "set": {
+        "operators.mutation.name": "gene",
+        "operators.mutation.params": {},
+        "engine.pm": 1.0
+      }
+    }
+  ]
+}
