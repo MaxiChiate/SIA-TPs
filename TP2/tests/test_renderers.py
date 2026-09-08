@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from problems.triangles import colorspace
+from problems.triangles.genotype import genes_per_shape
 
 native = pytest.importorskip(
     "triangles_native",
@@ -20,28 +21,36 @@ from problems.triangles.renderers import (  # noqa: E402  (after the skip guard)
 IMAGE = "images/argentina.png"
 WIDTH, HEIGHT = 32, 20
 BACKGROUND = (255, 255, 255)
-TRIANGLE_COUNT = 4
+SHAPE_COUNT = 4
+SHAPE_TYPES = ("triangle", "oval", "both")
+
+
+@pytest.fixture(params=SHAPE_TYPES)
+def shape_type(request) -> str:
+    return request.param
 
 
 @pytest.fixture
-def spec() -> RenderSpec:
+def spec(shape_type) -> RenderSpec:
     return RenderSpec.build(
-        IMAGE, WIDTH, HEIGHT, BACKGROUND, colorspace.RGB, triangle_count=TRIANGLE_COUNT
+        IMAGE, WIDTH, HEIGHT, BACKGROUND, colorspace.RGB, SHAPE_COUNT, shape_type
     )
 
 
-def _genome(seed: float) -> list[float]:
+def _genome(seed: float, shape_type: str = "triangle") -> list[float]:
     """One genome's worth of alleles, deterministic and inside [0, 1]."""
-    return [((seed * (i + 1)) % 1.0) for i in range(TRIANGLE_COUNT * 10)]
+    length = SHAPE_COUNT * genes_per_shape(shape_type)
+    return [((seed * (i + 1)) % 1.0) for i in range(length)]
 
 
-def _blank_genome() -> list[float]:
-    """Same triangle count, every alpha zeroed - the native rasterizer's
-    equivalent of "draw nothing". ``RenderSpec`` fixes the triangle count, so
+def _blank_genome(shape_type: str = "triangle") -> list[float]:
+    """Same shape count, every alpha zeroed - the native rasterizer's
+    equivalent of "draw nothing". ``RenderSpec`` fixes the shape count, so
     there is no way to hand it an empty list; a fully transparent population
     leaves the canvas unchanged instead."""
-    alleles = _genome(0.5)
-    for locus in range(9, len(alleles), 10):  # alpha is the 10th gene of each block
+    block = genes_per_shape(shape_type)
+    alleles = _genome(0.5, shape_type)
+    for locus in range(block - 1, len(alleles), block):  # alpha is always the last gene
         alleles[locus] = 0.0
     return alleles
 
@@ -54,11 +63,11 @@ def test_spec_holds_the_target_at_the_work_resolution(spec):
     assert len(spec.target_rgb) == WIDTH * HEIGHT * 3
 
 
-def test_closed_form_baseline_matches_rendering_nothing(spec):
+def test_closed_form_baseline_matches_rendering_nothing(spec, shape_type):
     """The fitness denominator must match what the renderer itself reports for
-    a fully transparent - i.e. invisible - population of triangles."""
+    a fully transparent - i.e. invisible - population of shapes."""
     renderer = RustRenderer(spec)
-    assert spec.baseline_mse == pytest.approx(renderer.mse(_blank_genome()))
+    assert spec.baseline_mse == pytest.approx(renderer.mse(_blank_genome(shape_type)))
 
 
 def test_baseline_never_reaches_zero_for_a_target_equal_to_the_background():
@@ -86,20 +95,26 @@ def test_a_stale_schema_version_is_rejected(spec, monkeypatch):
         RustRenderer(spec)
 
 
+def test_unknown_shape_type_is_rejected():
+    spec = RenderSpec.build(IMAGE, WIDTH, HEIGHT, BACKGROUND, colorspace.RGB, SHAPE_COUNT, "hexagon")
+    with pytest.raises(ValueError, match="shape_type"):
+        RustRenderer(spec)
+
+
 # -- scoring -----------------------------------------------------------------
 
 
-def test_batch_scoring_agrees_with_scoring_one_at_a_time(spec):
+def test_batch_scoring_agrees_with_scoring_one_at_a_time(spec, shape_type):
     renderer = RustRenderer(spec)
-    genomes = [_genome(0.11), _genome(0.37), _genome(0.83)]
+    genomes = [_genome(0.11, shape_type), _genome(0.37, shape_type), _genome(0.83, shape_type)]
     assert renderer.score_batch(genomes) == [renderer.score(g) for g in genomes]
 
 
-def test_mse_is_reported_unclamped(spec):
+def test_mse_is_reported_unclamped(spec, shape_type):
     """Fitness floors at 0 for anything worse than a blank canvas; the thread
     invariance tests need the raw error, which has no such floor."""
     renderer = RustRenderer(spec)
-    alleles = _genome(0.37)
+    alleles = _genome(0.37, shape_type)
     assert renderer.mse(alleles) > 0.0
     assert renderer.score(alleles) >= 0.0
 

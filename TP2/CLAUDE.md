@@ -68,10 +68,21 @@ requirements.txt        # pillow, numpy, pytest, maturin  (el core no los usa)
 
 ## Genotipo (problema triangles)
 
-Individuo = lista fija de `T` triángulos, cada uno 10 genes `x1,y1,x2,y2,x3,y3` + 3 canales
-de color + `A`. Genotipo plano de `10*T` alelos. **Todos los alelos normalizados a `[0,1]`**; el renderer
-escala a la resolución de trabajo (genotipo independiente de la resolución). El `GeneSchema`
-del problema declara `block_size = 10`.
+Individuo = lista fija de `T` figuras. `problem.params.shape_type` (default `"triangle"`)
+decide qué es cada figura y cuántos genes tiene su bloque — **todos los alelos normalizados a
+`[0,1]`** en los tres modos; el renderer escala a la resolución de trabajo (genotipo
+independiente de la resolución):
+
+| `shape_type` | `block_size` | Layout |
+|---|---|---|
+| `triangle` (default) | 10 | `x1,y1,x2,y2,x3,y3, c1,c2,c3, a` |
+| `oval` | 9 | `cx,cy,rx,ry,θ, c1,c2,c3, a` |
+| `both` | 11 | `kind, p0..p5, c1,c2,c3, a` |
+
+En `both`, `kind` es un gen discreto (0=triángulo, 1=óvalo) y `p0..p5` son 6 slots genéricos:
+si `kind=0` se leen como los 6 vértices del triángulo; si `kind=1`, los primeros 5 como
+`cx,cy,rx,ry,θ` (`p5` queda sin usar pero sigue mutando). El alpha es siempre el último gen
+del bloque, en los tres modos — ver la entrada de diseño más abajo.
 
 ## Decisiones de diseño tomadas
 
@@ -108,7 +119,7 @@ del problema declara `block_size = 10`.
 - **Tasa de mutación invariante al largo del genoma** (`mutations_per_child` en
   `operators.mutation.params`): `pm` es la probabilidad por tirada y todos los operadores salvo
   `gene` tiran una vez por locus, así que las mutaciones esperadas por hijo son
-  `pm × 10 × triangle_count` — subir los triángulos multiplicaba la mutación sin que se viera en
+  `pm × 10 × shape_count` en modo triángulo — subir los triángulos multiplicaba la mutación sin que se viera en
   el config. Medido (argentina, 1000 generaciones, RMSE @640×400): con `pm=0.05` fijo, 500
   triángulos daba **peor** que 50 (18,59 contra 16,69); fijando 25 mutaciones/hijo el orden se
   endereza y 500 pasa a ser el mejor (15,29). La normalización vive en `_rate()`
@@ -138,12 +149,45 @@ del problema declara `block_size = 10`.
   es CIE LCh(ab)/D65; lo que cae fuera del gamut sRGB se resuelve **bajando el croma** a tono
   y luminosidad constantes (bisección), no clampeando canales, para no aplanar el fitness en
   los tres ejes a la vez. Conversiones en float escalar sin numpy, portables a C tal cual.
+- **Óvalos y modo mixto** (`problem.params.shape_type`: `triangle` default, `oval`, `both`) —
+  el opcional del enunciado ("otros polígonos... u óvalos"). Bloque de tamaño fijo por modo en
+  vez de genoma de longitud variable: la cruza corta en múltiplos de `block_size` asumiendo que
+  ambos padres tienen el mismo largo (`ga/operators/crossover.py`), así que "cuántas figuras
+  hay" tenía que seguir siendo un número fijo por `Problem` — lo que varía es *qué es* cada
+  bloque, no cuántos hay. En `both` eso se resuelve con un gen discreto `kind` al principio del
+  bloque (0=triángulo, 1=óvalo) + 6 slots genéricos que el decoder interpreta distinto según
+  `kind` (padding de 1 slot cuando es óvalo, que sigue mutando aunque el decoder lo ignore).
+  Ningún operador nuevo: `kind` es un gen discreto más, y los operadores de mutación existentes
+  (`gene`, `multigene`, `uniform`, `non_uniform`) ya lo tratan como tal — qué proporción de
+  triángulos y óvalos termina teniendo el mejor individuo lo decide la mutación generación a
+  generación, no un ratio de config. `θ` se lee `[0,π)` y no `[0,2π)` porque una elipse es
+  igual a sí misma rotada 180° — usar el giro completo desperdiciaría la mitad del rango de
+  mutación en duplicados visuales; `rx`/`ry` escalan igual que cualquier coordenada
+  (`allele × ancho/alto`) en vez de tener un tope propio. El alpha se mantiene como el último
+  gen del bloque en los tres modos a propósito: es lo que deja que `initial_alpha` siga
+  ubicándolo por `schema.block_size - 1` sin saber qué hay en el resto del bloque. La
+  rasterización del óvalo en `rust/src/raster.rs` prueba pertenencia píxel a píxel dentro del
+  bounding box rotado en vez del span-por-fila en punto fijo que usa el triángulo: sigue el
+  mismo principio de "solo tocar el bounding box", pero sin el truco de resolver el span en
+  forma cerrada — ese ahorro no era el cuello de botella compartido (`score_batch` ya paraleliza
+  por individuo completo) y no valía la pena arriesgarlo sin poder correr `cargo test` al
+  escribirlo.
+
+- **`write_history` (config raíz, default `true`)**: si es `false`, `simulate()` no escribe
+  `history.csv`/`history.json`. Es una clave de nivel raíz, como `import`, y no
+  `engine.write_history` ni `problem.params`: no configura ni el motor ni el dominio, es una
+  decisión de qué escribe la etapa `simulate` — `_write_history` vuelca `dataclasses.asdict`
+  de cada `GenerationRecord` (`pipeline.py`), y con corridas largas o muchas generaciones ese
+  archivo crece linealmente y nada lo vuelve a leer (`summary.json` y `best.json` ya alcanzan
+  para reproducir o re-renderizar una corrida).
 
 ## Estado
 
-Los seis bloques están hechos: core, config+registry, operadores, plug-in `triangles`, tests
-(118 pasando) y la salida de métricas. El backend nativo de `rust/` reemplazó al camino
-Pillow del todo.
+Los seis bloques están hechos: core, config+registry, operadores, plug-in `triangles`
+(triángulos, óvalos y modo mixto), tests y la salida de métricas. El backend nativo de
+`rust/` reemplazó al camino Pillow del todo. `../.venv/bin/python -m pytest` da el conteo
+vigente — sin el backend nativo compilado, los casos que necesitan `triangles_native` se
+saltean en vez de fallar (ver "Cómo correr").
 
 Agregado en la rama `dev-ag-analisis`: **`analysis/`**, el runner de experimentos y sus
 gráficos. Es una capa estrictamente por encima de `run.py` — no toca `ga/` ni `problems/`.
@@ -246,20 +290,22 @@ selección/cruza/mutación/supervivencia + `Pc`/`Pm`/`max_generations`, un `Rng`
 individuo, generación en que apareció, criterio de corte, evaluaciones, tiempo, `history` de
 `GenerationRecord`).
 
-Tests: `../.venv/bin/python -m pytest` desde `TP2/` (118 casos, deterministas).
+Tests: `../.venv/bin/python -m pytest` desde `TP2/`, deterministas.
 Dependencias del dominio y tests: `../.venv/bin/pip install -r requirements.txt`.
 
 ## Importar un individuo inicial
 
 El config admite un campo opcional de nivel raíz `"import"`: la ruta a un
-`triangles.json` de un run previo (mismo `triangle_count`). Si se completa, ese
+`figures.json` de un run previo (mismo `shape_count`). Si se completa, ese
 individuo reemplaza a uno de los `n` individuos aleatorios de la generación 0
 (`EngineConfig.seed_individual`, `ga/core/engine.py`); vacío o ausente (`""`)
 deshabilita la importación. La decodificación (`TrianglesProblem.
-individual_from_export`, `problems/triangles/problem.py`) normaliza los
-vértices en píxeles contra la resolución **nativa** de `image_path` — el
-tamaño con el que las etapas de render exportan por defecto. Un `triangles.json` exportado
-con `--export-width`/`--export-height` explícitos no decodifica bien.
+individual_from_export`, `problems/triangles/problem.py`) normaliza la
+geometría en píxeles contra la resolución **nativa** de `image_path` — el
+tamaño con el que las etapas de render exportan por defecto. Un `figures.json` exportado
+con `--export-width`/`--export-height` explícitos no decodifica bien. Cada figura del
+export debe ser del tipo que espera el `shape_type` de la corrida (`triangle`/`oval`
+exigen que todas lo sean; `both` acepta cualquier mezcla).
 
 ## Perillas que no hacen nada (y por qué no están en el config)
 
@@ -290,7 +336,7 @@ puede divergir del camino por partes.
   derivado del intérprete; después importa la extensión **en un subproceso** (el padre puede
   tener una vieja cargada) y reporta `build_info()`/`schema_version()`. `--check` solo verifica.
 - `simulate.py` — corre el AG y escribe `history.csv`/`.json`, `summary.json`, `best.json`,
-  `triangles.json` y, con `--snapshot-every N`, `checkpoints.jsonl`. **No dibuja nada.**
+  `figures.json` y, con `--snapshot-every N`, `checkpoints.jsonl`. **No dibuja nada.**
 - `render_final.py` / `render_snapshots.py` — leen el directorio de resultados y dibujan.
 
 **Por qué se separó**: `on_generation` renderizaba un PNG a resolución nativa *adentro* del
@@ -300,7 +346,7 @@ loop cronometrado, así que `elapsed_seconds` incluía trabajo ajeno al algoritm
 place, así que checkpointear no le cuesta nada al loop — y las vuelca al terminar.
 `--progress-every N` / `--quiet` hace lo mismo con los prints.
 
-**`checkpoints.jsonl` guarda alelos crudos, no el export de `triangles.json`**: ese export
+**`checkpoints.jsonl` guarda alelos crudos, no el export de `figures.json`**: ese export
 normaliza vértices contra la resolución nativa y solo decodifica exacto para un export de
 tamaño default, mientras que los alelos en `[0,1]` son independientes de la resolución por
 construcción. Se redondean a 8 decimales (a 4096 px de export son 4e-5 de un píxel) porque
@@ -308,8 +354,8 @@ existen para dibujarse; `best.json` va a precisión completa porque es el result
 corrida y puede volver a entrar por `import`.
 
 **Las etapas de render no necesitan el config**: reconstruyen el problema desde el bloque
-`config` de `summary.json`, para que la imagen la dibuje el mismo kernel, espacio de color y
-`triangle_count` que la puntuó.
+`config` de `summary.json`, para que la imagen la dibuje el mismo kernel, espacio de color,
+`shape_type` y `shape_count` que la puntuó.
 
 ## Tandas de experimentos (`analysis/`)
 

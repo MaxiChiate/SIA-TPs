@@ -1,7 +1,7 @@
 """Export a solved individual: a full-resolution rendered image, a JSON
-enumeration of its triangles (position + color), and an animated GIF of a run's
-progress - the "output" the assignment asks for, independent of whatever small
-resolution fitness was evaluated at.
+enumeration of its figures (shape + position + color), and an animated GIF of
+a run's progress - the "output" the assignment asks for, independent of
+whatever small resolution fitness was evaluated at.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from ga.core.individual import Individual
 
 from .colorspace import DEFAULT as DEFAULT_COLOR_SPACE
 from .colorspace import ColorSpace
-from .genotype import triangles_from_alleles
+from .genotype import figures_from_alleles
 
 
 def native_resolution(image_path: str | Path) -> tuple[int, int]:
@@ -25,26 +25,27 @@ def native_resolution(image_path: str | Path) -> tuple[int, int]:
         return img.size
 
 
-def triangles_as_json(
+def figures_as_json(
     individual: Individual,
-    triangle_count: int,
+    shape_type: str,
+    shape_count: int,
     width: int,
     height: int,
     color_space: ColorSpace = DEFAULT_COLOR_SPACE,
 ) -> list[dict]:
-    """Enumerate the individual's triangles (pixel vertices + RGBA color) at
+    """Enumerate the individual's figures (pixel geometry + RGBA color) at
     ``width``x``height``.
 
-    Colors are always dumped as RGBA, whatever ``color_space`` the run searched
-    in: the export describes the picture, not the genotype's coordinates.
+    Each entry is whatever its own ``Figure.to_export()`` produces (tagged
+    with a ``"type"``), so this function does not need to know whether a given
+    shape is a triangle or an oval. Colors are always dumped as RGBA, whatever
+    ``color_space`` the run searched in: the export describes the picture, not
+    the genotype's coordinates.
     """
-    triangles = triangles_from_alleles(
-        individual.alleles, triangle_count, width, height, color_space
+    figures = figures_from_alleles(
+        individual.alleles, shape_type, shape_count, width, height, color_space
     )
-    return [
-        {"vertices": [list(vertex) for vertex in triangle.vertices], "color": list(triangle.color)}
-        for triangle in triangles
-    ]
+    return [figure.to_export() for figure in figures]
 
 
 def save_image(
@@ -63,15 +64,16 @@ def save_image(
     renderer.render_rgb(individual.alleles, width, height).save(path)
 
 
-def save_triangles_json(
+def save_figures_json(
     individual: Individual,
-    triangle_count: int,
+    shape_type: str,
+    shape_count: int,
     width: int,
     height: int,
     path: str | Path,
     color_space: ColorSpace = DEFAULT_COLOR_SPACE,
 ) -> None:
-    data = triangles_as_json(individual, triangle_count, width, height, color_space)
+    data = figures_as_json(individual, shape_type, shape_count, width, height, color_space)
     Path(path).write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 

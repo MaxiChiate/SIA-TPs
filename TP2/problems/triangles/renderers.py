@@ -36,7 +36,8 @@ _MIN_BASELINE_MSE = 1e-9
 # Bumped in lockstep with ``SCHEMA_VERSION`` in rust/src/lib.rs whenever the
 # native kernel's numerics change, so a stale .so left over from an earlier
 # build fails loudly instead of quietly scoring genomes a different way.
-NATIVE_SCHEMA_VERSION = 1
+# Bumped to 2: the native ``Scorer`` gained the ``shape_type`` parameter.
+NATIVE_SCHEMA_VERSION = 2
 
 try:
     import triangles_native as _native
@@ -57,7 +58,8 @@ class RenderSpec:
     height: int
     background_rgb: tuple[int, int, int]
     color_space: ColorSpace
-    triangle_count: int
+    shape_count: int
+    shape_type: str
     target_rgb: bytes
     baseline_mse: float
 
@@ -69,7 +71,8 @@ class RenderSpec:
         height: int,
         background_rgb: tuple[int, int, int],
         color_space: ColorSpace,
-        triangle_count: int,
+        shape_count: int,
+        shape_type: str = "triangle",
     ) -> "RenderSpec":
         target = Image.open(image_path).convert("RGB").resize((width, height))
         target_rgb = target.tobytes()
@@ -78,7 +81,8 @@ class RenderSpec:
             height=height,
             background_rgb=background_rgb,
             color_space=color_space,
-            triangle_count=triangle_count,
+            shape_count=shape_count,
+            shape_type=shape_type,
             target_rgb=target_rgb,
             baseline_mse=_baseline_mse(target_rgb, background_rgb),
         )
@@ -131,9 +135,10 @@ class RustRenderer:
             spec.width,
             spec.height,
             tuple(spec.background_rgb),
-            spec.triangle_count,
+            spec.shape_count,
             spec.color_space.name,
             spec.baseline_mse,
+            spec.shape_type,
             threads,
         )
 

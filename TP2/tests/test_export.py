@@ -1,11 +1,18 @@
-"""Unit tests for ``problems.triangles.export`` (the GIF assembly)."""
+"""Unit tests for ``problems.triangles.export`` (figure JSON + GIF assembly)."""
 
 from __future__ import annotations
+
+import json
 
 import pytest
 from PIL import Image
 
-from problems.triangles.export import save_gif
+from ga.core.individual import Individual
+from problems.triangles import colorspace
+from problems.triangles.export import figures_as_json, save_figures_json, save_gif
+from problems.triangles.genotype import schema_for
+
+WIDTH, HEIGHT = 40, 30
 
 
 def _write_frames(directory, colors) -> list:
@@ -46,3 +53,37 @@ def test_save_gif_keeps_frame_order_and_size(tmp_path):
 def test_save_gif_rejects_an_empty_frame_list(tmp_path):
     with pytest.raises(ValueError):
         save_gif([], tmp_path / "progress.gif")
+
+
+# -- figures_as_json / save_figures_json ----------------------------------------
+
+
+def _individual(shape_type: str, shape_count: int) -> Individual:
+    schema = schema_for(shape_type, shape_count, colorspace.RGB)
+    alleles = [((0.29 * (i + 1)) % 1.0) for i in range(len(schema))]
+    return Individual(alleles, schema)
+
+
+def test_figures_as_json_tags_each_entry_with_its_type():
+    individual = _individual("triangle", shape_count=3)
+    data = figures_as_json(individual, "triangle", 3, WIDTH, HEIGHT, colorspace.RGB)
+    assert len(data) == 3
+    assert all(entry["type"] == "triangle" for entry in data)
+    assert all("vertices" in entry and "color" in entry for entry in data)
+
+
+def test_figures_as_json_reports_ovals():
+    individual = _individual("oval", shape_count=2)
+    data = figures_as_json(individual, "oval", 2, WIDTH, HEIGHT, colorspace.RGB)
+    assert len(data) == 2
+    assert all(entry["type"] == "oval" for entry in data)
+    assert all("center" in entry and "radii" in entry and "angle" in entry for entry in data)
+
+
+def test_save_figures_json_writes_readable_json(tmp_path):
+    individual = _individual("triangle", shape_count=2)
+    path = tmp_path / "figures.json"
+    save_figures_json(individual, "triangle", 2, WIDTH, HEIGHT, path, colorspace.RGB)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert len(data) == 2
+    assert data[0]["type"] == "triangle"

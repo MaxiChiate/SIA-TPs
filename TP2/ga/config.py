@@ -18,7 +18,9 @@ from .core.engine import EngineConfig, StopContext, Stopping
 from .core.problem import Problem
 from .core.rng import Rng, make_rng
 
-_TOP_LEVEL_KEYS = {"seed", "engine", "operators", "stopping", "problem", "import"}
+_TOP_LEVEL_KEYS = {
+    "seed", "engine", "operators", "stopping", "problem", "import", "write_history",
+}
 _ENGINE_KEYS = {"n", "k", "pc", "pm", "max_generations"}
 _ENGINE_OPTIONAL_KEYS = {"processes"}
 _OPERATOR_CATEGORIES = ("parent_selection", "crossover", "mutation", "survival")
@@ -36,6 +38,7 @@ class LoadedConfig:
     rng: Rng
     problem: Problem
     engine_config: EngineConfig
+    write_history: bool
     raw: dict[str, Any]
 
 
@@ -61,6 +64,12 @@ def load_config(source: str | Path | dict[str, Any]) -> LoadedConfig:
     problem_section = _require(raw, "problem", "")
     problem = _build_problem(problem_section)
 
+    write_history = raw.get("write_history", True)
+    if not isinstance(write_history, bool):
+        raise ConfigError(
+            f"write_history: expected bool, got {type(write_history).__name__}"
+        )
+
     import_path = raw.get("import") or None
     if import_path is not None:
         if not isinstance(import_path, str):
@@ -71,7 +80,12 @@ def load_config(source: str | Path | dict[str, Any]) -> LoadedConfig:
             raise ConfigError(f"import: {err}") from err
 
     return LoadedConfig(
-        seed=seed, rng=rng, problem=problem, engine_config=engine_config, raw=raw
+        seed=seed,
+        rng=rng,
+        problem=problem,
+        engine_config=engine_config,
+        write_history=write_history,
+        raw=raw,
     )
 
 

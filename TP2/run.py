@@ -12,10 +12,10 @@ live in ``pipeline.py`` and this script only chains them, so there is one
 implementation of each and no way for the combined path to drift from the
 separate ones.
 
-Writes into the results directory: ``history.csv`` / ``history.json``,
-``summary.json``, ``best.json``, ``triangles.json``, ``final.png``, and - only
-with ``--snapshot-every`` - ``checkpoints.jsonl``, ``snapshots/gen_*.png`` and
-``progress.gif``.
+Writes into the results directory: ``history.csv`` / ``history.json`` (unless
+the config's ``write_history`` is ``false``), ``summary.json``, ``best.json``,
+``figures.json``, ``final.png``, and - only with ``--snapshot-every`` -
+``checkpoints.jsonl``, ``snapshots/gen_*.png`` and ``progress.gif``.
 
 For timing work use ``simulate.py`` instead: the rendering here happens after
 the engine loop and is not in ``elapsed_seconds``, but it is still minutes of
