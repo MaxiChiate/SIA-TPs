@@ -350,7 +350,11 @@ _ENGINE_FIELDS = (
 )
 _PROBLEM_FIELDS = (
     ("problem.params.image_path", "imagen"),
+    ("problem.params.shape_count", "figuras"),
+    # Sweeps run before shape_type existed wrote triangle_count; keeping the old
+    # key means their captions still name the count instead of silently dropping it.
     ("problem.params.triangle_count", "triángulos"),
+    ("problem.params.shape_type", "figura"),
     ("problem.params.work_resolution", "resolución"),
 )
 
@@ -369,6 +373,8 @@ KNOB_NAMES = {
     "engine.k": "cantidad de hijos",
     "engine.pc": "probabilidad de cruza",
     "engine.pm": "probabilidad de mutación",
+    "problem.params.shape_count": "cantidad de figuras",
+    "problem.params.shape_type": "tipo de figura",
     "problem.params.triangle_count": "cantidad de triángulos",
     "problem.params.color_space": "espacio de color",
     "engine.max_generations": "presupuesto de generaciones",

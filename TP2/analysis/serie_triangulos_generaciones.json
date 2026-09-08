@@ -24,13 +24,13 @@
   "_comment_ocho_variantes": "8 es exactamente el maximo que soporta la paleta validada de plots_style.py. Una tercera columna de presupuesto obliga a partir la serie.",
 
   "variants": [
-    {"label": "10t·150g",  "set": {"problem.params.triangle_count": 10,  "engine.max_generations": 150}},
-    {"label": "50t·150g",  "set": {"problem.params.triangle_count": 50,  "engine.max_generations": 150}},
-    {"label": "200t·150g", "set": {"problem.params.triangle_count": 200, "engine.max_generations": 150}},
-    {"label": "500t·150g", "set": {"problem.params.triangle_count": 500, "engine.max_generations": 150}},
-    {"label": "10t·1200g",  "set": {"problem.params.triangle_count": 10,  "engine.max_generations": 1200}},
-    {"label": "50t·1200g",  "set": {"problem.params.triangle_count": 50,  "engine.max_generations": 1200}},
-    {"label": "200t·1200g", "set": {"problem.params.triangle_count": 200, "engine.max_generations": 1200}},
-    {"label": "500t·1200g", "set": {"problem.params.triangle_count": 500, "engine.max_generations": 1200}}
+    {"label": "10t·150g",  "set": {"problem.params.shape_count": 10,  "engine.max_generations": 150}},
+    {"label": "50t·150g",  "set": {"problem.params.shape_count": 50,  "engine.max_generations": 150}},
+    {"label": "200t·150g", "set": {"problem.params.shape_count": 200, "engine.max_generations": 150}},
+    {"label": "500t·150g", "set": {"problem.params.shape_count": 500, "engine.max_generations": 150}},
+    {"label": "10t·1200g",  "set": {"problem.params.shape_count": 10,  "engine.max_generations": 1200}},
+    {"label": "50t·1200g",  "set": {"problem.params.shape_count": 50,  "engine.max_generations": 1200}},
+    {"label": "200t·1200g", "set": {"problem.params.shape_count": 200, "engine.max_generations": 1200}},
+    {"label": "500t·1200g", "set": {"problem.params.shape_count": 500, "engine.max_generations": 1200}}
   ]
 }
