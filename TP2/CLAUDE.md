@@ -54,7 +54,11 @@ analysis/               # runner de experimentos + gráficos — capa por encima
   runner.py             # orquestador paralelo (un proceso por corrida)
   records.py            # esquema de summary.csv (1 fila/corrida) e history.csv (1 fila/generación)
   main.py               # CLI: corre una serie
-  plots_*.py            # CLI + datos + estilo de los tres gráficos
+  plots_data.py         # carga de los CSVs, agregación por seed, catálogo de series
+  plots_style.py        # paleta validada + layout + barras de error
+  plots_index.py        # index.html por serie + landing por pregunta de la consigna
+  plots_compare.py      # comparación estadística entre variantes (tests pareados)
+  plots_main.py         # CLI único: dibuja todas las series y arma los índices
   serie_*.json          # una receta por serie (selección, cruza, mutación, ...)
 build.py                # CLI: compila rust/ y verifica el binario resultante
 simulate.py             # CLI: corre el AG, escribe solo datos (no dibuja)
@@ -195,15 +199,17 @@ gráficos. Es una capa estrictamente por encima de `run.py` — no toca `ga/` ni
 ## Pasos a seguir
 
 La maquinaria está lista: agregar una serie es escribir una receta de ~6 líneas
-(`analysis/serie_*.json`) y correr dos comandos (`analysis/main.py` y después
-`analysis/plots_main.py`). No hace falta programar nada más — los tres gráficos salen solos de
-cualquier serie.
+(`analysis/serie_*.json`) y correr dos comandos: `analysis/main.py <receta>` para correrla y
+`analysis/plots_main.py` (sin argumentos) para redibujar **todas** las series y la landing. No
+hace falta programar nada más — los ocho gráficos salen solos de cualquier serie.
 
-1. **Correr las series que faltan.** Corridas: **cruza** y **mutación** (4 variantes x 10 seeds
-   cada una). Faltan **selección**, **supervivencia**, **triángulos**, **población** y **espacio
-   de color**; las siete recetas ya están escritas y validadas en `analysis/`. Regla: **una
-   perilla por vez**, todo lo demás fijo, varias seeds, y `max_generations` fijo sin corte por
-   fitness para que todas las corridas hagan el mismo trabajo.
+1. **Correr las series que faltan.** Ya corridas, 10 seeds cada una: **selección** (7
+   variantes), **cruza** (4), **mutación** (4), **supervivencia** (2), **presupuesto de
+   generaciones** (5) y la grilla **triángulos × generaciones** (8). Faltan **población** y
+   **espacio de color**; sus recetas ya están escritas y validadas. Regla: **una perilla por
+   vez**, todo lo demás fijo, varias seeds, y `max_generations` fijo sin corte por fitness para
+   que todas las corridas hagan el mismo trabajo — la única excepción declarada es
+   `serie_triangulos_generaciones.json`, que mueve dos a propósito y lo dice en su `title`.
 2. **Ejercicio 1.** El del mapa NxN de caracteres ASCII. No se implementa, se piensa — pero es
    entregable y hay que responderlo en la presentación.
 3. **Presentación.**
@@ -278,7 +284,7 @@ cd TP2
 
 ../.venv/bin/python analysis/main.py              # una serie -> analysis/results/<sweep_id>/
 ../.venv/bin/python analysis/main.py --dry-run    # valida el sweep y muestra el plan
-../.venv/bin/python analysis/plots_main.py        # dibuja la serie más reciente
+../.venv/bin/python analysis/plots_main.py        # dibuja TODAS las series + la landing
 ```
 
 Una corrida son tres etapas separables (ver "Etapas separadas" abajo):
@@ -365,8 +371,14 @@ base, qué perilla variar y con qué seeds repetir; el runner corre el producto
 fila por corrida) e `history.csv` (una fila por generación, formato largo con `(variant, seed)`
 como identificador), más `resolved.json` con el config exacto que corrió cada variante.
 
-`analysis/plots_main.py` dibuja esos CSVs: curva de fitness, curva de diversidad y un dot plot
-de fitness final con un punto por seed. Los tres llevan al pie del título lo que se mantuvo
+`analysis/plots_main.py` dibuja esos CSVs: cuatro gráficos de trayectoria (fitness, diversidad,
+presión selectiva, y un dot plot de fitness final con un punto por seed) y cuatro de comparación
+entre variantes (boxplot, diferencia pareada o estabilidad del ranking, velocidad de convergencia
+y el trade-off explotación/exploración), más `survival_cost.html` solo en la serie de
+supervivencia. Escribe además un `index.html` por serie y una landing en `analysis/results/`
+organizada por las preguntas de la consigna. La comparación se apoya en que todas las variantes
+corren **las mismas seeds**: las corridas quedan pareadas y se comparan con un test de
+permutación exacto y un bootstrap, ambos con la biblioteca estándar. Los tres llevan al pie del título lo que se mantuvo
 fijo en la serie, derivado de `resolved.json` — lo que la serie varió se cae solo de ese
 cartel, porque difiere entre variantes.
 
