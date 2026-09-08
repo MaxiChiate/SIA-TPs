@@ -1,0 +1,185 @@
+"""Shared palette and layout, so every chart of a sweep reads as one system.
+
+The categorical palette is a fixed, validated order: worst adjacent CVD Delta E 9.1
+and worst adjacent normal-vision Delta E 19.6 on this surface (OKLab x100; targets
+are 8 and 15). Hues are assigned in slot order and never cycled - past 8 variants
+the right move is faceting, not a ninth invented colour.
+
+Three of these slots fall below 3:1 contrast against the light surface, so every
+chart here also carries non-colour identity: a legend, direct labels at the end of
+each line, and value labels on bars.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from pathlib import Path
+
+import plotly.graph_objects as go
+
+# Categorical slots, in fixed order. Colour follows the variant, not its rank.
+_SERIES = (
+    "#2a78d6",  # blue
+    "#eb6834",  # orange
+    "#1baf7a",  # aqua
+    "#eda100",  # yellow
+    "#e87ba4",  # magenta
+    "#008300",  # green
+    "#4a3aa7",  # violet
+    "#e34948",  # red
+)
+
+SURFACE = "#fcfcfb"
+TEXT_PRIMARY = "#0b0b0b"
+TEXT_SECONDARY = "#52514e"
+GRID = "#e6e5e1"
+
+FONT_FAMILY = "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+
+
+class PaletteError(Exception):
+    """More series than the validated palette has slots."""
+
+
+def palette_for(variants: tuple[str, ...] | list[str]) -> dict[str, str]:
+    """Map each variant to its slot colour, stable across every chart of a sweep."""
+    if len(variants) > len(_SERIES):
+        raise PaletteError(
+            f"{len(variants)} variants but only {len(_SERIES)} validated colour slots; "
+            "split the sweep or facet instead of inventing a colour"
+        )
+    return {variant: _SERIES[index] for index, variant in enumerate(variants)}
+
+
+def translucent(color: str, alpha: float) -> str:
+    """``"#2a78d6"`` -> ``"rgba(42,120,214,0.13)"``, a faded fill of a series' colour.
+
+    A fill has to carry its series' own colour so it reads as belonging to that
+    series, but stay faint enough that whatever sits on top of it - a box's
+    outline, a dot's ring, a bar's edge - is still the part being read.
+    """
+    hex_digits = color.lstrip("#")
+    red, green, blue = (int(hex_digits[i : i + 2], 16) for i in (0, 2, 4))
+    return f"rgba({red},{green},{blue},{alpha})"
+
+
+# How many points of each curve carry an error bar. Ten reads as a sample of the
+# spread along the whole run without turning a 150-generation line into a fence.
+ERROR_MARKS = 10
+
+
+def add_error_bars(
+    figure: go.Figure,
+    marks: tuple[list[float], list[float], list[float], list[float]],
+    color: str,
+) -> None:
+    """Mark a curve's spread across seeds at the points ``marks`` samples.
+
+    Takes the four arrays (``x, y, up, down``) rather than the ``Band`` they come
+    from, so this module stays what it says it is - palette and drawing - and
+    does not grow a dependency on the shaping layer.
+
+    Hidden from the legend and from hover: the bars annotate their own line, and
+    seven variants x an extra hover entry would drown the unified tooltip. Add
+    them after the lines so the caps sit on top rather than under.
+    """
+    x, y, up, down = marks
+    figure.add_trace(
+        go.Scatter(
+            x=x, y=y, mode="markers",
+            marker={"color": color, "size": 5},
+            error_y={
+                "type": "data", "symmetric": False, "array": up, "arrayminus": down,
+                "color": color, "thickness": 1.2, "width": 4,
+            },
+            showlegend=False, hoverinfo="skip",
+        )
+    )
+
+
+def base_layout(
+    title: str, subtitles: Sequence[str], x_title: str, y_title: str
+) -> dict:
+    """Recessive axes and grid, generous margins, legend below the plot.
+
+    Subtitles ride inside the title block rather than as footer annotations: a
+    footer below the axis has to be positioned in paper coordinates, and any
+    margin change silently collides it with the axis title or the legend. The top
+    margin grows with the number of subtitle lines, so callers can add context
+    without doing layout arithmetic.
+    """
+    lines = [line for line in subtitles if line]
+    heading = title
+    for line in lines:
+        heading += (
+            f"<br><span style='font-size:11px;color:{TEXT_SECONDARY}'>{line}</span>"
+        )
+    axis = {
+        "showgrid": True,
+        "gridcolor": GRID,
+        "gridwidth": 1,
+        "zeroline": False,
+        "linecolor": GRID,
+        "ticks": "outside",
+        "tickcolor": GRID,
+        "tickfont": {"color": TEXT_SECONDARY, "size": 12},
+        "title": {"font": {"color": TEXT_SECONDARY, "size": 13}},
+    }
+    return {
+        # Anchored to the figure's own top-left corner, not the plotting area's:
+        # a subtitle line then pushes the block down predictably instead of
+        # re-centring over the plot, and a long caption is not clipped by a wide
+        # left margin (the dot plot needs one for its category labels).
+        "title": {
+            "text": heading,
+            "font": {"color": TEXT_PRIMARY, "size": 18},
+            "x": 0, "xref": "container", "xanchor": "left",
+            "y": 1, "yanchor": "top", "yref": "container",
+            "pad": {"t": 20, "l": 20},
+        },
+        "paper_bgcolor": SURFACE,
+        "plot_bgcolor": SURFACE,
+        "font": {"family": FONT_FAMILY, "color": TEXT_PRIMARY, "size": 13},
+        "xaxis": {**axis, "title": {**axis["title"], "text": x_title}},
+        "yaxis": {**axis, "title": {**axis["title"], "text": y_title}},
+        # Legend below the plot: with 7-8 series a horizontal legend wraps to two
+        # rows, and above the plot those rows collide with the title block.
+        "legend": {
+            "orientation": "h",
+            "yanchor": "top",
+            "y": -0.18,
+            "xanchor": "left",
+            "x": 0,
+            "font": {"color": TEXT_SECONDARY, "size": 12},
+        },
+        # Right margin leaves room for the end-of-line direct labels; bottom for
+        # the axis title plus the (possibly two-row) legend; top grows with the
+        # subtitle lines.
+        "margin": {"l": 80, "r": 150, "t": 62 + 22 * len(lines), "b": 130},
+        "hovermode": "x unified",
+    }
+
+
+def end_label(text: str, x: float, y: float, color: str) -> dict:
+    """A direct label past the end of a line, so identity is never colour-alone."""
+    return {
+        "x": x,
+        "y": y,
+        "text": f" {text}",
+        "xanchor": "left",
+        "yanchor": "middle",
+        "showarrow": False,
+        "font": {"color": color, "size": 11},
+    }
+
+
+def write_html(figure, path: Path) -> Path:
+    """Write a standalone HTML chart.
+
+    plotly.js is embedded rather than loaded from a CDN (~3 MB per file): these
+    are meant to be opened during a presentation, where assuming internet is a
+    bad bet. The output directory is gitignored anyway.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    figure.write_html(str(path), include_plotlyjs=True, full_html=True)
+    return path

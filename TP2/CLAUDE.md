@@ -49,6 +49,13 @@ ga/                     # motor genérico — solo stdlib
 problems/
   triangles/            # genotype, renderers (delega a rust/), colorspace, problem, export  [Pillow: solo I/O]
 rust/                   # crate PyO3 del backend nativo: color, raster, score  (obligatorio, no opcional)
+analysis/               # runner de experimentos + gráficos — capa por encima de run.py
+  config.py             # SweepConfig + overrides por ruta con puntos
+  runner.py             # orquestador paralelo (un proceso por corrida)
+  records.py            # esquema de summary.csv (1 fila/corrida) e history.csv (1 fila/generación)
+  main.py               # CLI: corre una serie
+  plots_*.py            # CLI + datos + estilo de los tres gráficos
+  serie_*.json          # una receta por serie (selección, cruza, mutación, ...)
 build.py                # CLI: compila rust/ y verifica el binario resultante
 simulate.py             # CLI: corre el AG, escribe solo datos (no dibuja)
 render_final.py         # CLI: final.png desde un directorio de resultados
@@ -182,6 +189,80 @@ Los seis bloques están hechos: core, config+registry, operadores, plug-in `tria
 vigente — sin el backend nativo compilado, los casos que necesitan `triangles_native` se
 saltean en vez de fallar (ver "Cómo correr").
 
+Agregado en la rama `dev-ag-analisis`: **`analysis/`**, el runner de experimentos y sus
+gráficos. Es una capa estrictamente por encima de `run.py` — no toca `ga/` ni `problems/`.
+
+## Pasos a seguir
+
+La maquinaria está lista: agregar una serie es escribir una receta de ~6 líneas
+(`analysis/serie_*.json`) y correr dos comandos (`analysis/main.py` y después
+`analysis/plots_main.py`). No hace falta programar nada más — los tres gráficos salen solos de
+cualquier serie.
+
+1. **Correr las series que faltan.** Corridas: **cruza** y **mutación** (4 variantes x 10 seeds
+   cada una). Faltan **selección**, **supervivencia**, **triángulos**, **población** y **espacio
+   de color**; las siete recetas ya están escritas y validadas en `analysis/`. Regla: **una
+   perilla por vez**, todo lo demás fijo, varias seeds, y `max_generations` fijo sin corte por
+   fitness para que todas las corridas hagan el mismo trabajo.
+2. **Ejercicio 1.** El del mapa NxN de caracteres ASCII. No se implementa, se piensa — pero es
+   entregable y hay que responderlo en la presentación.
+3. **Presentación.**
+
+### Resultados hasta ahora
+
+> **La serie de selección corrida el 2026-09-05 (3 seeds) quedó invalidada.** Se corrió antes
+> del cambio de fitness (`ff952f9`) y del fix de la selección de padres (`6c9f297`), así que sus
+> números están en otra escala y con otro consumo del RNG. Hay que volver a correrla; la receta
+> ya está en 10 seeds.
+
+**Cruza** (4 métodos x 10 seeds, 150 generaciones):
+
+- `uniform` 0.9565 · `ring` 0.9433 · `two_point` 0.9402 · `one_point` 0.9299.
+- Gana la uniforme, lo que contradice la intuición del teorema de esquemas. La explicación es
+  propia de este problema: **el orden de los triángulos en el genotipo no codifica nada**, así
+  que no hay bloques contiguos que romper y solo queda su ventaja de mezcla. Es la respuesta al
+  "decidir qué método de cruza usarían en diferentes circunstancias y por qué" de la consigna.
+- Hay solape entre seeds: gana en media, no en todas las corridas.
+
+**Mutación** (4 operadores x 10 seeds, igualados en alelos tocados por hijo):
+
+- `non_uniform` 0.9299 · `gene` 0.8202 · `multigene` 0.7139 · `uniform` 0.6873.
+- **Concluyente**: la peor seed de `non_uniform` supera a la mejor de `gene`, y la peor de
+  `gene` a la mejor de `multigene`. No se solapan.
+- Perturbar el alelo le gana a reemplazarlo por lejos: reemplazar 25 alelos por hijo destruye lo
+  que la selección venía construyendo.
+- **`multigene` tiene la diversidad más alta (0.153) y el anteúltimo fitness.** Es el
+  contraejemplo de "más diversidad es mejor": nunca converge, es búsqueda aleatoria cara. Buen
+  material para la presentación junto al extremo opuesto (`one_point`, diversidad 0.0016).
+
+**Control de reproducibilidad, gratis:** la variante `one_point` de la serie de cruza y la
+variante `non_uniform` de la de mutación son la misma configuración, corridas en series
+distintas. Dieron el mismo valor hasta el último decimal.
+
+### Pendientes técnicos
+
+Detectados en revisión; ninguno bloquea los experimentos, pero conviene resolverlos o tener la
+respuesta lista para la defensa.
+
+- **Escala del fitness: resuelto** por `ff952f9`. Era `1 - MSE/255²`, que vivía en `[0.85, 1.0]`
+  y dejaba a ruleta y Boltzmann —que dependen de las *diferencias absolutas* de fitness— casi
+  uniformes. Ahora se normaliza contra el error del canvas vacío, así que `0` = "no mejor que no
+  dibujar nada". Queda **revisar las temperaturas de Boltzmann** de
+  `analysis/serie_seleccion.json` (`t0=0.5, tmin=0.02`): se eligieron para la escala vieja y con
+  la nueva pueden no ser las adecuadas.
+- **La función de fitness no es elegible por config.** Hay una sola, en `rust/src/score.rs`.
+  Para poder experimentar sobre ella (MAE vs MSE, comparación por bloques de píxeles) habría que
+  resolverla por nombre desde el registry, igual que los operadores. **La consigna no lo pide**,
+  así que es opcional.
+- **`exclusive` no cubre `K <= N`.** El PPT define que en ese caso la nueva generación son los K
+  hijos + (N−K) de la generación actual; hoy `ga/operators/survival.py` tira `ValueError`.
+- **`stagnation` mal etiquetado.** Su docstring dice "structure-based", pero mide que el mejor
+  fitness no mejore: eso es **contenido**. Falta un criterio de estructura propiamente dicho
+  (la diversidad ya la calcula `ga/metrics.py`).
+- **Nombres de mutación vs. el PPT.** Lo que el PPT llama "uniforme" (cada gen con prob. Pm) es
+  nuestro `multigene`; nuestro `uniform` es por bloque y no figura en el PPT. Falta "multigen
+  limitada". Renombrar, o aclararlo explícitamente en la presentación.
+
 ## Método de trabajo
 
 Frenar entre cada bloque para revisión. Justificar cada decisión de diseño en una línea. Si
@@ -194,6 +275,10 @@ solo.
 cd TP2
 ../.venv/bin/python build.py                      # compila rust/ y verifica el binario
 ../.venv/bin/python run.py config.json            # simular + dibujar, de un saque
+
+../.venv/bin/python analysis/main.py              # una serie -> analysis/results/<sweep_id>/
+../.venv/bin/python analysis/main.py --dry-run    # valida el sweep y muestra el plan
+../.venv/bin/python analysis/plots_main.py        # dibuja la serie más reciente
 ```
 
 Una corrida son tres etapas separables (ver "Etapas separadas" abajo):
@@ -271,3 +356,19 @@ corrida y puede volver a entrar por `import`.
 **Las etapas de render no necesitan el config**: reconstruyen el problema desde el bloque
 `config` de `summary.json`, para que la imagen la dibuje el mismo kernel, espacio de color,
 `shape_type` y `shape_count` que la puntuó.
+
+## Tandas de experimentos (`analysis/`)
+
+Capa por encima de `run.py`, para comparar variantes entre sí. Un *sweep* declara una config
+base, qué perilla variar y con qué seeds repetir; el runner corre el producto
+`variantes x seeds`, un proceso por corrida, y emite dos CSVs comparables: `summary.csv` (una
+fila por corrida) e `history.csv` (una fila por generación, formato largo con `(variant, seed)`
+como identificador), más `resolved.json` con el config exacto que corrió cada variante.
+
+`analysis/plots_main.py` dibuja esos CSVs: curva de fitness, curva de diversidad y un dot plot
+de fitness final con un punto por seed. Los tres llevan al pie del título lo que se mantuvo
+fijo en la serie, derivado de `resolved.json` — lo que la serie varió se cae solo de ese
+cartel, porque difiere entre variantes.
+
+Regla de método: **una perilla por vez**, todo lo demás fijo, varias seeds, y `max_generations`
+fijo sin corte por fitness para que todas las corridas hagan el mismo trabajo.

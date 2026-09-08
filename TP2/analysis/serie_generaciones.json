@@ -1,0 +1,27 @@
+{
+  "_comment": "Serie de presupuesto de generaciones. Responde 'cuanto mas se saca dejandolo correr', que es la contracara de 'decidir de que manera terminara la ejecucion' de la consigna.",
+
+  "base_config": "config.json.example",
+
+  "_comment_no_es_una_corrida_truncada": [
+    "Ojo con la intuicion de que estas 5 variantes son la misma corrida cortada en 5 lugares. NO lo son: la mutacion non_uniform recoce contra max_generations (delta = span * (1 - g/G)^b), asi que G no es solo cuando paras, es la ESCALA del recocido.",
+    "Con G=150 la mutacion ya casi no perturba en la generacion 100; con G=2400, en la generacion 100 todavia esta explorando a full. Declarar mas presupuesto cambia el comportamiento desde la generacion 0.",
+    "Por eso vale como serie de una perilla y no como un solo grafico de fitness mirado en distintos puntos del eje x."
+  ],
+
+  "_comment_esperado": "Rendimientos decrecientes: cada duplicacion del presupuesto compra menos que la anterior. El punto donde se aplana es el argumento para elegir max_generations en el config final.",
+
+  "overrides": {
+    "stopping": []
+  },
+
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+
+  "_comment_workers": "1: el kernel de Rust ya usa todos los cores por corrida, y con varios procesos compitiendo elapsed_seconds deja de ser comparable.",
+  "workers": 1,
+
+  "sweep": {
+    "path": "engine.max_generations",
+    "values": [150, 300, 600, 1200, 2400]
+  }
+}

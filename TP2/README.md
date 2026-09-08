@@ -43,6 +43,18 @@ problems/
     export.py                    render full-res + enumeración JSON + native_resolution
 rust/                     crate PyO3 obligatorio: rasteriza + decodifica color + puntúa
                           (ver "El backend nativo" más abajo; sin esto no corre nada)
+analysis/                 runner de experimentos (corre muchas configs y compara)
+  main.py                  CLI: python3 analysis/main.py [serie.json]
+  config.py                 SweepConfig + overrides por ruta con puntos
+  runner.py                  orquestador paralelo (un proceso por corrida)
+  records.py                  esquema de summary.csv e history.csv
+  serie_*.json                 una receta por serie (selección, cruza, mutación, …)
+  plots_data.py                 carga de los CSVs y promedio por seed
+  plots_style.py                 paleta validada + layout base
+  plots_index.py                  index.html que enlaza los gráficos de una serie
+  plots_compare.py                 comparación estadística entre variantes
+  plots_main.py                     CLI: genera todos los gráficos + el índice
+  results/                         CSVs y HTMLs generados (gitignoreados)
 images/                   imágenes de referencia (argentina.png, starry_night.png)
 tests/                    tests unitarios de los operadores (pytest, deterministas)
 ```
@@ -677,6 +689,246 @@ métricas. Tres archivos (`test_renderers.py`, `test_problem.py`,
 `test_native_parity.py` — 34 tests) necesitan la extensión nativa compilada y se
 **saltean** en bloque si no está, en vez de romper: sin ella la suite corre
 79 passed, 3 skipped.
+
+## Series de experimentos
+
+`run.py` corre **una** config. Para comparar métodos entre sí hace falta correr
+muchas y juntar los resultados, y de eso se encarga `analysis/`:
+
+```bash
+python3 analysis/main.py                              # usa serie_seleccion.json
+python3 analysis/main.py analysis/serie_cruza.json
+python3 analysis/main.py analysis/serie_cruza.json --dry-run   # solo el plan
+```
+
+Hay una receta por serie en `analysis/`, y cada una mueve **una sola perilla**:
+
+| Receta | Qué varía | Corridas |
+|---|---|---|
+| `serie_seleccion.json` | los 7 métodos de selección | 70 |
+| `serie_cruza.json` | one_point · two_point · uniform · ring | 40 |
+| `serie_mutacion.json` | gene · multigene · uniform · non_uniform | 40 |
+| `serie_supervivencia.json` | additive · exclusive | 20 |
+| `serie_triangulos.json` | 10 · 50 · 200 · 500 triángulos | 40 |
+| `serie_generaciones.json` | 150 · 300 · 600 · 1200 · 2400 generaciones | 50 |
+| `serie_poblacion.json` | N = 30 · 100 · 300 | 30 |
+| `serie_color.json` | rgb · hsv · hcl | 30 |
+
+Con una excepción declarada, que mueve dos:
+
+| Receta | Qué varía | Corridas |
+|---|---|---|
+| `serie_triangulos_generaciones.json` | 10 · 50 · 200 · 500 triángulos **×** 150 · 1200 generaciones | 80 |
+
+Es la serie que hace honesta a `serie_triangulos.json`. Ahí las cuatro
+cantidades de triángulos se comparan a 150 generaciones para todas, y eso
+confunde *cuánta capacidad tiene el genotipo* con *cuánto presupuesto le dieron
+para usarla*: 500 triángulos son 5000 alelos, y a 150 generaciones todavía no
+terminaron de acomodarse — medido, dan **peor** que 10 triángulos. La pregunta
+que se puede contestar no es "cuántos triángulos conviene" sino "cuántos
+triángulos conviene **para este presupuesto**", y esa necesita las dos perillas
+en la misma grilla.
+
+Y `serie_generaciones.json` no es una sola corrida cortada en cinco lugares,
+aunque lo parezca: la mutación `non_uniform` recoce contra `max_generations`
+(`delta = span · (1 − g/G)^b`), así que **G no es solo cuándo parás, es la escala
+del recocido**. Con G=150 la mutación ya casi no perturba en la generación 100;
+con G=2400, en la generación 100 sigue explorando. Declarar más presupuesto
+cambia el comportamiento desde la generación 0.
+
+Una receta declara de qué config partir, qué pisarle y con qué seeds repetir:
+
+```json
+{
+  "base_config": "config.json.example",
+  "overrides": {"stopping": [], "engine.max_generations": 150},
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "workers": 1,
+  "sweep": {
+    "path": "operators.crossover.name",
+    "values": ["one_point", "two_point", "uniform", "ring"]
+  }
+}
+```
+
+- **`overrides`**: se aplican a todas las variantes. Las claves son rutas con
+  puntos hacia el config base (`engine.max_generations`,
+  `operators.mutation.params`). Si la ruta no existe, falla al cargar.
+- **`sweep`**: atajo para variar **una** perilla; genera una variante por valor.
+- **`variants`**: la forma general, para cuando una variante necesita cambiar
+  varias claves a la vez (ver `analysis/serie_seleccion.json`). Va `sweep` **o**
+  `variants`, no los dos.
+- **`title`** (opcional): cómo nombran los gráficos a la serie. Sin él, el título
+  se deriva de lo que difiere entre las variantes, que es lo correcto para una
+  serie de una perilla y es incompleto para una grilla — nada río abajo puede
+  distinguir un segundo eje deliberado de una perilla movida para compensar (en
+  `serie_mutacion.json`, `engine.pm=1.0` está para que `gene` mute un alelo como
+  los demás, y el título correcto sigue siendo "método de mutación"). Una receta
+  que mueve dos perillas a propósito tiene que decirlo ella.
+- **`seeds`**: cada variante corre una vez por seed. Con una sola seed no podés
+  distinguir una diferencia real del azar.
+- **`workers`**: corridas en paralelo. **Dejarlo en 1**: el kernel nativo ya
+  paraleliza cada generación sobre todos los cores (`problem.params.threads`),
+  así que correr varias corridas a la vez sobre-suscribe la CPU y ensucia los
+  tiempos. Cada corrida usa un proceso propio y el runner le fuerza
+  `engine.processes = 1` para no anidar pools.
+
+Antes de correr nada valida **todas** las variantes contra `ga.config`, así un
+nombre de operador mal escrito falla en el segundo cero y no a los 40 minutos.
+
+Cada serie escribe en `analysis/results/<sweep_id>/`:
+
+- `summary.csv` — **una fila por corrida**: variante, seed, fitness final,
+  generación en que apareció, criterio de corte, evaluaciones, tiempo,
+  diversidad final. Es el CSV para comparar variantes entre sí.
+- `history.csv` — **una fila por generación**, en formato largo, con
+  `(variant, seed)` como identificador. Es el CSV para las curvas de fitness y
+  diversidad a lo largo del tiempo.
+- `resolved.json` — el config completo que efectivamente corrió cada variante,
+  para poder reproducir la serie desde su propia salida.
+
+Los CSVs se van escribiendo a medida que terminan las corridas, así que una
+serie interrumpida igual deja datos usables.
+
+## Gráficos
+
+**Un solo comando** dibuja todas las series y arma las páginas para navegarlas:
+
+```bash
+python3 analysis/plots_main.py --abrir                          # todas las series, y abre la landing
+python3 analysis/plots_main.py                                  # ídem, sin abrir nada
+python3 analysis/plots_main.py analysis/results/20260907T193328Z # solo esa (la landing se rearma igual)
+python3 analysis/plots_main.py --force                          # redibuja incluso lo que está al día
+```
+
+Deja dos niveles de navegación:
+
+- **`analysis/results/index.html`** — la landing. Una fila por serie: qué perilla
+  mueve, sus variantes, cuántas seeds y corridas, cuándo se corrió. Sin esto la
+  carpeta de resultados es una pila de timestamps UTC y saber cuál tiene la serie
+  de cruza es abrirlas hasta que una coincida.
+- **`<serie>/index.html`** — el índice de esa serie. Lista cada gráfico con la
+  pregunta que contesta, repite las tablas de números que el script imprime por
+  stdout, y cierra con la configuración que **efectivamente** corrió (leída de
+  `summary.csv` y `resolved.json`, no escrita a mano).
+
+Los gráficos de una serie se leen juntos —la trayectoria cuenta qué pasó, la
+comparación dice si eso es un resultado— y partirlos en dos comandos solo invita
+a presentar la mitad. Por eso es un comando y no varios.
+
+Redibujar las siete series en cada invocación sería sobre todo reescribir
+gráficos cuyos datos no se movieron, y cada uno lleva ~3 MB de plotly embebido:
+una serie se saltea si su `index.html` es más nuevo que sus CSVs. `--force`
+ignora ese chequeo. Si una serie está rota, se reporta y se sigue con las otras
+— una serie inservible no se lleva puesta a la landing ni a las demás.
+
+Todos los HTML son autocontenidos: llevan plotly embebido y abren sin internet.
+
+### Trayectoria — qué hizo el algoritmo generación a generación
+
+- `fitness.html` — mejor fitness alcanzado, como máximo acumulado por seed.
+- `diversity.html` — diversidad genotípica por generación. Es el gráfico que
+  muestra la **convergencia prematura**: si la curva se va a cero antes de que
+  el fitness llegue a algo aceptable, la población se homogeneizó.
+- `pressure.html` — la distancia del mejor individuo al promedio de su
+  población: lo que el método de selección efectivamente hace.
+- `comparison.html` — fitness final por variante, con un círculo por seed y un
+  rombo en la media.
+
+Las seeds se promedian por generación, así que una variante es una línea, y cada
+curva marca con **barras de error** el rango completo entre seeds, en diez puntos
+de la corrida. No son ±1 desvío: con diez corridas la pregunta que se hace quien
+lee es "¿podrían haberse dado vuelta estas dos variantes en otra seed?", y el
+rango completo la contesta — una banda de 1σ esconde justo las colas que la
+deciden. Cada variante marca sus barras en generaciones distintas, así que con
+varias curvas se intercalan en vez de apilarse en una columna ilegible.
+
+En `comparison.html` no se promedian: se muestran una por una a propósito, porque **si las seeds de una
+variante se dispersan más que la distancia entre dos variantes, esa distancia no
+es un resultado**.
+
+Ese gráfico es un dot plot y no barras por una razón: el fitness vive en una
+franja angosta cerca de 1, así que un gráfico de barras necesitaría un eje
+truncado para mostrar alguna diferencia — y una barra truncada miente sobre la
+magnitud, porque el largo de la barra *es* el valor. Los puntos codifican
+posición, así que un eje con zoom es honesto.
+
+`--x cumulative_evaluations` **agrega** una segunda versión de estos tres contra
+trabajo hecho en vez de generaciones, para las series donde una generación no
+cuesta lo mismo en cada variante (tamaño de población, cantidad de triángulos):
+ahí generaciones iguales no son trabajo igual. Las dos versiones quedan en el
+mismo índice, así que se pueden mirar una al lado de la otra.
+
+### Comparación — si la diferencia es un resultado o es ruido
+
+Una trayectoria no puede decir si dos variantes realmente difieren. Eso lo
+responden estos, que sirven para cualquier serie porque todas hacen la misma
+pregunta que hace la consigna: *qué método usarían en diferentes circunstancias
+y por qué*.
+
+- `compare_distribution.html` — boxplot del fitness final por variante, con un
+  punto por seed. La caja muestra mediana y cuartiles (lo que la media tapa) y
+  los puntos evitan leer 10 corridas como si fueran una población suave.
+- `compare_paired.html` (2 variantes) — la diferencia **por seed**, barra por
+  barra, con la media y su IC95%. Una barra que cruza el cero es una seed en la
+  que se dio vuelta el ranking.
+- `compare_ranking.html` (3 variantes o más) — el puesto que sacó cada variante
+  dentro de cada seed: puesto medio, cada puesto individual y el rango completo.
+  Una variante cuyo rango cubre todo el campo no ganó de verdad.
+- `compare_speed.html` — generaciones hasta un umbral de fitness que **todas**
+  las corridas alcanzan. Es el gráfico que separa "mejor" de "más rápido", que
+  es justo la circunstancia que pregunta la consigna: un método que termina más
+  abajo pero llega en un tercio de las generaciones es la opción correcta si el
+  presupuesto es de generaciones.
+- `compare_tradeoff.html` — diversidad final contra fitness final, un punto por
+  corrida. Convierte "peor" en el trade-off explotación/exploración: terminar
+  abajo con la población todavía dispersa (no terminó de converger) es un
+  problema distinto de terminar abajo ya convergido (óptimo local).
+- `survival_cost.html` — **solo** para la serie de supervivencia. Por generación,
+  cuánto queda la población por debajo del mejor que ya había encontrado. Bajo
+  aditiva (μ+λ) la curva está clavada en cero *por construcción*: el mejor
+  siempre compite. Bajo exclusiva (μ,λ) cada generación es una oportunidad de
+  tirarlo. El gráfico demuestra la propiedad en vez de sugerirla.
+
+### Por qué se pueden comparar de a pares
+
+Todas las variantes corren **las mismas seeds**, y una seed fija la población
+inicial y todo el stream del RNG: las dos corridas arrancan del mismo punto y se
+separan únicamente por el operador que se está probando. Por eso la unidad de
+comparación es la diferencia dentro de una seed y no la distancia entre dos
+promedios — comparar promedios gastaría casi toda la resolución en la dispersión
+entre seeds, que acá es más grande que el efecto.
+
+Sobre eso corren dos tests, ambos con la biblioteca estándar y sin supuestos de
+normalidad (10 corridas no alcanzan para verificarla):
+
+- **Test de permutación pareado.** Si las dos variantes fueran intercambiables,
+  cambiarles la etiqueta dentro de una seed sería igual de probable, así que cada
+  diferencia podría haber tenido cualquier signo. El *p* es la fracción de las
+  2ⁿ asignaciones de signos cuya media es al menos tan extrema como la observada.
+  Con 10 seeds son 1024 casos: es **exacto**, no muestreado.
+- **Bootstrap percentil** para el IC95% de la diferencia media. La semilla del
+  bootstrap está fija (`BOOTSTRAP_SEED`), así que el intervalo es el mismo número
+  en cada corrida del script — un IC que se mueve entre dos ejecuciones no es un
+  número que se pueda poner en una filmina.
+
+Con 3 variantes o más se testea cada una **contra la líder** y se corrige por
+Holm-Bonferroni. Comparar 6 métodos contra el mejor son 6 tests, y a p<0.05 cada
+uno es más probable que salga un falso ganador a que no salga ninguno; la columna
+`p (Holm)` es la que hay que citar.
+
+### Pie de página
+
+Todos los gráficos llevan al pie del título qué se mantuvo **fijo** en toda la
+serie (N, K, Pc, Pm, generaciones, operadores, imagen, triángulos, resolución).
+Eso sale del `resolved.json` de la propia corrida, no de un texto escrito a mano,
+así que no puede quedar desfasado — y lo que la serie varió queda afuera solo,
+porque justamente difiere entre variantes. De ahí sale también el título del
+índice: la serie se nombra por la perilla que movió.
+
+La paleta (`analysis/plots_style.py`) está validada para daltonismo: los colores
+se asignan en orden fijo y cada variante conserva el suyo en todos los gráficos.
+Pasadas 8 variantes conviene partir la serie en vez de inventar un color nuevo.
 
 ## Agregar un operador nuevo
 

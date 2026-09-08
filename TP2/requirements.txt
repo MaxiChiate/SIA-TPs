@@ -7,3 +7,6 @@ pillow
 numpy
 pytest
 maturin
+
+# Only for the sweep charts (analysis/plots_main.py); nothing else imports it.
+plotly>=5.18
