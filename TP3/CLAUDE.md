@@ -8,18 +8,22 @@ Enunciado: `docs/Enunciado TP3 - 2Q 2026.pdf`.
 
 ## Estado
 
-**Solo diseño.** No hay código, ni datasets, ni tests. Lo que existe:
+**Primera neurona en C.** Perceptrón simple que entrena y valida sobre CSVs; sin tests ni
+multicapa todavía. Lo que existe:
 
 ```
 docs/Enunciado TP3 - 2Q 2026.pdf
-validation_exercise/
-  README.md                      # los 4 casos de validación del enunciado
-  pseudocode/                    # diseño del perceptrón simple, un archivo por módulo
-    simple_perceptron_activation_functions.md
-    simple_perceptron_update_rules.md
-    simple_perceptron_model.md
-    simple_perceptron_trainer.md
+neuron/                          # C11 + make; README.md explica cómo correrlo
+  main.c                         # carga config y datasets, entrena, valida
+  neuron.c/h                     # la neurona: pesos dimensionados en runtime (n_inputs + 1)
+  activation/                    # sign, lineal, tanh (θ y θ'), elegidas por nombre
+  io/                            # config.json (JSON plano) y datasets CSV
+  config.json.example            # se versiona este; config.json está gitignoreado
 ```
+
+`n_inputs` no es global: lo trae cada neurona, y se deduce de las columnas del CSV (entradas
+primero, ζ en la última). Así la misma neurona sirve de bloque para el multicapa. `build/` y
+`data/` están gitignoreados.
 
 Se trabaja en la rama `dev-perceptron`.
 
@@ -29,7 +33,7 @@ Cuatro herramientas: perceptrón simple **escalón**, **lineal** y **no lineal**
 **multicapa**.
 
 **Ejercicio (validación)** — no se presenta, pero fija el contrato de cada módulo. Los cuatro
-casos están tabulados en `validation_exercise/README.md`: AND lógico con escalón, ~50 muestras
+casos: AND lógico con escalón, ~50 muestras
 de `y = x` con el lineal, ~50 de `y = tanh(x)` con el no lineal, y XOR multicapa con
 arquitecturas `[2,2,1]` y `[2,3,2,1]` (conviene hacer las cuentas a mano).
 
@@ -59,8 +63,8 @@ las conclusiones; feature engineering sobre el dataset de fraude; calibración d
 
 ## Diseño del perceptrón simple — decisiones tomadas
 
-El pseudocódigo en `validation_exercise/pseudocode/` es el contrato. Lo cerrado, para no
-volver a discutirlo:
+El pseudocódigo original se borró; lo cerrado queda acá, para no volver a discutirlo. La neurona
+en C todavía no cubre todo (ver Pendiente).
 
 - **Cuatro módulos**, frontera clara entre ellos: `activations` (θ, θ', rango), `update_rules`
   (Δw), `model` (pesos y predicción), `trainer` (loop de entrenamiento).
@@ -88,7 +92,10 @@ volver a discutirlo:
 
 - **Diseñar el multicapa**: backpropagation y las arquitecturas `[2,2,1]` y `[2,3,2,1]`. El
   pseudocódigo actual cubre únicamente el perceptrón simple.
-- **Implementar**: no hay una sola línea de código todavía.
+- **Llevar a `neuron/` lo decidido que falta**: `batch_size`, rosenblatt vs. gradiente según la
+  activación, guardar el mejor error, criterio de convergencia, métricas por época, `logistic`.
+  Hoy `neuron_train_by_epoch` corre `epochs` épocas online fijas.
+- La seed se usa con `srand`/`rand` en `main.c`, no con un RNG inyectado como pide la convención.
 - **Conseguir los datasets**: `transactions.csv`, `digits.csv`, `digits_test.csv` no están en
   el repo.
 - Ejercicio 1 y Ejercicio 2 completos (son los entregables).
@@ -101,7 +108,9 @@ volver a discutirlo:
 - Nombres de archivo descriptivos, no numerados ni abreviados.
 - Los algoritmos se implementan **a mano**: nada de scikit-learn, Keras ni equivalentes para
   el perceptrón. Librerías externas solo para I/O, arrays y gráficos.
-- Python con type hints y dataclasses, `from __future__ import annotations`, funciones cortas,
+- La neurona está en C (C11, `make`): módulos por directorio, `main` corto que llama función por
+  función, validaciones en helpers aparte.
+- Python (si se usa, p. ej. análisis y gráficos) con type hints y dataclasses, `from __future__ import annotations`, funciones cortas,
   sin herencia profunda.
 - `seed` obligatorio en todo lo que use aleatoriedad (inicialización de pesos, shuffle, splits):
   misma seed + mismo config ⇒ mismo resultado. Una sola instancia de RNG inyectada por
