@@ -1,0 +1,8 @@
+{
+  "train_dataset": "data/tanh_train.csv",
+  "validation_dataset": "data/tanh_validation.csv",
+  "activation": "tanh",
+  "eta": 0.05,
+  "epochs": 10000,
+  "seed": 42
+}

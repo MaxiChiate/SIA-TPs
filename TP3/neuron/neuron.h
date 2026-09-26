@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
-
 typedef struct neuron * Neuron;
 
 #define EPSILON 0.000001
@@ -25,7 +23,7 @@ int neuron_learn(Neuron neuron, const double input[], double zeta);
 __attribute__((deprecated("neuron_train is deprecated")))
 int neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples, int max_epochs);
 
-int neuron_train_by_epoch(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples);
+void neuron_train_by_epoch(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples, int epochs);
 
 // out must have room for n_inputs + 1 elements
 void neuron_get_weights(const Neuron neuron, double out[]);

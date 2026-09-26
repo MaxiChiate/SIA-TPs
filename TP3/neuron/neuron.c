@@ -14,7 +14,7 @@ Neuron neuron_new(int n_inputs, double (*func)(double), double (*func_prime)(dou
 
   Neuron neuron = malloc(sizeof(struct neuron) + (n_inputs + 1) * sizeof(double));
   if (neuron == NULL) {
-    fprintf(stderr, "FATAL: couldn't allocate neuron\n", stderr);
+    fprintf(stderr, "FATAL: couldn't allocate neuron\n");
     abort();
   }
   neuron->n_inputs = n_inputs;
@@ -98,11 +98,11 @@ int neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs], 
   return convergence ? epoch : -1;
 }
 
-int neuron_train_by_epoch(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples) {
+void neuron_train_by_epoch(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples, int epochs) {
 
   int epoch = 0;
 
-  while ( epoch++ < EPOCHS) {
+  while ( epoch++ < epochs) {
 
     int errors_this_epoch = 0;
     for (int i = 0; i < n_samples; i++) {
@@ -110,7 +110,6 @@ int neuron_train_by_epoch(Neuron neuron, int n_inputs, const double dataset[][n_
     }
   }
 
-  return epoch;
 }
 
 
