@@ -2,21 +2,23 @@
 #include <math.h>
 
 struct neuron {
-  double weights[WEIGHTS_AMOUNT];
+  int n_inputs;
   double (*theta)(double);
   double (*theta_prime)(double);
   double eta;
+  double weights[]; // n_inputs + 1 elements, weights[0] = w0
 };
 
 
-Neuron neuron_new(double (*func)(double), double (*func_prime)(double), double weights[], double eta) {
+Neuron neuron_new(int n_inputs, double (*func)(double), double (*func_prime)(double), const double weights[], double eta) {
 
-  Neuron neuron = malloc(sizeof(struct neuron));
+  Neuron neuron = malloc(sizeof(struct neuron) + (n_inputs + 1) * sizeof(double));
   if (neuron == NULL) {
     fprintf(stderr, "FATAL: couldn't allocate neuron\n", stderr);
     abort();
   }
-  memcpy(neuron->weights, weights, sizeof(neuron->weights)); 
+  neuron->n_inputs = n_inputs;
+  memcpy(neuron->weights, weights, (n_inputs + 1) * sizeof(double));
   neuron->theta = func;
   neuron->theta_prime = func_prime;
   neuron->eta = eta;
@@ -26,17 +28,27 @@ Neuron neuron_new(double (*func)(double), double (*func_prime)(double), double w
 }
 
 
-void neuron_get_weights(const Neuron neuron, double out[WEIGHTS_AMOUNT]) {
-  memcpy(out, neuron->weights, sizeof(neuron->weights));
+void neuron_free(Neuron neuron) {
+  free(neuron);
 }
 
 
-double neuron_predict(const Neuron neuron, const double input[N_INPUTS], double * h_out) {
+int neuron_get_n_inputs(const Neuron neuron) {
+  return neuron->n_inputs;
+}
+
+
+void neuron_get_weights(const Neuron neuron, double out[]) {
+  memcpy(out, neuron->weights, (neuron->n_inputs + 1) * sizeof(double));
+}
+
+
+double neuron_predict(const Neuron neuron, const double input[], double * h_out) {
 
   double aux = 0.0;
 
-  for (int i = 1, j = 0; i < WEIGHTS_AMOUNT && j < N_INPUTS; i++, j++) {
-    aux += (neuron->weights[i] * input[j]);
+  for (int j = 0; j < neuron->n_inputs; j++) {
+    aux += (neuron->weights[j+1] * input[j]);
   }
   aux += neuron->weights[0];
   
@@ -49,7 +61,7 @@ double neuron_predict(const Neuron neuron, const double input[N_INPUTS], double 
 }
 
 
-int neuron_learn(Neuron neuron, const double input[N_INPUTS], double zeta) {
+int neuron_learn(Neuron neuron, const double input[], double zeta) {
   
   double h;
   double prediction = neuron_predict(neuron, input, &h);
@@ -57,16 +69,17 @@ int neuron_learn(Neuron neuron, const double input[N_INPUTS], double zeta) {
   double delta = neuron->eta * (zeta - prediction) * neuron->theta_prime(h);
 
   neuron->weights[0] += delta;
-  for (int i = 1; i < WEIGHTS_AMOUNT; i++) {
+  for (int i = 1; i <= neuron->n_inputs; i++) {
     neuron->weights[i] += (delta * input[i-1]);
   }
 
-  return !(((prediction - zeta)  < 0.1) && ((zeta - prediction) > -0.1));
+  return !(fabs(prediction - zeta) < EPSILON);
 
 }
 
 
-int neuron_train(Neuron neuron, const double dataset[][N_INPUTS], const double zetas[], int n_samples, int max_epochs) {
+
+int neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples, int max_epochs) {
 
   int convergence = 0;
   int epoch = 0;
@@ -83,5 +96,38 @@ int neuron_train(Neuron neuron, const double dataset[][N_INPUTS], const double z
 
   
   return convergence ? epoch : -1;
+}
+
+int neuron_train_by_epoch(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples) {
+
+  int epoch = 0;
+
+  while ( epoch++ < EPOCHS) {
+
+    int errors_this_epoch = 0;
+    for (int i = 0; i < n_samples; i++) {
+      errors_this_epoch += neuron_learn(neuron, dataset[i], zetas[i]);
+    }
+  }
+
+  return epoch;
+}
+
+
+void plot_neuron_validation(const Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples) {
+
+  int errors = 0;
+
+  for (int i = 0; i < n_samples; i++) {
+    double prediction = neuron_predict(neuron, dataset[i], NULL);
+
+    printf("input: %f, prediction: %f, zeta: %f\n", dataset[i][0], prediction, zetas[i]);
+
+    if (!(fabs(prediction - zetas[i]) < EPSILON)) {
+      errors++;
+    }
+  }
+
+  printf("errors: %d/%d\n", errors, n_samples);
 
 }
