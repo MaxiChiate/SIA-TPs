@@ -30,3 +30,16 @@ va a un archivo aparte y no entra al entrenamiento.
   la activación saturada.
 - Con seed fija: misma seed y mismo config dan el mismo resultado, y las corridas se pueden
   comparar.
+
+## Activación del no lineal (fraude): logistic, no tanh
+
+**Qué:** θ(h) = 1 / (1 + e^(−h)), θ'(h) = θ(h)·(1 − θ(h)). Está en `neuron/activation/`.
+
+**Por qué:**
+- La salida es una probabilidad y ζ vive en [0, 1]. La imagen de la logistic es (0, 1), la
+  de tanh es (−1, 1): con tanh la neurona puede predecir probabilidades negativas y la mitad
+  de su rango queda en valores imposibles.
+- Resultado sobre el dataset completo (η = 0.001 y 1000 épocas para lineal y logistic;
+  η = 0.0001 para tanh): MSE lineal 0.026 (su óptimo teórico), tanh 0.015, logistic 0.011.
+- θ' sale de θ misma, sin otra exponencial.
+- Se implementa partida por signo de h para que `exp` no desborde con |h| grande.

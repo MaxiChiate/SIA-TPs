@@ -46,7 +46,7 @@ solo imprime esa ruta. Si dos corridas caen en el mismo segundo, la segunda llev
 |----------------------|--------|----------------------------------------------------|
 | `train_dataset`      | string | CSV de entrenamiento                               |
 | `validation_dataset` | string | CSV de validación                                  |
-| `activation`         | string | `sign`, `lineal` o `tanh`                          |
+| `activation`         | string | `sign`, `lineal`, `tanh` o `logistic`              |
 | `eta`                | número | Tasa de aprendizaje, mayor a 0                     |
 | `epochs`             | entero | Épocas de entrenamiento, mayor a 0                 |
 | `seed`               | entero | Semilla de los pesos iniciales (uniformes en [-0.5, 0.5]) |

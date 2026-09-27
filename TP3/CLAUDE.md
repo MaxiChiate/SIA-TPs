@@ -16,7 +16,7 @@ docs/Enunciado TP3 - 2Q 2026.pdf
 neuron/                          # C11 + make; README.md explica cómo correrlo
   main.c                         # carga config y datasets, entrena, valida
   neuron.c/h                     # la neurona: pesos dimensionados en runtime (n_inputs + 1)
-  activation/                    # sign, lineal, tanh (θ y θ'), elegidas por nombre
+  activation/                    # sign, lineal, tanh, logistic (θ y θ'), elegidas por nombre
   io/                            # config.json (JSON plano) y datasets CSV
   config.json.example            # se versiona este; config.json está gitignoreado
 ```
@@ -93,7 +93,7 @@ en C todavía no cubre todo (ver Pendiente).
 - **Diseñar el multicapa**: backpropagation y las arquitecturas `[2,2,1]` y `[2,3,2,1]`. El
   pseudocódigo actual cubre únicamente el perceptrón simple.
 - **Llevar a `neuron/` lo decidido que falta**: `batch_size`, rosenblatt vs. gradiente según la
-  activación, guardar el mejor error, criterio de convergencia, métricas por época, `logistic`.
+  activación, guardar el mejor error, criterio de convergencia, métricas por época.
   Hoy `neuron_train_by_epoch` corre `epochs` épocas online fijas.
 - La seed se usa con `srand`/`rand` en `main.c`, no con un RNG inyectado como pide la convención.
 - **Conseguir los datasets**: `transactions.csv`, `digits.csv`, `digits_test.csv` no están en
