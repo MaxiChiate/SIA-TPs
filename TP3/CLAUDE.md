@@ -121,6 +121,8 @@ en C todavía no cubre todo (ver Pendiente).
 ## Método de trabajo
 
 - Frenar entre bloques para revisión. Justificar cada decisión de diseño en una línea.
+- **`DECISIONS.md`**: revisarlo y completarlo cada vez que se tome una decisión que puedan
+  preguntar en la defensa. Una entrada por decisión, concisa y concreta: **Qué** + **Por qué**.
 - Si algo tiene más de una forma razonable de resolverse, plantear las opciones en vez de
   elegir solo.
 - Commits chicos y atómicos, con mensaje de una sola línea.
