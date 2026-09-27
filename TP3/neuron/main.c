@@ -1,6 +1,7 @@
 #include "activation/activation.h"
 #include "io/config.h"
 #include "io/dataset.h"
+#include "io/results.h"
 #include "neuron.h"
 #include <stdarg.h>
 
@@ -61,16 +62,18 @@ static void init_random_weights(double weights[], int n_weights, unsigned int se
 }
 
 
-static void print_weights(const char * title, const Neuron neuron) {
-  int n_weights = neuron_get_n_inputs(neuron) + 1;
-  double weights[n_weights];
-  neuron_get_weights(neuron, weights);
+static Results create_results(const char * config_path, const char * activation) {
+  Results results;
+  if (!results_create(config_path, activation, &results)) exit(EXIT_FAILURE);
+  return results;
+}
 
-  printf("%s:\n", title);
-  for (int i = 0; i < n_weights; i++) {
-    printf(i == 0 ? "%f" : ", %f", weights[i]);
-  }
-  printf("\n");
+
+static void save_weights(const Results * results, const double initial_weights[], const Neuron neuron) {
+  int n_weights = neuron_get_n_inputs(neuron) + 1;
+  double final_weights[n_weights];
+  neuron_get_weights(neuron, final_weights);
+  if (!results_write_weights(results, n_weights, initial_weights, final_weights)) exit(EXIT_FAILURE);
 }
 
 
@@ -81,16 +84,27 @@ static void train_neuron(Neuron neuron, const Dataset train, int epochs) {
 }
 
 
-static void validate_neuron(const Neuron neuron, const Dataset validation) {
+static void validate_neuron(const Neuron neuron, const Dataset validation, const Results * results) {
   int n_inputs = dataset_n_inputs(validation);
+  int n_samples = dataset_n_samples(validation);
   const double (*inputs)[n_inputs] = (const double (*)[n_inputs]) dataset_inputs(validation);
-  plot_neuron_validation(neuron, n_inputs, inputs, dataset_zetas(validation), dataset_n_samples(validation));
+
+  double * predictions = malloc(n_samples * sizeof(double));
+  if (predictions == NULL) die("couldn't allocate predictions");
+  for (int i = 0; i < n_samples; i++) {
+    predictions[i] = neuron_predict(neuron, inputs[i], NULL);
+  }
+
+  int ok = results_write_predictions(results, n_inputs, inputs, dataset_zetas(validation), predictions, n_samples);
+  free(predictions);
+  if (!ok) exit(EXIT_FAILURE);
 }
 
 
 int main(int argc, char * argv[]) {
 
-  Config config = load_config(config_path(argc, argv));
+  const char * path = config_path(argc, argv);
+  Config config = load_config(path);
   const Activation * activation = load_activation(config.activation);
   Dataset train = load_dataset(config.train_dataset);
   Dataset validation = load_dataset(config.validation_dataset);
@@ -98,50 +112,18 @@ int main(int argc, char * argv[]) {
 
   double initial_weights[n_inputs + 1];
   // Simple:
-  /*init_random_weights(initial_weights, n_inputs + 1, config.seed);
+  init_random_weights(initial_weights, n_inputs + 1, config.seed);
   Neuron neuron = neuron_new(n_inputs, activation->theta, activation->theta_prime, initial_weights, config.eta);
 
-  print_weights("weights before training", neuron);
+  Results results = create_results(path, config.activation);
   train_neuron(neuron, train, config.epochs);
-  print_weights("weights after training", neuron);
-  validate_neuron(neuron, validation); 
+  save_weights(&results, initial_weights, neuron);
+  validate_neuron(neuron, validation, &results);
+  printf("results -> %s\n", results.dir);
 
   neuron_free(neuron);
   dataset_free(train);
-  dataset_free(validation);*/
-
-
-  // Primer intento multicapa: :)
-  init_random_weights(initial_weights, n_inputs + 1, config.seed);
-  Neuron neuron1 = neuron_new(n_inputs, activation->theta, activation->theta_prime, initial_weights, config.eta);
-  init_random_weights(initial_weights, n_inputs + 1, config.seed);
-  Neuron neuron2 = neuron_new(n_inputs, activation->theta, activation->theta_prime, initial_weights, config.eta);
-  
-  init_random_weights(initial_weights, 2 + 1, config.seed);
-  Neuron neuron3 = neuron_new(2, activation->theta, activation->theta_prime, initial_weights, config.eta);
-
-  
-  int n_inputs_dataset = dataset_n_inputs(train);
-  const double (*inputs)[n_inputs] = (const double (*)[n_inputs]) dataset_inputs(train);
-
-  for (int i = 0; i < config.epochs; i++) {
-  
-    for(int n=0 ; n<n_inputs_dataset; n++){
-      neuron_learn(neuron1, inputs[n], dataset_zetas(train)[n]);
-      neuron_learn(neuron2, inputs[n], dataset_zetas(train)[n]);
-    }
-
-    neuron_learn(neuron3, (double[]){neuron_predict(neuron1, inputs[0], NULL), neuron_predict(neuron2, inputs[0], NULL)}, dataset_zetas(train)[0]);
-  }
-
-  validate_neuron(neuron3, validation);
-
-  neuron_free(neuron1);
-  neuron_free(neuron2);
-  neuron_free(neuron3);
-  dataset_free(train);
   dataset_free(validation);
-
   return 0;
 
 }

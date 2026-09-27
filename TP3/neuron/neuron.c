@@ -125,22 +125,3 @@ void neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs],
   }
 
 }
-
-
-void plot_neuron_validation(const Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples) {
-
-  int errors = 0;
-
-  for (int i = 0; i < n_samples; i++) {
-    double prediction = neuron_predict(neuron, dataset[i], NULL);
-
-    printf("input: %f, prediction: %f, zeta: %f\n", dataset[i][0], prediction, zetas[i]);
-
-    if (!(fabs(prediction - zetas[i]) < EPSILON)) {
-      errors++;
-    }
-  }
-
-  printf("errors: %d/%d\n", errors, n_samples);
-
-}

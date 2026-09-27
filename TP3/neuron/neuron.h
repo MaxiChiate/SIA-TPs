@@ -7,7 +7,7 @@
 
 typedef struct neuron * Neuron;
 
-#define EPSILON 0.000001
+#define EPSILON 0.0001
 
 // weights has n_inputs + 1 elements (weights[0] = w0, the bias weight)
 Neuron neuron_new(int n_inputs, double (*func)(double), double (*func_prime)(double), const double weights[], double eta);
@@ -24,7 +24,5 @@ void neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs],
 
 // out must have room for n_inputs + 1 elements
 void neuron_get_weights(const Neuron neuron, double out[]);
-
-void plot_neuron_validation(const Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples);
 
 #endif //__NEURON_H__

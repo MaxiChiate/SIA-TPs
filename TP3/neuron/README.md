@@ -25,6 +25,19 @@ make run CONFIG=otro_config.json
 
 Otros targets: `make` solo compila (objetos y binario en `build/`), `make clean` borra `build/`.
 
+## Salida
+
+Cada corrida escribe en su propia carpeta, `results/<fecha>_<hora>_<activación>/`, y por consola
+solo imprime esa ruta. Si dos corridas caen en el mismo segundo, la segunda lleva sufijo `_2`.
+
+| Archivo           | Contenido                                                            |
+|-------------------|----------------------------------------------------------------------|
+| `config.json`     | Copia exacta del config con el que se corrió                         |
+| `weights.csv`     | Pesos iniciales y finales, una fila cada uno (`w0` es el bias)       |
+| `predictions.csv` | Por muestra de validación: entradas (`x1`…`xn`), `zeta`, `prediction` |
+
+`results/` está gitignoreado.
+
 ## Configuración
 
 `config.json` es un objeto JSON con todas estas claves (ninguna es opcional):
