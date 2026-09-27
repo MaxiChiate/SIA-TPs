@@ -77,7 +77,7 @@ static void print_weights(const char * title, const Neuron neuron) {
 static void train_neuron(Neuron neuron, const Dataset train, int epochs) {
   int n_inputs = dataset_n_inputs(train);
   const double (*inputs)[n_inputs] = (const double (*)[n_inputs]) dataset_inputs(train);
-  neuron_train_by_epoch(neuron, n_inputs, inputs, dataset_zetas(train), dataset_n_samples(train), epochs);
+  neuron_train(neuron, n_inputs, inputs, dataset_zetas(train), dataset_n_samples(train), epochs);
 }
 
 
@@ -97,15 +97,48 @@ int main(int argc, char * argv[]) {
   int n_inputs = shared_n_inputs(train, validation);
 
   double initial_weights[n_inputs + 1];
-  init_random_weights(initial_weights, n_inputs + 1, config.seed);
+  // Simple:
+  /*init_random_weights(initial_weights, n_inputs + 1, config.seed);
   Neuron neuron = neuron_new(n_inputs, activation->theta, activation->theta_prime, initial_weights, config.eta);
 
   print_weights("weights before training", neuron);
   train_neuron(neuron, train, config.epochs);
   print_weights("weights after training", neuron);
-  validate_neuron(neuron, validation);
+  validate_neuron(neuron, validation); 
 
   neuron_free(neuron);
+  dataset_free(train);
+  dataset_free(validation);*/
+
+
+  // Primer intento multicapa: :)
+  init_random_weights(initial_weights, n_inputs + 1, config.seed);
+  Neuron neuron1 = neuron_new(n_inputs, activation->theta, activation->theta_prime, initial_weights, config.eta);
+  init_random_weights(initial_weights, n_inputs + 1, config.seed);
+  Neuron neuron2 = neuron_new(n_inputs, activation->theta, activation->theta_prime, initial_weights, config.eta);
+  
+  init_random_weights(initial_weights, 2 + 1, config.seed);
+  Neuron neuron3 = neuron_new(2, activation->theta, activation->theta_prime, initial_weights, config.eta);
+
+  
+  int n_inputs_dataset = dataset_n_inputs(train);
+  const double (*inputs)[n_inputs] = (const double (*)[n_inputs]) dataset_inputs(train);
+
+  for (int i = 0; i < config.epochs; i++) {
+  
+    for(int n=0 ; n<n_inputs_dataset; n++){
+      neuron_learn(neuron1, inputs[n], dataset_zetas(train)[n]);
+      neuron_learn(neuron2, inputs[n], dataset_zetas(train)[n]);
+    }
+
+    neuron_learn(neuron3, (double[]){neuron_predict(neuron1, inputs[0], NULL), neuron_predict(neuron2, inputs[0], NULL)}, dataset_zetas(train)[0]);
+  }
+
+  validate_neuron(neuron3, validation);
+
+  neuron_free(neuron1);
+  neuron_free(neuron2);
+  neuron_free(neuron3);
   dataset_free(train);
   dataset_free(validation);
 

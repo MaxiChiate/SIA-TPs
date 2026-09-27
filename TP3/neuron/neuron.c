@@ -61,7 +61,22 @@ double neuron_predict(const Neuron neuron, const double input[], double * h_out)
 }
 
 
-int neuron_learn(Neuron neuron, const double input[], double zeta) {
+void neuron_learn(Neuron neuron, const double input[], double zeta) {
+  
+  double h;
+  double prediction = neuron_predict(neuron, input, &h);
+
+  double delta = neuron->eta * (zeta - prediction) * neuron->theta_prime(h);
+
+  neuron->weights[0] += delta;
+  for (int i = 1; i <= neuron->n_inputs; i++) {
+    neuron->weights[i] += (delta * input[i-1]);
+  }
+
+}
+
+
+int neuron_learn_only(Neuron neuron, const double input[], double zeta) {
   
   double h;
   double prediction = neuron_predict(neuron, input, &h);
@@ -78,8 +93,7 @@ int neuron_learn(Neuron neuron, const double input[], double zeta) {
 }
 
 
-
-int neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples, int max_epochs) {
+/*int neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples, int max_epochs) {
 
   int convergence = 0;
   int epoch = 0;
@@ -88,7 +102,7 @@ int neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs], 
 
     int errors_this_epoch = 0;
     for (int i = 0; i < n_samples; i++) {
-      errors_this_epoch += neuron_learn(neuron, dataset[i], zetas[i]);
+      neuron_learn(neuron, dataset[i], zetas[i]);
     }
 
     if (errors_this_epoch == 0) convergence = 1;
@@ -96,9 +110,9 @@ int neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs], 
 
   
   return convergence ? epoch : -1;
-}
+}*/
 
-void neuron_train_by_epoch(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples, int epochs) {
+void neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples, int epochs) {
 
   int epoch = 0;
 
@@ -106,7 +120,7 @@ void neuron_train_by_epoch(Neuron neuron, int n_inputs, const double dataset[][n
 
     int errors_this_epoch = 0;
     for (int i = 0; i < n_samples; i++) {
-      errors_this_epoch += neuron_learn(neuron, dataset[i], zetas[i]);
+      neuron_learn(neuron, dataset[i], zetas[i]);
     }
   }
 

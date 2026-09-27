@@ -18,12 +18,9 @@ int neuron_get_n_inputs(const Neuron neuron);
 
 double neuron_predict(const Neuron neuron, const double input[], double * h_out);
 
-int neuron_learn(Neuron neuron, const double input[], double zeta);
+void neuron_learn(Neuron neuron, const double input[], double zeta);
 
-__attribute__((deprecated("neuron_train is deprecated")))
-int neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples, int max_epochs);
-
-void neuron_train_by_epoch(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples, int epochs);
+void neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples, int epochs);
 
 // out must have room for n_inputs + 1 elements
 void neuron_get_weights(const Neuron neuron, double out[]);
