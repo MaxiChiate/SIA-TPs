@@ -2,6 +2,7 @@
 #define __CONFIG_H__
 
 #define CONFIG_STRING_MAX 256
+#define CONFIG_HIDDEN_LAYERS_MAX 16
 
 typedef struct {
   char train_dataset[CONFIG_STRING_MAX];
@@ -9,6 +10,9 @@ typedef struct {
   char activation[CONFIG_STRING_MAX];
   double eta;
   int epochs;
+  int batch_size;
+  int hidden_layers[CONFIG_HIDDEN_LAYERS_MAX]; // neurons per hidden layer; empty = simple perceptron
+  int n_hidden_layers;
   unsigned int seed;
 } Config;
 

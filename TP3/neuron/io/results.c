@@ -86,27 +86,21 @@ int results_create(const char * config_path, const char * activation, Results * 
 }
 
 
-static void write_weight_row(FILE * file, const char * stage, int n_weights, const double weights[]) {
-  fprintf(file, "%s", stage);
-  for (int i = 0; i < n_weights; i++) {
-    fprintf(file, ",%.10g", weights[i]);
-  }
-  fputc('\n', file);
-}
-
-
-int results_write_weights(const Results * results, int n_weights, const double initial[], const double final[]) {
+int results_write_weights(const Results * results, int n_layers, const int sizes[], const double initial[],
+                          const double final[]) {
   FILE * file = open_in_run_dir(results, "weights.csv");
   if (file == NULL) return 0;
 
-  fprintf(file, "stage");
-  for (int i = 0; i < n_weights; i++) {
-    fprintf(file, ",w%d", i);
-  }
-  fputc('\n', file);
+  fprintf(file, "layer,neuron,weight,initial,final\n");
 
-  write_weight_row(file, "initial", n_weights, initial);
-  write_weight_row(file, "final", n_weights, final);
+  int index = 0;
+  for (int l = 1; l <= n_layers; l++) {
+    for (int j = 0; j < sizes[l]; j++) {
+      for (int w = 0; w <= sizes[l-1]; w++, index++) {
+        fprintf(file, "%d,%d,%d,%.10g,%.10g\n", l, j + 1, w, initial[index], final[index]);
+      }
+    }
+  }
 
   return fclose(file) == 0;
 }

@@ -8,21 +8,24 @@
 
 #define CONFIG_FILE_MAX 4096
 
-enum field_type { FIELD_STRING, FIELD_DOUBLE, FIELD_INT, FIELD_UINT };
+enum field_type { FIELD_STRING, FIELD_DOUBLE, FIELD_INT, FIELD_UINT, FIELD_INT_ARRAY };
 
 typedef struct {
   const char * key;
   enum field_type type;
   size_t offset;
+  size_t count_offset; // FIELD_INT_ARRAY only: where the element count goes
 } Field;
 
 static const Field FIELDS[] = {
-  { "train_dataset",      FIELD_STRING, offsetof(Config, train_dataset) },
-  { "validation_dataset", FIELD_STRING, offsetof(Config, validation_dataset) },
-  { "activation",         FIELD_STRING, offsetof(Config, activation) },
-  { "eta",                FIELD_DOUBLE, offsetof(Config, eta) },
-  { "epochs",             FIELD_INT,    offsetof(Config, epochs) },
-  { "seed",               FIELD_UINT,   offsetof(Config, seed) },
+  { "train_dataset",      FIELD_STRING,    offsetof(Config, train_dataset), 0 },
+  { "validation_dataset", FIELD_STRING,    offsetof(Config, validation_dataset), 0 },
+  { "activation",         FIELD_STRING,    offsetof(Config, activation), 0 },
+  { "eta",                FIELD_DOUBLE,    offsetof(Config, eta), 0 },
+  { "epochs",             FIELD_INT,       offsetof(Config, epochs), 0 },
+  { "batch_size",         FIELD_INT,       offsetof(Config, batch_size), 0 },
+  { "hidden_layers",      FIELD_INT_ARRAY, offsetof(Config, hidden_layers), offsetof(Config, n_hidden_layers) },
+  { "seed",               FIELD_UINT,      offsetof(Config, seed), 0 },
 };
 
 #define N_FIELDS ((int) (sizeof(FIELDS) / sizeof(FIELDS[0])))
@@ -86,6 +89,36 @@ static int parse_number(Parser * parser, double * out) {
 }
 
 
+static int parse_integer(Parser * parser, int * out) {
+  double value;
+  if (!parse_number(parser, &value)) return 0;
+  if (value != floor(value)) return parse_error(parser, "expected an integer");
+  *out = (int) value;
+  return 1;
+}
+
+
+static int parse_int_array(Parser * parser, int out[CONFIG_HIDDEN_LAYERS_MAX], int * count) {
+  if (!expect(parser, '[')) return 0;
+
+  *count = 0;
+  skip_whitespace(parser);
+  if (*parser->cursor == ']') {
+    parser->cursor++;
+    return 1;
+  }
+
+  while (1) {
+    if (*count == CONFIG_HIDDEN_LAYERS_MAX) return parse_error(parser, "array too long");
+    if (!parse_integer(parser, &out[(*count)++])) return 0;
+
+    skip_whitespace(parser);
+    if (*parser->cursor != ',') return expect(parser, ']');
+    parser->cursor++;
+  }
+}
+
+
 static const Field * find_field(const char * key) {
   for (int i = 0; i < N_FIELDS; i++) {
     if (strcmp(FIELDS[i].key, key) == 0) return &FIELDS[i];
@@ -98,6 +131,7 @@ static int parse_value(Parser * parser, const Field * field, Config * config) {
   void * target = (char *) config + field->offset;
 
   if (field->type == FIELD_STRING) return parse_string(parser, target);
+  if (field->type == FIELD_INT_ARRAY) return parse_int_array(parser, target, (int *) ((char *) config + field->count_offset));
 
   double value;
   if (!parse_number(parser, &value)) return 0;
@@ -195,6 +229,16 @@ static int validate(const char * path, const Config * config) {
   if (config->epochs <= 0) {
     fprintf(stderr, "%s: \"epochs\" must be positive\n", path);
     return 0;
+  }
+  if (config->batch_size <= 0) {
+    fprintf(stderr, "%s: \"batch_size\" must be positive\n", path);
+    return 0;
+  }
+  for (int i = 0; i < config->n_hidden_layers; i++) {
+    if (config->hidden_layers[i] <= 0) {
+      fprintf(stderr, "%s: every entry of \"hidden_layers\" must be positive\n", path);
+      return 0;
+    }
   }
   return 1;
 }
