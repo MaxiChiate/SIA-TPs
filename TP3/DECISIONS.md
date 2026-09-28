@@ -45,66 +45,69 @@ peso de cada neurona `rand() / RAND_MAX − 0.5`, bias incluido (`weights[0]`). 
 - θ' sale de θ misma, sin otra exponencial.
 - Se implementa partida por signo de h para que `exp` no desborde con |h| grande.
 
-## Online, batch y mini-batch: un solo parámetro, `batch_size`
+## Actualización de pesos: online, batch y mini-batch con `batch_size`
 
-> **A revisar:** suma vs. promedio del Δw del batch, y si se mezclan las muestras en cada época.
-
-**Qué:** cada muestra suma su Δw = η·δ·x a un acumulador de la neurona, y los pesos cambian
-recién cuando se completa el batch. `batch_size = 1` es online, `≥ N` es batch, en el medio
-mini-batch. Se suma, no se promedia.
+**Qué:** cada muestra calcula su Δw = η·δ·x y lo suma a un acumulador de la neurona; los pesos
+cambian recién cuando se completa el batch. `batch_size = 1` es online, `≥ N` es batch, en el
+medio mini-batch. Las muestras van en el orden del CSV.
 
 **Por qué:**
-- Un solo camino de código para los tres regímenes: se comparan cambiando un número del config.
-- Suma y no promedio porque así lo define la regla (ΔW = Σ Δw). La contra: con batch más grande
-  el paso es más grande, así que η hay que ajustarlo según `batch_size`.
+- Un solo camino de código: los tres regímenes se comparan cambiando un número del config.
+- Se suma, no se promedia, porque así es la regla (ΔW = Σ Δw). La contra: con batch más grande
+  el paso es más grande, así que η se ajusta según `batch_size`.
 - El último batch de la época puede quedar incompleto y se aplica igual, para no descartar
   muestras.
 
-## Backpropagation: todos los δ antes de tocar un peso
+> **Sin decidir:** promediar en vez de sumar, y mezclar las muestras en cada época (hoy los
+> mini-batches son siempre los mismos).
 
-**Qué:** por muestra, forward (guarda h y V de cada capa), δ de salida
-`(ζ − O)·θ'(h)`, δ de las ocultas de atrás hacia adelante `θ'(h_j)·Σ_k w_kj·δ_k`, y recién
-después se acumula Δw en todas las neuronas.
+## Backpropagation: primero todos los δ, después los pesos
 
-**Por qué:**
-- El δ de una capa oculta usa los pesos de la capa siguiente. Si se actualizaran antes, el error
-  se propagaría con pesos que no son los que produjeron la salida.
-- Con el acumulador esto sale solo: los pesos no cambian hasta el final del batch.
-- Todas las capas usan la misma activación; tiene que ser derivable (`tanh`, `logistic`). Con
-  escalón, θ' = 0 y no llega error a las ocultas.
-- Con `hidden_layers: []` la red es una neurona sola y la regla queda igual a la del perceptrón
-  simple: verificado, mismas predicciones y pesos que la versión anterior.
-
-## Curva de aprendizaje: E, MSE, MAE y máx |e| por época, sobre train y validación
-
-> **A confirmar:** medir con una pasada aparte (y no acumulando durante la época), MSE como
-> error principal para comparar train y validación, y medir en todas las épocas y no cada k.
-
-**Qué:** al terminar cada época (con el último batch ya aplicado) se hace un forward de todo el
-train y de toda la validación, sin tocar los pesos, y se guardan E, MSE, MAE y máx |e| de cada uno
-en `epochs.csv` (salen de la misma pasada). El reporte deja elegir cuál graficar; por defecto MSE. La época 0 es la red sin entrenar. `network_train` recibe un callback por época;
-la medición la hace `main`, así la red no sabe que existe un conjunto de validación.
-
-- **E = ½·Σ(ζ − O)²**: la función que minimiza la regla (Δw = −η·∂E/∂w); el ½ cancela el 2 de
-  la derivada. Crece con la cantidad de muestras.
-- **MSE = Σ(ζ − O)² / N = 2E / N**: E por muestra; es el que se compara entre train y
-  validación, porque tienen distinto N.
-- **MAE = Σ|ζ − O| / N**: error medio en las unidades de ζ; un error grande pesa menos que en
-  el MSE. **máx |e|**: la peor muestra; muestra si queda algún caso sin aprender aunque el
-  promedio sea bajo.
-- **Train**: error sobre `train_dataset`, lo que el entrenamiento ve. **Validación**: sobre
-  `validation_dataset`, muestras que no ve. Si train baja y validación sube, hay overfitting.
-  Si con esta curva se elige algo (época, η, arquitectura), ese conjunto deja de ser de test:
-  el test final tiene que ser otro, sin tocar.
+**Qué:** por muestra, forward guardando h y V de cada capa; δ de salida `(ζ − O)·θ'(h)`; δ de
+cada oculta, de atrás hacia adelante, `θ'(h_j)·Σ_k w_kj·δ_k`; y recién ahí se acumula Δw en
+todas las neuronas.
 
 **Por qué:**
-- Pasada aparte y no acumular el error durante la época: en online y mini-batch cada muestra se
-  mediría con pesos distintos, y el número no correspondería a ningún modelo. Así cada punto es
-  el error de la red que se tiene al final de esa época.
-- El costo es un forward extra por muestra de train y de validación por época: con fraude
-  (7500 muestras, mismo dataset para las dos) pasa de 0.80 s a 1.45 s en 300 épocas.
-- Sin threads: el entrenamiento es secuencial (cada update depende del anterior), así que solo
-  se podría paralelizar la medición, y con datasets de 4 a 7500 muestras la sincronización por
-  época come la ganancia. Para usar los núcleos conviene correr varias configs o seeds en
-  procesos separados.
+- El δ de una oculta usa los pesos de la capa siguiente. Si esos pesos cambiaran antes, el error
+  se propagaría con pesos distintos de los que produjeron la salida.
+- Todas las capas usan la misma activación y tiene que ser derivable (`tanh`, `logistic`): con
+  escalón θ' = 0 y a las ocultas no les llega error.
+- Con `hidden_layers: []` queda la regla del perceptrón simple. Verificado: mismos pesos y
+  predicciones que la neurona sola.
 
+## Medición del error: una pasada aparte al final de cada época
+
+**Qué:** al terminar cada época se hace un forward de todo el train y de toda la validación, sin
+tocar los pesos, y se guarda el error de cada uno en `epochs.csv`. La época 0 es la red sin
+entrenar.
+
+**Por qué:**
+- No se acumula el error durante la época: en online y mini-batch cada muestra se mediría con
+  pesos distintos, y el número no sería el de ningún modelo. Así cada punto es el error de la red
+  que se tiene al final de esa época.
+- Cuesta un forward extra por muestra: con fraude (7500 muestras), 300 épocas pasan de 0.80 s a
+  1.45 s.
+
+## Métricas de error: MSE para comparar, MAE y máx |e| para interpretar
+
+**Qué:** de la misma pasada salen cuatro números; el reporte grafica MSE por defecto.
+
+**Por qué cada uno:**
+- **E = ½·Σ(ζ − O)²**: es lo que minimiza la regla (Δw = −η·∂E/∂w; el ½ cancela el 2 de la
+  derivada). Crece con N, así que no sirve para comparar conjuntos de distinto tamaño.
+- **MSE = Σ(ζ − O)² / N = 2E / N**: el principal. Es E por muestra, así que se puede comparar
+  train contra validación.
+- **MAE = Σ|ζ − O| / N**: error medio en las unidades de ζ (en fraude, puntos de probabilidad).
+  Un error grande pesa menos que en el MSE.
+- **máx |e|**: la peor muestra. Muestra si queda algún caso sin aprender aunque el promedio sea
+  bajo.
+
+## Train y validación: dos curvas
+
+**Qué:** el error se mide sobre `train_dataset` (lo que ve el entrenamiento) y sobre
+`validation_dataset` (muestras que no ve), los dos definidos en el config.
+
+**Por qué:**
+- Si train baja y validación sube, hay overfitting; con una sola curva no se ve.
+- Si con la curva de validación se elige algo (época, η, arquitectura), ese conjunto deja de ser
+  un test honesto: la evaluación final tiene que hacerse sobre otro conjunto, sin tocar.
