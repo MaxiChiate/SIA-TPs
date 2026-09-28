@@ -106,6 +106,69 @@ int results_write_weights(const Results * results, int n_layers, const int sizes
 }
 
 
+#define WEIGHTS_HEADER "layer,neuron,weight,initial,final"
+#define WEIGHTS_LINE_MAX 256
+
+
+static FILE * open_weights(const char * path, char resolved[RESULTS_PATH_MAX + 64]) {
+  struct stat info;
+  if (stat(path, &info) == 0 && S_ISDIR(info.st_mode)) {
+    snprintf(resolved, RESULTS_PATH_MAX + 64, "%s/weights.csv", path);
+  } else {
+    snprintf(resolved, RESULTS_PATH_MAX + 64, "%s", path);
+  }
+  FILE * file = fopen(resolved, "r");
+  if (file == NULL) perror(resolved);
+  return file;
+}
+
+
+static int read_weight_rows(FILE * file, const char * path, int n_layers, const int sizes[], double out[]) {
+  char line[WEIGHTS_LINE_MAX];
+  if (fgets(line, sizeof(line), file) == NULL || strncmp(line, WEIGHTS_HEADER, strlen(WEIGHTS_HEADER)) != 0) {
+    fprintf(stderr, "%s: expected the header \"%s\"\n", path, WEIGHTS_HEADER);
+    return 0;
+  }
+
+  int index = 0;
+  for (int l = 1; l <= n_layers; l++) {
+    for (int j = 1; j <= sizes[l]; j++) {
+      for (int w = 0; w <= sizes[l-1]; w++, index++) {
+        int layer, neuron, weight;
+        double initial;
+        if (fgets(line, sizeof(line), file) == NULL
+            || sscanf(line, "%d,%d,%d,%lf,%lf", &layer, &neuron, &weight, &initial, &out[index]) != 5) {
+          fprintf(stderr, "%s: row %d isn't layer %d, neuron %d, weight %d; does the architecture match?\n",
+                  path, index + 2, l, j, w);
+          return 0;
+        }
+        if (layer != l || neuron != j || weight != w) {
+          fprintf(stderr, "%s: row %d is layer %d, neuron %d, weight %d, expected %d, %d, %d; "
+                          "does the architecture match?\n", path, index + 2, layer, neuron, weight, l, j, w);
+          return 0;
+        }
+      }
+    }
+  }
+
+  if (fgets(line, sizeof(line), file) != NULL) {
+    fprintf(stderr, "%s: more weights than the network has; does the architecture match?\n", path);
+    return 0;
+  }
+  return 1;
+}
+
+
+int results_read_weights(const char * path, int n_layers, const int sizes[], double out[]) {
+  char resolved[RESULTS_PATH_MAX + 64];
+  FILE * file = open_weights(path, resolved);
+  if (file == NULL) return 0;
+  int ok = read_weight_rows(file, resolved, n_layers, sizes, out);
+  fclose(file);
+  return ok;
+}
+
+
 // "name" with a single output, "name_0", "name_1", ... with several (0-based, like the dataset's zeta_k)
 static void write_output_names(FILE * file, const char * name, int n_outputs) {
   for (int j = 0; j < n_outputs; j++) {
@@ -157,17 +220,17 @@ static void write_metrics(FILE * file, const ErrorMetrics * metrics) {
 
 
 int results_write_epochs(const Results * results, int n_epochs, const ErrorMetrics train[],
-                         const ErrorMetrics validation[]) {
+                         const ErrorMetrics validation[], const double elapsed[]) {
   FILE * file = open_in_run_dir(results, "epochs.csv");
   if (file == NULL) return 0;
 
   fprintf(file, "epoch,train_error,train_mse,train_mae,train_max_error,"
-                "validation_error,validation_mse,validation_mae,validation_max_error\n");
+                "validation_error,validation_mse,validation_mae,validation_max_error,elapsed_s\n");
   for (int epoch = 0; epoch <= n_epochs; epoch++) {
     fprintf(file, "%d", epoch);
     write_metrics(file, &train[epoch]);
     write_metrics(file, &validation[epoch]);
-    fputc('\n', file);
+    fprintf(file, ",%.6f\n", elapsed[epoch]);
   }
 
   return fclose(file) == 0;

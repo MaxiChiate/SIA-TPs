@@ -114,6 +114,16 @@ void network_get_weights(const Network network, double out[]) {
 }
 
 
+void network_set_weights(Network network, const double weights[]) {
+  for (int l = 1; l <= network->n_layers; l++) {
+    for (int j = 0; j < network->sizes[l]; j++) {
+      neuron_set_weights(network->layers[l][j], weights);
+      weights += network->sizes[l-1] + 1;
+    }
+  }
+}
+
+
 // Leaves every v[l] and h[l] filled in, backpropagation needs them
 static void forward(Network network, const double input[]) {
   memcpy(network->v[0], input, network->sizes[0] * sizeof(double));

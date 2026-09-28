@@ -108,30 +108,3 @@ la medición la hace `main`, así la red no sabe que existe un conjunto de valid
   época come la ganancia. Para usar los núcleos conviene correr varias configs o seeds en
   procesos separados.
 
-## Dígitos: píxeles sin normalizar y label en one-hot
-
-**Qué:** `scripts/prepare_digits_dataset.py` escribe cada imagen como `x1..x784` (los píxeles
-tal cual vienen) seguido de `zeta_0..zeta_9`, el label en one-hot: una columna ζ por neurona de
-salida.
-
-**Por qué:**
-- Los píxeles ya están todos en `[0, 1]`, en la misma escala, así que no hay columnas que
-  saturen la activación. Con z-score, los bordes (siempre negros) tendrían desvío 0.
-- One-hot y no una sola salida con el dígito como número: 0–9 no es una magnitud ordenada (un 7
-  no está "más cerca" de un 8 que de un 1). Con 10 salidas, cada neurona aprende "¿es este
-  dígito?" y la clase predicha es el argmax.
-- ζ en {0, 1}, que es el rango de `logistic`.
-
-## Varias neuronas de salida: las ζ se leen del encabezado
-
-**Qué:** la cantidad de neuronas de salida es la cantidad de columnas finales del CSV cuyo nombre
-empieza con `zeta` (`zeta_0 … zeta_9` en dígitos). Si no hay encabezado o ninguna se llama así, es una
-sola: la última columna. No hay clave en el config.
-
-**Por qué:**
-- La salida la define el problema, no es un hiperparámetro: sale del dataset igual que `n_inputs`.
-  Una clave `n_outputs` en el config podría contradecir al CSV.
-- Los datasets que ya había (`zeta`, `big_model_fraud_probability`) siguen dando una salida, sin
-  cambios: corrimos XOR antes y después y los archivos de resultados son idénticos byte a byte.
-- E, MSE y MAE se promedian sobre muestras × salidas, así que el reporte cuenta cada (muestra,
-  salida) como un valor. Para clasificar, además, aciertos por argmax.

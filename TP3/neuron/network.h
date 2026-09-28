@@ -23,6 +23,9 @@ int network_n_weights(const Network network);
 // out gets every weight, layer by layer and neuron by neuron, each neuron as w0 (bias), w1, ..., wn
 void network_get_weights(const Network network, double out[]);
 
+// Inverse of network_get_weights: weights is laid out the same way
+void network_set_weights(Network network, const double weights[]);
+
 // output must have room for network_n_outputs elements
 void network_predict(Network network, const double input[], double output[]);
 

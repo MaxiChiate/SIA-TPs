@@ -58,6 +58,12 @@ void neuron_get_weights(const Neuron neuron, double out[]) {
 }
 
 
+void neuron_set_weights(Neuron neuron, const double weights[]) {
+  memcpy(neuron->weights, weights, (neuron->n_inputs + 1) * sizeof(double));
+  memset(neuron->pending, 0, (neuron->n_inputs + 1) * sizeof(double));
+}
+
+
 double neuron_predict(const Neuron neuron, const double input[], double * h_out) {
 
   double aux = 0.0;

@@ -38,4 +38,7 @@ void neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs],
 // out must have room for n_inputs + 1 elements
 void neuron_get_weights(const Neuron neuron, double out[]);
 
+// weights has n_inputs + 1 elements; drops any Δw still pending
+void neuron_set_weights(Neuron neuron, const double weights[]);
+
 #endif //__NEURON_H__

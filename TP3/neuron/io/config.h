@@ -14,9 +14,12 @@ typedef struct {
   int hidden_layers[CONFIG_HIDDEN_LAYERS_MAX]; // neurons per hidden layer; empty = simple perceptron
   int n_hidden_layers;
   unsigned int seed;
+  char initial_weights[CONFIG_STRING_MAX]; // optional: an earlier run's directory or weights.csv to keep
+                                           // training from; "" (the default) draws random weights
 } Config;
 
-// Reads a flat JSON object with every Config field as a key.
+// Reads a flat JSON object with the Config fields as keys. Every key is required except the optional
+// ones, which default to zero / "".
 // Returns 1 on success; on failure prints the reason to stderr and returns 0.
 int config_load(const char * path, Config * config);
 

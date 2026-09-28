@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L // clock_gettime
+
 #include "activation/activation.h"
 #include "io/config.h"
 #include "io/dataset.h"
@@ -6,6 +8,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define DEFAULT_CONFIG_PATH "config.json"
 
@@ -90,6 +93,16 @@ static Results create_results(const char * config_path, const char * activation)
 }
 
 
+// Keeps training an earlier run: its final weights replace the random ones
+static void load_initial_weights(const char * path, Network network, int n_layers, const int sizes[]) {
+  double * weights = malloc(network_n_weights(network) * sizeof(double));
+  if (weights == NULL) die("couldn't allocate weights");
+  if (!results_read_weights(path, n_layers, sizes, weights)) exit(EXIT_FAILURE);
+  network_set_weights(network, weights);
+  free(weights);
+}
+
+
 static double * snapshot_weights(const Network network) {
   double * weights = malloc(network_n_weights(network) * sizeof(double));
   if (weights == NULL) die("couldn't allocate weights");
@@ -107,16 +120,31 @@ static void save_weights(const Results * results, int n_layers, const int sizes[
 }
 
 
+static double now_seconds(void) {
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  return now.tv_sec + now.tv_nsec * 1e-9;
+}
+
+
 #define SNAPSHOT_INTERVALS 10 // validation predictions saved at 0%, 10%, ..., 100% of the epochs
 
 
-// What training leaves besides the weights: errors after every epoch (index 0 is the untrained
-// network) and the validation predictions at a few snapshot epochs
+#define PROGRESS_INTERVAL 1.0 // seconds between progress lines
+
+
+// What training leaves besides the weights: errors and training time after every epoch (index 0 is
+// the untrained network) and the validation predictions at a few snapshot epochs
 typedef struct {
   Dataset train;
   Dataset validation;
+  int epochs;
   ErrorMetrics * train_errors;
   ErrorMetrics * validation_errors;
+  double * elapsed;    // seconds spent training up to each epoch; evaluating the errors is left out
+  double started_at;   // wall clock, error evaluation included
+  double resumed_at;   // when training last resumed after record_epoch
+  double reported_at;  // when progress was last printed
   int snapshot_epochs[SNAPSHOT_INTERVALS + 1];
   int n_snapshots;
   int next_snapshot;
@@ -140,8 +168,28 @@ static void predict_dataset(Network network, const Dataset dataset, double predi
 }
 
 
+// On stderr, since make run reads the run directory from stdout. At most one line per
+// PROGRESS_INTERVAL, plus the last epoch.
+static void report_progress(TrainingHistory * history, int epoch) {
+  double now = now_seconds();
+  int last = epoch == history->epochs;
+  if (!last && now - history->reported_at < PROGRESS_INTERVAL) return;
+  history->reported_at = now;
+
+  double wall = now - history->started_at;
+  fprintf(stderr, "epoch %d/%d (%3.0f%%)  train MSE %.4g  validation MSE %.4g  %.1fs", epoch, history->epochs,
+          100.0 * epoch / history->epochs, history->train_errors[epoch].mse, history->validation_errors[epoch].mse,
+          wall);
+  if (!last && epoch > 0) fprintf(stderr, ", ~%.1fs left", wall / epoch * (history->epochs - epoch));
+  fputc('\n', stderr);
+}
+
+
 static void record_epoch(int epoch, Network network, void * context) {
   TrainingHistory * history = context;
+  double paused_at = now_seconds();
+  history->elapsed[epoch] = epoch == 0 ? 0.0 : history->elapsed[epoch - 1] + paused_at - history->resumed_at;
+
   history->train_errors[epoch] = dataset_error(network, history->train);
   history->validation_errors[epoch] = dataset_error(network, history->validation);
 
@@ -150,6 +198,9 @@ static void record_epoch(int epoch, Network network, void * context) {
     predict_dataset(network, history->validation, &history->snapshot_predictions[history->next_snapshot * n_values]);
     history->next_snapshot++;
   }
+
+  report_progress(history, epoch);
+  history->resumed_at = now_seconds();
 }
 
 
@@ -168,13 +219,16 @@ static TrainingHistory new_training_history(const Dataset train, const Dataset v
   TrainingHistory history = {
     .train = train,
     .validation = validation,
+    .epochs = epochs,
     .train_errors = malloc((epochs + 1) * sizeof(ErrorMetrics)),
     .validation_errors = malloc((epochs + 1) * sizeof(ErrorMetrics)),
+    .elapsed = malloc((epochs + 1) * sizeof(double)),
   };
   history.n_snapshots = snapshot_epochs(epochs, history.snapshot_epochs);
   history.snapshot_predictions = malloc((size_t) history.n_snapshots * dataset_n_samples(validation)
                                         * dataset_n_outputs(validation) * sizeof(double));
-  if (history.train_errors == NULL || history.validation_errors == NULL || history.snapshot_predictions == NULL) {
+  if (history.train_errors == NULL || history.validation_errors == NULL || history.elapsed == NULL
+      || history.snapshot_predictions == NULL) {
     die("couldn't allocate training history");
   }
   return history;
@@ -184,11 +238,13 @@ static TrainingHistory new_training_history(const Dataset train, const Dataset v
 static void free_training_history(TrainingHistory * history) {
   free(history->train_errors);
   free(history->validation_errors);
+  free(history->elapsed);
   free(history->snapshot_predictions);
 }
 
 
 static void train_network(Network network, const Dataset train, const Config * config, TrainingHistory * history) {
+  history->started_at = history->reported_at = now_seconds();
   record_epoch(0, network, history);
   network_train(network, dataset_inputs(train), dataset_zetas(train), dataset_n_samples(train),
                 config->epochs, config->batch_size, record_epoch, history);
@@ -196,7 +252,8 @@ static void train_network(Network network, const Dataset train, const Config * c
 
 
 static void save_history(const Results * results, const TrainingHistory * history, int epochs) {
-  int ok = results_write_epochs(results, epochs, history->train_errors, history->validation_errors)
+  int ok = results_write_epochs(results, epochs, history->train_errors, history->validation_errors,
+                                history->elapsed)
         && results_write_snapshots(results, history->n_snapshots, history->snapshot_epochs,
                                    dataset_n_samples(history->validation), dataset_n_outputs(history->validation),
                                    dataset_zetas(history->validation),
@@ -237,6 +294,7 @@ int main(int argc, char * argv[]) {
 
   srand(config.seed);
   Network network = network_new(n_layers, sizes, activation, config.eta, random_weight);
+  if (config.initial_weights[0] != '\0') load_initial_weights(config.initial_weights, network, n_layers, sizes);
   double * initial_weights = snapshot_weights(network);
 
   Results results = create_results(path, config.activation);

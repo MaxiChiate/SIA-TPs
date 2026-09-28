@@ -59,15 +59,21 @@ Otros targets: `make` solo compila (objetos y binario en `build/`), `make clean`
 
 ## Salida
 
-Cada corrida escribe en su propia carpeta, `results/<fecha>_<hora>_<activación>/`, y por consola
+Cada corrida escribe en su propia carpeta, `results/<fecha>_<hora>_<activación>/`, y por stdout
 solo imprime esa ruta. Si dos corridas caen en el mismo segundo, la segunda lleva sufijo `_2`.
+
+Mientras entrena, el progreso va por stderr, a lo sumo una línea por segundo más la última época:
+
+```
+epoch 3/5 ( 60%)  train MSE 0.007156  validation MSE 0.02374  1.3s, ~0.8s left
+```
 
 | Archivo           | Contenido                                                            |
 |-------------------|----------------------------------------------------------------------|
 | `config.json`     | Copia exacta del config con el que se corrió                         |
 | `weights.csv`     | Una fila por peso: `layer`, `neuron`, `weight` (0 es el bias), `initial`, `final` |
 | `predictions.csv` | Por muestra de validación: entradas (`x1`…`xn`), `zeta`, `prediction` (con varias salidas, `zeta_0`… y `prediction_0`…) |
-| `epochs.csv`      | Por época: `epoch` y, para `train_` y `validation_`, `error`, `mse`, `mae`, `max_error` (época 0 = pesos iniciales) |
+| `epochs.csv`      | Por época: `epoch` y, para `train_` y `validation_`, `error`, `mse`, `mae`, `max_error` (época 0 = pesos iniciales), y `elapsed_s` |
 | `predictions_by_epoch.csv` | Por muestra de validación: `zeta` y la predicción en 11 épocas (`epoch_0` … `epoch_<epochs>`, cada 10%; con varias salidas, `epoch_<e>_<salida>`) |
 | `report.html`     | Resumen para abrir en el navegador: config, curva de aprendizaje, error de validación, gráficos, pesos y predicciones |
 
@@ -81,7 +87,8 @@ del error y, con una sola entrada, la curva aprendida.
 En `epochs.csv`, `error` es E = ½·Σ(ζ − O)², lo que minimiza el entrenamiento; `mse` es 2E / N,
 E por muestra, que es lo que se compara entre train y validación; `mae` es Σ|ζ − O| / N y
 `max_error` es el peor |ζ − O|. Con varias salidas, N cuenta muestras × salidas. Se miden después de cada
-época con los pesos ya actualizados (ver `DECISIONS.md`).
+época con los pesos ya actualizados (ver `DECISIONS.md`). `elapsed_s` son los segundos de
+entrenamiento acumulados hasta esa época, sin contar el cálculo de estos errores.
 
 Las capas y neuronas se numeran desde 1 (la capa 0 son las entradas). Es una fila por peso porque
 cada capa tiene una cantidad distinta de entradas.
@@ -90,7 +97,8 @@ cada capa tiene una cantidad distinta de entradas.
 
 ## Configuración
 
-`config.json` es un objeto JSON con todas estas claves (ninguna es opcional):
+`config.json` es un objeto JSON con estas claves; todas son obligatorias salvo las marcadas como
+opcionales, y una clave desconocida es un error:
 
 | Clave                | Tipo   | Descripción                                        |
 |----------------------|--------|----------------------------------------------------|
@@ -102,6 +110,13 @@ cada capa tiene una cantidad distinta de entradas.
 | `batch_size`         | entero | Muestras por update: 1 online, ≥ N batch, en el medio mini-batch |
 | `hidden_layers`      | lista  | Neuronas por capa oculta, p. ej. `[2]`; `[]` es perceptrón simple |
 | `seed`               | entero | Semilla de los pesos iniciales (uniformes en [-0.5, 0.5]) |
+| `initial_weights`    | string | Opcional. Carpeta de una corrida anterior (o su `weights.csv`) para seguir entrenando desde sus pesos finales; sin ella, pesos al azar |
+
+Con `initial_weights`, la arquitectura (entradas, `hidden_layers` y salidas) tiene que ser la
+misma que la de esa corrida. La corrida nueva numera sus épocas desde 0 (la época 0 es donde
+terminó la anterior), y su `weights.csv` tiene como `initial` los pesos cargados, así que se puede
+encadenar. Para agregar una clave opcional: el campo en `Config` y una fila en `FIELDS`
+(`io/config.c`) con `optional` en 1; si falta, queda en cero / `""`.
 
 Todas las capas usan la misma `activation`. Para el multicapa tiene que ser derivable (`tanh` o
 `logistic`): con `sign` el error no se propaga a las capas ocultas.

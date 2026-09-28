@@ -15,17 +15,19 @@ typedef struct {
   enum field_type type;
   size_t offset;
   size_t count_offset; // FIELD_INT_ARRAY only: where the element count goes
+  int optional;        // may be left out, the field then keeps its zero value
 } Field;
 
 static const Field FIELDS[] = {
-  { "train_dataset",      FIELD_STRING,    offsetof(Config, train_dataset), 0 },
-  { "validation_dataset", FIELD_STRING,    offsetof(Config, validation_dataset), 0 },
-  { "activation",         FIELD_STRING,    offsetof(Config, activation), 0 },
-  { "eta",                FIELD_DOUBLE,    offsetof(Config, eta), 0 },
-  { "epochs",             FIELD_INT,       offsetof(Config, epochs), 0 },
-  { "batch_size",         FIELD_INT,       offsetof(Config, batch_size), 0 },
-  { "hidden_layers",      FIELD_INT_ARRAY, offsetof(Config, hidden_layers), offsetof(Config, n_hidden_layers) },
-  { "seed",               FIELD_UINT,      offsetof(Config, seed), 0 },
+  { "train_dataset",      FIELD_STRING,    offsetof(Config, train_dataset), 0, 0 },
+  { "validation_dataset", FIELD_STRING,    offsetof(Config, validation_dataset), 0, 0 },
+  { "activation",         FIELD_STRING,    offsetof(Config, activation), 0, 0 },
+  { "eta",                FIELD_DOUBLE,    offsetof(Config, eta), 0, 0 },
+  { "epochs",             FIELD_INT,       offsetof(Config, epochs), 0, 0 },
+  { "batch_size",         FIELD_INT,       offsetof(Config, batch_size), 0, 0 },
+  { "hidden_layers",      FIELD_INT_ARRAY, offsetof(Config, hidden_layers), offsetof(Config, n_hidden_layers), 0 },
+  { "seed",               FIELD_UINT,      offsetof(Config, seed), 0, 0 },
+  { "initial_weights",    FIELD_STRING,    offsetof(Config, initial_weights), 0, 1 },
 };
 
 #define N_FIELDS ((int) (sizeof(FIELDS) / sizeof(FIELDS[0])))
@@ -190,7 +192,7 @@ static int parse_object(Parser * parser, Config * config) {
   if (*parser->cursor != '\0') return parse_error(parser, "unexpected content after the object");
 
   for (int i = 0; i < N_FIELDS; i++) {
-    if (!seen[i]) {
+    if (!seen[i] && !FIELDS[i].optional) {
       fprintf(stderr, "%s: missing key \"%s\"\n", parser->path, FIELDS[i].key);
       return 0;
     }
@@ -248,6 +250,7 @@ int config_load(const char * path, Config * config) {
   char buffer[CONFIG_FILE_MAX];
   if (!read_file(path, buffer)) return 0;
 
+  *config = (Config) {0};
   Parser parser = { .path = path, .cursor = buffer };
   return parse_object(&parser, config) && validate(path, config);
 }

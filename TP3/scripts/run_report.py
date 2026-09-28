@@ -60,6 +60,7 @@ class EpochRecord:
     epoch: int  # 0 is the untrained network
     train: dict[str, float]  # keyed by EPOCH_METRICS
     validation: dict[str, float]
+    elapsed: float | None  # seconds spent training so far; None for runs from before elapsed_s existed
 
 
 @dataclass(frozen=True)
@@ -139,7 +140,8 @@ def load_epochs(run_dir: Path) -> list[EpochRecord]:
     metrics = [metric for metric in EPOCH_METRICS if rows and f"train_{metric}" in rows[0]]
     return [
         EpochRecord(int(row["epoch"]), {m: float(row[f"train_{m}"]) for m in metrics},
-                    {m: float(row[f"validation_{m}"]) for m in metrics})
+                    {m: float(row[f"validation_{m}"]) for m in metrics},
+                    float(row["elapsed_s"]) if "elapsed_s" in row else None)
         for row in rows
     ]
 
@@ -464,8 +466,19 @@ def stats_section(run: Run, error: RunError) -> str:
     return f'<section class="stats">{"".join(tiles)}</section>'
 
 
+def training_time(epochs: list[EpochRecord]) -> str | None:
+    if not epochs or epochs[-1].elapsed is None:
+        return None
+    total = epochs[-1].elapsed
+    per_epoch = total / max(epochs[-1].epoch, 1)
+    return f"{total:.2f} s ({1000 * per_epoch:.3g} ms por época)"
+
+
 def config_section(run: Run) -> str:
     rows = [("Arquitectura", architecture(run)), *((key, json.dumps(value)) for key, value in run.config.items())]
+    time = training_time(run.epochs)
+    if time is not None:
+        rows.insert(1, ("Tiempo de entrenamiento", time))
     body = "".join(f"<tr><th>{html.escape(key)}</th><td>{html.escape(str(value))}</td></tr>" for key, value in rows)
     return f'<section><h2>Configuración</h2><table class="config">{body}</table></section>'
 

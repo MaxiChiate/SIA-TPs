@@ -28,7 +28,10 @@ scripts/
   report_server.py               # make serve: reporte de la última corrida en localhost, se recarga solo
 ```
 
-Cada corrida guarda `epochs.csv`: E y MSE de train y validación después de cada época.
+Cada corrida guarda `epochs.csv`: E y MSE de train y validación después de cada época, y los
+segundos de entrenamiento acumulados (`elapsed_s`). El progreso sale por stderr (stdout es solo la
+ruta, que lee `make run`). `initial_weights` (opcional) sigue entrenando desde los pesos finales de
+otra corrida.
 
 `n_inputs` no es global: lo trae cada neurona, y se deduce de las columnas del CSV (entradas
 primero, ζ al final). Las ζ son las últimas columnas del encabezado que se llaman `zeta*` (si no hay
