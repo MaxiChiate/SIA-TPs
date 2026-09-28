@@ -15,7 +15,7 @@ RESULTS_DIR = Path(__file__).resolve().parent.parent / "neuron" / "results"
 
 @dataclass(frozen=True)
 class RunError:
-    n_samples: int
+    n_samples: int  # zeta values: samples x outputs
     energy: float  # E = 1/2 * sum((zeta - O)^2), the error the neuron minimizes
     mse: float
     mae: float
@@ -29,9 +29,21 @@ def latest_run(results_dir: Path) -> Path:
     return runs[-1]
 
 
+def output_columns(names: list[str], prefix: str) -> list[tuple[str, int | None]]:
+    """(column, output) pairs: `prefix` alone with a single output, `prefix_0`, `prefix_1`, ... with several."""
+    if prefix in names:
+        return [(prefix, None)]
+    columns = [name for name in names if name.startswith(f"{prefix}_")]
+    return [(name, int(name.removeprefix(f"{prefix}_"))) for name in columns]
+
+
 def load_predictions(run_dir: Path) -> list[tuple[float, float]]:
+    """One (zeta, prediction) pair per sample and output."""
     with (run_dir / "predictions.csv").open(newline="") as file:
-        return [(float(row["zeta"]), float(row["prediction"])) for row in csv.DictReader(file)]
+        reader = csv.DictReader(file)
+        names = list(reader.fieldnames or [])
+        pairs = list(zip(output_columns(names, "zeta"), output_columns(names, "prediction")))
+        return [(float(row[zeta]), float(row[prediction])) for row in reader for (zeta, _), (prediction, _) in pairs]
 
 
 def run_error(pairs: list[tuple[float, float]]) -> RunError:

@@ -26,10 +26,26 @@ void network_get_weights(const Network network, double out[]);
 // output must have room for network_n_outputs elements
 void network_predict(Network network, const double input[], double output[]);
 
+// Averages are over every output value, n_samples * n_outputs (with one output, per sample)
+typedef struct {
+  double energy;        // E = 1/2 * sum((zeta - O)^2), what training minimizes
+  double mse;           // sum((zeta - O)^2) / n
+  double mae;           // sum(|zeta - O|) / n
+  double max_abs_error; // max |zeta - O|
+} ErrorMetrics;
+
+// Error of the network with its current weights. Doesn't train.
+// zetas is row-major n_samples x n_outputs.
+ErrorMetrics network_error(Network network, const double inputs[], const double zetas[], int n_samples);
+
+// Called after every epoch (numbered from 1), once the epoch's last batch is applied
+typedef void (*EpochCallback)(int epoch, Network network, void * context);
+
 // zetas is row-major n_samples x n_outputs.
 // batch_size = 1 is online, batch_size >= n_samples is full batch, anything between is mini-batch:
 // Δw is accumulated over the batch and the weights change once at its end.
+// on_epoch may be NULL.
 void network_train(Network network, const double inputs[], const double zetas[], int n_samples,
-                   int epochs, int batch_size);
+                   int epochs, int batch_size, EpochCallback on_epoch, void * context);
 
 #endif //__NETWORK_H__

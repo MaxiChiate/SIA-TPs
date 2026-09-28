@@ -7,12 +7,12 @@ simple o multicapa según `hidden_layers` (ver [Arquitectura](#arquitectura)).
 
 La red tiene tres partes, y solo una se configura:
 
-- **Entradas**: tantas como columnas de entrada tenga el dataset (todas menos la última). No se
+- **Entradas**: tantas como columnas de entrada tenga el dataset (todas menos las ζ). No se
   configuran.
 - **Capas ocultas**: `hidden_layers` es una lista con la cantidad de neuronas de cada capa oculta, en
   orden desde las entradas hacia la salida. Su largo es la cantidad de capas ocultas.
-- **Salida**: siempre **una sola neurona**, porque el dataset tiene una sola columna ζ. No se
-  configura.
+- **Salida**: **una neurona por columna ζ** del dataset: una sola en general, 10 en dígitos (ver
+  [Formato de los datasets](#formato-de-los-datasets)). No se configura.
 
 Ejemplos con un dataset de 2 entradas (`x1,x2,zeta`):
 
@@ -35,13 +35,25 @@ cp config.json.example config.json   # la primera vez
 make run
 ```
 
-`make run` compila si hace falta y ejecuta con `config.json`. Para usar otro archivo:
+`make run` compila si hace falta, ejecuta con `config.json` y arma el reporte HTML de la corrida
+(ver [Salida](#salida); necesita `python3`, sin dependencias). Para usar otro archivo:
 
 ```sh
 make run CONFIG=otro_config.json
 # o directamente
 ./build/neuron otro_config.json
 ```
+
+Para seguir las corridas en el navegador, en otra terminal:
+
+```sh
+make serve              # http://localhost:8000; otro puerto: make serve PORT=8080
+```
+
+`/` muestra el reporte de la última corrida terminada y se recarga solo cuando termina una nueva
+(pregunta cada 2 s). `/run/<carpeta>` muestra una corrida puntual, sin recargarse. El reporte se arma
+desde los CSVs en cada pedido, así que también aparecen las corridas hechas con `./build/neuron`.
+Escucha solo en `127.0.0.1`.
 
 Otros targets: `make` solo compila (objetos y binario en `build/`), `make clean` borra `build/`.
 
@@ -54,7 +66,22 @@ solo imprime esa ruta. Si dos corridas caen en el mismo segundo, la segunda llev
 |-------------------|----------------------------------------------------------------------|
 | `config.json`     | Copia exacta del config con el que se corrió                         |
 | `weights.csv`     | Una fila por peso: `layer`, `neuron`, `weight` (0 es el bias), `initial`, `final` |
-| `predictions.csv` | Por muestra de validación: entradas (`x1`…`xn`), `zeta`, `prediction` |
+| `predictions.csv` | Por muestra de validación: entradas (`x1`…`xn`), `zeta`, `prediction` (con varias salidas, `zeta_0`… y `prediction_0`…) |
+| `epochs.csv`      | Por época: `epoch` y, para `train_` y `validation_`, `error`, `mse`, `mae`, `max_error` (época 0 = pesos iniciales) |
+| `predictions_by_epoch.csv` | Por muestra de validación: `zeta` y la predicción en 11 épocas (`epoch_0` … `epoch_<epochs>`, cada 10%; con varias salidas, `epoch_<e>_<salida>`) |
+| `report.html`     | Resumen para abrir en el navegador: config, curva de aprendizaje, error de validación, gráficos, pesos y predicciones |
+
+`report.html` lo escribe `scripts/run_report.py` (lo llama `make run`; corriendo el binario directo
+no se genera). Para regenerarlo: `python3 ../scripts/run_report.py [results/<corrida>]`, sin
+argumento usa la última. Muestra las mismas métricas que `run_error.py`, los aciertos si ζ toma dos
+valores (con varias salidas, por argmax: la salida más alta contra la ζ más alta), la curva de aprendizaje (train y validación por época, eligiendo el error), predicción vs. ζ
+con un slider por época, el histograma
+del error y, con una sola entrada, la curva aprendida.
+
+En `epochs.csv`, `error` es E = ½·Σ(ζ − O)², lo que minimiza el entrenamiento; `mse` es 2E / N,
+E por muestra, que es lo que se compara entre train y validación; `mae` es Σ|ζ − O| / N y
+`max_error` es el peor |ζ − O|. Con varias salidas, N cuenta muestras × salidas. Se miden después de cada
+época con los pesos ya actualizados (ver `DECISIONS.md`).
 
 Las capas y neuronas se numeran desde 1 (la capa 0 son las entradas). Es una fila por peso porque
 cada capa tiene una cantidad distinta de entradas.
@@ -83,14 +110,26 @@ Se versiona solo `config.json.example`; `config.json` está gitignoreado.
 
 ## Formato de los datasets
 
-CSV con una muestra por fila: primero las entradas y en la última columna el valor esperado (ζ).
-La primera fila puede ser un encabezado, y las filas vacías se ignoran. La cantidad de entradas se
-deduce de la cantidad de columnas, y entrenamiento y validación tienen que coincidir.
+CSV con una muestra por fila: primero las entradas y al final el valor esperado (ζ).
+La primera fila puede ser un encabezado, y las filas vacías se ignoran. Entrenamiento y validación
+tienen que coincidir en la cantidad de entradas y de ζ.
 
 ```
 x1,x2,zeta
 0.445,0.669,1.0
 0.349,0.692,1.0
 ```
+
+Las ζ se deducen del encabezado: son las **últimas columnas cuyo nombre empieza con `zeta`**, y hay
+una neurona de salida por cada una. Sin encabezado, o si ninguna columna se llama así, la ζ es solo la
+última columna. Así se arma, por ejemplo, el one-hot de dígitos:
+
+```
+x1,...,x784,zeta_0,...,zeta_9
+0,...,0.34,...,0,0,0,0,0,0,0,1,0,0
+```
+
+`scripts/prepare_digits_dataset.py` pasa `digits.csv`, `digits_test.csv` y `more_digits.csv` a este
+formato (`data/<nombre>_prepared.csv`).
 
 Los datasets van en `data/`, que está gitignoreado.

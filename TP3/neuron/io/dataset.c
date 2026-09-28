@@ -6,12 +6,14 @@
 #include <string.h>
 
 #define INITIAL_CAPACITY 64
+#define ZETA_PREFIX "zeta"
 
 struct dataset {
   int n_samples;
   int n_inputs;
+  int n_outputs;
   double * inputs; // n_samples * n_inputs, row-major
-  double * zetas;  // n_samples
+  double * zetas;  // n_samples * n_outputs, row-major
 };
 
 
@@ -36,6 +38,25 @@ static int count_columns(const char * line) {
 
 static int is_blank(const char * line) {
   return line[strspn(line, " \t\r\n")] == '\0';
+}
+
+
+static int is_zeta_name(const char * name) {
+  name += strspn(name, " \t\"");
+  return strncmp(name, ZETA_PREFIX, strlen(ZETA_PREFIX)) == 0;
+}
+
+
+// Trailing header columns named zeta*: one per output neuron
+static int count_zeta_columns(const char * header, int columns) {
+  const char * names[columns];
+  names[0] = header;
+  for (int i = 1; i < columns; i++) {
+    names[i] = strchr(names[i-1], ',') + 1;
+  }
+  int count = 0;
+  while (count < columns && is_zeta_name(names[columns - 1 - count])) count++;
+  return count;
 }
 
 
@@ -69,11 +90,13 @@ Dataset dataset_load(const char * path) {
   Dataset dataset = checked_realloc(NULL, sizeof(struct dataset));
   dataset->n_samples = 0;
   dataset->n_inputs = -1;
+  dataset->n_outputs = 1;
   dataset->inputs = NULL;
   dataset->zetas = NULL;
 
   int capacity = 0;
   double * row = NULL;
+  int columns = 0;
   char * line = NULL;
   size_t line_size = 0;
   int line_number = 0;
@@ -83,19 +106,23 @@ Dataset dataset_load(const char * path) {
     line_number++;
     if (is_blank(line)) continue;
 
-    int columns = count_columns(line);
-
     if (dataset->n_inputs == -1) {
-      if (columns < 2) {
-        fprintf(stderr, "%s:%d: expected at least 2 columns (inputs and zeta)\n", path, line_number);
+      columns = count_columns(line);
+      row = checked_realloc(NULL, columns * sizeof(double));
+      int is_header = !parse_row(line, row, columns);
+      if (is_header) {
+        int zeta_columns = count_zeta_columns(line, columns);
+        if (zeta_columns > 0) dataset->n_outputs = zeta_columns;
+      }
+      dataset->n_inputs = columns - dataset->n_outputs;
+      if (dataset->n_inputs < 1) {
+        fprintf(stderr, "%s:%d: expected at least one input column before the zeta columns\n", path, line_number);
         ok = 0;
         break;
       }
-      dataset->n_inputs = columns - 1;
-      row = checked_realloc(NULL, columns * sizeof(double));
-      if (!parse_row(line, row, columns)) continue; // header
-    } else if (columns != dataset->n_inputs + 1 || !parse_row(line, row, columns)) {
-      fprintf(stderr, "%s:%d: expected %d numeric columns\n", path, line_number, dataset->n_inputs + 1);
+      if (is_header) continue;
+    } else if (count_columns(line) != columns || !parse_row(line, row, columns)) {
+      fprintf(stderr, "%s:%d: expected %d numeric columns\n", path, line_number, columns);
       ok = 0;
       break;
     }
@@ -103,11 +130,12 @@ Dataset dataset_load(const char * path) {
     if (dataset->n_samples == capacity) {
       capacity = capacity == 0 ? INITIAL_CAPACITY : capacity * 2;
       dataset->inputs = checked_realloc(dataset->inputs, (size_t) capacity * dataset->n_inputs * sizeof(double));
-      dataset->zetas = checked_realloc(dataset->zetas, capacity * sizeof(double));
+      dataset->zetas = checked_realloc(dataset->zetas, (size_t) capacity * dataset->n_outputs * sizeof(double));
     }
 
     memcpy(&dataset->inputs[dataset->n_samples * dataset->n_inputs], row, dataset->n_inputs * sizeof(double));
-    dataset->zetas[dataset->n_samples] = row[dataset->n_inputs];
+    memcpy(&dataset->zetas[dataset->n_samples * dataset->n_outputs], &row[dataset->n_inputs],
+           dataset->n_outputs * sizeof(double));
     dataset->n_samples++;
   }
 
@@ -144,6 +172,11 @@ int dataset_n_samples(const Dataset dataset) {
 
 int dataset_n_inputs(const Dataset dataset) {
   return dataset->n_inputs;
+}
+
+
+int dataset_n_outputs(const Dataset dataset) {
+  return dataset->n_outputs;
 }
 
 

@@ -18,13 +18,23 @@ neuron/                          # C11 + make; README.md explica cómo correrlo
   network.c/h                    # capas de neuronas: forward, backprop, loop por batch
   neuron.c/h                     # la neurona: pesos (n_inputs + 1) y Δw pendiente
   activation/                    # sign, lineal, tanh, logistic (θ y θ'), elegidas por nombre
-  io/                            # config.json (JSON plano) y datasets CSV
+  io/                            # config.json (JSON plano), datasets CSV y results/ de cada corrida
   config.json.example            # se versiona este; config.json está gitignoreado
+scripts/
+  prepare_fraud_dataset.py       # fraude crudo -> CSV de la red (z-score) + labels aparte
+  prepare_digits_dataset.py      # dígitos crudos -> x1..x784 + zeta_0..zeta_9 (one-hot)
+  run_error.py                   # métricas de error de una corrida
+  run_report.py                  # report.html de la corrida (lo llama make run): curva, gráficos, tablas
+  report_server.py               # make serve: reporte de la última corrida en localhost, se recarga solo
 ```
 
+Cada corrida guarda `epochs.csv`: E y MSE de train y validación después de cada época.
+
 `n_inputs` no es global: lo trae cada neurona, y se deduce de las columnas del CSV (entradas
-primero, ζ en la última). La red es `{n_inputs, hidden_layers..., 1}`; con `hidden_layers: []` es
-el perceptrón simple y da exactamente lo mismo que la neurona sola. `build/` y
+primero, ζ al final). Las ζ son las últimas columnas del encabezado que se llaman `zeta*` (si no hay
+ninguna, solo la última), y hay una neurona de salida por cada una. La red es
+`{n_inputs, hidden_layers..., n_outputs}`; con `hidden_layers: []` y una ζ es el perceptrón simple y
+da exactamente lo mismo que la neurona sola. `build/` y
 `data/` están gitignoreados.
 
 Se trabaja en la rama `dev-perceptron`.
@@ -96,13 +106,15 @@ en C todavía no cubre todo (ver Pendiente).
 - **Shuffle por época**: sin decidir. Hoy las muestras van siempre en el orden del CSV, así que
   los mini-batches son siempre los mismos.
 - **Llevar a `neuron/` lo decidido que falta**: rosenblatt vs. gradiente según la activación,
-  guardar el mejor error, criterio de convergencia, métricas por época. Hoy `network_train`
-  corre `epochs` épocas fijas.
-- Salida de más de una neurona (dígitos, 10 clases): la red ya lo soporta, falta que el dataset
-  tenga más de una columna ζ.
+  guardar el mejor error, criterio de convergencia (el error por época ya se mide, vía el
+  callback de `network_train`). Hoy corre `epochs` épocas fijas.
+- **Dígitos**: `scripts/prepare_digits_dataset.py` los deja en one-hot (`x1..x784,zeta_0..zeta_9`) y
+  la red ya entrena con 10 salidas; el reporte muestra aciertos por argmax. Falta la matriz de
+  confusión / aciertos por clase. `digits.csv` no tiene ningún 8 y tiene pocos 5 (271);
+  `more_digits.csv` sí tiene 8.
 - La seed se usa con `srand`/`rand` en `main.c`, no con un RNG inyectado como pide la convención.
-- **Conseguir los datasets**: `transactions.csv`, `digits.csv`, `digits_test.csv` no están en
-  el repo.
+- **Conseguir los datasets**: `transactions.csv` no está en el repo (los de dígitos sí, en
+  `neuron/data/`, gitignoreados).
 - Ejercicio 1 y Ejercicio 2 completos (son los entregables).
 - Presentación.
 

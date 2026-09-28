@@ -2,9 +2,9 @@
   "train_dataset": "data/xor.csv",
   "validation_dataset": "data/xor.csv",
   "activation": "tanh",
-  "eta": 10,
-  "epochs": 10000,
+  "eta": 0.1,
+  "epochs": 1000,
   "batch_size": 1,
-  "hidden_layers": [2],
+  "hidden_layers": [3, 2],
   "seed": 42
 }

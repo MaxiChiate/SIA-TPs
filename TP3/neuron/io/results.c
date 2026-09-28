@@ -106,7 +106,27 @@ int results_write_weights(const Results * results, int n_layers, const int sizes
 }
 
 
-int results_write_predictions(const Results * results, int n_inputs, const double inputs[][n_inputs],
+// "name" with a single output, "name_0", "name_1", ... with several (0-based, like the dataset's zeta_k)
+static void write_output_names(FILE * file, const char * name, int n_outputs) {
+  for (int j = 0; j < n_outputs; j++) {
+    if (n_outputs == 1) {
+      fprintf(file, "%s", name);
+    } else {
+      fprintf(file, "%s_%d", name, j);
+    }
+    if (j < n_outputs - 1) fputc(',', file);
+  }
+}
+
+
+static void write_values(FILE * file, const double values[], int n_values) {
+  for (int j = 0; j < n_values; j++) {
+    fprintf(file, ",%.10g", values[j]);
+  }
+}
+
+
+int results_write_predictions(const Results * results, int n_inputs, int n_outputs, const double inputs[][n_inputs],
                               const double zetas[], const double predictions[], int n_samples) {
   FILE * file = open_in_run_dir(results, "predictions.csv");
   if (file == NULL) return 0;
@@ -114,13 +134,67 @@ int results_write_predictions(const Results * results, int n_inputs, const doubl
   for (int j = 0; j < n_inputs; j++) {
     fprintf(file, "x%d,", j + 1);
   }
-  fprintf(file, "zeta,prediction\n");
+  write_output_names(file, "zeta", n_outputs);
+  fputc(',', file);
+  write_output_names(file, "prediction", n_outputs);
+  fputc('\n', file);
 
   for (int i = 0; i < n_samples; i++) {
-    for (int j = 0; j < n_inputs; j++) {
-      fprintf(file, "%.10g,", inputs[i][j]);
+    fprintf(file, "%.10g", inputs[i][0]);
+    write_values(file, &inputs[i][1], n_inputs - 1);
+    write_values(file, &zetas[i * n_outputs], n_outputs);
+    write_values(file, &predictions[i * n_outputs], n_outputs);
+    fputc('\n', file);
+  }
+
+  return fclose(file) == 0;
+}
+
+
+static void write_metrics(FILE * file, const ErrorMetrics * metrics) {
+  fprintf(file, ",%.10g,%.10g,%.10g,%.10g", metrics->energy, metrics->mse, metrics->mae, metrics->max_abs_error);
+}
+
+
+int results_write_epochs(const Results * results, int n_epochs, const ErrorMetrics train[],
+                         const ErrorMetrics validation[]) {
+  FILE * file = open_in_run_dir(results, "epochs.csv");
+  if (file == NULL) return 0;
+
+  fprintf(file, "epoch,train_error,train_mse,train_mae,train_max_error,"
+                "validation_error,validation_mse,validation_mae,validation_max_error\n");
+  for (int epoch = 0; epoch <= n_epochs; epoch++) {
+    fprintf(file, "%d", epoch);
+    write_metrics(file, &train[epoch]);
+    write_metrics(file, &validation[epoch]);
+    fputc('\n', file);
+  }
+
+  return fclose(file) == 0;
+}
+
+
+int results_write_snapshots(const Results * results, int n_snapshots, const int epochs[], int n_samples,
+                            int n_outputs, const double zetas[], const double predictions[]) {
+  FILE * file = open_in_run_dir(results, "predictions_by_epoch.csv");
+  if (file == NULL) return 0;
+
+  write_output_names(file, "zeta", n_outputs);
+  for (int k = 0; k < n_snapshots; k++) {
+    char name[32];
+    snprintf(name, sizeof(name), "epoch_%d", epochs[k]);
+    fputc(',', file);
+    write_output_names(file, name, n_outputs);
+  }
+  fputc('\n', file);
+
+  for (int i = 0; i < n_samples; i++) {
+    fprintf(file, "%.10g", zetas[i * n_outputs]);
+    write_values(file, &zetas[i * n_outputs + 1], n_outputs - 1);
+    for (int k = 0; k < n_snapshots; k++) {
+      write_values(file, &predictions[(k * n_samples + i) * n_outputs], n_outputs);
     }
-    fprintf(file, "%.10g,%.10g\n", zetas[i], predictions[i]);
+    fputc('\n', file);
   }
 
   return fclose(file) == 0;

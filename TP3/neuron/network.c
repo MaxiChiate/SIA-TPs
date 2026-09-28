@@ -1,5 +1,6 @@
 #include "network.h"
 #include "neuron.h"
+#include <math.h>
 
 struct network {
   int n_layers;     // layers with neurons, the input layer doesn't count
@@ -171,18 +172,45 @@ static void apply_updates(Network network) {
 }
 
 
+ErrorMetrics network_error(Network network, const double inputs[], const double zetas[], int n_samples) {
+  int n_inputs = network_n_inputs(network);
+  int n_outputs = network_n_outputs(network);
+  double * output = network->v[network->n_layers];
+
+  double squared_sum = 0.0, abs_sum = 0.0, max_abs = 0.0;
+  for (int i = 0; i < n_samples; i++) {
+    forward(network, &inputs[i * n_inputs]);
+    for (int j = 0; j < n_outputs; j++) {
+      double error = zetas[i * n_outputs + j] - output[j];
+      squared_sum += error * error;
+      abs_sum += fabs(error);
+      if (fabs(error) > max_abs) max_abs = fabs(error);
+    }
+  }
+
+  int n = n_samples * n_outputs;
+  return (ErrorMetrics) {
+    .energy = squared_sum / 2,
+    .mse = squared_sum / n,
+    .mae = abs_sum / n,
+    .max_abs_error = max_abs,
+  };
+}
+
+
 void network_train(Network network, const double inputs[], const double zetas[], int n_samples,
-                   int epochs, int batch_size) {
+                   int epochs, int batch_size, EpochCallback on_epoch, void * context) {
 
   int n_inputs = network_n_inputs(network);
   int n_outputs = network_n_outputs(network);
 
-  for (int epoch = 0; epoch < epochs; epoch++) {
+  for (int epoch = 1; epoch <= epochs; epoch++) {
     for (int i = 0; i < n_samples; i++) {
       backpropagate(network, &inputs[i * n_inputs], &zetas[i * n_outputs]);
       int batch_done = (i + 1) % batch_size == 0 || i + 1 == n_samples;
       if (batch_done) apply_updates(network);
     }
+    if (on_epoch != NULL) on_epoch(epoch, network, context);
   }
 
 }
