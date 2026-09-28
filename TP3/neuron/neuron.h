@@ -18,7 +18,20 @@ int neuron_get_n_inputs(const Neuron neuron);
 
 double neuron_predict(const Neuron neuron, const double input[], double * h_out);
 
+// Online update for a single neuron: accumulate + apply
 void neuron_learn(Neuron neuron, const double input[], double zeta);
+
+// Adds eta * delta * input to the pending Δw, without touching the weights.
+// delta already includes theta'(h): (zeta - O) * theta'(h) at the output, backpropagated otherwise.
+void neuron_accumulate(Neuron neuron, const double input[], double delta);
+
+// weights += pending Δw, then clears it
+void neuron_apply(Neuron neuron);
+
+double neuron_theta_prime(const Neuron neuron, double h);
+
+// i = 0 is the bias weight
+double neuron_get_weight(const Neuron neuron, int i);
 
 void neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs], const double zetas[], int n_samples, int epochs);
 

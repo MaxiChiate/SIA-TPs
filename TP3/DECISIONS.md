@@ -19,13 +19,14 @@ va a un archivo aparte y no entra al entrenamiento.
 
 ## Pesos iniciales: aleatorios uniformes en [−0.5, 0.5]
 
-**Qué:** `init_random_weights` (`neuron/main.c`) arranca `srand(seed)` y asigna a cada peso
-`rand() / RAND_MAX − 0.5`, bias incluido (`weights[0]`). La `seed` viene del `config.json`.
+**Qué:** `main` hace `srand(seed)` una sola vez y `random_weight` (`neuron/main.c`) asigna a cada
+peso de cada neurona `rand() / RAND_MAX − 0.5`, bias incluido (`weights[0]`). La `seed` viene del
+`config.json`.
 
 **Por qué:**
 - Aleatorios: si todas las neuronas de una capa arrancan igual, reciben el mismo gradiente y
-  nunca se diferencian (simetría). En el perceptrón simple no molesta, pero es la misma
-  función que va a usar el multicapa.
+  nunca se diferencian (simetría). Por eso `srand` va una sola vez y no por neurona: con la
+  misma seed en cada una, todas arrancarían con los mismos pesos.
 - Chicos y centrados en 0: `h` arranca cerca de 0, donde θ' es máxima; así no se arranca con
   la activación saturada.
 - Con seed fija: misma seed y mismo config dan el mismo resultado, y las corridas se pueden
@@ -43,3 +44,33 @@ va a un archivo aparte y no entra al entrenamiento.
   η = 0.0001 para tanh): MSE lineal 0.026 (su óptimo teórico), tanh 0.015, logistic 0.011.
 - θ' sale de θ misma, sin otra exponencial.
 - Se implementa partida por signo de h para que `exp` no desborde con |h| grande.
+
+## Online, batch y mini-batch: un solo parámetro, `batch_size`
+
+> **A revisar:** suma vs. promedio del Δw del batch, y si se mezclan las muestras en cada época.
+
+**Qué:** cada muestra suma su Δw = η·δ·x a un acumulador de la neurona, y los pesos cambian
+recién cuando se completa el batch. `batch_size = 1` es online, `≥ N` es batch, en el medio
+mini-batch. Se suma, no se promedia.
+
+**Por qué:**
+- Un solo camino de código para los tres regímenes: se comparan cambiando un número del config.
+- Suma y no promedio porque así lo define la regla (ΔW = Σ Δw). La contra: con batch más grande
+  el paso es más grande, así que η hay que ajustarlo según `batch_size`.
+- El último batch de la época puede quedar incompleto y se aplica igual, para no descartar
+  muestras.
+
+## Backpropagation: todos los δ antes de tocar un peso
+
+**Qué:** por muestra, forward (guarda h y V de cada capa), δ de salida
+`(ζ − O)·θ'(h)`, δ de las ocultas de atrás hacia adelante `θ'(h_j)·Σ_k w_kj·δ_k`, y recién
+después se acumula Δw en todas las neuronas.
+
+**Por qué:**
+- El δ de una capa oculta usa los pesos de la capa siguiente. Si se actualizaran antes, el error
+  se propagaría con pesos que no son los que produjeron la salida.
+- Con el acumulador esto sale solo: los pesos no cambian hasta el final del batch.
+- Todas las capas usan la misma activación; tiene que ser derivable (`tanh`, `logistic`). Con
+  escalón, θ' = 0 y no llega error a las ocultas.
+- Con `hidden_layers: []` la red es una neurona sola y la regla queda igual a la del perceptrón
+  simple: verificado, mismas predicciones y pesos que la versión anterior.

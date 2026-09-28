@@ -8,21 +8,23 @@ Enunciado: `docs/Enunciado TP3 - 2Q 2026.pdf`.
 
 ## Estado
 
-**Primera neurona en C.** Perceptrón simple que entrena y valida sobre CSVs; sin tests ni
-multicapa todavía. Lo que existe:
+**Multicapa en C con backpropagation.** Entrena y valida sobre CSVs; sin tests todavía. XOR con
+`[2,2,1]` y `tanh` converge (salvo algunas seeds, que caen en un mínimo local). Lo que existe:
 
 ```
 docs/Enunciado TP3 - 2Q 2026.pdf
 neuron/                          # C11 + make; README.md explica cómo correrlo
-  main.c                         # carga config y datasets, entrena, valida
-  neuron.c/h                     # la neurona: pesos dimensionados en runtime (n_inputs + 1)
+  main.c                         # carga config y datasets, arma la red, entrena, valida
+  network.c/h                    # capas de neuronas: forward, backprop, loop por batch
+  neuron.c/h                     # la neurona: pesos (n_inputs + 1) y Δw pendiente
   activation/                    # sign, lineal, tanh, logistic (θ y θ'), elegidas por nombre
   io/                            # config.json (JSON plano) y datasets CSV
   config.json.example            # se versiona este; config.json está gitignoreado
 ```
 
 `n_inputs` no es global: lo trae cada neurona, y se deduce de las columnas del CSV (entradas
-primero, ζ en la última). Así la misma neurona sirve de bloque para el multicapa. `build/` y
+primero, ζ en la última). La red es `{n_inputs, hidden_layers..., 1}`; con `hidden_layers: []` es
+el perceptrón simple y da exactamente lo mismo que la neurona sola. `build/` y
 `data/` están gitignoreados.
 
 Se trabaja en la rama `dev-perceptron`.
@@ -90,11 +92,14 @@ en C todavía no cubre todo (ver Pendiente).
 
 ## Pendiente
 
-- **Diseñar el multicapa**: backpropagation y las arquitecturas `[2,2,1]` y `[2,3,2,1]`. El
-  pseudocódigo actual cubre únicamente el perceptrón simple.
-- **Llevar a `neuron/` lo decidido que falta**: `batch_size`, rosenblatt vs. gradiente según la
-  activación, guardar el mejor error, criterio de convergencia, métricas por época.
-  Hoy `neuron_train_by_epoch` corre `epochs` épocas online fijas.
+- **Probar `[2,3,2,1]`** en XOR (la red ya lo soporta: `hidden_layers: [3, 2]`).
+- **Shuffle por época**: sin decidir. Hoy las muestras van siempre en el orden del CSV, así que
+  los mini-batches son siempre los mismos.
+- **Llevar a `neuron/` lo decidido que falta**: rosenblatt vs. gradiente según la activación,
+  guardar el mejor error, criterio de convergencia, métricas por época. Hoy `network_train`
+  corre `epochs` épocas fijas.
+- Salida de más de una neurona (dígitos, 10 clases): la red ya lo soporta, falta que el dataset
+  tenga más de una columna ζ.
 - La seed se usa con `srand`/`rand` en `main.c`, no con un RNG inyectado como pide la convención.
 - **Conseguir los datasets**: `transactions.csv`, `digits.csv`, `digits_test.csv` no están en
   el repo.

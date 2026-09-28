@@ -2,8 +2,10 @@
 #include "io/config.h"
 #include "io/dataset.h"
 #include "io/results.h"
-#include "neuron.h"
+#include "network.h"
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define DEFAULT_CONFIG_PATH "config.json"
 
@@ -54,11 +56,21 @@ static int shared_n_inputs(const Dataset train, const Dataset validation) {
 }
 
 
-static void init_random_weights(double weights[], int n_weights, unsigned int seed) {
-  srand(seed);
-  for (int i = 0; i < n_weights; i++) {
-    weights[i] = (double) rand() / RAND_MAX - 0.5;
+// Uniform in [-0.5, 0.5]. rand is seeded once in main, so every neuron gets different weights.
+static double random_weight(void) {
+  return (double) rand() / RAND_MAX - 0.5;
+}
+
+
+// {n_inputs, hidden_layers..., 1}: the dataset has a single zeta column, so one output neuron
+static int layer_sizes(const Config * config, int n_inputs, int sizes[]) {
+  sizes[0] = n_inputs;
+  for (int i = 0; i < config->n_hidden_layers; i++) {
+    sizes[i + 1] = config->hidden_layers[i];
   }
+  int n_layers = config->n_hidden_layers + 1;
+  sizes[n_layers] = 1;
+  return n_layers;
 }
 
 
@@ -69,22 +81,30 @@ static Results create_results(const char * config_path, const char * activation)
 }
 
 
-static void save_weights(const Results * results, const double initial_weights[], const Neuron neuron) {
-  int n_weights = neuron_get_n_inputs(neuron) + 1;
-  double final_weights[n_weights];
-  neuron_get_weights(neuron, final_weights);
-  if (!results_write_weights(results, n_weights, initial_weights, final_weights)) exit(EXIT_FAILURE);
+static double * snapshot_weights(const Network network) {
+  double * weights = malloc(network_n_weights(network) * sizeof(double));
+  if (weights == NULL) die("couldn't allocate weights");
+  network_get_weights(network, weights);
+  return weights;
 }
 
 
-static void train_neuron(Neuron neuron, const Dataset train, int epochs) {
-  int n_inputs = dataset_n_inputs(train);
-  const double (*inputs)[n_inputs] = (const double (*)[n_inputs]) dataset_inputs(train);
-  neuron_train(neuron, n_inputs, inputs, dataset_zetas(train), dataset_n_samples(train), epochs);
+static void save_weights(const Results * results, int n_layers, const int sizes[], const double initial_weights[],
+                         const Network network) {
+  double * final_weights = snapshot_weights(network);
+  int ok = results_write_weights(results, n_layers, sizes, initial_weights, final_weights);
+  free(final_weights);
+  if (!ok) exit(EXIT_FAILURE);
 }
 
 
-static void validate_neuron(const Neuron neuron, const Dataset validation, const Results * results) {
+static void train_network(Network network, const Dataset train, const Config * config) {
+  network_train(network, dataset_inputs(train), dataset_zetas(train), dataset_n_samples(train),
+                config->epochs, config->batch_size);
+}
+
+
+static void validate_network(Network network, const Dataset validation, const Results * results) {
   int n_inputs = dataset_n_inputs(validation);
   int n_samples = dataset_n_samples(validation);
   const double (*inputs)[n_inputs] = (const double (*)[n_inputs]) dataset_inputs(validation);
@@ -92,7 +112,7 @@ static void validate_neuron(const Neuron neuron, const Dataset validation, const
   double * predictions = malloc(n_samples * sizeof(double));
   if (predictions == NULL) die("couldn't allocate predictions");
   for (int i = 0; i < n_samples; i++) {
-    predictions[i] = neuron_predict(neuron, inputs[i], NULL);
+    network_predict(network, inputs[i], &predictions[i]);
   }
 
   int ok = results_write_predictions(results, n_inputs, inputs, dataset_zetas(validation), predictions, n_samples);
@@ -110,18 +130,21 @@ int main(int argc, char * argv[]) {
   Dataset validation = load_dataset(config.validation_dataset);
   int n_inputs = shared_n_inputs(train, validation);
 
-  double initial_weights[n_inputs + 1];
-  // Simple:
-  init_random_weights(initial_weights, n_inputs + 1, config.seed);
-  Neuron neuron = neuron_new(n_inputs, activation->theta, activation->theta_prime, initial_weights, config.eta);
+  int sizes[CONFIG_HIDDEN_LAYERS_MAX + 2];
+  int n_layers = layer_sizes(&config, n_inputs, sizes);
+
+  srand(config.seed);
+  Network network = network_new(n_layers, sizes, activation, config.eta, random_weight);
+  double * initial_weights = snapshot_weights(network);
 
   Results results = create_results(path, config.activation);
-  train_neuron(neuron, train, config.epochs);
-  save_weights(&results, initial_weights, neuron);
-  validate_neuron(neuron, validation, &results);
+  train_network(network, train, &config);
+  save_weights(&results, n_layers, sizes, initial_weights, network);
+  validate_network(network, validation, &results);
   printf("results -> %s\n", results.dir);
 
-  neuron_free(neuron);
+  free(initial_weights);
+  network_free(network);
   dataset_free(train);
   dataset_free(validation);
   return 0;
