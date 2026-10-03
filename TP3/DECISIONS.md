@@ -19,14 +19,16 @@ va a un archivo aparte y no entra al entrenamiento.
 
 ## Pesos iniciales: aleatorios uniformes en [−0.5, 0.5]
 
-**Qué:** `main` hace `srand(seed)` una sola vez y `random_weight` (`neuron/main.c`) asigna a cada
-peso de cada neurona `rand() / RAND_MAX − 0.5`, bias incluido (`weights[0]`). La `seed` viene del
-`config.json`.
+**Qué:** `main` crea un único `Rng` (`neuron/rng.c`, splitmix64) con la `seed` del `config.json` y
+lo pasa a `network_new`; `random_weight` (`neuron/main.c`) asigna a cada peso de cada neurona
+`uniforme[0,1) − 0.5`, bias incluido (`weights[0]`).
 
 **Por qué:**
 - Aleatorios: si todas las neuronas de una capa arrancan igual, reciben el mismo gradiente y
-  nunca se diferencian (simetría). Por eso `srand` va una sola vez y no por neurona: con la
-  misma seed en cada una, todas arrancarían con los mismos pesos.
+  nunca se diferencian (simetría). Por eso hay una sola instancia de RNG compartida y no una
+  por neurona: con la misma seed en cada una, todas arrancarían con los mismos pesos.
+- RNG propio e inyectado y no `rand()`: es estado global, y su secuencia cambia según la libc,
+  así que la misma seed no daba lo mismo en otra máquina.
 - Chicos y centrados en 0: `h` arranca cerca de 0, donde θ' es máxima; así no se arranca con
   la activación saturada.
 - Con seed fija: misma seed y mismo config dan el mismo resultado, y las corridas se pueden
@@ -111,3 +113,20 @@ entrenar.
 - Si train baja y validación sube, hay overfitting; con una sola curva no se ve.
 - Si con la curva de validación se elige algo (época, η, arquitectura), ese conjunto deja de ser
   un test honesto: la evaluación final tiene que hacerse sobre otro conjunto, sin tocar.
+
+## Fin del entrenamiento: mejor error visto y convergencia
+
+**Qué:** después de cada época `main` compara el MSE de train con el mejor visto y, si es menor,
+copia los pesos. Al terminar (o al converger) la red queda con los pesos de la mejor época, no de
+la última. Se corta antes de tiempo si: activación discreta (`sign`) → cero muestras mal
+clasificadas; el resto → MSE de train `< tolerance` (opcional en el config; 0 = nunca corta).
+
+**Por qué:**
+- El error no baja monótonamente (una corrección puede romper otra muestra), así que el último
+  estado puede ser peor que uno anterior.
+- Con floats un error exactamente 0 nunca se alcanza, por eso la tolerancia; en el escalón sí
+  tiene sentido contar errores, porque la salida es ±1.
+- El criterio de mejor es el error de **train**, no el de validación: elegir por validación la
+  convertiría en parte del entrenamiento. Si hace falta, se elige la época a mano mirando las curvas.
+- La regla de Rosenblatt no necesita rama aparte: `sign_prime` devuelve 1 y la regla delta
+  genérica η·(ζ − O)·x da exactamente la de Rosenblatt.

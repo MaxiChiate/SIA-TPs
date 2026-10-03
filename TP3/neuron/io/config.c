@@ -26,6 +26,7 @@ static const Field FIELDS[] = {
   { "epochs",             FIELD_INT,       offsetof(Config, epochs), 0, 0 },
   { "batch_size",         FIELD_INT,       offsetof(Config, batch_size), 0, 0 },
   { "hidden_layers",      FIELD_INT_ARRAY, offsetof(Config, hidden_layers), offsetof(Config, n_hidden_layers), 0 },
+  { "tolerance",          FIELD_DOUBLE,    offsetof(Config, tolerance), 0, 1 },
   { "seed",               FIELD_UINT,      offsetof(Config, seed), 0, 0 },
   { "initial_weights",    FIELD_STRING,    offsetof(Config, initial_weights), 0, 1 },
 };
@@ -234,6 +235,10 @@ static int validate(const char * path, const Config * config) {
   }
   if (config->batch_size <= 0) {
     fprintf(stderr, "%s: \"batch_size\" must be positive\n", path);
+    return 0;
+  }
+  if (config->tolerance < 0) {
+    fprintf(stderr, "%s: \"tolerance\" can't be negative\n", path);
     return 0;
   }
   for (int i = 0; i < config->n_hidden_layers; i++) {

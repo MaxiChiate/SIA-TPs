@@ -13,6 +13,8 @@ typedef struct {
   int batch_size;
   int hidden_layers[CONFIG_HIDDEN_LAYERS_MAX]; // neurons per hidden layer; empty = simple perceptron
   int n_hidden_layers;
+  double tolerance; // stop once the train MSE drops below it; 0 (the default) never stops early.
+                    // Ignored with a discrete activation, which stops at zero misclassified samples
   unsigned int seed;
   char initial_weights[CONFIG_STRING_MAX]; // optional: an earlier run's directory or weights.csv to keep
                                            // training from; "" (the default) draws random weights

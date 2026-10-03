@@ -5,6 +5,7 @@ typedef struct {
   const char * name;
   double (*theta)(double);
   double (*theta_prime)(double);
+  int discrete; // outputs are classes (sign): converged means zero misclassified, not a small error
 } Activation;
 
 // Returns NULL if there's no activation with that name

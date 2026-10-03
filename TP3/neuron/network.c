@@ -22,17 +22,17 @@ static void * checked_malloc(size_t size) {
 }
 
 
-static Neuron new_neuron(int n_inputs, const Activation * activation, double eta, double (*draw_weight)(void)) {
+static Neuron new_neuron(int n_inputs, const Activation * activation, double eta, double (*draw_weight)(void *), void * context) {
   double weights[n_inputs + 1];
   for (int i = 0; i <= n_inputs; i++) {
-    weights[i] = draw_weight();
+    weights[i] = draw_weight(context);
   }
   return neuron_new(n_inputs, activation->theta, activation->theta_prime, weights, eta);
 }
 
 
 Network network_new(int n_layers, const int sizes[], const Activation * activation, double eta,
-                    double (*draw_weight)(void)) {
+                    double (*draw_weight)(void *), void * context) {
 
   Network network = checked_malloc(sizeof(struct network));
   network->n_layers = n_layers;
@@ -52,7 +52,7 @@ Network network_new(int n_layers, const int sizes[], const Activation * activati
   for (int l = 1; l <= n_layers; l++) {
     network->layers[l] = checked_malloc(sizes[l] * sizeof(Neuron));
     for (int j = 0; j < sizes[l]; j++) {
-      network->layers[l][j] = new_neuron(sizes[l-1], activation, eta, draw_weight);
+      network->layers[l][j] = new_neuron(sizes[l-1], activation, eta, draw_weight, context);
     }
     network->v[l] = checked_malloc(sizes[l] * sizeof(double));
     network->h[l] = checked_malloc(sizes[l] * sizeof(double));
@@ -208,8 +208,27 @@ ErrorMetrics network_error(Network network, const double inputs[], const double 
 }
 
 
-void network_train(Network network, const double inputs[], const double zetas[], int n_samples,
-                   int epochs, int batch_size, EpochCallback on_epoch, void * context) {
+int network_misclassified(Network network, const double inputs[], const double zetas[], int n_samples) {
+  int n_inputs = network_n_inputs(network);
+  int n_outputs = network_n_outputs(network);
+  double * output = network->v[network->n_layers];
+
+  int wrong = 0;
+  for (int i = 0; i < n_samples; i++) {
+    forward(network, &inputs[i * n_inputs]);
+    for (int j = 0; j < n_outputs; j++) {
+      if (fabs(zetas[i * n_outputs + j] - output[j]) > 0.5) {
+        wrong++;
+        break;
+      }
+    }
+  }
+  return wrong;
+}
+
+
+int network_train(Network network, const double inputs[], const double zetas[], int n_samples,
+                  int epochs, int batch_size, EpochCallback on_epoch, void * context) {
 
   int n_inputs = network_n_inputs(network);
   int n_outputs = network_n_outputs(network);
@@ -220,7 +239,8 @@ void network_train(Network network, const double inputs[], const double zetas[],
       int batch_done = (i + 1) % batch_size == 0 || i + 1 == n_samples;
       if (batch_done) apply_updates(network);
     }
-    if (on_epoch != NULL) on_epoch(epoch, network, context);
+    if (on_epoch != NULL && on_epoch(epoch, network, context)) return epoch;
   }
+  return epochs;
 
 }

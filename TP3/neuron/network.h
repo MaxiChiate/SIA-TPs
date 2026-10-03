@@ -7,9 +7,9 @@ typedef struct network * Network;
 
 // sizes has n_layers + 1 elements: sizes[0] = inputs, sizes[l] = neurons in layer l (the last one is
 // the output). {2, 2, 1} is the 2-2-1 net; {n, 1} is a simple perceptron.
-// draw_weight is called once per weight, layer by layer and neuron by neuron, bias first.
+// draw_weight(context) is called once per weight, layer by layer and neuron by neuron, bias first.
 Network network_new(int n_layers, const int sizes[], const Activation * activation, double eta,
-                    double (*draw_weight)(void));
+                    double (*draw_weight)(void * context), void * context);
 
 void network_free(Network network);
 
@@ -41,14 +41,19 @@ typedef struct {
 // zetas is row-major n_samples x n_outputs.
 ErrorMetrics network_error(Network network, const double inputs[], const double zetas[], int n_samples);
 
-// Called after every epoch (numbered from 1), once the epoch's last batch is applied
-typedef void (*EpochCallback)(int epoch, Network network, void * context);
+// Samples whose prediction is off by more than 0.5 on any output. Meant for discrete activations (sign),
+// where a prediction is either right or wrong.
+int network_misclassified(Network network, const double inputs[], const double zetas[], int n_samples);
+
+// Called after every epoch (numbered from 1), once the epoch's last batch is applied.
+// Returns nonzero to stop training (converged).
+typedef int (*EpochCallback)(int epoch, Network network, void * context);
 
 // zetas is row-major n_samples x n_outputs.
 // batch_size = 1 is online, batch_size >= n_samples is full batch, anything between is mini-batch:
 // Δw is accumulated over the batch and the weights change once at its end.
-// on_epoch may be NULL.
-void network_train(Network network, const double inputs[], const double zetas[], int n_samples,
-                   int epochs, int batch_size, EpochCallback on_epoch, void * context);
+// on_epoch may be NULL. Returns the number of epochs run: less than epochs if on_epoch asked to stop.
+int network_train(Network network, const double inputs[], const double zetas[], int n_samples,
+                  int epochs, int batch_size, EpochCallback on_epoch, void * context);
 
 #endif //__NETWORK_H__

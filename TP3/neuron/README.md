@@ -109,8 +109,12 @@ opcionales, y una clave desconocida es un error:
 | `epochs`             | entero | Épocas de entrenamiento, mayor a 0                 |
 | `batch_size`         | entero | Muestras por update: 1 online, ≥ N batch, en el medio mini-batch |
 | `hidden_layers`      | lista  | Neuronas por capa oculta, p. ej. `[2]`; `[]` es perceptrón simple |
+| `tolerance`          | número | Opcional. Corta el entrenamiento cuando el MSE de train baja de este valor; sin ella (o 0) corre todas las épocas. Con `sign` se corta solo al clasificar bien todo el train |
 | `seed`               | entero | Semilla de los pesos iniciales (uniformes en [-0.5, 0.5]) |
 | `initial_weights`    | string | Opcional. Carpeta de una corrida anterior (o su `weights.csv`) para seguir entrenando desde sus pesos finales; sin ella, pesos al azar |
+
+Al terminar, la red queda con los pesos de la época de menor MSE de train (no los de la última), y
+`epochs.csv` llega solo hasta la última época entrenada.
 
 Con `initial_weights`, la arquitectura (entradas, `hidden_layers` y salidas) tiene que ser la
 misma que la de esa corrida. La corrida nueva numera sus épocas desde 0 (la época 0 es donde

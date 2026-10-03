@@ -6,6 +6,8 @@ static double sign(double x) {
   return x >= 0 ? 1.0 : -1.0;
 }
 
+// Not the derivative (it's 0 almost everywhere): 1 makes the generic delta rule
+// eta * (zeta - O) * x exactly Rosenblatt's, so the step needs no special case.
 static double sign_prime(double x) {
   (void) x;
   return 1.0;
@@ -37,10 +39,10 @@ static double logistic_prime(double x) {
 }
 
 static const Activation ACTIVATIONS[] = {
-  { "sign",     sign,     sign_prime },
-  { "lineal",   lineal,   lineal_prime },
-  { "tanh",     tanh,     tanh_prime },
-  { "logistic", logistic, logistic_prime },
+  { "sign",     sign,     sign_prime,     1 },
+  { "lineal",   lineal,   lineal_prime,   0 },
+  { "tanh",     tanh,     tanh_prime,     0 },
+  { "logistic", logistic, logistic_prime, 0 },
 };
 
 #define N_ACTIVATIONS ((int) (sizeof(ACTIVATIONS) / sizeof(ACTIVATIONS[0])))

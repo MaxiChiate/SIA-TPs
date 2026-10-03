@@ -5,6 +5,7 @@
 #include "io/dataset.h"
 #include "io/results.h"
 #include "network.h"
+#include "rng.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,9 +69,9 @@ static int shared_n_outputs(const Dataset train, const Dataset validation) {
 }
 
 
-// Uniform in [-0.5, 0.5]. rand is seeded once in main, so every neuron gets different weights.
-static double random_weight(void) {
-  return (double) rand() / RAND_MAX - 0.5;
+// Uniform in [-0.5, 0.5], drawn from the run's single Rng
+static double random_weight(void * context) {
+  return rng_uniform(context) - 0.5;
 }
 
 
@@ -138,7 +139,13 @@ static double now_seconds(void) {
 typedef struct {
   Dataset train;
   Dataset validation;
-  int epochs;
+  int epochs;          // planned
+  int epochs_run;      // actually trained: fewer when it converged
+  int discrete;        // activation's outputs are classes
+  double tolerance;    // train MSE that counts as converged (continuous activations); 0 = never
+  double best_mse;     // lowest train MSE seen, and the weights and epoch it happened at
+  int best_epoch;
+  double * best_weights;
   ErrorMetrics * train_errors;
   ErrorMetrics * validation_errors;
   double * elapsed;    // seconds spent training up to each epoch; evaluating the errors is left out
@@ -185,7 +192,27 @@ static void report_progress(TrainingHistory * history, int epoch) {
 }
 
 
-static void record_epoch(int epoch, Network network, void * context) {
+// The error doesn't fall monotonically, so training keeps the best weights it saw, not the last ones
+static void keep_if_best(TrainingHistory * history, int epoch, Network network) {
+  double mse = history->train_errors[epoch].mse;
+  if (epoch > 0 && mse >= history->best_mse) return;
+  history->best_mse = mse;
+  history->best_epoch = epoch;
+  network_get_weights(network, history->best_weights);
+}
+
+
+// Discrete: every train sample classified right. Continuous: train MSE under the tolerance.
+static int has_converged(const TrainingHistory * history, int epoch, Network network) {
+  if (history->discrete) {
+    return network_misclassified(network, dataset_inputs(history->train), dataset_zetas(history->train),
+                                 dataset_n_samples(history->train)) == 0;
+  }
+  return history->tolerance > 0 && history->train_errors[epoch].mse < history->tolerance;
+}
+
+
+static int record_epoch(int epoch, Network network, void * context) {
   TrainingHistory * history = context;
   double paused_at = now_seconds();
   history->elapsed[epoch] = epoch == 0 ? 0.0 : history->elapsed[epoch - 1] + paused_at - history->resumed_at;
@@ -199,8 +226,12 @@ static void record_epoch(int epoch, Network network, void * context) {
     history->next_snapshot++;
   }
 
-  report_progress(history, epoch);
+  keep_if_best(history, epoch, network);
+  int converged = epoch > 0 && has_converged(history, epoch, network);
+
+  report_progress(history, converged ? history->epochs : epoch);
   history->resumed_at = now_seconds();
+  return converged;
 }
 
 
@@ -215,11 +246,17 @@ static int snapshot_epochs(int epochs, int out[]) {
 }
 
 
-static TrainingHistory new_training_history(const Dataset train, const Dataset validation, int epochs) {
+static TrainingHistory new_training_history(const Dataset train, const Dataset validation, const Network network,
+                                            const Config * config, const Activation * activation) {
+  int epochs = config->epochs;
   TrainingHistory history = {
     .train = train,
     .validation = validation,
     .epochs = epochs,
+    .epochs_run = epochs,
+    .discrete = activation->discrete,
+    .tolerance = config->tolerance,
+    .best_weights = malloc(network_n_weights(network) * sizeof(double)),
     .train_errors = malloc((epochs + 1) * sizeof(ErrorMetrics)),
     .validation_errors = malloc((epochs + 1) * sizeof(ErrorMetrics)),
     .elapsed = malloc((epochs + 1) * sizeof(double)),
@@ -228,7 +265,7 @@ static TrainingHistory new_training_history(const Dataset train, const Dataset v
   history.snapshot_predictions = malloc((size_t) history.n_snapshots * dataset_n_samples(validation)
                                         * dataset_n_outputs(validation) * sizeof(double));
   if (history.train_errors == NULL || history.validation_errors == NULL || history.elapsed == NULL
-      || history.snapshot_predictions == NULL) {
+      || history.snapshot_predictions == NULL || history.best_weights == NULL) {
     die("couldn't allocate training history");
   }
   return history;
@@ -240,21 +277,27 @@ static void free_training_history(TrainingHistory * history) {
   free(history->validation_errors);
   free(history->elapsed);
   free(history->snapshot_predictions);
+  free(history->best_weights);
 }
 
 
 static void train_network(Network network, const Dataset train, const Config * config, TrainingHistory * history) {
   history->started_at = history->reported_at = now_seconds();
   record_epoch(0, network, history);
-  network_train(network, dataset_inputs(train), dataset_zetas(train), dataset_n_samples(train),
-                config->epochs, config->batch_size, record_epoch, history);
+  history->epochs_run = network_train(network, dataset_inputs(train), dataset_zetas(train),
+                                      dataset_n_samples(train), config->epochs, config->batch_size,
+                                      record_epoch, history);
+  network_set_weights(network, history->best_weights);
+  fprintf(stderr, "%s after %d epochs; keeping the weights of epoch %d (train MSE %.4g)\n",
+          history->epochs_run < config->epochs ? "converged" : "finished", history->epochs_run,
+          history->best_epoch, history->best_mse);
 }
 
 
-static void save_history(const Results * results, const TrainingHistory * history, int epochs) {
-  int ok = results_write_epochs(results, epochs, history->train_errors, history->validation_errors,
+static void save_history(const Results * results, const TrainingHistory * history) {
+  int ok = results_write_epochs(results, history->epochs_run, history->train_errors, history->validation_errors,
                                 history->elapsed)
-        && results_write_snapshots(results, history->n_snapshots, history->snapshot_epochs,
+        && results_write_snapshots(results, history->next_snapshot, history->snapshot_epochs,
                                    dataset_n_samples(history->validation), dataset_n_outputs(history->validation),
                                    dataset_zetas(history->validation),
                                    history->snapshot_predictions);
@@ -292,15 +335,15 @@ int main(int argc, char * argv[]) {
   int sizes[CONFIG_HIDDEN_LAYERS_MAX + 2];
   int n_layers = layer_sizes(&config, n_inputs, n_outputs, sizes);
 
-  srand(config.seed);
-  Network network = network_new(n_layers, sizes, activation, config.eta, random_weight);
+  Rng rng = rng_new(config.seed);
+  Network network = network_new(n_layers, sizes, activation, config.eta, random_weight, &rng);
   if (config.initial_weights[0] != '\0') load_initial_weights(config.initial_weights, network, n_layers, sizes);
   double * initial_weights = snapshot_weights(network);
 
   Results results = create_results(path, config.activation);
-  TrainingHistory history = new_training_history(train, validation, config.epochs);
+  TrainingHistory history = new_training_history(train, validation, network, &config, activation);
   train_network(network, train, &config, &history);
-  save_history(&results, &history, config.epochs);
+  save_history(&results, &history);
   save_weights(&results, n_layers, sizes, initial_weights, network);
   validate_network(network, validation, &results);
   printf("results -> %s\n", results.dir);
