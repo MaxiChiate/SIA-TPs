@@ -9,12 +9,14 @@ Enunciado: `docs/Enunciado TP3 - 2Q 2026.pdf`.
 ## Estado
 
 **Multicapa en C con backpropagation.** Entrena y valida sobre CSVs; sin tests todavía. XOR con
-`[2,2,1]` y `tanh` converge (salvo algunas seeds, que caen en un mínimo local). Lo que existe:
+`[2,2,1]` y `tanh` converge en 3 de 6 seeds probadas (el resto cae en un mínimo local); con
+`[2,3,2,1]` convergió en las 6. Lo que existe:
 
 ```
 docs/Enunciado TP3 - 2Q 2026.pdf
 neuron/                          # C11 + make; README.md explica cómo correrlo
   main.c                         # carga config y datasets, arma la red, entrena, valida
+  rng.c/h                        # RNG propio (splitmix64), uno por corrida, inyectado a la red
   network.c/h                    # capas de neuronas: forward, backprop, loop por batch
   neuron.c/h                     # la neurona: pesos (n_inputs + 1) y Δw pendiente
   activation/                    # sign, lineal, tanh, logistic (θ y θ'), elegidas por nombre
@@ -29,7 +31,9 @@ scripts/
 ```
 
 Cada corrida guarda `epochs.csv`: E y MSE de train y validación después de cada época, y los
-segundos de entrenamiento acumulados (`elapsed_s`). El progreso sale por stderr (stdout es solo la
+segundos de entrenamiento acumulados (`elapsed_s`). Corta antes si converge (`sign`: cero mal
+clasificadas; resto: MSE de train < `tolerance`, opcional) y la red queda con los pesos de la
+mejor época de train, no de la última. El progreso sale por stderr (stdout es solo la
 ruta, que lee `make run`). `initial_weights` (opcional) sigue entrenando desde los pesos finales de
 otra corrida.
 
@@ -105,19 +109,15 @@ en C todavía no cubre todo (ver Pendiente).
 
 ## Pendiente
 
-- **Probar `[2,3,2,1]`** en XOR (la red ya lo soporta: `hidden_layers: [3, 2]`).
 - **Shuffle por época**: sin decidir. Hoy las muestras van siempre en el orden del CSV, así que
   los mini-batches son siempre los mismos.
-- **Llevar a `neuron/` lo decidido que falta**: rosenblatt vs. gradiente según la activación,
-  guardar el mejor error, criterio de convergencia (el error por época ya se mide, vía el
-  callback de `network_train`). Hoy corre `epochs` épocas fijas.
 - **Dígitos**: `scripts/prepare_digits_dataset.py` los deja en one-hot (`x1..x784,zeta_0..zeta_9`) y
-  la red ya entrena con 10 salidas; el reporte muestra aciertos por argmax. Falta la matriz de
-  confusión / aciertos por clase. `digits.csv` no tiene ningún 8 y tiene pocos 5 (271);
+  la red ya entrena con 10 salidas; el reporte muestra aciertos por argmax. El reporte ya trae matriz de
+  confusión y aciertos/precisión por clase (probada solo con datos sintéticos). `digits.csv` no tiene ningún 8 y tiene pocos 5 (271);
   `more_digits.csv` sí tiene 8.
-- La seed se usa con `srand`/`rand` en `main.c`, no con un RNG inyectado como pide la convención.
-- **Conseguir los datasets**: `transactions.csv` no está en el repo (los de dígitos sí, en
-  `neuron/data/`, gitignoreados).
+- **Conseguir los datasets**: no hay ningún CSV en el repo (`neuron/data/` solo tiene datos de
+  prueba: AND, XOR, `y = x`, clases sintéticas). Faltan `transactions.csv`, `digits.csv`,
+  `digits_test.csv`. Bloquea los Ejercicios 1 y 2.
 - Ejercicio 1 y Ejercicio 2 completos (son los entregables).
 - Presentación.
 

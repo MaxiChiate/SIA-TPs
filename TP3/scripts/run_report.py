@@ -195,6 +195,18 @@ def argmax_hits(run: Run) -> int:
     return hits
 
 
+def confusion_matrix(run: Run) -> list[list[int]]:
+    """Rows are the expected class (largest zeta), columns the predicted one (largest prediction)."""
+    size = run.n_outputs
+    matrix = [[0] * size for _ in range(size)]
+    for start in range(0, len(run.samples), size):
+        outputs = run.samples[start:start + size]
+        expected = max(range(size), key=lambda k: outputs[k].zeta)
+        predicted = max(range(size), key=lambda k: outputs[k].prediction)
+        matrix[expected][predicted] += 1
+    return matrix
+
+
 # ---------- svg primitives ----------
 
 def fmt(value: float) -> str:
@@ -466,6 +478,40 @@ def stats_section(run: Run, error: RunError) -> str:
     return f'<section class="stats">{"".join(tiles)}</section>'
 
 
+def share(count: int, total: int) -> str:
+    return f"{100 * count / total:.1f}%" if total else "–"
+
+
+def confusion_cell(count: int, row_total: int, is_diagonal: bool) -> str:
+    """Shade by the share of the row, so each class reads the same whatever its size."""
+    intensity = round(80 * count / row_total) if row_total else 0
+    color = "--series-1" if is_diagonal else "--series-2"
+    style = f' style="background: color-mix(in srgb, var({color}) {intensity}%, transparent)"' if count else ""
+    return f"<td{style}>{count}</td>"
+
+
+def confusion_section(run: Run) -> str:
+    """Per-class hits (recall) and precision; a class with no samples shows –, e.g. digits.csv has no 8."""
+    matrix = confusion_matrix(run)
+    size = run.n_outputs
+    row_totals = [sum(row) for row in matrix]
+    column_totals = [sum(matrix[i][j] for i in range(size)) for j in range(size)]
+    rows = []
+    for i, row in enumerate(matrix):
+        cells = "".join(confusion_cell(count, row_totals[i], i == j) for j, count in enumerate(row))
+        rows.append(f'<tr><th>{i}</th>{cells}<td>{row_totals[i]}</td><td>{share(row[i], row_totals[i])}</td></tr>')
+    precision = "".join(f"<td>{share(matrix[j][j], column_totals[j])}</td>" for j in range(size))
+    header = "".join(f"<th>{j}</th>" for j in range(size))
+    body = "".join(rows)
+    footer = f'<tr><th>precisión</th>{precision}<td></td><td></td></tr>'
+    table_html = (f'<div class="table-wrap"><table class="data confusion"><thead><tr><th>real ↓ · predicho →</th>{header}'
+                  f'<th>muestras</th><th>aciertos</th></tr></thead><tbody>{body}{footer}</tbody></table></div>')
+    note = ('<p class="note">Cada fila es la clase real (ζ más grande) y cada columna la que predijo la red '
+            '(salida más grande). <b>Aciertos</b> = diagonal / muestras de la fila (recall); '
+            '<b>precisión</b> = diagonal / predichas en la columna. El color es la parte de la fila.</p>')
+    return f'<section><h2>Matriz de confusión</h2>{table_html}{note}</section>'
+
+
 def training_time(epochs: list[EpochRecord]) -> str | None:
     if not epochs or epochs[-1].elapsed is None:
         return None
@@ -703,6 +749,7 @@ def render(run: Run) -> str:
 <p class="subtitle">{html.escape(run.dir.name)} · validación sobre {html.escape(run.config["validation_dataset"])}</p>
 <h2>Error de validación (pesos finales)</h2>
 {stats_section(run, error)}
+{confusion_section(run) if run.n_outputs > 1 else ""}
 {glossary_section()}
 {charts_section(run)}
 {config_section(run)}
