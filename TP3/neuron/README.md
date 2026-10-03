@@ -152,3 +152,10 @@ x1,...,x784,zeta_0,...,zeta_9
 formato (`data/<nombre>_prepared.csv`).
 
 Los datasets van en `data/`, que está gitignoreado.
+
+## Tests
+
+`make test` compila `tests/test_main.c` contra todo menos `main.c` y lo corre (sin dependencias). Cubre
+el RNG, las activaciones y sus derivadas, el forward y la actualización a mano, backprop contra el
+gradiente numérico, full batch independiente del orden, AND/`y = x`/XOR `[2,3,2,1]`, corte por
+callback, y la lectura de datasets y config.

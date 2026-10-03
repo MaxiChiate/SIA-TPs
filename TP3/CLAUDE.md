@@ -8,7 +8,7 @@ Enunciado: `docs/Enunciado TP3 - 2Q 2026.pdf`.
 
 ## Estado
 
-**Multicapa en C con backpropagation.** Entrena y valida sobre CSVs; sin tests todavía. XOR con
+**Multicapa en C con backpropagation.** Entrena y valida sobre CSVs; tests con `make test` (en `neuron/tests/`). XOR con
 `[2,2,1]` y `tanh` converge en 3 de 6 seeds probadas (el resto cae en un mínimo local); con
 `[2,3,2,1]` convergió en las 6. Lo que existe:
 
