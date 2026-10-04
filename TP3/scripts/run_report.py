@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Writes report.html into a run directory: config, learning curve, validation error, charts and raw results.
+"""Writes report.html into a run directory: validation error, learning curve, confusion matrix, charts and config.
 
 Takes a run directory (results/<date>_<time>_<activation>/); without one, uses the latest run.
-`make run` calls it after every run. Standard library only: the charts are inline SVG.
+`make run` calls it after every run. Standard library only: the charts are inline SVG. Three tabs (summary,
+charts, config); every explanation lives behind an (i) button that opens a modal. The full weights and
+predictions stay in weights.csv and predictions.csv.
 """
 
 from __future__ import annotations
@@ -20,8 +22,7 @@ from run_error import RESULTS_DIR, RunError, latest_run, output_columns, run_err
 
 MAX_PLOTTED_SAMPLES = 2000
 MAX_PLOTTED_EPOCHS = 1000
-MAX_TABLE_ROWS = 10000
-MAX_SHOWN_INPUTS = 10  # with more inputs (784 pixels) the x values are left out of tooltips and tables
+MAX_SHOWN_INPUTS = 10  # with more inputs (784 pixels) the x values are left out of tooltips
 HISTOGRAM_BINS = 20
 
 WIDTH, HEIGHT = 640, 340
@@ -41,15 +42,6 @@ class Sample:
     @property
     def error(self) -> float:
         return self.zeta - self.prediction
-
-
-@dataclass(frozen=True)
-class Weight:
-    layer: int
-    neuron: int
-    index: int  # 0 is the bias
-    initial: float
-    final: float
 
 
 # epochs.csv column suffix -> label; the first one is the curve shown by default
@@ -75,7 +67,6 @@ class Run:
     dir: Path
     config: dict
     samples: list[Sample]
-    weights: list[Weight]
     epochs: list[EpochRecord]  # empty for runs from before epochs.csv existed
     snapshots: list[Snapshot]  # validation predictions at a few epochs; empty for older runs
 
@@ -122,15 +113,6 @@ def load_samples(run_dir: Path) -> list[Sample]:
     return samples
 
 
-def load_weights(run_dir: Path) -> list[Weight]:
-    with (run_dir / "weights.csv").open(newline="") as file:
-        return [
-            Weight(int(row["layer"]), int(row["neuron"]), int(row["weight"]), float(row["initial"]),
-                   float(row["final"]))
-            for row in csv.DictReader(file)
-        ]
-
-
 def load_epochs(run_dir: Path) -> list[EpochRecord]:
     path = run_dir / "epochs.csv"
     if not path.exists():
@@ -165,8 +147,7 @@ def load_snapshots(run_dir: Path) -> list[Snapshot]:
 
 def load_run(run_dir: Path) -> Run:
     config = json.loads((run_dir / "config.json").read_text())
-    return Run(run_dir, config, load_samples(run_dir), load_weights(run_dir), load_epochs(run_dir),
-               load_snapshots(run_dir))
+    return Run(run_dir, config, load_samples(run_dir), load_epochs(run_dir), load_snapshots(run_dir))
 
 
 # ---------- metrics ----------
@@ -297,9 +278,21 @@ def zoomable_svg(frame: str, marks: str, x: Scale, y: Scale, title: str, zoom_x:
 ZOOM_HINT = " Arrastrá para hacer zoom; doble clic para volver."
 
 
+def info(title: str, body: str) -> str:
+    """The (i) button. Its text opens in the page's modal (MODAL_SCRIPT) instead of sitting on the page."""
+    if not body.startswith("<"):
+        body = f"<p>{body}</p>"
+    return (f'<button type="button" class="info" aria-label="Más información: {html.escape(title)}" '
+            f'data-title="{html.escape(title)}">i</button><template>{body}</template>')
+
+
+def card_head(tag: str, title: str, body: str = "") -> str:
+    help_button = info(title, body) if body else ""
+    return f'<div class="card-head"><{tag}>{html.escape(title)}</{tag}>{help_button}</div>'
+
+
 def figure(title: str, chart: str, caption: str = "", legend: str = "") -> str:
-    caption_html = f"<figcaption>{caption}</figcaption>" if caption else ""
-    return f'<figure><h3>{html.escape(title)}</h3>{legend}{chart}{caption_html}</figure>'
+    return f'<figure>{card_head("h3", title, caption)}{legend}{chart}</figure>'
 
 
 def legend(items: list[tuple[str, str]]) -> str:
@@ -399,9 +392,12 @@ def learning_curve_chart(epochs: list[EpochRecord]) -> str:
         for i, metric in enumerate(metrics)
     )
     items = [("series-1", "train"), ("series-2", "validación")]
-    caption = ("Error después de cada época, con los pesos ya actualizados; la época 0 son los pesos iniciales."
-               + ZOOM_HINT
-               + (f" Se grafica 1 de cada {step} épocas." if step > 1 else ""))
+    caption = ("<p>Error después de cada época, con los pesos ya actualizados; la época 0 son los pesos iniciales.</p>"
+               "<p><b>train</b> es el error sobre <code>train_dataset</code>, lo que ve el entrenamiento. "
+               "<b>validación</b> es sobre <code>validation_dataset</code>, muestras que no ve: si baja train y sube "
+               "validación, hay overfitting.</p>"
+               f"<p>{ZOOM_HINT.strip()}</p>"
+               + (f"<p>Se grafica 1 de cada {step} épocas.</p>" if step > 1 else ""))
     controls = f'<div class="curve-controls"><div class="segmented">{buttons}</div>{legend(items)}</div>'
     return figure("Curva de aprendizaje", controls + charts, caption)
 
@@ -480,28 +476,53 @@ def bar_path(left: float, right: float, top: float, base: float) -> str:
 
 # ---------- page sections ----------
 
-def stat(label: str, value: str) -> str:
-    return f'<div class="stat"><div class="stat-label">{label}</div><div class="stat-value">{value}</div></div>'
+def stat(label: str, value: str, info_body: str, sub: str = "", accent: bool = False) -> str:
+    sub_html = f'<div class="stat-sub">{sub}</div>' if sub else ""
+    css = "stat accent" if accent else "stat"
+    return (f'<div class="{css}"><div class="stat-label">{html.escape(label)}{info(label, info_body)}</div>'
+            f'<div class="stat-value">{value}</div>{sub_html}</div>')
+
+
+RESIDUAL = "<p><b>e = ζ − O</b>: error de una muestra, lo esperado menos lo que da la red.</p>"
+
+STAT_INFO = {
+    "energy": RESIDUAL + "<p><b>E = ½·Σ e²</b>: la función que minimiza el entrenamiento; Δw = −η·∂E/∂w sale de "
+                         "derivarla. El ½ cancela el 2 de la derivada. Crece con la cantidad de muestras.</p>",
+    "mse": RESIDUAL + "<p><b>MSE = Σ e² / N = 2E / N</b>: E promediado por muestra, así que se puede comparar entre "
+                      "datasets de distinto tamaño (train vs. validación). Con varias salidas, N cuenta "
+                      "muestras × salidas.</p>",
+    "mae": "<p><b>MAE = Σ |e| / N</b>: error medio en las unidades de ζ; pesa menos los errores grandes que el MSE.</p>",
+    "max_error": "<p><b>máx |e|</b>: el error de la peor muestra.</p>",
+}
+
+
+def accuracy_stat(run: Run, error: RunError) -> str | None:
+    """Hits by argmax with several outputs, by the closer of the two zetas otherwise; None for regression."""
+    if run.n_outputs > 1:
+        count, total = argmax_hits(run), run.n_samples
+        body = ("<p>Una muestra es un acierto cuando la salida más alta de la red coincide con la ζ más alta "
+                "(argmax).</p>")
+    else:
+        hits = classification_hits(run.samples)
+        if hits is None:
+            return None
+        (count, threshold), total = hits, error.n_samples
+        body = (f"<p>Con dos valores de ζ, cada predicción se clasifica por el más cercano: el umbral es "
+                f"{fmt(threshold)}.</p>")
+    return stat("Aciertos", f"{100 * count / total:.1f}%", body, sub=f"{count} de {total} muestras", accent=True)
 
 
 def stats_section(run: Run, error: RunError) -> str:
     tiles = [
-        stat("Muestras", str(run.n_samples)),
-        stat("E = ½·Σ(ζ−O)²", fmt(error.energy)),
-        stat("MSE", fmt(error.mse)),
-        stat("MAE", fmt(error.mae)),
-        stat("máx |e|", fmt(error.max_abs_error)),
+        accuracy_stat(run, error),
+        stat("MSE", fmt(error.mse), STAT_INFO["mse"]),
+        stat("MAE", fmt(error.mae), STAT_INFO["mae"]),
+        stat("máx |e|", fmt(error.max_abs_error), STAT_INFO["max_error"]),
+        stat("E = ½·Σ(ζ−O)²", fmt(error.energy), STAT_INFO["energy"]),
+        stat("Muestras", str(run.n_samples),
+             "<p>Muestras de validación, medidas con los pesos finales (los de la época con menor MSE de train).</p>"),
     ]
-    if run.n_outputs > 1:
-        count = argmax_hits(run)
-        tiles.append(stat("Aciertos (argmax)", f"{count}/{run.n_samples} · {100 * count / run.n_samples:.1f}%"))
-        return f'<section class="stats">{"".join(tiles)}</section>'
-    hits = classification_hits(run.samples)
-    if hits is not None:
-        count, threshold = hits
-        tiles.append(stat(f"Aciertos (umbral {fmt(threshold)})",
-                          f"{count}/{error.n_samples} · {100 * count / error.n_samples:.1f}%"))
-    return f'<section class="stats">{"".join(tiles)}</section>'
+    return f'<section class="stats">{"".join(tile for tile in tiles if tile)}</section>'
 
 
 def share(count: int, total: int) -> str:
@@ -532,10 +553,12 @@ def confusion_section(run: Run) -> str:
     footer = f'<tr><th>precisión</th>{precision}<td></td><td></td></tr>'
     table_html = (f'<div class="table-wrap"><table class="data confusion"><thead><tr><th>real ↓ · predicho →</th>{header}'
                   f'<th>muestras</th><th>aciertos</th></tr></thead><tbody>{body}{footer}</tbody></table></div>')
-    note = ('<p class="note">Cada fila es la clase real (ζ más grande) y cada columna la que predijo la red '
-            '(salida más grande). <b>Aciertos</b> = diagonal / muestras de la fila (recall); '
-            '<b>precisión</b> = diagonal / predichas en la columna. El color es la parte de la fila.</p>')
-    return f'<section><h2>Matriz de confusión</h2>{table_html}{note}</section>'
+    note = ('<p>Cada fila es la clase real (ζ más grande) y cada columna la que predijo la red '
+            '(salida más grande).</p>'
+            '<p><b>Aciertos</b> = diagonal / muestras de la fila (recall).</p>'
+            '<p><b>Precisión</b> = diagonal / predichas en la columna.</p>'
+            '<p>El color es la parte de la fila: azul en la diagonal, naranja fuera de ella.</p>')
+    return f'<section class="card">{card_head("h2", "Matriz de confusión", note)}{table_html}</section>'
 
 
 def training_time(epochs: list[EpochRecord]) -> str | None:
@@ -546,103 +569,110 @@ def training_time(epochs: list[EpochRecord]) -> str | None:
     return f"{total:.2f} s ({1000 * per_epoch:.3g} ms por época)"
 
 
+def chips(run: Run) -> str:
+    """The run at a glance, next to the title."""
+    trained = run.epochs[-1].epoch if run.epochs else run.config["epochs"]
+    items = [architecture(run), run.config["activation"], f"η {run.config['eta']}", f"{trained} épocas"]
+    if run.epochs and run.epochs[-1].elapsed is not None:
+        items.append(f"{run.epochs[-1].elapsed:.1f} s")
+    return f'<div class="chips">{"".join(f"<span>{html.escape(item)}</span>" for item in items)}</div>'
+
+
+FILES_INFO = (
+    "<p>Los pesos y las predicciones completos no están en esta página; están en la carpeta de la corrida:</p>"
+    "<ul><li><code>config.json</code>: copia exacta del config con el que se corrió.</li>"
+    "<li><code>weights.csv</code>: una fila por peso (capa, neurona, peso, inicial, final; el peso 0 es el bias).</li>"
+    "<li><code>predictions.csv</code>: por muestra de validación, entradas, ζ y predicción.</li>"
+    "<li><code>epochs.csv</code>: error de train y validación por época.</li>"
+    "<li><code>predictions_by_epoch.csv</code>: predicciones de validación en 11 épocas.</li></ul>"
+)
+
+
 def config_section(run: Run) -> str:
     rows = [("Arquitectura", architecture(run)), *((key, json.dumps(value)) for key, value in run.config.items())]
     time = training_time(run.epochs)
     if time is not None:
         rows.insert(1, ("Tiempo de entrenamiento", time))
     body = "".join(f"<tr><th>{html.escape(key)}</th><td>{html.escape(str(value))}</td></tr>" for key, value in rows)
-    return f'<section><h2>Configuración</h2><table class="config">{body}</table></section>'
+    return (f'<section class="card">{card_head("h2", "Configuración", FILES_INFO)}'
+            f'<table class="config">{body}</table></section>')
 
 
 def charts_section(run: Run) -> str:
     charts = [prediction_vs_zeta_chart(run.samples, run.snapshots), error_histogram_chart(run.samples)]
     if run.n_inputs == 1 and run.n_outputs == 1:
         charts.insert(1, fit_chart(run.samples))
+    return f'<div class="charts">{"".join(charts)}</div>'
+
+
+def summary_section(run: Run, error: RunError) -> str:
+    parts = [stats_section(run, error)]
     if run.epochs:
-        charts.insert(0, learning_curve_chart(run.epochs))
-    return f'<section><h2>Entrenamiento y validación</h2><div class="charts">{"".join(charts)}</div></section>'
+        parts.append(learning_curve_chart(run.epochs))
+    if run.n_outputs > 1:
+        parts.append(confusion_section(run))
+    return "".join(parts)
 
 
-GLOSSARY = [
-    ("e = ζ − O", "error de una muestra: lo esperado menos lo que da la red."),
-    ("E = ½·Σ e²", "la función que minimiza el entrenamiento; Δw = −η·∂E/∂w sale de derivarla. "
-                   "El ½ cancela el 2 de la derivada. Crece con la cantidad de muestras."),
-    ("MSE = Σ e² / N = 2E / N", "E promediado por muestra: se puede comparar entre datasets de distinto "
-                                "tamaño (train vs. validación)."),
-    ("MAE = Σ |e| / N", "error medio en las unidades de ζ; pesa menos los errores grandes."),
-    ("máx |e|", "la peor muestra."),
-    ("train / validación", "el mismo error medido sobre train_dataset (lo que ve el entrenamiento) o sobre "
-                           "validation_dataset (muestras que no ve; si baja train y sube validación, hay overfitting)."),
-]
-
-
-def glossary_section() -> str:
-    items = "".join(f"<dt>{html.escape(term)}</dt><dd>{html.escape(text)}</dd>" for term, text in GLOSSARY)
-    return f'<section><h2>Qué es cada error</h2><dl class="glossary">{items}</dl></section>'
-
-
-def table(headers: list[str], rows: list[list[str]]) -> str:
-    head = "".join(f"<th>{html.escape(header)}</th>" for header in headers)
-    body = "".join("<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>" for row in rows)
-    return f'<div class="table-wrap"><table class="data"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
-
-
-def weights_section(run: Run) -> str:
-    rows = [[str(w.layer), str(w.neuron), "bias" if w.index == 0 else f"w{w.index}", fmt(w.initial), fmt(w.final),
-             fmt(w.final - w.initial)] for w in run.weights]
-    return (f'<section><h2>Pesos ({len(run.weights)})</h2>'
-            f'{table(["capa", "neurona", "peso", "inicial", "final", "Δ"], rows)}</section>')
-
-
-def predictions_section(run: Run) -> str:
-    shown = run.samples[:MAX_TABLE_ROWS]
-    show_inputs = run.n_inputs <= MAX_SHOWN_INPUTS
-    show_outputs = run.n_outputs > 1
-    headers = [*(["muestra", "salida"] if show_outputs else []),
-               *(f"x{j + 1}" for j in range(run.n_inputs) if show_inputs), "ζ", "predicción", "e"]
-    rows = [[*([str(s.number), str(s.output)] if show_outputs else []),
-             *(fmt(value) for value in s.inputs if show_inputs), fmt(s.zeta), fmt(s.prediction), fmt(s.error)]
-            for s in shown]
-    notes = []
-    if len(run.samples) > MAX_TABLE_ROWS:
-        notes.append(f"Primeras {MAX_TABLE_ROWS} filas de {len(run.samples)}; el resto está en predictions.csv.")
-    if not show_inputs:
-        notes.append(f"Sin las {run.n_inputs} entradas; están en predictions.csv.")
-    note = f'<p class="note">{" ".join(notes)}</p>' if notes else ""
-    return f'<section><h2>Predicciones ({run.n_samples})</h2>{note}{table(headers, rows)}</section>'
+def tabbed(tabs: list[tuple[str, str, str]]) -> str:
+    """(key, label, html) per tab. The first one shows until TAB_SCRIPT restores the last one picked."""
+    buttons = "".join(
+        f'<button type="button" role="tab" data-tab="{key}" aria-selected="{str(i == 0).lower()}" '
+        f'tabindex="{0 if i == 0 else -1}">{label}</button>' for i, (key, label, _) in enumerate(tabs))
+    panels = "".join(
+        f'<div class="panel" role="tabpanel" data-tab="{key}"{"" if i == 0 else " hidden"}>{content}</div>'
+        for i, (key, _, content) in enumerate(tabs))
+    return f'<nav class="tabs" role="tablist">{buttons}</nav>{panels}'
 
 
 STYLE = """
 :root {
   color-scheme: light;
-  --surface: #fcfcfb; --surface-2: #f3f2ef; --border: #e2e1dc;
-  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7a7973;
-  --grid: #e8e7e3; --series-1: #2a78d6; --series-2: #eb6834;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --surface: #1a1a19; --surface-2: #232321; --border: #383835;
-    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
-    --grid: #2e2e2c; --series-1: #3987e5; --series-2: #d95926;
-  }
+  --surface: #f4f5f7; --surface-2: #ffffff; --border: #e3e5e9;
+  --text-primary: #14161a; --text-secondary: #4b5058; --text-muted: #7b818b;
+  --grid: #eceef1; --series-1: #2a78d6; --series-2: #eb6834; --accent-soft: #eaf2fd; --accent-border: #c5dbf6;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; background: var(--surface); color: var(--text-primary);
        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
-h1 { font-size: 22px; margin: 0 0 4px; }
+main { max-width: 1140px; margin: 0 auto; padding: 28px 16px 56px; }
+h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -0.01em; }
 h2 { font-size: 17px; margin: 32px 0 12px; }
-h3 { font-size: 14px; margin: 0 0 8px; color: var(--text-secondary); font-weight: 600; }
+h3 { font-size: 14px; margin: 0; color: var(--text-secondary); font-weight: 600; }
+code { font-family: ui-monospace, monospace; font-size: 12px; }
 .subtitle { color: var(--text-muted); margin: 0; font-family: ui-monospace, monospace; font-size: 13px; }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
-.stat { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
-.stat-label { color: var(--text-secondary); font-size: 13px; }
-.stat-value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 16px; }
-figure { margin: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
-figcaption, .note { color: var(--text-muted); font-size: 13px; margin-top: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.chips span { background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 12px;
+              font-size: 13px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+.tabs { display: flex; gap: 4px; margin: 24px 0 20px; border-bottom: 1px solid var(--border); }
+.tabs button { font: inherit; font-weight: 500; padding: 8px 16px; border: 0; border-bottom: 2px solid transparent;
+               margin-bottom: -1px; background: transparent; color: var(--text-secondary); cursor: pointer; }
+.tabs button:hover { color: var(--text-primary); }
+.tabs button[aria-selected="true"] { color: var(--series-1); border-bottom-color: var(--series-1); }
+.panel { display: grid; gap: 20px; }
+
+.card, figure { margin: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+                padding: 16px; box-shadow: var(--shadow); }
+.card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.card-head h2 { margin: 0; font-size: 16px; }
+.info { flex: none; width: 20px; height: 20px; padding: 0; border: 1px solid var(--border); border-radius: 50%;
+        background: var(--surface-2); color: var(--text-muted); font: italic 600 12px/1 Georgia, serif; cursor: pointer; }
+.info:hover, .info:focus-visible { color: var(--series-1); border-color: var(--series-1); background: var(--accent-soft); outline: 0; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.stat { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px;
+        box-shadow: var(--shadow); }
+.stat.accent { background: var(--accent-soft); border-color: var(--accent-border); }
+.stat-label { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 13px; }
+.stat-value { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.stat.accent .stat-value { color: var(--series-1); }
+.stat-sub { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 20px; }
+.note { color: var(--text-muted); font-size: 13px; margin-top: 6px; }
 svg { width: 100%; height: auto; display: block; }
 svg .grid { stroke: var(--grid); stroke-width: 1; }
 svg .axis { stroke: var(--text-muted); stroke-width: 1; }
@@ -656,22 +686,20 @@ svg circle.series-1, svg circle.series-2 { stroke: var(--surface-2); stroke-widt
 svg .line { fill: none; stroke: var(--series-1); stroke-width: 2; stroke-linejoin: round; }
 svg .line.series-2 { stroke: var(--series-2); }
 svg rect.hit[data-tip]:hover { fill: var(--grid); opacity: 0.5; }
-.glossary { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; font-size: 13px; margin: 0; }
-.glossary dt { font-family: ui-monospace, monospace; }
-.glossary dd { margin: 0; color: var(--text-secondary); }
-@media (max-width: 560px) { .glossary { grid-template-columns: 1fr; } .glossary dd { margin-bottom: 8px; } }
 svg g[data-tip]:hover circle:not(.hit), svg g[data-tip]:hover path { stroke: var(--text-primary); stroke-width: 1.5; }
 .legend { display: flex; gap: 16px; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
 .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 .swatch.series-1 { background: var(--series-1); } .swatch.series-2 { background: var(--series-2); }
 table { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 th, td { padding: 4px 12px 4px 0; text-align: left; border-bottom: 1px solid var(--border); }
-.config th { color: var(--text-secondary); font-weight: 500; }
+.config { width: 100%; }
+.config th { color: var(--text-secondary); font-weight: 500; width: 40%; padding: 6px 12px 6px 0; }
 .config td { font-family: ui-monospace, monospace; }
+.config tr:last-child th, .config tr:last-child td { border-bottom: 0; }
 .data td { text-align: right; } .data th { text-align: right; color: var(--text-secondary); }
 .table-wrap { overflow: auto; max-height: 420px; border: 1px solid var(--border); border-radius: 8px; }
 .table-wrap table { width: 100%; }
-.table-wrap th, .table-wrap td { padding: 4px 12px; }
+.table-wrap th, .table-wrap td { padding: 5px 12px; }
 .table-wrap thead th { position: sticky; top: 0; background: var(--surface-2); }
 .curve-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 .curve-controls .legend { margin: 0; }
@@ -688,9 +716,20 @@ svg .zoom-box { fill: var(--series-1); fill-opacity: 0.12; stroke: var(--series-
 .segmented button { font: inherit; font-size: 13px; padding: 3px 10px; border: 0; background: transparent;
                     color: var(--text-secondary); cursor: pointer; }
 .segmented button + button { border-left: 1px solid var(--border); }
-.segmented button[aria-pressed="true"] { background: var(--text-primary); color: var(--surface); }
-#tip { position: fixed; pointer-events: none; background: var(--text-primary); color: var(--surface);
+.segmented button[aria-pressed="true"] { background: var(--series-1); color: #fff; }
+#tip { position: fixed; pointer-events: none; background: var(--text-primary); color: var(--surface-2);
        padding: 6px 8px; border-radius: 6px; font-size: 12px; white-space: pre; z-index: 10; }
+
+dialog.modal { width: min(540px, calc(100vw - 32px)); padding: 0; border: 0; border-radius: 14px;
+               background: var(--surface-2); color: var(--text-primary); box-shadow: 0 24px 64px rgba(16, 24, 40, 0.28); }
+dialog.modal::backdrop { background: rgba(16, 24, 40, 0.4); }
+.modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 0; }
+.modal-title { font-size: 17px; margin: 0; color: var(--text-primary); }
+.modal-close { font: inherit; font-size: 22px; line-height: 1; width: 30px; height: 30px; border: 0; border-radius: 6px;
+               background: transparent; color: var(--text-muted); cursor: pointer; }
+.modal-close:hover { background: var(--surface); color: var(--text-primary); }
+.modal-body { padding: 8px 20px 20px; color: var(--text-secondary); font-size: 14px; }
+.modal-body p { margin: 8px 0; } .modal-body ul { margin: 8px 0; padding-left: 20px; } .modal-body li { margin: 4px 0; }
 """
 
 # Box zoom for the charts made with zoomable_svg. Every mark under g.plot keeps its unzoomed coordinates in
@@ -831,7 +870,53 @@ document.querySelectorAll("svg.zoomable").forEach((svg) => {
 });
 """
 
-SCRIPT = ZOOM_SCRIPT + """
+MODAL_HTML = """<dialog class="modal" id="info-modal" aria-labelledby="info-modal-title">
+<div class="modal-head"><h3 class="modal-title" id="info-modal-title"></h3>
+<button type="button" class="modal-close" aria-label="Cerrar">×</button></div>
+<div class="modal-body"></div>
+</dialog>"""
+
+# Every (i) button (see info()) is followed by a <template> with its text; the click copies it into the one modal
+MODAL_SCRIPT = """
+const modal = document.getElementById("info-modal");
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("button.info");
+  if (button) {
+    modal.querySelector(".modal-title").textContent = button.dataset.title;
+    modal.querySelector(".modal-body").replaceChildren(button.nextElementSibling.content.cloneNode(true));
+    modal.showModal();
+  } else if (event.target === modal || event.target.closest(".modal-close")) {
+    modal.close();
+  }
+});
+"""
+
+TAB_SCRIPT = """
+// Tabs; the last one picked is remembered so the auto-reload of report_server keeps it
+const tabButtons = [...document.querySelectorAll('[role="tab"]')];
+function showTab(key) {
+  if (!tabButtons.some((button) => button.dataset.tab === key)) return;
+  tabButtons.forEach((button) => {
+    button.setAttribute("aria-selected", button.dataset.tab === key);
+    button.tabIndex = button.dataset.tab === key ? 0 : -1;
+  });
+  document.querySelectorAll('[role="tabpanel"]').forEach((panel) => { panel.hidden = panel.dataset.tab !== key; });
+  try { localStorage.setItem("reportTab", key); } catch (error) {}
+}
+tabButtons.forEach((button, i) => {
+  button.addEventListener("click", () => showTab(button.dataset.tab));
+  button.addEventListener("keydown", (event) => {
+    const step = {ArrowRight: 1, ArrowLeft: -1}[event.key];
+    if (!step) return;
+    const next = tabButtons[(i + step + tabButtons.length) % tabButtons.length];
+    showTab(next.dataset.tab);
+    next.focus();
+  });
+});
+try { const saved = localStorage.getItem("reportTab"); if (saved) showTab(saved); } catch (error) {}
+"""
+
+SCRIPT = ZOOM_SCRIPT + MODAL_SCRIPT + TAB_SCRIPT + """
 // Learning curve metric; remembered so the auto-reload of report_server keeps it
 function showMetric(metric) {
   const buttons = document.querySelectorAll(".segmented button");
@@ -901,6 +986,8 @@ document.addEventListener("pointermove", (event) => {
 def render(run: Run) -> str:
     error = run_error([(s.zeta, s.prediction) for s in run.samples])
     title = f"{run.config['activation']} {architecture(run)}"
+    tabs = [("summary", "Resumen", summary_section(run, error)), ("charts", "Gráficos", charts_section(run)),
+            ("config", "Configuración", config_section(run))]
     return f"""<!doctype html>
 <html lang="es">
 <head>
@@ -913,16 +1000,11 @@ def render(run: Run) -> str:
 <main>
 <h1>Corrida {html.escape(title)}</h1>
 <p class="subtitle">{html.escape(run.dir.name)} · validación sobre {html.escape(run.config["validation_dataset"])}</p>
-<h2>Error de validación (pesos finales)</h2>
-{stats_section(run, error)}
-{confusion_section(run) if run.n_outputs > 1 else ""}
-{glossary_section()}
-{charts_section(run)}
-{config_section(run)}
-{weights_section(run)}
-{predictions_section(run)}
+{chips(run)}
+{tabbed(tabs)}
 </main>
 <div id="tip" hidden></div>
+{MODAL_HTML}
 <script>{SCRIPT}</script>
 </body>
 </html>

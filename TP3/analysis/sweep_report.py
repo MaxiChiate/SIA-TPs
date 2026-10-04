@@ -20,8 +20,8 @@ from typing import Any, Callable
 
 from sweep import RESULTS_DIR, RunSummary, read_summary
 from run_report import (
-    EPOCH_METRICS, HEIGHT, MARGIN_BOTTOM, MARGIN_TOP, STYLE, ZOOM_HINT, ZOOM_SCRIPT, EpochRecord, Scale, axes,
-    figure, fmt, legend, load_epochs, x_scale, y_scale, y_ticks, zoomable_svg,
+    EPOCH_METRICS, HEIGHT, MARGIN_BOTTOM, MARGIN_TOP, MODAL_HTML, MODAL_SCRIPT, STYLE, ZOOM_HINT, ZOOM_SCRIPT,
+    EpochRecord, Scale, axes, figure, fmt, legend, load_epochs, x_scale, y_scale, y_ticks, zoomable_svg,
 )
 
 SPLITS = {"validation": "validación", "train": "train"}
@@ -312,14 +312,10 @@ def runs_section(sweep_dir: Path, variants: list[VariantRuns]) -> str:
             f'<table class="data runs"><thead><tr>{head}</tr></thead><tbody>{"".join(rows)}</tbody></table></div></section>')
 
 
-# Slots 1-2 are run_report's; 3-8 follow the same validated categorical order, light and dark
+# Slots 1-2 are run_report's; 3-8 follow the same validated categorical order
 EXTRA_STYLE = """
 :root { --series-3: #1baf7a; --series-4: #eda100; --series-5: #e87ba4; --series-6: #008300; --series-7: #4a3aa7;
         --series-8: #e34948; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --series-3: #199e70; --series-4: #c98500; --series-5: #d55181;
-                                    --series-6: #008300; --series-7: #9085e9; --series-8: #e66767; }
-}
 """ + "".join(
     f"svg .line.series-{k} {{ stroke: var(--series-{k}); }} svg circle.series-{k} {{ fill: var(--series-{k}); "
     f"stroke: var(--surface-2); stroke-width: 1.5; }} svg .band.series-{k} {{ fill: var(--series-{k}); }} "
@@ -337,7 +333,7 @@ svg g[data-tip]:hover line.mean { stroke-width: 3; }
 code { font-family: ui-monospace, monospace; font-size: 12px; }
 """
 
-SCRIPT = ZOOM_SCRIPT + """
+SCRIPT = ZOOM_SCRIPT + MODAL_SCRIPT + """
 // Every segmented control picks one part of the chart key; the chart whose data-key matches is shown
 document.querySelectorAll("figure.switchable").forEach((figure) => {
   const groups = [...figure.querySelectorAll(".segmented")];
@@ -396,6 +392,7 @@ def render(sweep_dir: Path) -> str:
 {runs_section(sweep_dir, variants)}
 </main>
 <div id="tip" hidden></div>
+{MODAL_HTML}
 <script>{SCRIPT}</script>
 </body>
 </html>

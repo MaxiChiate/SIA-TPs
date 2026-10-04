@@ -157,7 +157,6 @@ void neuron_train(Neuron neuron, int n_inputs, const double dataset[][n_inputs],
 
   while ( epoch++ < epochs) {
 
-    int errors_this_epoch = 0;
     for (int i = 0; i < n_samples; i++) {
       neuron_learn(neuron, dataset[i], zetas[i]);
     }
