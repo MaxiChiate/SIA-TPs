@@ -1,0 +1,11 @@
+{
+  "_comment": "Función de activación en dígitos: logistic, tanh y lineal, [64] online. Cada una con el η que anduvo en corridas cortas (0.01, 0.01 y 0.001), así que la diferencia mezcla activación y η. ReLU no está: con una sola activación para toda la red, las salidas ReLU con ζ one-hot en 0/1 se clavan en MSE 0.1 (salen 0 siempre) para toda seed y η probados; hace falta una activación de salida propia.",
+  "title": "función de activación",
+  "base_config": "../neuron/config.json.digits.example",
+  "variants": [
+    {"label": "logistic", "set": {"activation": "logistic", "eta": 0.01}},
+    {"label": "tanh", "set": {"activation": "tanh", "eta": 0.01}},
+    {"label": "lineal", "set": {"activation": "lineal", "eta": 0.001}}
+  ],
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+}

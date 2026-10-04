@@ -1,0 +1,12 @@
+{
+  "_comment": "Shuffle por época en dígitos, [64] con logistic: online y mini-batch de 32, con y sin mezclar las muestras. El mini-batch usa η = 0.01 / 32, porque Δw se suma sobre el batch (igual que series_batch_size). El shuffle usa la seed de la corrida, así que cada par comparte pesos iniciales.",
+  "title": "shuffle por época",
+  "base_config": "../neuron/config.json.digits.example",
+  "variants": [
+    {"label": "online", "set": {"batch_size": 1, "eta": 0.01, "shuffle": false}},
+    {"label": "online + shuffle", "set": {"batch_size": 1, "eta": 0.01, "shuffle": true}},
+    {"label": "mini-batch 32", "set": {"batch_size": 32, "eta": 0.0003125, "shuffle": false}},
+    {"label": "mini-batch 32 + shuffle", "set": {"batch_size": 32, "eta": 0.0003125, "shuffle": true}}
+  ],
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+}

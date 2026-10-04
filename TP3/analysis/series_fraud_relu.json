@@ -1,0 +1,13 @@
+{
+  "_comment": "Ejercicio 1, parte 1 (opcional ReLU): lineal, logistic y ReLU sin capa oculta y con [16], sobre todo el dataset de fraude (train = validación), 1000 épocas online. Cada una con el η que anduvo en corridas cortas (lineal 0.001, logistic 0.01, ReLU 0.001). Con una sola activación para toda la red, el ReLU también está en la salida, y no la acota a (0, 1).",
+  "title": "ReLU contra logistic",
+  "base_config": "../neuron/config.json.fraud.example",
+  "variants": [
+    {"label": "lineal", "set": {"activation": "lineal", "eta": 0.001, "hidden_layers": []}},
+    {"label": "logistic", "set": {"activation": "logistic", "eta": 0.01, "hidden_layers": []}},
+    {"label": "relu", "set": {"activation": "relu", "eta": 0.001, "hidden_layers": []}},
+    {"label": "logistic [16]", "set": {"activation": "logistic", "eta": 0.01, "hidden_layers": [16]}},
+    {"label": "relu [16]", "set": {"activation": "relu", "eta": 0.001, "hidden_layers": [16]}}
+  ],
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+}

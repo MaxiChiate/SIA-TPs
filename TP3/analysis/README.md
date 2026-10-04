@@ -25,28 +25,40 @@ Un JSON por serie. Las claves que empiezan con `_` se ignoran (sirven de comenta
 | `variants`    | En lugar de `vary`: lista de `{"label", "set"}`, para variantes que cambian más de una clave (p. ej. `batch_size` junto con `eta`) |
 | `seeds`       | Seeds de cada variante; todas las variantes usan las mismas, así la diferencia no son los pesos iniciales |
 | `workers`     | Opcional. Corridas en paralelo |
+| `title`       | Opcional. Cómo nombran los gráficos a la serie; sin él lo deducen de lo que varía, y con dos perillas a la vez (η junto con `batch_size`) deducen mal |
 
 Hasta 8 variantes por serie (un color cada una). Se puede variar cualquier clave del config.
 
-Las series son sobre dígitos, con `neuron/config.json.digits.example` de base: train
-`more_digits_prepared.csv`, validación `digits_test_prepared.csv`, `logistic` (ζ one-hot en 0/1),
-`[64]`, η = 0.01 online, 50 épocas, 3 seeds. Para entrenar con `digits_prepared.csv`, pisar
-`train_dataset` en el `set` de la serie (ojo: no tiene ningún 8).
+## Series existentes
 
-- `series_eta.json`: tasa de aprendizaje.
-- `series_architecture.json`: `hidden_layers`.
-- `series_batch_size.json`: online y mini-batch de 32 y 256 (con η dividido por `batch_size`, porque Δw se suma).
-- `series_train_dataset.json`: `digits_prepared` contra `more_digits_prepared`.
+Las primeras series con 3 seeds; las marcadas con (10) usan 10 seeds.
 
-Sobre fraude (base `neuron/config.json.fraud.example`; antes hay que correr
-`python3 scripts/prepare_fraud_dataset.py`; train y validación son el dataset completo):
+**Dígitos** (Ejercicio 2). Base: `neuron/config.json.digits.example`, es decir train `more_digits_prepared.csv`,
+validación `digits_test_prepared.csv`, `logistic`, `[64]`, η = 0.01 online, 50 épocas.
 
-- `series_fraud_activation.json`: perceptrón lineal contra logistic, con varios η.
-- `series_fraud_capacity.json`: logistic sin y con capas ocultas, para ver si el perceptrón simple
-  ya agotó su capacidad.
+| Serie | Qué varía | Pregunta |
+|---|---|---|
+| `series_eta` | η: 0.001, 0.005, 0.01, 0.05, 0.1 | ¿Qué tasa de aprendizaje converge mejor? |
+| `series_architecture` | `hidden_layers`: `[16]`, `[32]`, `[64]`, `[128]`, `[64, 32]` | ¿Más neuronas ayudan? ¿Una capa ancha o dos? |
+| `series_batch_size` | online, mini-batch de 32 y de 256 (η dividido por `batch_size`, porque Δw se suma) | ¿Cuánto cambia el régimen de actualización? |
+| `series_train_dataset` | train: `digits_prepared` o `more_digits_prepared` (el primero no tiene ningún 8) | ¿Cuánto afecta el dataset de entrenamiento? |
+| `series_activation` (10) | logistic (η 0.01), tanh (η 0.01) y lineal (η 0.001); sin ReLU: con una sola activación para toda la red no aprende en dígitos | ¿Cuánto importa la no linealidad? |
+| `series_shuffle` (10) | online y mini-batch de 32, con y sin `shuffle` | ¿Cambia algo mezclar las muestras en cada época? |
+| `series_depth` (10) | `hidden_layers`: `[96]`, `[64, 32]`, `[48, 32, 16]`, `[32, 32, 32]` | ¿Qué pasa con las mismas neuronas repartidas en más capas? |
+
+**Fraude** (Ejercicio 1, parte 1). Base: `neuron/config.json.fraud.example`, es decir `logistic`, η = 0.001, 1000 épocas,
+online, sin capas ocultas, train = validación = dataset completo. Antes hay que correr
+`python3 scripts/prepare_fraud_dataset.py`.
+
+| Serie | Qué varía | Pregunta |
+|---|---|---|
+| `series_fraud_activation` | lineal (η 0.0001, 0.001) contra logistic (η 0.001, 0.01, 0.1) | ¿Hay underfitting en el lineal? ¿Cuál elegir? |
+| `series_fraud_capacity` | `hidden_layers`: `[]`, `[4]`, `[16]`, `[16, 8]` | ¿El perceptrón simple ya agotó su capacidad? |
+| `series_fraud_relu` (10) | lineal, logistic y ReLU, sin capa oculta y con `[16]` (cada una con su η) | ¿Cambian las conclusiones con ReLU? |
 
 Una serie de 15 corridas tarda ~1.5 min con 20 cores y ocupa ~270 MB (cada corrida de dígitos deja
-~18 MB, igual que con `make run`; ~6 MB es su `report.html`).
+~18 MB, igual que con `make run`; ~6 MB es su `report.html`). Las de dígitos con 10 seeds son 30 a 40
+corridas: ~540 a 720 MB, o ~12 MB menos por corrida con `--no-run-reports`.
 
 ## Salida
 
