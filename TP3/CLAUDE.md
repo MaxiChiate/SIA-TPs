@@ -119,11 +119,15 @@ en C todavía no cubre todo (ver Pendiente).
   la red ya entrena con 10 salidas; el reporte muestra aciertos por argmax. El reporte ya trae matriz de
   confusión y aciertos/precisión por clase (probada solo con datos sintéticos). `digits.csv` no tiene ningún 8 y tiene pocos 5 (271);
   `more_digits.csv` sí tiene 8.
-- **Conseguir los datasets**: no hay ningún CSV en el repo (`neuron/data/` solo tiene datos de
-  prueba: AND, XOR, `y = x`, clases sintéticas). Faltan `transactions.csv`, `digits.csv`,
-  `digits_test.csv`. Bloquea los Ejercicios 1 y 2.
-- Ejercicio 1 y Ejercicio 2 completos (son los entregables).
-- Presentación.
+- **Datasets**: ya están en `neuron/data/` (gitignoreado): `fraud_dataset.csv` (7500 filas, el
+  `transactions.csv` del enunciado), `digits.csv`, `digits_test.csv`, `more_digits.csv` y
+  `fraud_dataset_documentation.pdf`. `scripts/explore_fraud_dataset.py` es la exploración del
+  fraude (resultados en `DECISIONS.md`).
+- Ejercicio 1: falta la comparación lineal vs. logistic con validación, el estudio de
+  generalización (split estratificado, métricas) y el umbral. Ejercicio 2: falta cerrar
+  conclusiones de las series.
+- Presentación: esqueleto de 13 diapositivas como Artifact, con `[__]` donde falta un resultado
+  (https://claude.ai/artifact/NpkJsGnWfG1tzxKzwyiywZ).
 
 ## Convenciones
 

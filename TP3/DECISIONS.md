@@ -17,6 +17,53 @@ va a un archivo aparte y no entra al entrenamiento.
 - La media y el desvío salen solo del conjunto de entrenamiento. En la parte 1 es el dataset
   completo; en la parte 2, solo el split de train, para no filtrar información del test.
 
+## Exploración del fraude: qué se encontró y qué se hace con eso
+
+**Qué:** `scripts/explore_fraud_dataset.py` describe el dataset antes de modelar. Hallazgos: 7500
+filas sin nulos ni duplicados; 11.6 % con `flagged_fraud = 1`; `timestamp`,
+`device_screen_resolution` y `time_since_last_login_s` tienen correlación ≈ 0 con la
+probabilidad de BigModel (|r| < 0.03), las otras seis entre 0.33 y 0.59 en valor absoluto; y
+`flagged_fraud = 1` coincide exactamente con probabilidad ≥ 0.85 (el fraude de menor
+probabilidad tiene 0.850089 y el no fraude de mayor tiene 0.849891).
+
+**Por qué importa:**
+- Las tres columnas sin correlación son candidatas a descartar. No se descartan por la
+  exploración sola: la correlación de Pearson no ve relaciones no lineales, así que se confirma
+  entrenando con y sin ellas.
+- `amount_usd` tiene cola larga (mediana 63, p99 862, máximo 2000): se prueba `log(amount)`
+  además del z-score.
+- La probabilidad de BigModel llega a 1.0 exacto en 43 filas y la logistic solo lo alcanza en el
+  límite, así que el error de esas muestras no baja a 0.
+- Con 11.6 % de fraudes, el split de la parte 2 se estratifica por `flagged_fraud`, para que
+  validación no se quede con pocos positivos.
+- Umbral: BigModel separa perfecto en 0.85, pero el TinyModel imita la probabilidad con error, así
+  que su umbral óptimo puede correrse. Se elige con `flagged_fraud` sobre validación, no se
+  asume 0.85.
+
+## Elección del TinyModel (fraude, parte 1): perceptrón logistic
+
+**Qué:** series `analysis/series_fraud_activation.json` y `series_fraud_capacity.json` sobre el
+dataset completo (train = validación, como pide el enunciado), online, 1000 épocas, 3 seeds. MSE
+y R² = 1 − MSE / varianza del objetivo (0.0915):
+
+| Modelo | MSE | R² |
+|---|---|---|
+| lineal (η 0.0001 y 0.001) | 0.0261 | 0.715 |
+| logistic (η 0.001 y 0.01) | 0.0109 | 0.881 |
+| logistic con `[4]` | 0.0106 | 0.884 |
+| logistic con `[16]` y `[16, 8]` | 0.0105 | 0.886 |
+
+**Por qué logistic:**
+- El lineal tiene underfitting: la relación entre las entradas y la probabilidad no es una
+  combinación lineal, y no baja de 0.026 por más épocas ni con otro η (ya está en su óptimo).
+- La logistic reduce el error 2.4 veces con la misma cantidad de pesos y su salida vive en (0, 1).
+- Saturación de capacidad: agregar capas ocultas solo baja el MSE de 0.0109 a 0.0105. Un perceptrón
+  simple ya capta casi todo lo que dan estas entradas; el resto no se arregla con más neuronas.
+- La diferencia entre seeds es menor a 0.0001 y η casi no importa (0.001 a 0.1): el problema
+  es de un mínimo único.
+- Límite de esta conclusión: es error de entrenamiento sobre todo el dataset. Qué tan bien
+  generaliza se estudia en la parte 2.
+
 ## Pesos iniciales: aleatorios uniformes en [−0.5, 0.5]
 
 **Qué:** `main` crea un único `Rng` (`neuron/rng.c`, splitmix64) con la `seed` del `config.json` y
