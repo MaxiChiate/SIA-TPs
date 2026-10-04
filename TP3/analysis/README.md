@@ -38,6 +38,13 @@ Las series son sobre dígitos, con `neuron/config.json.digits.example` de base: 
 - `series_batch_size.json`: online y mini-batch de 32 y 256 (con η dividido por `batch_size`, porque Δw se suma).
 - `series_train_dataset.json`: `digits_prepared` contra `more_digits_prepared`.
 
+Sobre fraude (base `neuron/config.json.fraud.example`; antes hay que correr
+`python3 scripts/prepare_fraud_dataset.py`; train y validación son el dataset completo):
+
+- `series_fraud_activation.json`: perceptrón lineal contra logistic, con varios η.
+- `series_fraud_capacity.json`: logistic sin y con capas ocultas, para ver si el perceptrón simple
+  ya agotó su capacidad.
+
 Una serie de 15 corridas tarda ~1.5 min con 20 cores y ocupa ~270 MB (cada corrida de dígitos deja
 ~18 MB, igual que con `make run`; ~6 MB es su `report.html`).
 
