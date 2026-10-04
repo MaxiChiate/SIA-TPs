@@ -1,0 +1,2 @@
+# Solo para los gráficos de las series (analysis/plots_main.py); sweep.py y su report.html no lo usan.
+plotly>=5.18

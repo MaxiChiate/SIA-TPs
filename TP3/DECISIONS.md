@@ -226,3 +226,26 @@ h > 0 y 0 si no.
 - Su salida no está acotada: en fraude (salida en (0, 1)) `logistic` sigue siendo la adecuada para
   la salida. Como la activación es una sola para toda la red, ReLU en las ocultas y `logistic` en la
   salida todavía no se puede combinar.
+
+## Gráficos de las series: plotly, pareado por seed y plotly.js compartido
+
+**Qué:** `analysis/plots_main.py` arma, por serie, curvas de MSE (train, validación y la brecha) y
+gráficos de comparación (puntos por seed, boxplot, diferencia pareada o puesto por seed, velocidad,
+costo contra calidad, generalización) más un `index.html`. Es el esquema de TP2 llevado a la red. Las
+tablas traen test de permutación pareado, IC95% bootstrap y corrección de Holm contra la mejor variante.
+
+**Por qué:**
+- Es la misma pregunta que en TP2: una curva dice qué pasó, pero no si dos variantes realmente
+  difieren. Todas las variantes corren las mismas seeds y una seed fija los pesos iniciales (y el
+  shuffle), así que las corridas están pareadas y se comparan sin gastar resolución en la dispersión
+  entre seeds. Con pocas seeds el test exacto (2^n signos) es barato y no supone normalidad; con 3 seeds
+  el p mínimo es 0.25, y la tabla lo muestra en vez de esconderlo.
+- Acá el error se **minimiza** (en TP2 el fitness se maximizaba): cada `Metric` dice hacia dónde es
+  mejor y todo el ranking y el pareado lo leen de ahí.
+- La velocidad usa como umbral el error de validación más exigente que alcanzan *todas* las corridas;
+  con el mejor error de la ganadora, las variantes más débiles nunca llegarían y el gráfico quedaría vacío.
+- Una corrida que corta antes (por `tolerance`) conserva su último valor en las curvas: el entrenamiento
+  terminó ahí, y promediar menos seeds hacia el final sesgaría la curva.
+- `plotly.min.js` se escribe una vez por serie (`include_plotlyjs="directory"`): funciona sin internet
+  como un plotly embebido, y la serie pesa ~4 MB en lugar de ~4 MB por gráfico.
+- `sweep.py` y su `report.html` siguen sin dependencias; plotly solo se pide para `plots_main.py`.

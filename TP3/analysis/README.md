@@ -11,7 +11,7 @@ python3 analysis/sweep.py analysis/series_eta.json --no-run-reports  # sin el re
 python3 analysis/sweep_report.py [analysis/results/<serie>]    # regenera el reporte (default: la última)
 ```
 
-Compila el binario si hace falta. Solo usa la biblioteca estándar de Python.
+Compila el binario si hace falta. `sweep.py` solo usa la biblioteca estándar de Python.
 
 ## La serie
 
@@ -65,6 +65,42 @@ de aprendizaje de cada variante (promedio de las seeds, train o validación, con
 opcional), el resultado final por variante con un punto por seed, y la lista de corridas con link a
 cada reporte. Zoom en los gráficos arrastrando un rectángulo (en el de resultado final, solo en y); doble
 clic vuelve.
+
+## Gráficos de las series
+
+Además de ese `report.html`, `plots_main.py` arma los gráficos de plotly de las series, como en TP2: una
+página por gráfico y un `index.html` que los reúne. Necesita plotly (`pip install -r analysis/requirements.txt`).
+
+```sh
+python3 analysis/plots_main.py                         # todas las series de analysis/results
+python3 analysis/plots_main.py analysis/results/<serie> --tablas   # una sola, y las tablas por terminal
+python3 analysis/plots_main.py --x elapsed_s --abrir   # además contra segundos de entrenamiento; abre el índice
+```
+
+Escribe en la carpeta de cada serie, más `analysis/results/index.html` (la portada con todas las series). Se
+saltea las series cuyo índice ya es más nuevo que sus CSVs (`--force` las redibuja). Las explicaciones están
+detrás de botones (i) en el índice.
+
+| Archivo | Qué muestra |
+|---|---|
+| `validation.html`, `train.html` | MSE por época de cada variante, promedio de las seeds con barras de rango min-max |
+| `gap.html` | validación menos train: la brecha de generalización |
+| `compare_final.html`, `compare_distribution.html` | MSE de validación final: un punto por seed, y el boxplot |
+| `compare_paired.html` / `compare_ranking.html` | con 2 variantes, la diferencia pareada por seed; con 3 o más, el puesto de cada una dentro de cada seed |
+| `compare_speed.html` | épocas hasta un error de validación que todas las corridas alcanzan |
+| `compare_tradeoff.html` | segundos de entrenamiento contra MSE de validación |
+| `compare_generalization.html` | MSE de train contra MSE de validación, sobre la diagonal |
+| `compare_accuracy.html` | aciertos de validación, si la serie los tiene |
+| `plotly.min.js` | el plotly.js que comparten los gráficos (un solo archivo por serie, no uno por gráfico) |
+
+Las curvas se leen de `runs/<corrida>/epochs.csv`, así que borrar `runs/` para ahorrar disco también borra las
+curvas. Una corrida que cortó antes de tiempo se completa con su último valor. Las tablas del índice (y de
+`--tablas`) traen media, desvío y puesto por variante, la velocidad, y la comparación de cada variante contra
+la mejor con test de permutación pareado, IC95% bootstrap y corrección de Holm.
+
+Para agregar una prueba nueva: un `series_*.json` (ver arriba), `sweep.py` y `plots_main.py`. Si la serie
+varía una clave que no tiene nombre en `KNOB_NAMES` (`plots_data.py`), el título usa la clave tal cual; se
+puede poner un `"title"` en el JSON de la serie.
 
 "Convergió" es que cumplió el criterio de corte (`tolerance`, o cero mal clasificadas con `sign`); sin
 criterio en el config queda vacío. Una corrida que cortó antes queda en las curvas con su último valor.
