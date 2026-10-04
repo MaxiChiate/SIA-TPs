@@ -28,6 +28,10 @@ scripts/
   run_error.py                   # métricas de error de una corrida
   run_report.py                  # report.html de la corrida (lo llama make run): curva, gráficos, tablas
   report_server.py               # make serve: reporte de la última corrida en localhost, se recarga solo
+analysis/                        # README.md explica cómo correrlo
+  sweep.py                       # serie de corridas variando un parámetro × seeds, en paralelo -> summary.csv
+  sweep_report.py                # report.html de la serie: curvas promedio por variante, resultado final por seed
+  series_*.json                  # series sobre dígitos (more_digits vs digits_test): eta, hidden_layers, batch_size, train
 ```
 
 Cada corrida guarda `epochs.csv`: E y MSE de train y validación después de cada época, y los

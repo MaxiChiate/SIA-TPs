@@ -82,7 +82,7 @@ no se genera). Para regenerarlo: `python3 ../scripts/run_report.py [results/<cor
 argumento usa la última. Muestra las mismas métricas que `run_error.py`, los aciertos si ζ toma dos
 valores (con varias salidas, por argmax: la salida más alta contra la ζ más alta), la curva de aprendizaje (train y validación por época, eligiendo el error), predicción vs. ζ
 con un slider por época, el histograma
-del error y, con una sola entrada, la curva aprendida.
+del error y, con una sola entrada, la curva aprendida. Salvo el histograma, los gráficos tienen zoom: se arrastra un rectángulo y doble clic vuelve.
 
 En `epochs.csv`, `error` es E = ½·Σ(ζ − O)², lo que minimiza el entrenamiento; `mse` es 2E / N,
 E por muestra, que es lo que se compara entre train y validación; `mae` es Σ|ζ − O| / N y

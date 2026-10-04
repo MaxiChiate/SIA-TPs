@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import csv
 import html
+import itertools
 import json
 import math
 from dataclasses import dataclass
@@ -245,7 +246,8 @@ def y_ticks(y: Scale) -> list[float]:
 
 
 def axes(x: Scale, y: Scale, x_label: str, y_label: str) -> str:
-    parts = []
+    """Grid and ticks go in g.ticks, which the zoom redraws; the axis line and labels stay."""
+    parts = ['<g class="ticks">']
     for tick in y_ticks(y):
         py = y(tick)
         parts.append(f'<line class="grid" x1="{x.px_lo}" x2="{x.px_hi}" y1="{py:.1f}" y2="{py:.1f}"/>')
@@ -254,6 +256,7 @@ def axes(x: Scale, y: Scale, x_label: str, y_label: str) -> str:
     for tick in nice_ticks(x.lo, x.hi):
         px = x(tick)
         parts.append(f'<text class="tick" x="{px:.1f}" y="{y.px_lo + 18}" text-anchor="middle">{fmt(tick)}</text>')
+    parts.append("</g>")
     parts.append(f'<line class="axis" x1="{x.px_lo}" x2="{x.px_hi}" y1="{y.px_lo}" y2="{y.px_lo}"/>')
     parts.append(f'<text class="label" x="{(x.px_lo + x.px_hi) / 2}" y="{HEIGHT - 6}" '
                  f'text-anchor="middle">{html.escape(x_label)}</text>')
@@ -271,6 +274,27 @@ def dot(px: float, py: float, css_class: str, tip: str) -> str:
 def svg(body: str, title: str) -> str:
     return (f'<svg viewBox="0 0 {WIDTH} {HEIGHT}" role="img" aria-label="{html.escape(title)}">'
             f'{body}</svg>')
+
+
+_clip_ids = itertools.count()
+
+
+def zoomable_svg(frame: str, marks: str, x: Scale, y: Scale, title: str, zoom_x: bool = True) -> str:
+    """Drag a box to zoom, double click to reset (ZOOM_SCRIPT). The marks are clipped to the plot area and
+    the scales go in data-scales so the script can redraw the ticks; zoom_x=False zooms only y."""
+    clip = f"plot-{next(_clip_ids)}"
+    top, bottom = min(y.px_lo, y.px_hi), max(y.px_lo, y.px_hi)
+    scales = {"x": [x.lo, x.hi, x.px_lo, x.px_hi, x.log] if zoom_x else None,
+              "y": [y.lo, y.hi, y.px_lo, y.px_hi, y.log], "xRange": [x.px_lo, x.px_hi]}
+    return (f'<svg class="zoomable" viewBox="0 0 {WIDTH} {HEIGHT}" role="img" aria-label="{html.escape(title)}" '
+            f'data-scales="{html.escape(json.dumps(scales))}">'
+            f'<defs><clipPath id="{clip}"><rect x="{x.px_lo}" y="{top}" width="{x.px_hi - x.px_lo}" '
+            f'height="{bottom - top}"/></clipPath></defs>{frame}'
+            f'<g class="plot" clip-path="url(#{clip})">{marks}</g>'
+            f'<rect class="zoom-box" x="0" y="0" width="0" height="0" style="display: none"/></svg>')
+
+
+ZOOM_HINT = " Arrastrá para hacer zoom; doble clic para volver."
 
 
 def figure(title: str, chart: str, caption: str = "", legend: str = "") -> str:
@@ -318,9 +342,9 @@ def prediction_vs_zeta_chart(samples: list[Sample], snapshots: list[Snapshot]) -
     diagonal = (f'<line class="reference" x1="{x(domain[0]):.1f}" y1="{y(domain[0]):.1f}" '
                 f'x2="{x(domain[1]):.1f}" y2="{y(domain[1]):.1f}"/>')
     dots = "".join(dot(x(s.zeta), y(s.prediction), "series-1", sample_tip(s)) for s in shown)
-    chart = svg(axes(x, y, "ζ (esperado)", "predicción") + diagonal + f'<g class="snapshot-dots">{dots}</g>',
-                "Predicción contra valor esperado")
-    caption = "La diagonal punteada es la predicción perfecta (predicción = ζ). " + note
+    chart = zoomable_svg(axes(x, y, "ζ (esperado)", "predicción"), diagonal + f'<g class="snapshot-dots">{dots}</g>',
+                         x, y, "Predicción contra valor esperado")
+    caption = "La diagonal punteada es la predicción perfecta (predicción = ζ)." + ZOOM_HINT + " " + note
     if not snapshots:
         return figure("Predicción vs. ζ", chart, caption)
     return figure("Predicción vs. ζ por época", snapshot_controls(samples, snapshots, step, y) + chart,
@@ -355,8 +379,8 @@ def fit_chart(samples: list[Sample]) -> str:
     line = f'<polyline class="line series-1" points="{points}"/>'
     dots = "".join(dot(x(s.inputs[0]), y(s.zeta), "series-2", sample_tip(s)) for s in shown)
     items = [("series-2", "ζ (esperado)"), ("series-1", "predicción")]
-    return figure("Ajuste sobre la entrada", svg(axes(x, y, "x1", "salida") + line + dots, "Ajuste sobre x1"),
-                  note, legend(items))
+    return figure("Ajuste sobre la entrada", zoomable_svg(axes(x, y, "x1", "salida"), line + dots, x, y, "Ajuste sobre x1"),
+                  ZOOM_HINT.strip() + " " + note, legend(items))
 
 
 def learning_curve_chart(epochs: list[EpochRecord]) -> str:
@@ -376,6 +400,7 @@ def learning_curve_chart(epochs: list[EpochRecord]) -> str:
     )
     items = [("series-1", "train"), ("series-2", "validación")]
     caption = ("Error después de cada época, con los pesos ya actualizados; la época 0 son los pesos iniciales."
+               + ZOOM_HINT
                + (f" Se grafica 1 de cada {step} épocas." if step > 1 else ""))
     controls = f'<div class="curve-controls"><div class="segmented">{buttons}</div>{legend(items)}</div>'
     return figure("Curva de aprendizaje", controls + charts, caption)
@@ -407,7 +432,8 @@ def metric_curve(shown: list[EpochRecord], metric: str) -> str:
         for r in shown
     )
     y_label = f"{label} (escala log)" if log else label
-    return svg(axes(x, y, "época", y_label) + "".join(lines) + hits, f"{label} de train y validación por época")
+    return zoomable_svg(axes(x, y, "época", y_label), "".join(lines) + hits, x, y,
+                        f"{label} de train y validación por época")
 
 
 def epoch_tip(record: EpochRecord, metric: str) -> str:
@@ -656,6 +682,8 @@ th, td { padding: 4px 12px 4px 0; text-align: left; border-bottom: 1px solid var
                            background: transparent; color: var(--text-primary); cursor: pointer; }
 .snapshot-label { min-width: 210px; }
 svg .snapshot-dots circle { transition: cy 0.35s ease; }
+svg.zoomable { cursor: crosshair; touch-action: none; user-select: none; }
+svg .zoom-box { fill: var(--series-1); fill-opacity: 0.12; stroke: var(--series-1); stroke-width: 1; }
 .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .segmented button { font: inherit; font-size: 13px; padding: 3px 10px; border: 0; background: transparent;
                     color: var(--text-secondary); cursor: pointer; }
@@ -665,7 +693,145 @@ svg .snapshot-dots circle { transition: cy 0.35s ease; }
        padding: 6px 8px; border-radius: 6px; font-size: 12px; white-space: pre; z-index: 10; }
 """
 
-SCRIPT = """
+# Box zoom for the charts made with zoomable_svg. Every mark under g.plot keeps its unzoomed coordinates in
+# el._base; a zoom is an affine map per axis from those to the plot area, and the ticks are redrawn for the
+# zoomed domain. Rects are only moved sideways: they are full-height hover columns.
+ZOOM_SCRIPT = """
+const ZOOM_ATTRS = {circle: [["cx", "x"], ["cy", "y"]], line: [["x1", "x"], ["x2", "x"], ["y1", "y"], ["y2", "y"]],
+                    rect: [["x", "x"], ["width", "w"]]};
+const IDENTITY = {ax: 1, bx: 0, ay: 1, by: 0};
+
+function baseOf(el) {
+  if (!el._base) {
+    el._base = {};
+    if (el.hasAttribute("points")) el._base.points = el.getAttribute("points");
+    for (const [attr] of ZOOM_ATTRS[el.tagName] || []) el._base[attr] = Number(el.getAttribute(attr));
+  }
+  return el._base;
+}
+
+function place(el, zoom) {
+  const base = baseOf(el);
+  if (base.points !== undefined) {
+    el.setAttribute("points", base.points.split(" ").map((pair) => {
+      const [px, py] = pair.split(",").map(Number);
+      return `${(zoom.ax * px + zoom.bx).toFixed(1)},${(zoom.ay * py + zoom.by).toFixed(1)}`;
+    }).join(" "));
+    return;
+  }
+  for (const [attr, axis] of ZOOM_ATTRS[el.tagName] || []) {
+    const value = axis === "x" ? zoom.ax * base[attr] + zoom.bx : axis === "y" ? zoom.ay * base[attr] + zoom.by
+                                                                              : zoom.ax * base[attr];
+    el.setAttribute(attr, value.toFixed(1));
+  }
+}
+
+// For code that moves marks (the snapshot slider): value is unzoomed, the current zoom is applied on top
+function setBase(el, attr, value) {
+  baseOf(el)[attr] = value;
+  const svg = el.closest("svg.zoomable");
+  place(el, (svg && svg._zoom) || IDENTITY);
+}
+
+const fmtTick = (value) => Number(value.toPrecision(4)).toString();
+
+function niceTicks(lo, hi, count = 5) {
+  const raw = (hi - lo) / count;
+  const magnitude = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 5, 10].map((m) => m * magnitude).find((s) => s >= raw);
+  const ticks = [];
+  for (let k = Math.ceil(lo / step); k * step <= hi + step * 1e-9; k++) ticks.push(Number((k * step).toPrecision(12)));
+  return ticks;
+}
+
+// [lo, hi] are exponents of 10 on a log scale; under one decade there are no powers left, so linear ticks
+function scaleTicks(lo, hi, log) {
+  if (!log) return niceTicks(lo, hi);
+  const step = Math.max(1, Math.ceil((hi - lo) / 6));
+  const powers = [];
+  for (let e = Math.ceil(lo); e <= Math.floor(hi); e += step) powers.push(10 ** e);
+  return powers.length >= 2 ? powers : niceTicks(10 ** lo, 10 ** hi).filter((value) => value > 0);
+}
+
+function drawTicks(svg, x, y) {
+  const NS = "http://www.w3.org/2000/svg";
+  const group = svg.querySelector(".ticks");
+  group.replaceChildren();
+  const add = (tag, attrs, text) => {
+    const el = document.createElementNS(NS, tag);
+    for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, value);
+    if (text !== undefined) el.textContent = text;
+    group.appendChild(el);
+  };
+  const toPx = ([lo, hi, pxLo, pxHi, log], value) => pxLo + ((log ? Math.log10(value) : value) - lo) / (hi - lo) * (pxHi - pxLo);
+  const [left, right] = JSON.parse(svg.dataset.scales).xRange;
+  for (const tick of scaleTicks(y[0], y[1], y[4])) {
+    const py = toPx(y, tick).toFixed(1);
+    add("line", {class: "grid", x1: left, x2: right, y1: py, y2: py});
+    add("text", {class: "tick", x: left - 8, y: py, "text-anchor": "end", "dominant-baseline": "middle"}, fmtTick(tick));
+  }
+  if (!x) return;
+  for (const tick of scaleTicks(x[0], x[1], x[4])) {
+    add("text", {class: "tick", x: toPx(x, tick).toFixed(1), y: y[2] + 18, "text-anchor": "middle"}, fmtTick(tick));
+  }
+}
+
+function applyZoom(svg, zoom) {
+  svg._zoom = zoom;
+  svg.querySelectorAll(".plot circle, .plot line, .plot rect, .plot polyline, .plot polygon").forEach((el) => place(el, zoom));
+}
+
+document.querySelectorAll("svg.zoomable").forEach((svg) => {
+  const scales = JSON.parse(svg.dataset.scales);
+  const box = svg.querySelector(".zoom-box");
+  const ticksHtml = svg.querySelector(".ticks").innerHTML;
+  const [left, right] = scales.xRange;
+  const [bottom, top] = [scales.y[2], scales.y[3]];
+  const toSvg = (event) => new DOMPoint(event.clientX, event.clientY).matrixTransform(svg.getScreenCTM().inverse());
+  const clamp = (value, lo, hi) => Math.min(Math.max(value, lo), hi);
+  let start = null;
+
+  svg.addEventListener("pointerdown", (event) => {
+    const point = toSvg(event);
+    if (point.x < left || point.x > right || point.y < top || point.y > bottom) return;
+    start = point;
+    svg.setPointerCapture(event.pointerId);
+  });
+  svg.addEventListener("pointermove", (event) => {
+    if (!start) return;
+    const point = toSvg(event);
+    const x0 = scales.x ? Math.min(start.x, clamp(point.x, left, right)) : left;
+    const x1 = scales.x ? Math.max(start.x, clamp(point.x, left, right)) : right;
+    const y0 = Math.min(start.y, clamp(point.y, top, bottom)), y1 = Math.max(start.y, clamp(point.y, top, bottom));
+    Object.entries({x: x0, y: y0, width: x1 - x0, height: y1 - y0}).forEach(([key, value]) => box.setAttribute(key, value));
+    box.style.display = "";
+  });
+  svg.addEventListener("pointerup", () => {
+    if (!start) return;
+    start = null;
+    box.style.display = "none";
+    const [x0, y0, w, h] = ["x", "y", "width", "height"].map((key) => Number(box.getAttribute(key)));
+    if (h < 5 || (scales.x && w < 5)) return;
+    // The box is in zoomed pixels: back to unzoomed ones, then the map that stretches them over the plot area
+    const zoom = svg._zoom || IDENTITY;
+    const bx0 = (x0 - zoom.bx) / zoom.ax, bx1 = (x0 + w - zoom.bx) / zoom.ax;
+    const by0 = (y0 - zoom.by) / zoom.ay, by1 = (y0 + h - zoom.by) / zoom.ay;
+    const ax = scales.x ? (right - left) / (bx1 - bx0) : 1, ay = (bottom - top) / (by1 - by0);
+    applyZoom(svg, {ax, bx: scales.x ? left - ax * bx0 : 0, ay, by: top - ay * by0});
+    // Domain of the zoomed area, read off the unzoomed scales
+    const at = ([lo, hi, pxLo, pxHi, log], px) => [lo + (px - pxLo) / (pxHi - pxLo) * (hi - lo), log];
+    const x = scales.x && [at(scales.x, bx0)[0], at(scales.x, bx1)[0], left, right, scales.x[4]];
+    const y = [at(scales.y, by1)[0], at(scales.y, by0)[0], bottom, top, scales.y[4]];
+    drawTicks(svg, x, y);
+  });
+  svg.addEventListener("dblclick", () => {
+    applyZoom(svg, IDENTITY);
+    svg.querySelector(".ticks").innerHTML = ticksHtml;
+  });
+});
+"""
+
+SCRIPT = ZOOM_SCRIPT + """
 // Learning curve metric; remembered so the auto-reload of report_server keeps it
 function showMetric(metric) {
   const buttons = document.querySelectorAll(".segmented button");
@@ -696,7 +862,7 @@ document.querySelectorAll(".snapshot-data").forEach((script) => {
     label.textContent = `época ${data.epochs[k]} (${data.percents[k]}%) · MSE ${fmt(data.mse[k])}`;
     groups.forEach((group, i) => {
       const prediction = data.predictions[k][i];
-      group.querySelectorAll("circle").forEach((circle) => circle.setAttribute("cy", toPx(prediction).toFixed(1)));
+      group.querySelectorAll("circle").forEach((circle) => setBase(circle, "cy", toPx(prediction)));
       group.dataset.tip = `${data.labels[i]}\n` +
         `ζ = ${fmt(data.zetas[i])}\npredicción = ${fmt(prediction)}\ne = ${fmt(data.zetas[i] - prediction)}\n` +
         `época ${data.epochs[k]}`;
