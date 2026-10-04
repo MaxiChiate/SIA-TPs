@@ -6,7 +6,7 @@
 
 typedef struct {
   char train_dataset[CONFIG_STRING_MAX];
-  char validation_dataset[CONFIG_STRING_MAX];
+  char validation_dataset[CONFIG_STRING_MAX]; // "" when validation_split is used instead
   char activation[CONFIG_STRING_MAX];
   double eta;
   int epochs;
@@ -16,12 +16,17 @@ typedef struct {
   double tolerance; // stop once the train MSE drops below it; 0 (the default) never stops early.
                     // Ignored with a discrete activation, which stops at zero misclassified samples
   unsigned int seed;
+  int shuffle; // optional: reshuffle the train samples at the start of every epoch (with seed); 0 keeps the CSV order
+  double validation_split; // optional: share of train_dataset held out as validation, in (0, 1), instead of a
+                           // validation_dataset; 0 (the default) means there is a validation_dataset
+  unsigned int split_seed; // seed of that split, independent of seed; required with validation_split
   char initial_weights[CONFIG_STRING_MAX]; // optional: an earlier run's directory or weights.csv to keep
                                            // training from; "" (the default) draws random weights
 } Config;
 
 // Reads a flat JSON object with the Config fields as keys. Every key is required except the optional
-// ones, which default to zero / "".
+// ones, which default to zero / "". Exactly one of validation_dataset and validation_split must be given,
+// and split_seed goes with validation_split.
 // Returns 1 on success; on failure prints the reason to stderr and returns 0.
 int config_load(const char * path, Config * config);
 

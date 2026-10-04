@@ -51,6 +51,24 @@ static Dataset load_dataset(const char * path) {
 }
 
 
+// validation_dataset is its own file; otherwise train_dataset is split, with its own seed so the split
+// stays the same while seed (the initial weights, the shuffling) varies
+static void load_datasets(const Config * config, Dataset * train, Dataset * validation) {
+  *train = load_dataset(config->train_dataset);
+  if (config->validation_dataset[0] != '\0') {
+    *validation = load_dataset(config->validation_dataset);
+    return;
+  }
+
+  Dataset all = *train;
+  Rng split_rng = rng_new(config->split_seed);
+  if (!dataset_split(all, config->validation_split, &split_rng, train, validation)) exit(EXIT_FAILURE);
+  fprintf(stderr, "split %s: %d train / %d validation samples\n", config->train_dataset, dataset_n_samples(*train),
+          dataset_n_samples(*validation));
+  dataset_free(all);
+}
+
+
 static int shared_n_inputs(const Dataset train, const Dataset validation) {
   int n_inputs = dataset_n_inputs(train);
   if (dataset_n_inputs(validation) != n_inputs) {
@@ -281,12 +299,13 @@ static void free_training_history(TrainingHistory * history) {
 }
 
 
-static void train_network(Network network, const Dataset train, const Config * config, TrainingHistory * history) {
+static void train_network(Network network, const Dataset train, const Config * config, Rng * rng,
+                          TrainingHistory * history) {
   history->started_at = history->reported_at = now_seconds();
   record_epoch(0, network, history);
   history->epochs_run = network_train(network, dataset_inputs(train), dataset_zetas(train),
                                       dataset_n_samples(train), config->epochs, config->batch_size,
-                                      record_epoch, history);
+                                      config->shuffle ? rng : NULL, record_epoch, history);
   network_set_weights(network, history->best_weights);
   fprintf(stderr, "%s after %d epochs; keeping the weights of epoch %d (train MSE %.4g)\n",
           history->epochs_run < config->epochs ? "converged" : "finished", history->epochs_run,
@@ -327,8 +346,8 @@ int main(int argc, char * argv[]) {
   const char * path = config_path(argc, argv);
   Config config = load_config(path);
   const Activation * activation = load_activation(config.activation);
-  Dataset train = load_dataset(config.train_dataset);
-  Dataset validation = load_dataset(config.validation_dataset);
+  Dataset train, validation;
+  load_datasets(&config, &train, &validation);
   int n_inputs = shared_n_inputs(train, validation);
   int n_outputs = shared_n_outputs(train, validation);
 
@@ -342,7 +361,7 @@ int main(int argc, char * argv[]) {
 
   Results results = create_results(path, config.activation);
   TrainingHistory history = new_training_history(train, validation, network, &config, activation);
-  train_network(network, train, &config, &history);
+  train_network(network, train, &config, &rng, &history);
   save_history(&results, &history);
   save_weights(&results, n_layers, sizes, initial_weights, network);
   validate_network(network, validation, &results);

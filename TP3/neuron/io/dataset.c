@@ -157,6 +157,64 @@ Dataset dataset_load(const char * path) {
 }
 
 
+static Dataset new_dataset(int n_samples, int n_inputs, int n_outputs) {
+  Dataset dataset = checked_realloc(NULL, sizeof(struct dataset));
+  dataset->n_samples = n_samples;
+  dataset->n_inputs = n_inputs;
+  dataset->n_outputs = n_outputs;
+  dataset->inputs = checked_realloc(NULL, (size_t) n_samples * n_inputs * sizeof(double));
+  dataset->zetas = checked_realloc(NULL, (size_t) n_samples * n_outputs * sizeof(double));
+  return dataset;
+}
+
+
+static void copy_sample(Dataset to, int to_index, const Dataset from, int from_index) {
+  memcpy(&to->inputs[to_index * to->n_inputs], &from->inputs[from_index * from->n_inputs],
+         from->n_inputs * sizeof(double));
+  memcpy(&to->zetas[to_index * to->n_outputs], &from->zetas[from_index * from->n_outputs],
+         from->n_outputs * sizeof(double));
+}
+
+
+int dataset_split(const Dataset source, double validation_fraction, Rng * rng, Dataset * train, Dataset * validation) {
+  int n = source->n_samples;
+  if (n < 2) {
+    fprintf(stderr, "can't split a dataset of %d sample(s)\n", n);
+    return 0;
+  }
+  if (!(validation_fraction > 0 && validation_fraction < 1)) {
+    fprintf(stderr, "validation fraction %g must be in (0, 1)\n", validation_fraction);
+    return 0;
+  }
+
+  int n_validation = (int) (validation_fraction * n + 0.5);
+  if (n_validation < 1) n_validation = 1;
+  if (n_validation > n - 1) n_validation = n - 1;
+
+  // The first n_validation entries of a shuffled 0..n-1 are the validation samples
+  int * order = checked_realloc(NULL, n * sizeof(int));
+  char * is_validation = checked_realloc(NULL, n);
+  for (int i = 0; i < n; i++) {
+    order[i] = i;
+    is_validation[i] = 0;
+  }
+  rng_shuffle(rng, order, n);
+  for (int i = 0; i < n_validation; i++) is_validation[order[i]] = 1;
+
+  *train = new_dataset(n - n_validation, source->n_inputs, source->n_outputs);
+  *validation = new_dataset(n_validation, source->n_inputs, source->n_outputs);
+  int next_train = 0, next_validation = 0;
+  for (int i = 0; i < n; i++) {
+    if (is_validation[i]) copy_sample(*validation, next_validation++, source, i);
+    else copy_sample(*train, next_train++, source, i);
+  }
+
+  free(order);
+  free(is_validation);
+  return 1;
+}
+
+
 void dataset_free(Dataset dataset) {
   if (dataset == NULL) return;
   free(dataset->inputs);

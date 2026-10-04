@@ -394,7 +394,8 @@ def learning_curve_chart(epochs: list[EpochRecord]) -> str:
     items = [("series-1", "train"), ("series-2", "validación")]
     caption = ("<p>Error después de cada época, con los pesos ya actualizados; la época 0 son los pesos iniciales.</p>"
                "<p><b>train</b> es el error sobre <code>train_dataset</code>, lo que ve el entrenamiento. "
-               "<b>validación</b> es sobre <code>validation_dataset</code>, muestras que no ve: si baja train y sube "
+               "<b>validación</b> es sobre muestras que no ve (<code>validation_dataset</code>, o la parte que "
+               "<code>validation_split</code> aparta de train): si baja train y sube "
                "validación, hay overfitting.</p>"
                f"<p>{ZOOM_HINT.strip()}</p>"
                + (f"<p>Se grafica 1 de cada {step} épocas.</p>" if step > 1 else ""))
@@ -559,6 +560,13 @@ def confusion_section(run: Run) -> str:
             '<p><b>Precisión</b> = diagonal / predichas en la columna.</p>'
             '<p>El color es la parte de la fila: azul en la diagonal, naranja fuera de ella.</p>')
     return f'<section class="card">{card_head("h2", "Matriz de confusión", note)}{table_html}</section>'
+
+
+def validation_source(config: dict) -> str:
+    """Where the validation samples come from: its own file, or a share of train_dataset."""
+    if "validation_dataset" in config:
+        return config["validation_dataset"]
+    return f"{100 * config['validation_split']:g}% de {config['train_dataset']} (split_seed {config['split_seed']})"
 
 
 def training_time(epochs: list[EpochRecord]) -> str | None:
@@ -999,7 +1007,7 @@ def render(run: Run) -> str:
 <body>
 <main>
 <h1>Corrida {html.escape(title)}</h1>
-<p class="subtitle">{html.escape(run.dir.name)} · validación sobre {html.escape(run.config["validation_dataset"])}</p>
+<p class="subtitle">{html.escape(run.dir.name)} · validación sobre {html.escape(validation_source(run.config))}</p>
 {chips(run)}
 {tabbed(tabs)}
 </main>

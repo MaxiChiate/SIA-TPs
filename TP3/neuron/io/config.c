@@ -8,7 +8,7 @@
 
 #define CONFIG_FILE_MAX 4096
 
-enum field_type { FIELD_STRING, FIELD_DOUBLE, FIELD_INT, FIELD_UINT, FIELD_INT_ARRAY };
+enum field_type { FIELD_STRING, FIELD_DOUBLE, FIELD_INT, FIELD_UINT, FIELD_BOOL, FIELD_INT_ARRAY };
 
 typedef struct {
   const char * key;
@@ -20,7 +20,7 @@ typedef struct {
 
 static const Field FIELDS[] = {
   { "train_dataset",      FIELD_STRING,    offsetof(Config, train_dataset), 0, 0 },
-  { "validation_dataset", FIELD_STRING,    offsetof(Config, validation_dataset), 0, 0 },
+  { "validation_dataset", FIELD_STRING,    offsetof(Config, validation_dataset), 0, 1 },
   { "activation",         FIELD_STRING,    offsetof(Config, activation), 0, 0 },
   { "eta",                FIELD_DOUBLE,    offsetof(Config, eta), 0, 0 },
   { "epochs",             FIELD_INT,       offsetof(Config, epochs), 0, 0 },
@@ -28,6 +28,9 @@ static const Field FIELDS[] = {
   { "hidden_layers",      FIELD_INT_ARRAY, offsetof(Config, hidden_layers), offsetof(Config, n_hidden_layers), 0 },
   { "tolerance",          FIELD_DOUBLE,    offsetof(Config, tolerance), 0, 1 },
   { "seed",               FIELD_UINT,      offsetof(Config, seed), 0, 0 },
+  { "shuffle",            FIELD_BOOL,      offsetof(Config, shuffle), 0, 1 },
+  { "validation_split",   FIELD_DOUBLE,    offsetof(Config, validation_split), 0, 1 },
+  { "split_seed",         FIELD_UINT,      offsetof(Config, split_seed), 0, 1 },
   { "initial_weights",    FIELD_STRING,    offsetof(Config, initial_weights), 0, 1 },
 };
 
@@ -130,10 +133,26 @@ static const Field * find_field(const char * key) {
 }
 
 
+static int parse_bool(Parser * parser, int * out) {
+  skip_whitespace(parser);
+  if (strncmp(parser->cursor, "true", 4) == 0) {
+    *out = 1;
+    parser->cursor += 4;
+  } else if (strncmp(parser->cursor, "false", 5) == 0) {
+    *out = 0;
+    parser->cursor += 5;
+  } else {
+    return parse_error(parser, "expected true or false");
+  }
+  return 1;
+}
+
+
 static int parse_value(Parser * parser, const Field * field, Config * config) {
   void * target = (char *) config + field->offset;
 
   if (field->type == FIELD_STRING) return parse_string(parser, target);
+  if (field->type == FIELD_BOOL) return parse_bool(parser, target);
   if (field->type == FIELD_INT_ARRAY) return parse_int_array(parser, target, (int *) ((char *) config + field->count_offset));
 
   double value;
@@ -154,6 +173,26 @@ static int parse_value(Parser * parser, const Field * field, Config * config) {
     default:
       return 0;
   }
+}
+
+
+static int was_given(const int seen[], const char * key) {
+  return seen[find_field(key) - FIELDS];
+}
+
+
+// The validation set comes either from its own file or from a split of the train one, never both
+static int check_validation_source(const Parser * parser, const int seen[]) {
+  int has_dataset = was_given(seen, "validation_dataset");
+  int has_split = was_given(seen, "validation_split");
+  if (has_dataset == has_split) {
+    return parse_error(parser, "give exactly one of \"validation_dataset\" and \"validation_split\"");
+  }
+  if (has_split && !was_given(seen, "split_seed")) return parse_error(parser, "missing key \"split_seed\"");
+  if (!has_split && was_given(seen, "split_seed")) {
+    return parse_error(parser, "\"split_seed\" only goes with \"validation_split\"");
+  }
+  return 1;
 }
 
 
@@ -199,7 +238,7 @@ static int parse_object(Parser * parser, Config * config) {
     }
   }
 
-  return 1;
+  return check_validation_source(parser, seen);
 }
 
 
@@ -235,6 +274,10 @@ static int validate(const char * path, const Config * config) {
   }
   if (config->batch_size <= 0) {
     fprintf(stderr, "%s: \"batch_size\" must be positive\n", path);
+    return 0;
+  }
+  if (config->validation_dataset[0] == '\0' && !(config->validation_split > 0 && config->validation_split < 1)) {
+    fprintf(stderr, "%s: \"validation_split\" must be between 0 and 1, both excluded\n", path);
     return 0;
   }
   if (config->tolerance < 0) {

@@ -13,3 +13,13 @@ double rng_uniform(Rng * rng) {
   z ^= z >> 31;
   return (z >> 11) * (1.0 / 9007199254740992.0); // top 53 bits
 }
+
+
+void rng_shuffle(Rng * rng, int values[], int n) {
+  for (int i = n - 1; i > 0; i--) {
+    int j = (int) (rng_uniform(rng) * (i + 1)); // uniform in [0, i]
+    int swapped = values[i];
+    values[i] = values[j];
+    values[j] = swapped;
+  }
+}

@@ -2,6 +2,7 @@
 #define __NETWORK_H__
 
 #include "activation/activation.h"
+#include "rng.h"
 
 typedef struct network * Network;
 
@@ -52,8 +53,10 @@ typedef int (*EpochCallback)(int epoch, Network network, void * context);
 // zetas is row-major n_samples x n_outputs.
 // batch_size = 1 is online, batch_size >= n_samples is full batch, anything between is mini-batch:
 // Δw is accumulated over the batch and the weights change once at its end.
+// shuffle_rng may be NULL: the samples then go in the order given, every epoch. Otherwise they are
+// reshuffled with it at the start of each epoch (the batches change from one epoch to the next).
 // on_epoch may be NULL. Returns the number of epochs run: less than epochs if on_epoch asked to stop.
 int network_train(Network network, const double inputs[], const double zetas[], int n_samples,
-                  int epochs, int batch_size, EpochCallback on_epoch, void * context);
+                  int epochs, int batch_size, Rng * shuffle_rng, EpochCallback on_epoch, void * context);
 
 #endif //__NETWORK_H__

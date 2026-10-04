@@ -130,3 +130,52 @@ clasificadas; el resto → MSE de train `< tolerance` (opcional en el config; 0 
   convertiría en parte del entrenamiento. Si hace falta, se elige la época a mano mirando las curvas.
 - La regla de Rosenblatt no necesita rama aparte: `sign_prime` devuelve 1 y la regla delta
   genérica η·(ζ − O)·x da exactamente la de Rosenblatt.
+
+## Shuffle por época (opcional)
+
+**Qué:** con `"shuffle": true`, `network_train` mezcla el orden de las muestras al empezar cada
+época (Fisher-Yates, `rng_shuffle`) con el mismo `Rng` de los pesos iniciales. Se mezcla un
+arreglo de índices, no el dataset. Sin la clave (o con `false`) siguen en el orden del CSV.
+
+**Por qué:**
+- Sin mezclar, los mini-batches son siempre los mismos y el online ve las muestras en el orden del
+  archivo; si el CSV viene ordenado (por clase, por fecha) cada época arrastra la red hacia lo
+  último que vio.
+- El batch completo no cambia: suma Δw sobre todas las muestras, el orden no importa (hay un test).
+- Mismo `Rng` y no uno nuevo: una sola instancia por corrida, inyectada. Se arranca después de
+  sortear los pesos, así `initial_weights` no altera el orden de las muestras.
+- Apagado por defecto: así los configs y las series que ya existen dan lo mismo que antes.
+
+## Validación a partir de un solo CSV: `validation_split` + `split_seed`
+
+**Qué:** en lugar de `validation_dataset`, el config puede traer `validation_split` (parte de
+`train_dataset` que se aparta, entre 0 y 1) y `split_seed`. Exactamente una de las dos fuentes;
+`split_seed` es obligatoria con el split y no puede ir sin él. El split se hace una vez, antes de
+entrenar (`dataset_split`): se mezclan los índices con su propio `Rng` y los primeros
+`round(N·fracción)` (al menos 1, dejando al menos 1 en train) son validación. Cada lado conserva el
+orden del CSV. No es estratificado.
+
+**Por qué:**
+- El dataset de fraude es un solo archivo, y el enunciado pide estudiar generalización.
+- `split_seed` aparte de `seed`: al barrer `seed` (pesos iniciales, shuffle) el split no se mueve,
+  así la variación entre corridas no mezcla dos fuentes de azar. Obligatoria por la convención del
+  TP: toda aleatoriedad lleva seed explícita.
+- Mantener el orden del CSV en cada lado: `predictions.csv` queda alineado con el archivo y el
+  shuffle por época se ocupa de mezclar el entrenamiento.
+- Sin estratificar: la ζ del fraude es una probabilidad continua, no una clase. Con dígitos, un
+  split al azar de miles de muestras por clase es bastante parejo.
+- Vale lo de «Train y validación: dos curvas»: si con la validación se elige algo, ese pedazo ya no
+  es un test honesto.
+
+## ReLU: `max(0, h)` con θ'(0) = 0
+
+**Qué:** `relu` es una activación más (`activation/activation.c`): θ(h) = max(0, h), θ'(h) = 1 si
+h > 0 y 0 si no.
+
+**Por qué:**
+- Es el opcional del enunciado (efecto de ReLU en las conclusiones del no lineal).
+- En h = 0 no es derivable; se elige 0 (convención usual) y el test de la derivada numérica
+  salta ese punto.
+- Su salida no está acotada: en fraude (salida en (0, 1)) `logistic` sigue siendo la adecuada para
+  la salida. Como la activación es una sola para toda la red, ReLU en las ocultas y `logistic` en la
+  salida todavía no se puede combinar.

@@ -80,6 +80,42 @@ static void test_rng(void) {
 }
 
 
+static void test_rng_shuffle(void) {
+  int a[20], b[20], c[20];
+  for (int i = 0; i < 20; i++) a[i] = b[i] = c[i] = i;
+  Rng ra = rng_new(5), rb = rng_new(5), rc = rng_new(6);
+  rng_shuffle(&ra, a, 20);
+  rng_shuffle(&rb, b, 20);
+  rng_shuffle(&rc, c, 20);
+  check(memcmp(a, b, sizeof(a)) == 0); // same seed, same order
+  check(memcmp(a, c, sizeof(a)) != 0);
+
+  int seen[20] = {0}, moved = 0;
+  for (int i = 0; i < 20; i++) {
+    seen[a[i]]++;
+    if (a[i] != i) moved = 1;
+  }
+  int is_permutation = 1;
+  for (int i = 0; i < 20; i++) if (seen[i] != 1) is_permutation = 0;
+  check(is_permutation);
+  check(moved);
+
+  // Each of the 3! orders of three values comes up about a sixth of the time
+  int counts[3][3] = {{0}};
+  Rng rng = rng_new(1);
+  for (int t = 0; t < 6000; t++) {
+    int values[] = {0, 1, 2};
+    rng_shuffle(&rng, values, 3);
+    for (int i = 0; i < 3; i++) counts[i][values[i]]++;
+  }
+  for (int i = 0; i < 3; i++) for (int v = 0; v < 3; v++) check(abs(counts[i][v] - 2000) < 200);
+
+  int one[] = {7};
+  rng_shuffle(&rng, one, 1);
+  check(one[0] == 7);
+}
+
+
 // ---------- activations ----------
 
 static void test_activations(void) {
@@ -96,6 +132,20 @@ static void test_activations(void) {
   check_close(logistic->theta(0.0), 0.5, 1e-12);
   check_close(logistic->theta(1000.0), 1.0, 1e-12); // no overflow
   check_close(logistic->theta(-1000.0), 0.0, 1e-12);
+
+  const Activation * relu = activation_find("relu");
+  check(!relu->discrete);
+  check_close(relu->theta(-3.0), 0.0, 0);
+  check_close(relu->theta(0.0), 0.0, 0);
+  check_close(relu->theta(2.5), 2.5, 0);
+  check_close(relu->theta_prime(-3.0), 0.0, 0);
+  check_close(relu->theta_prime(0.0), 0.0, 0); // the kink: taken as 0
+  check_close(relu->theta_prime(2.5), 1.0, 0);
+  for (double h = -2.0; h <= 2.0; h += 0.5) {
+    if (h == 0.0) continue; // not differentiable there
+    double numeric = (relu->theta(h + 1e-6) - relu->theta(h - 1e-6)) / 2e-6;
+    check_close(relu->theta_prime(h), numeric, 1e-6);
+  }
 
   const char * smooth[] = {"lineal", "tanh", "logistic"};
   for (int i = 0; i < 3; i++) {
@@ -157,7 +207,7 @@ static void test_single_neuron_update_by_hand(void) {
   double weights[] = {0.0, 0.0, 0.0};
   set_weights(network, weights);
   double input[] = {2.0, -1.0}, zeta[] = {1.0};
-  network_train(network, input, zeta, 1, 1, 1, NULL, NULL);
+  network_train(network, input, zeta, 1, 1, 1, NULL, NULL, NULL);
   // O = 0, delta = 1, Δw = eta * delta * x
   double after[3];
   network_get_weights(network, after);
@@ -175,8 +225,8 @@ static double energy(Network network, const double inputs[], const double zetas[
 // Full batch: one epoch changes the weights by -eta * dE/dw, with dE/dw taken numerically. This checks
 // the whole backpropagation (hidden deltas included) against the definition of the gradient.
 static void test_backpropagation_matches_numeric_gradient(void) {
-  const char * activations[] = {"tanh", "logistic"};
-  for (int a = 0; a < 2; a++) {
+  const char * activations[] = {"tanh", "logistic", "relu"};
+  for (int a = 0; a < 3; a++) {
     int sizes[] = {2, 3, 2, 1};
     double eta = 0.01;
     Network network = new_network(3, sizes, activations[a], eta, 5);
@@ -185,7 +235,7 @@ static void test_backpropagation_matches_numeric_gradient(void) {
     network_get_weights(network, weights);
     double zetas[] = {0.1, 0.9, 0.8, 0.2};
 
-    network_train(network, XOR_INPUTS, zetas, 4, 1, 4, NULL, NULL);
+    network_train(network, XOR_INPUTS, zetas, 4, 1, 4, NULL, NULL, NULL);
     network_get_weights(network, trained);
 
     for (int i = 0; i < n; i++) {
@@ -211,8 +261,8 @@ static void test_full_batch_ignores_sample_order(void) {
   const double reversed_inputs[] = {1, 1, 1, -1, -1, 1, -1, -1};
   const double reversed_zetas[] = {-1, 1, 1, -1};
   Network a = new_network(2, sizes, "tanh", 0.1, 3), b = new_network(2, sizes, "tanh", 0.1, 3);
-  network_train(a, XOR_INPUTS, XOR_ZETAS, 4, 5, 4, NULL, NULL);
-  network_train(b, reversed_inputs, reversed_zetas, 4, 5, 4, NULL, NULL);
+  network_train(a, XOR_INPUTS, XOR_ZETAS, 4, 5, 4, NULL, NULL, NULL);
+  network_train(b, reversed_inputs, reversed_zetas, 4, 5, 4, NULL, NULL, NULL);
   double wa[9], wb[9];
   network_get_weights(a, wa);
   network_get_weights(b, wb);
@@ -220,8 +270,8 @@ static void test_full_batch_ignores_sample_order(void) {
 
   // online is order dependent: it doesn't give the same weights
   Network c = new_network(2, sizes, "tanh", 0.1, 3), d = new_network(2, sizes, "tanh", 0.1, 3);
-  network_train(c, XOR_INPUTS, XOR_ZETAS, 4, 5, 1, NULL, NULL);
-  network_train(d, reversed_inputs, reversed_zetas, 4, 5, 1, NULL, NULL);
+  network_train(c, XOR_INPUTS, XOR_ZETAS, 4, 5, 1, NULL, NULL, NULL);
+  network_train(d, reversed_inputs, reversed_zetas, 4, 5, 1, NULL, NULL, NULL);
   network_get_weights(c, wa);
   network_get_weights(d, wb);
   check(fabs(wa[0] - wb[0]) > 1e-9);
@@ -233,7 +283,7 @@ static void test_full_batch_ignores_sample_order(void) {
 static void test_and_with_sign_converges(void) {
   int sizes[] = {2, 1};
   Network network = new_network(1, sizes, "sign", 0.1, 1);
-  network_train(network, XOR_INPUTS, AND_ZETAS, 4, 100, 1, NULL, NULL);
+  network_train(network, XOR_INPUTS, AND_ZETAS, 4, 100, 1, NULL, NULL, NULL);
   check(network_misclassified(network, XOR_INPUTS, AND_ZETAS, 4) == 0);
 
   Network untrained = new_network(1, sizes, "sign", 0.1, 1);
@@ -250,7 +300,7 @@ static void test_line_with_lineal_converges(void) {
   Network network = new_network(1, sizes, "lineal", 0.05, 1);
   double inputs[50], zetas[50];
   for (int i = 0; i < 50; i++) inputs[i] = zetas[i] = -1.0 + 2.0 * i / 49;
-  network_train(network, inputs, zetas, 50, 200, 1, NULL, NULL);
+  network_train(network, inputs, zetas, 50, 200, 1, NULL, NULL, NULL);
   check(network_error(network, inputs, zetas, 50).mse < 1e-6);
   network_free(network);
 }
@@ -259,7 +309,7 @@ static void test_line_with_lineal_converges(void) {
 static void test_xor_multilayer_converges(void) {
   int sizes[] = {2, 3, 2, 1};
   Network network = new_network(3, sizes, "tanh", 0.1, 1);
-  network_train(network, XOR_INPUTS, XOR_ZETAS, 4, 3000, 1, NULL, NULL);
+  network_train(network, XOR_INPUTS, XOR_ZETAS, 4, 3000, 1, NULL, NULL, NULL);
   check(network_error(network, XOR_INPUTS, XOR_ZETAS, 4).mse < 0.01);
   check(network_misclassified(network, XOR_INPUTS, XOR_ZETAS, 4) == 0);
   network_free(network);
@@ -270,9 +320,9 @@ static void test_same_seed_same_result(void) {
   int sizes[] = {2, 3, 1};
   Network a = new_network(2, sizes, "tanh", 0.1, 9), b = new_network(2, sizes, "tanh", 0.1, 9);
   Network c = new_network(2, sizes, "tanh", 0.1, 10);
-  network_train(a, XOR_INPUTS, XOR_ZETAS, 4, 50, 1, NULL, NULL);
-  network_train(b, XOR_INPUTS, XOR_ZETAS, 4, 50, 1, NULL, NULL);
-  network_train(c, XOR_INPUTS, XOR_ZETAS, 4, 50, 1, NULL, NULL);
+  network_train(a, XOR_INPUTS, XOR_ZETAS, 4, 50, 1, NULL, NULL, NULL);
+  network_train(b, XOR_INPUTS, XOR_ZETAS, 4, 50, 1, NULL, NULL, NULL);
+  network_train(c, XOR_INPUTS, XOR_ZETAS, 4, 50, 1, NULL, NULL, NULL);
   double wa[13], wb[13], wc[13];
   network_get_weights(a, wa);
   network_get_weights(b, wb);
@@ -280,6 +330,62 @@ static void test_same_seed_same_result(void) {
   check(memcmp(wa, wb, sizeof(wa)) == 0);
   check(memcmp(wa, wc, sizeof(wa)) != 0);
   network_free(a); network_free(b); network_free(c);
+}
+
+
+static void test_shuffled_training(void) {
+  int sizes[] = {2, 3, 1};
+  double wa[13], wb[13], wc[13], wd[13];
+
+  // Same shuffle seed, same result; another seed, or no shuffling, gives a different one
+  Network a = new_network(2, sizes, "tanh", 0.1, 9), b = new_network(2, sizes, "tanh", 0.1, 9);
+  Network c = new_network(2, sizes, "tanh", 0.1, 9), d = new_network(2, sizes, "tanh", 0.1, 9);
+  Rng ra = rng_new(1), rb = rng_new(1), rc = rng_new(2);
+  network_train(a, XOR_INPUTS, XOR_ZETAS, 4, 20, 1, &ra, NULL, NULL);
+  network_train(b, XOR_INPUTS, XOR_ZETAS, 4, 20, 1, &rb, NULL, NULL);
+  network_train(c, XOR_INPUTS, XOR_ZETAS, 4, 20, 1, &rc, NULL, NULL);
+  network_train(d, XOR_INPUTS, XOR_ZETAS, 4, 20, 1, NULL, NULL, NULL);
+  network_get_weights(a, wa);
+  network_get_weights(b, wb);
+  network_get_weights(c, wc);
+  network_get_weights(d, wd);
+  check(memcmp(wa, wb, sizeof(wa)) == 0);
+  check(memcmp(wa, wc, sizeof(wa)) != 0);
+  check(memcmp(wa, wd, sizeof(wa)) != 0);
+  network_free(a); network_free(b); network_free(c); network_free(d);
+
+  // Full batch sums Δw over every sample, so shuffling must change nothing: each sample is visited
+  // exactly once per epoch
+  a = new_network(2, sizes, "tanh", 0.1, 3);
+  b = new_network(2, sizes, "tanh", 0.1, 3);
+  Rng rng = rng_new(4);
+  network_train(a, XOR_INPUTS, XOR_ZETAS, 4, 5, 4, &rng, NULL, NULL);
+  network_train(b, XOR_INPUTS, XOR_ZETAS, 4, 5, 4, NULL, NULL, NULL);
+  network_get_weights(a, wa);
+  network_get_weights(b, wb);
+  for (int i = 0; i < 13; i++) check_close(wa[i], wb[i], 1e-12);
+  network_free(a); network_free(b);
+
+  int xor_sizes[] = {2, 3, 2, 1};
+  Network xor_network = new_network(3, xor_sizes, "tanh", 0.1, 1);
+  Rng xor_rng = rng_new(1);
+  network_train(xor_network, XOR_INPUTS, XOR_ZETAS, 4, 3000, 1, &xor_rng, NULL, NULL);
+  check(network_misclassified(xor_network, XOR_INPUTS, XOR_ZETAS, 4) == 0);
+  network_free(xor_network);
+}
+
+
+static void test_relu_network_learns(void) {
+  int sizes[] = {2, 4, 1};
+  Network network = new_network(2, sizes, "relu", 0.05, 2);
+  const double inputs[] = {0, 0, 0, 1, 1, 0, 1, 1};
+  const double zetas[] = {0, 1, 1, 0}; // XOR
+  Rng rng = rng_new(1);
+  double before = network_error(network, inputs, zetas, 4).mse;
+  network_train(network, inputs, zetas, 4, 2000, 1, &rng, NULL, NULL);
+  check(network_error(network, inputs, zetas, 4).mse < before);
+  check(network_error(network, inputs, zetas, 4).mse < 0.05);
+  network_free(network);
 }
 
 
@@ -293,12 +399,12 @@ static void test_training_stops_when_callback_asks(void) {
   int sizes[] = {2, 1};
   Network network = new_network(1, sizes, "sign", 0.1, 1);
   int calls = 0;
-  int run = network_train(network, XOR_INPUTS, AND_ZETAS, 4, 100, 1, stop_at_three, &calls);
+  int run = network_train(network, XOR_INPUTS, AND_ZETAS, 4, 100, 1, NULL, stop_at_three, &calls);
   check(run == 3);
   check(calls == 3);
 
   calls = 0;
-  check(network_train(network, XOR_INPUTS, AND_ZETAS, 4, 2, 1, stop_at_three, &calls) == 2);
+  check(network_train(network, XOR_INPUTS, AND_ZETAS, 4, 2, 1, NULL, stop_at_three, &calls) == 2);
   network_free(network);
 }
 
@@ -352,12 +458,88 @@ static void test_dataset_loading(void) {
 }
 
 
+static void test_dataset_split(void) {
+  char text[512] = "x1,zeta\n";
+  for (int i = 0; i < 10; i++) {
+    char row[32];
+    snprintf(row, sizeof(row), "%d,%d\n", i, 100 + i); // the input says which sample it is
+    strcat(text, row);
+  }
+  write_tmp(text);
+  Dataset source = dataset_load(TMP_FILE);
+  check(source != NULL);
+  if (source == NULL) return;
+
+  Dataset train, validation, again, other;
+  Rng rng = rng_new(3), same = rng_new(3), different = rng_new(4);
+  check(dataset_split(source, 0.3, &rng, &train, &validation));
+  check(dataset_n_samples(train) == 7 && dataset_n_samples(validation) == 3);
+  check(dataset_n_inputs(validation) == 1 && dataset_n_outputs(validation) == 1);
+
+  // Every sample lands on exactly one side, with its own zeta, and each side keeps the source's order
+  int seen[10] = {0}, ordered = 1, paired = 1;
+  const Dataset sides[] = {train, validation};
+  for (int s = 0; s < 2; s++) {
+    for (int i = 0; i < dataset_n_samples(sides[s]); i++) {
+      int id = (int) dataset_inputs(sides[s])[i];
+      seen[id]++;
+      if (dataset_zetas(sides[s])[i] != 100 + id) paired = 0;
+      if (i > 0 && dataset_inputs(sides[s])[i] <= dataset_inputs(sides[s])[i - 1]) ordered = 0;
+    }
+  }
+  int partition = 1;
+  for (int i = 0; i < 10; i++) if (seen[i] != 1) partition = 0;
+  check(partition && paired && ordered);
+
+  check(dataset_split(source, 0.3, &same, &again, &other));
+  check(memcmp(dataset_inputs(validation), dataset_inputs(other), 3 * sizeof(double)) == 0);
+  dataset_free(again);
+  dataset_free(other);
+  check(dataset_split(source, 0.3, &different, &again, &other));
+  check(memcmp(dataset_inputs(validation), dataset_inputs(other), 3 * sizeof(double)) != 0);
+  dataset_free(again);
+  dataset_free(other);
+  dataset_free(train);
+  dataset_free(validation);
+
+  // Neither side is ever empty
+  Rng edge = rng_new(1);
+  check(dataset_split(source, 0.001, &edge, &train, &validation));
+  check(dataset_n_samples(validation) == 1 && dataset_n_samples(train) == 9);
+  dataset_free(train);
+  dataset_free(validation);
+  check(dataset_split(source, 0.999, &edge, &train, &validation));
+  check(dataset_n_samples(train) == 1 && dataset_n_samples(validation) == 9);
+  dataset_free(train);
+  dataset_free(validation);
+
+  fprintf(stderr, "  (expected errors follow)\n");
+  check(!dataset_split(source, 0.0, &edge, &train, &validation));
+  check(!dataset_split(source, 1.0, &edge, &train, &validation));
+  dataset_free(source);
+
+  write_tmp("1,2\n");
+  source = dataset_load(TMP_FILE);
+  check(source != NULL && !dataset_split(source, 0.5, &edge, &train, &validation));
+  if (source != NULL) dataset_free(source);
+}
+
+
 static const char * CONFIG_BASE = "\"train_dataset\":\"a\",\"validation_dataset\":\"b\",\"activation\":\"tanh\","
                                   "\"eta\":0.1,\"epochs\":10,\"batch_size\":2,\"hidden_layers\":[3,2],\"seed\":4";
 
 static int load_config_with(const char * extra, Config * config) {
   char text[1024];
   snprintf(text, sizeof(text), "{%s%s}", CONFIG_BASE, extra);
+  write_tmp(text);
+  return config_load(TMP_FILE, config);
+}
+
+// Same config, but without validation_dataset
+static int load_config_without_validation_dataset(const char * extra, Config * config) {
+  char text[1024];
+  snprintf(text, sizeof(text), "{\"train_dataset\":\"a\",\"activation\":\"tanh\",\"eta\":0.1,\"epochs\":10,"
+           "\"batch_size\":2,\"hidden_layers\":[3,2],\"seed\":4%s}", extra);
   write_tmp(text);
   return config_load(TMP_FILE, config);
 }
@@ -376,7 +558,25 @@ static void test_config_loading(void) {
   check_close(config.tolerance, 0.001, 0);
   check(strcmp(config.initial_weights, "results/x") == 0);
 
+  check(!config.shuffle && config.validation_split == 0 && config.split_seed == 0);
+  check(strcmp(config.validation_dataset, "b") == 0);
+
+  check(load_config_with(",\"shuffle\":true", &config) && config.shuffle == 1);
+  check(load_config_with(",\"shuffle\":false", &config) && config.shuffle == 0);
+
+  check(load_config_without_validation_dataset(",\"validation_split\":0.25,\"split_seed\":7", &config));
+  check_close(config.validation_split, 0.25, 0);
+  check(config.split_seed == 7 && config.validation_dataset[0] == '\0');
+
   fprintf(stderr, "  (expected errors follow)\n");
+  check(!load_config_with(",\"shuffle\":1", &config));
+  check(!load_config_with(",\"validation_split\":0.25,\"split_seed\":7", &config)); // both sources
+  check(!load_config_without_validation_dataset("", &config)); // neither
+  check(!load_config_without_validation_dataset(",\"validation_split\":0.25", &config)); // no split_seed
+  check(!load_config_with(",\"split_seed\":7", &config)); // split_seed without a split
+  check(!load_config_without_validation_dataset(",\"validation_split\":0,\"split_seed\":7", &config));
+  check(!load_config_without_validation_dataset(",\"validation_split\":1,\"split_seed\":7", &config));
+  check(!load_config_without_validation_dataset(",\"validation_split\":1.5,\"split_seed\":7", &config));
   check(!load_config_with(",\"tolerance\":-1", &config));
   check(!load_config_with(",\"nope\":1", &config));
   write_tmp("{\"eta\":0.1}");
@@ -391,6 +591,7 @@ typedef void (*Test)(void);
 int main(void) {
   struct { const char * name; Test run; } tests[] = {
     { "rng", test_rng },
+    { "rng shuffle", test_rng_shuffle },
     { "activations", test_activations },
     { "weights get/set roundtrip", test_weights_roundtrip },
     { "forward by hand", test_forward_by_hand },
@@ -402,8 +603,11 @@ int main(void) {
     { "y = x with lineal converges", test_line_with_lineal_converges },
     { "XOR [2,3,2,1] converges", test_xor_multilayer_converges },
     { "same seed, same result", test_same_seed_same_result },
+    { "shuffled training", test_shuffled_training },
+    { "relu network learns", test_relu_network_learns },
     { "callback stops training", test_training_stops_when_callback_asks },
     { "dataset loading", test_dataset_loading },
+    { "dataset split", test_dataset_split },
     { "config loading", test_config_loading },
   };
   int n_tests = (int) (sizeof(tests) / sizeof(tests[0]));

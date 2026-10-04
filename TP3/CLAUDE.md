@@ -16,10 +16,10 @@ Enunciado: `docs/Enunciado TP3 - 2Q 2026.pdf`.
 docs/Enunciado TP3 - 2Q 2026.pdf
 neuron/                          # C11 + make; README.md explica cómo correrlo
   main.c                         # carga config y datasets, arma la red, entrena, valida
-  rng.c/h                        # RNG propio (splitmix64), uno por corrida, inyectado a la red
+  rng.c/h                        # RNG propio (splitmix64) y shuffle; uno por corrida para pesos y shuffle, otro para el split
   network.c/h                    # capas de neuronas: forward, backprop, loop por batch
   neuron.c/h                     # la neurona: pesos (n_inputs + 1) y Δw pendiente
-  activation/                    # sign, lineal, tanh, logistic (θ y θ'), elegidas por nombre
+  activation/                    # sign, lineal, tanh, logistic, relu (θ y θ'), elegidas por nombre
   io/                            # config.json (JSON plano), datasets CSV y results/ de cada corrida
   config.json.example            # se versiona este; config.json está gitignoreado
 scripts/
@@ -39,7 +39,9 @@ segundos de entrenamiento acumulados (`elapsed_s`). Corta antes si converge (`si
 clasificadas; resto: MSE de train < `tolerance`, opcional) y la red queda con los pesos de la
 mejor época de train, no de la última. El progreso sale por stderr (stdout es solo la
 ruta, que lee `make run`). `initial_weights` (opcional) sigue entrenando desde los pesos finales de
-otra corrida.
+otra corrida. `shuffle` (opcional) mezcla las muestras en cada época; `validation_split` + `split_seed`
+(opcionales) arman la validación como una parte al azar de `train_dataset`, en lugar de un
+`validation_dataset`.
 
 `n_inputs` no es global: lo trae cada neurona, y se deduce de las columnas del CSV (entradas
 primero, ζ al final). Las ζ son las últimas columnas del encabezado que se llaman `zeta*` (si no hay
@@ -113,8 +115,6 @@ en C todavía no cubre todo (ver Pendiente).
 
 ## Pendiente
 
-- **Shuffle por época**: sin decidir. Hoy las muestras van siempre en el orden del CSV, así que
-  los mini-batches son siempre los mismos.
 - **Dígitos**: `scripts/prepare_digits_dataset.py` los deja en one-hot (`x1..x784,zeta_0..zeta_9`) y
   la red ya entrena con 10 salidas; el reporte muestra aciertos por argmax. El reporte ya trae matriz de
   confusión y aciertos/precisión por clase (probada solo con datos sintéticos). `digits.csv` no tiene ningún 8 y tiene pocos 5 (271);

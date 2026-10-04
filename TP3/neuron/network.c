@@ -228,19 +228,31 @@ int network_misclassified(Network network, const double inputs[], const double z
 
 
 int network_train(Network network, const double inputs[], const double zetas[], int n_samples,
-                  int epochs, int batch_size, EpochCallback on_epoch, void * context) {
+                  int epochs, int batch_size, Rng * shuffle_rng, EpochCallback on_epoch, void * context) {
 
   int n_inputs = network_n_inputs(network);
   int n_outputs = network_n_outputs(network);
 
+  // The samples are visited through order, so shuffling never touches the dataset itself
+  int * order = checked_malloc(n_samples * sizeof(int));
+  for (int i = 0; i < n_samples; i++) order[i] = i;
+
+  int epochs_run = epochs;
   for (int epoch = 1; epoch <= epochs; epoch++) {
+    if (shuffle_rng != NULL) rng_shuffle(shuffle_rng, order, n_samples);
     for (int i = 0; i < n_samples; i++) {
-      backpropagate(network, &inputs[i * n_inputs], &zetas[i * n_outputs]);
+      int sample = order[i];
+      backpropagate(network, &inputs[sample * n_inputs], &zetas[sample * n_outputs]);
       int batch_done = (i + 1) % batch_size == 0 || i + 1 == n_samples;
       if (batch_done) apply_updates(network);
     }
-    if (on_epoch != NULL && on_epoch(epoch, network, context)) return epoch;
+    if (on_epoch != NULL && on_epoch(epoch, network, context)) {
+      epochs_run = epoch;
+      break;
+    }
   }
-  return epochs;
+
+  free(order);
+  return epochs_run;
 
 }

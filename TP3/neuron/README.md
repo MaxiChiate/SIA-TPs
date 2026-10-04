@@ -103,14 +103,17 @@ opcionales, y una clave desconocida es un error:
 | Clave                | Tipo   | Descripción                                        |
 |----------------------|--------|----------------------------------------------------|
 | `train_dataset`      | string | CSV de entrenamiento                               |
-| `validation_dataset` | string | CSV de validación                                  |
-| `activation`         | string | `sign`, `lineal`, `tanh` o `logistic`              |
+| `validation_dataset` | string | CSV de validación. Va este **o** `validation_split` (exactamente uno) |
+| `activation`         | string | `sign`, `lineal`, `tanh`, `logistic` o `relu`      |
 | `eta`                | número | Tasa de aprendizaje, mayor a 0                     |
 | `epochs`             | entero | Épocas de entrenamiento, mayor a 0                 |
 | `batch_size`         | entero | Muestras por update: 1 online, ≥ N batch, en el medio mini-batch |
 | `hidden_layers`      | lista  | Neuronas por capa oculta, p. ej. `[2]`; `[]` es perceptrón simple |
 | `tolerance`          | número | Opcional. Corta el entrenamiento cuando el MSE de train baja de este valor; sin ella (o 0) corre todas las épocas. Con `sign` se corta solo al clasificar bien todo el train |
-| `seed`               | entero | Semilla de los pesos iniciales (uniformes en [-0.5, 0.5]) |
+| `seed`               | entero | Semilla de los pesos iniciales (uniformes en [-0.5, 0.5]) y del shuffle |
+| `shuffle`            | bool   | Opcional (`true`/`false`). Mezcla las muestras de train al empezar cada época, con `seed`; sin ella (o `false`) van siempre en el orden del CSV |
+| `validation_split`   | número | Opcional. En lugar de `validation_dataset`: la parte de `train_dataset` (entre 0 y 1, sin incluirlos) que se aparta como validación al azar; el resto es train |
+| `split_seed`         | entero | Semilla de ese split. Obligatoria con `validation_split` y solo va con ella |
 | `initial_weights`    | string | Opcional. Carpeta de una corrida anterior (o su `weights.csv`) para seguir entrenando desde sus pesos finales; sin ella, pesos al azar |
 
 Al terminar, la red queda con los pesos de la época de menor MSE de train (no los de la última), y
@@ -120,10 +123,28 @@ Con `initial_weights`, la arquitectura (entradas, `hidden_layers` y salidas) tie
 misma que la de esa corrida. La corrida nueva numera sus épocas desde 0 (la época 0 es donde
 terminó la anterior), y su `weights.csv` tiene como `initial` los pesos cargados, así que se puede
 encadenar. Para agregar una clave opcional: el campo en `Config` y una fila en `FIELDS`
-(`io/config.c`) con `optional` en 1; si falta, queda en cero / `""`.
+(`io/config.c`) con `optional` en 1; si falta, queda en cero / `""`. Los tipos son string, double,
+int, uint (sin signo), bool (`true`/`false`) y lista de enteros.
 
-Todas las capas usan la misma `activation`. Para el multicapa tiene que ser derivable (`tanh` o
-`logistic`): con `sign` el error no se propaga a las capas ocultas.
+Todas las capas usan la misma `activation`. Para el multicapa tiene que ser derivable (`tanh`,
+`logistic` o `relu`): con `sign` el error no se propaga a las capas ocultas.
+
+`relu` da `max(0, h)`; su derivada en 0 se toma como 0. Su salida no tiene techo, y con pocos pesos
+iniciales positivos una neurona puede quedar siempre en 0 y no aprender.
+
+Con `shuffle`, los mini-batches cambian de una época a otra y `batch_size = 1` ya no ve las muestras
+en bloques. Con `batch_size` ≥ N no cambia nada: el batch completo suma Δw sobre todas las muestras.
+El shuffle usa el mismo generador que los pesos iniciales, así que misma `seed` y mismo config
+reproducen la corrida; con `initial_weights` el orden de las muestras es el mismo que sin ellos.
+
+Con `validation_split`, `train_dataset` se parte una sola vez, antes de entrenar, con `split_seed` y
+no con `seed`: así el split no cambia mientras se varía `seed` (los pesos y el shuffle). Cada lado
+conserva el orden del CSV y el reparto se imprime por stderr. No es estratificado.
+
+```json
+{"train_dataset": "data/fraud_features.csv", "validation_split": 0.2, "split_seed": 1, "shuffle": true,
+ "activation": "logistic", "eta": 0.01, "epochs": 50, "batch_size": 32, "hidden_layers": [8], "seed": 1}
+```
 
 Se versiona solo `config.json.example`; `config.json` está gitignoreado.
 
@@ -156,6 +177,6 @@ Los datasets van en `data/`, que está gitignoreado.
 ## Tests
 
 `make test` compila `tests/test_main.c` contra todo menos `main.c` y lo corre (sin dependencias). Cubre
-el RNG, las activaciones y sus derivadas, el forward y la actualización a mano, backprop contra el
-gradiente numérico, full batch independiente del orden, AND/`y = x`/XOR `[2,3,2,1]`, corte por
-callback, y la lectura de datasets y config.
+el RNG y su shuffle, las activaciones (ReLU incluida) y sus derivadas, el forward y la actualización a
+mano, backprop contra el gradiente numérico, full batch independiente del orden, entrenamiento con
+shuffle, AND/`y = x`/XOR `[2,3,2,1]`, corte por callback, y la lectura de datasets (con el split) y config.

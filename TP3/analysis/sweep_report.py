@@ -364,6 +364,12 @@ document.addEventListener("pointermove", (event) => {
 """
 
 
+def validation_label(config: dict[str, Any]) -> str:
+    if "validation_dataset" in config:
+        return Path(config["validation_dataset"]).name
+    return f"{100 * config['validation_split']:g}% de {Path(config['train_dataset']).name}"
+
+
 def render(sweep_dir: Path) -> str:
     plan = json.loads((sweep_dir / "plan.json").read_text())
     variants = load_variants(sweep_dir, plan)
@@ -372,8 +378,7 @@ def render(sweep_dir: Path) -> str:
     charts = [learning_curves_chart(plotted), final_metrics_chart(plotted, varied)] if plotted else []
     title = f"Serie {plan['name']}"
     subtitle = (f"{sweep_dir.name} · {len(variants)} variantes × {len(plan['seeds'])} seeds · "
-                f"{plan['base_config']['activation']} · validación sobre "
-                f"{Path(plan['base_config']['validation_dataset']).name}")
+                f"{plan['base_config']['activation']} · validación sobre {validation_label(plan['base_config'])}")
     return f"""<!doctype html>
 <html lang="es">
 <head>
