@@ -1,0 +1,76 @@
+{
+  "_comment": "Ejercicio 3, paso 2: preprocesamiento, aumento de datos, épocas y η con [256] sobre la unión. Validación = 20 % de la unión. ex3_c = centrado por centro de masa; ex3_a2 = +2 copias aumentadas (desplazamiento ±2 px, rotación ±10°); ex3_ca2 = las dos.",
+  "base_config": "../neuron/config.json.digits_ex3.example",
+  "variants": [
+    {
+      "label": "centrado",
+      "set": {
+        "train_dataset": "data/ex3_c_train_union.csv",
+        "validation_dataset": "data/ex3_c_validation.csv",
+        "hidden_layers": [
+          256
+        ]
+      }
+    },
+    {
+      "label": "aumento x3",
+      "set": {
+        "train_dataset": "data/ex3_a2_train_union.csv",
+        "validation_dataset": "data/ex3_a2_validation.csv",
+        "hidden_layers": [
+          256
+        ]
+      }
+    },
+    {
+      "label": "centrado + aumento x3",
+      "set": {
+        "train_dataset": "data/ex3_ca2_train_union.csv",
+        "validation_dataset": "data/ex3_ca2_validation.csv",
+        "hidden_layers": [
+          256
+        ]
+      }
+    },
+    {
+      "label": "100 épocas",
+      "set": {
+        "train_dataset": "data/ex3_base_train_union.csv",
+        "validation_dataset": "data/ex3_base_validation.csv",
+        "hidden_layers": [
+          256
+        ],
+        "epochs": 100
+      }
+    },
+    {
+      "label": "eta 0.2",
+      "set": {
+        "train_dataset": "data/ex3_base_train_union.csv",
+        "validation_dataset": "data/ex3_base_validation.csv",
+        "hidden_layers": [
+          256
+        ],
+        "eta": 0.2,
+        "eta_increase": 0.02
+      }
+    },
+    {
+      "label": "eta 1.0",
+      "set": {
+        "train_dataset": "data/ex3_base_train_union.csv",
+        "validation_dataset": "data/ex3_base_validation.csv",
+        "hidden_layers": [
+          256
+        ],
+        "eta": 1.0,
+        "eta_increase": 0.1
+      }
+    }
+  ],
+  "seeds": [
+    1,
+    2,
+    3
+  ]
+}
