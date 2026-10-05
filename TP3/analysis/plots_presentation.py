@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import fraud_calibration  # noqa: E402
 import fraud_threshold  # noqa: E402
 
 TP_DIR = Path(__file__).resolve().parent.parent
@@ -136,7 +137,7 @@ def line_chart(lines: list[Line], width: int, height: int, xticks: list[float], 
     svg.append("</svg>")
     labels = [pinned(fmt_y(v), 0, py(v) - 16, left - 14, align="right") for v in yticks]
     labels += [pinned(fmt_x(v), px(v) - 60, top + plot_h + 12, 120, align="center") for v in xticks]
-    labels += [pinned(text, px(value) + 12, top + 4, 260, color=INK) for value, text in vlines or []]
+    labels += [pinned(text, px(value) + 12, top + plot_h - 44, 260, color=INK) for value, text in vlines or []]
     labels.append(pinned(xlabel, left, height - 34, plot_w, align="center"))
     return f'<div style="position:relative;width:{width}px;height:{height}px">{"".join(svg)}{"".join(labels)}</div>'
 
@@ -341,7 +342,7 @@ def fraud_size_curve() -> str:
     return chart
 
 
-def threshold_curve(chosen: float = 0.82) -> str:
+def threshold_curve(chosen: float = 0.78) -> str:
     directory = latest("series_fraud_final")
     run = next(r["run"] for r in rows(directory / "summary.csv") if r["label"] == "validacion" and r["seed"] == "1")
     scored = fraud_threshold.load(directory / "runs" / run / "predictions.csv", DATA / "fraud_drop3_validation_labels.csv")
@@ -350,11 +351,26 @@ def threshold_curve(chosen: float = 0.82) -> str:
     recall = [(t, fraud_threshold.counts_at(scored, t).recall) for t in grid]
     lines = [Line("Precisión", precision, SERIES[0]), Line("Recall", recall, SERIES[1])]
     chart = line_chart(lines, 1000, 480, [0.6, 0.7, 0.8, 0.9], [0.4, 0.6, 0.8, 1.0], xlabel="Umbral de detección", ylabel="Precisión y recall",
-                       fmt_x=lambda v: fmt(v, 1), fmt_y=lambda v: fmt(v, 1), vlines=[(chosen, "Umbral 0,82")])
+                       fmt_x=lambda v: fmt(v, 1), fmt_y=lambda v: fmt(v, 1), vlines=[(chosen, "Umbral 0,78")])
     return legend([(line.label, line.color) for line in lines]) + chart
 
 
-CHARTS = {"fraud_feature_bars": fraud_feature_bars, "fraud_size_curve": fraud_size_curve, "threshold_curve": threshold_curve,
+def fraud_reliability() -> str:
+    """Observed fraud rate against the mean prediction (test), before and after Platt scaling fit on validation."""
+    directory = latest("series_fraud_final")
+    runs = {r["label"]: r["run"] for r in rows(directory / "summary.csv") if r["seed"] == "1"}
+    validation = fraud_threshold.load(directory / "runs" / runs["validacion"] / "predictions.csv", DATA / "fraud_drop3_validation_labels.csv")
+    test = fraud_threshold.load(directory / "runs" / runs["test"] / "predictions.csv", DATA / "fraud_drop3_test_labels.csv")
+    a, b = fraud_calibration.fit_platt(validation.prediction, validation.label)
+    raw = [(m, r) for m, r, _ in fraud_calibration.reliability(test.prediction, test.label)]
+    platt = [(m, r) for m, r, _ in fraud_calibration.reliability([fraud_calibration.sigmoid(a * p + b) for p in test.prediction], test.label)]
+    lines = [Line("Calibración perfecta", [(0.0, 0.0), (1.0, 1.0)], MUTED), Line("TinyModel sin calibrar", raw, SERIES[0]), Line("Con Platt", platt, SERIES[1])]
+    chart = line_chart(lines, 900, 480, [0, 0.25, 0.5, 0.75, 1], [0, 0.25, 0.5, 0.75, 1], xlabel="Probabilidad predicha (media del intervalo)",
+                       ylabel="Fraudes observados", fmt_x=lambda v: fmt(v, 2), fmt_y=lambda v: fmt(v, 2))
+    return legend([(line.label, line.color) for line in lines]) + chart
+
+
+CHARTS = {"fraud_reliability": fraud_reliability, "fraud_feature_bars": fraud_feature_bars, "fraud_size_curve": fraud_size_curve, "threshold_curve": threshold_curve,
           "fraud_histogram": fraud_histogram, "fraud_curves": fraud_curves, "fraud_r2": fraud_r2,
           "digits_distribution": digits_distribution, "xor_convergence": xor_convergence, "eta_sensitivity": eta_sensitivity,
           "optimizer_validation_dots": optimizer_validation_dots, "optimizer_test_dots": optimizer_test_dots, "optimizer_curves": optimizer_curves}
