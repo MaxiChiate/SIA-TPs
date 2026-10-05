@@ -370,7 +370,26 @@ def fraud_reliability() -> str:
     return legend([(line.label, line.color) for line in lines]) + chart
 
 
-CHARTS = {"fraud_reliability": fraud_reliability, "fraud_feature_bars": fraud_feature_bars, "fraud_size_curve": fraud_size_curve, "threshold_curve": threshold_curve,
+def digits_vs_test() -> str:
+    digits, test = class_counts("digits"), class_counts("digits_test")
+    chart = grouped_bars([str(d) for d in range(10)], [("digits", SERIES[0], digits), ("digits_test", SERIES[2], test)],
+                         height=300, bar_w=52, note={(0, 5): "271", (0, 8): "0"})
+    return legend([("digits.csv (12 449)", SERIES[0]), ("digits_test.csv (2 497)", SERIES[2])]) + chart
+
+
+def architecture_dots() -> str:
+    runs = rows(sorted(RESULTS.glob("series_architecture_digits_2*"))[-1] / "summary.csv")
+    labels = ["[] (simple)", "[16]", "[32]", "[64]", "[128]", "[64, 32]"]
+    groups = [(label, [100 * float(r["accuracy"]) for r in runs if r["label"] == label], SERIES[0]) for label in labels]
+    return dot_plot(groups, 92.0, 97.5, [92.0, 93.0, 94.0, 95.0, 96.0, 97.0], width=900)
+
+
+def optimizer_digits_test_dots() -> str:
+    return optimizer_dots("series_optimizer_digits_test", 84.5, 87.0, [84.5, 85.0, 85.5, 86.0, 86.5, 87.0])
+
+
+CHARTS = {"digits_vs_test": digits_vs_test, "architecture_dots": architecture_dots, "optimizer_digits_test_dots": optimizer_digits_test_dots,
+          "fraud_reliability": fraud_reliability, "fraud_feature_bars": fraud_feature_bars, "fraud_size_curve": fraud_size_curve, "threshold_curve": threshold_curve,
           "fraud_histogram": fraud_histogram, "fraud_curves": fraud_curves, "fraud_r2": fraud_r2,
           "digits_distribution": digits_distribution, "xor_convergence": xor_convergence, "eta_sensitivity": eta_sensitivity,
           "optimizer_validation_dots": optimizer_validation_dots, "optimizer_test_dots": optimizer_test_dots, "optimizer_curves": optimizer_curves}
