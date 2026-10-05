@@ -28,6 +28,7 @@ scripts/
   prepare_fraud_split.py         # fraude: split estratificado train/validación/test, z-score solo de train, variantes de entradas
   explore_fraud_dataset.py       # exploración del fraude: limpieza, rangos, composición, correlaciones
   prepare_digits_dataset.py      # dígitos crudos -> x1..x784 + zeta_0..zeta_9 (one-hot)
+  prepare_digits_ex3.py          # Ejercicio 3: unión, validación apartada, centrado y aumento de datos
   run_error.py                   # métricas de error de una corrida
   run_report.py                  # report.html de la corrida (lo llama make run): curva, gráficos, tablas
   report_server.py               # make serve: reporte de la última corrida en localhost, se recarga solo
@@ -38,6 +39,7 @@ analysis/                        # README.md explica cómo correrlo
   fraud_threshold.py             # métricas (precisión, recall, PR-AUC) y umbral del TinyModel, elegido en validación
   fraud_calibration.py           # calibración (Platt, isotónica) de la salida del TinyModel contra flagged_fraud
   fraud_split_variability.py     # cuánto cambian el umbral y las métricas con otros splits
+  digits_ensemble.py             # accuracy del promedio de las salidas de varias redes de dígitos
   plots_presentation.py          # gráficos de la presentación como HTML de diapositiva (solo stdlib)
   plots_main.py                  # gráficos de plotly de cada serie + index.html (como TP2); necesita plotly
   plots_data.py / plots_compare.py / plots_index.py / plots_style.py   # carga y bandas, estadística pareada, índice con modales (i), paleta
@@ -154,9 +156,10 @@ en C todavía no cubre todo (ver Pendiente).
 - **Ejercicio 2** (solo `digits.csv`; ver `DECISIONS.md`): optimizadores (10 seeds), η y arquitectura hechos:
   GD, momentum y η adaptativo se igualan y superan a RMSProp y Adam; `[64]`. Test (`digits_test.csv`): 86.3 ± 0.2 %,
   limitado por el 8, que `digits.csv` no tiene.
-- **Ejercicio 3** (`more_digits.csv`): 95.5 ± 0.4 % en test. **Meta 98 % no alcanzada.** Falta: capacidad
-  (`[128]`+), aumento de datos, regularización, más épocas, reajustar con una validación de `more_digits.csv`; y los
-  opcionales de robustez al ruido e interpretabilidad (Ejercicios 2 y 3).
+- **Ejercicio 3**: **meta cumplida: 98,7 % en test** (ensemble de 9 redes; una `[512]` sola, 98,3 %). Unión de
+  `digits.csv` y `more_digits.csv`, `[512]`, aumento de datos y ensemble; búsqueda con una validación apartada,
+  test mirado una sola vez (`DECISIONS.md`). Faltan solo los opcionales (Ejercicios 2 y 3): robustez al ruido
+  e interpretabilidad.
 - **Presentación**: Artifact con gráficos (https://claude.ai/artifact/NpkJsGnWfG1tzxKzwyiywZ); hay que
   mantenerla alineada con este archivo y con `DECISIONS.md`. Tiene una sección por ejercicio (1, 2 y 3) más un anexo con la validación; la revisión visual la hace quien la presenta.
 

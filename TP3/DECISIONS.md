@@ -203,10 +203,7 @@ repo, `more_digits.csv`) con la meta de accuracy ≥ 98 %. Por eso:
   85.98, RMSProp 85.13. El 8, que no está en `digits.csv`, tiene 0 % de aciertos y es el 9.7 % del test, así que
   el techo es ≈ 90 %; en los otros 9 dígitos da 95.6 % (seed 4). Es el resultado «no satisfactorio» que
   motiva el Ejercicio 3.
-- **Ejercicio 3** = `more_digits.csv` para entrenar, mismo test (`series_optimizer_test.json`): η adaptativo
-  95.5 ± 0.4 %. **No alcanza el 98 %**: faltan 2.5 puntos (113 errores en 2497; el 98 % admite 50). El 8 explica
-  8.8 de los 9.2 puntos de mejora entre ejercicios (0 a 90 % de aciertos en 243 imágenes). Los hiperparámetros
-  son los del Ejercicio 2 y no se reajustaron con `more_digits.csv`.
+- **Ejercicio 3**: ver la entrada siguiente (la meta de 98 % se cumple con una búsqueda propia).
 - **Arquitectura** (`series_architecture_digits.json`, η adaptativo, validación de `digits.csv`, 5 seeds):
   sin capa oculta 92.79 %, `[16]` 94.22, `[32]` 95.65, `[64]` 96.62, `[128]` 96.83, `[64, 32]` 96.37. `[128]` suma
   0.2 puntos y cuesta el doble (41 s contra 22 s por corrida), y dos capas no mejoran a una: se usa `[64]` por
@@ -219,9 +216,47 @@ repo, `more_digits.csv`) con la meta de accuracy ≥ 98 %. Por eso:
   validación: sirven para explorar, pero no para elegir hiperparámetros del Ejercicio 2 según esta aclaración.
   Las de optimizadores y arquitectura que se usan en la presentación parten de `digits.csv` con
   `validation_split`.
-- Pendientes del Ejercicio 3: capacidad (`[128]` o más), aumento de datos, regularización, más épocas, y reajustar
-  η y arquitectura con una validación de `more_digits.csv`. Opcionales sin hacer (Ejercicios 2 y 3): robustez al
-  ruido gaussiano e interpretabilidad con métodos de atribución.
+- Opcionales sin hacer (Ejercicios 2 y 3): robustez al ruido gaussiano e interpretabilidad con métodos de
+  atribución.
+
+## Ejercicio 3: cómo se llegó a 98,7 % en test
+
+**Qué:** meta del cliente accuracy ≥ 98 %. `digits.csv` y `more_digits.csv` comparten 3689 imágenes (la unión sin
+repetidos tiene 24 501) y ninguno comparte imágenes con `digits_test.csv`. `scripts/prepare_digits_ex3.py --seed 1`
+aparta una validación de 4900 imágenes (20 % de la unión) y arma los entrenamientos sin ellas. Todo se elige con
+esa validación; `digits_test.csv` se evalúa **una sola vez**, al final. Series: `series_ex3_step1.json`,
+`step2` y `step3` (3 seeds), η adaptativo (η 0.5), online con shuffle, 50 épocas.
+
+| Paso | Validación |
+|---|---|
+| `[64]` con `more_digits` | 96.22 |
+| + unión de datos | 96.41 |
+| + `[256]` | 97.63 (`[128]` 97.30, `[512]` 97.88, `[256, 128]` 97.77) |
+| + aumento ×3 (2 copias por imagen, desplazamiento ±2 px, rotación ±10°) | 98.13 (×5: 98.24) |
+| + `[512]` | 98.40 |
+| ensemble de 9 redes (`[512]`, `[256, 128]` con ×3 y `[256]` con ×5; 3 seeds cada una) | 98.90 |
+
+No ayudaron: centrar por centro de masa (97.44 contra 97.63; con aumento 98.26, sin diferencia clara con 98.13),
+100 épocas (97.69), η 0.2 (97.56) y η 1.0 (97.20).
+
+**Resultado en test** (una evaluación, 2497 imágenes, protocolo fijado con la validación): ensemble de las 9
+redes **98.72 %** (32 errores; el 98 % admite 50); ensemble de las 3 `[512]` 98.40; redes individuales `[512]`
+98.29 ± 0.05, `[256, 128]` 97.93 ± 0.30, `[256]` con ×5 97.70 ± 0.14. La validación sobreestimó el test en 0.2
+puntos (98.90 contra 98.72). Aciertos por clase entre 96.9 % (el 5) y 100 %.
+
+**Por qué:**
+- La capacidad es lo que más sube (+1.2 de `[64]` a `[256]`) y después el aumento (+0.5); la unión de datos suma 0.2.
+- El aumento solo se aplica al entrenamiento; validación y test no se tocan.
+- El ensemble (promedio de las salidas) suma 0.5 puntos sobre la mejor red y es otra técnica que no cambia el
+  código en C: `analysis/digits_ensemble.py`.
+- El centrado no aporta (no se investigó por qué).
+- Costo: cada red tarda unos 17 minutos (entrenamiento en línea, un núcleo) contra 25 segundos de la `[64]`.
+- Un primer intento de evaluar sobre el test salió mal por un error de configuración (las variantes de la serie
+  pisaban el `validation_dataset` de la serie y se evaluó otra vez sobre la validación). Se detectó porque los números
+  coincidían con los de validación (y confirmó que el entrenamiento es determinista) y se repitió bien: el test no
+  se había mirado. Lección: verificar el `validation_dataset` del `config.json` de cada corrida antes de leer números.
+- Límites: una sola partición de validación y una sola evaluación en test (con 2497 imágenes, 98.7 tiene ±0.2 de
+  incertidumbre). No se probó regularización ni otras activaciones (una sola activación para toda la red).
 
 ## Pesos iniciales: aleatorios uniformes en [−0.5, 0.5]
 
