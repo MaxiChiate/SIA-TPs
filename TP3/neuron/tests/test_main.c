@@ -462,6 +462,102 @@ static void test_gd_minimizes_a_quadratic(void) {
 }
 
 
+// One weight starting at 0: steps[t] gets the Δw of each update with the given descent directions
+static void steps_on_one_weight(const OptimizerConfig * config, const double descents[], int n_steps, double steps[]) {
+  Optimizer optimizer = optimizer_new(config, 1);
+  double w[] = {0.0};
+  for (int t = 0; t < n_steps; t++) {
+    double before = w[0];
+    optimizer_step(optimizer, w, &descents[t]);
+    steps[t] = w[0] - before;
+  }
+  optimizer_free(optimizer);
+}
+
+
+// The numbers of the momentum example in class 12.1: eta = 0.1, alpha = 0.9
+static void test_momentum_steps_by_hand(void) {
+  OptimizerConfig config = { .name = "momentum", .eta = 0.1, .momentum = 0.9 };
+  double steps[4];
+
+  double constant[] = {1, 1, 1, 1}; // the steps add up, towards eta / (1 - alpha) = 1
+  steps_on_one_weight(&config, constant, 4, steps);
+  check_close(steps[0], 0.1, 1e-12);
+  check_close(steps[1], 0.19, 1e-12);
+  check_close(steps[2], 0.271, 1e-12);
+  check_close(steps[3], 0.3439, 1e-12);
+
+  double alternating[] = {1, -1, 1, -1}; // they cancel out, towards eta / (1 + alpha) in size
+  steps_on_one_weight(&config, alternating, 4, steps);
+  check_close(steps[0], 0.1, 1e-12);
+  check_close(steps[1], -0.01, 1e-12);
+  check_close(steps[2], 0.091, 1e-12);
+  check_close(steps[3], -0.0181, 1e-12);
+}
+
+
+// With alpha = 0 nothing carries over: every step is plain gradient descent
+static void test_momentum_without_alpha_is_gd(void) {
+  OptimizerConfig momentum = { .name = "momentum", .eta = 0.05, .momentum = 0.0 };
+  OptimizerConfig gd = { .name = "gd", .eta = 0.05 };
+  Rng rng = rng_new(3);
+  double descents[20], momentum_steps[20], gd_steps[20];
+  for (int t = 0; t < 20; t++) descents[t] = rng_uniform(&rng) - 0.5;
+  steps_on_one_weight(&momentum, descents, 20, momentum_steps);
+  steps_on_one_weight(&gd, descents, 20, gd_steps);
+  for (int t = 0; t < 20; t++) check_close(momentum_steps[t], gd_steps[t], 1e-15);
+}
+
+
+// S starts at 0, so after one step S = (1 - gamma) d^2 and the step is eta / sqrt(1 - gamma) = 3.16 eta
+static void test_rmsprop_first_step(void) {
+  OptimizerConfig config = { .name = "rmsprop", .eta = 0.001, .decay = 0.9, .epsilon = 1e-8 };
+  double descent[] = {2.0}, step[1];
+  steps_on_one_weight(&config, descent, 1, step);
+  check_close(step[0], 0.001 / sqrt(0.1), 1e-9);
+}
+
+
+// With the bias correction the first step is eta whatever the size of the gradient, and it goes the way
+// of the descent direction (the paper's minus sign is already in descent = -dE/dw)
+static void test_adam_first_step(void) {
+  OptimizerConfig config = { .name = "adam", .eta = 0.001, .beta1 = 0.9, .beta2 = 0.999, .epsilon = 1e-8 };
+  Optimizer optimizer = optimizer_new(&config, 4);
+  double weights[] = {0, 0, 0, 0}, descent[] = {100.0, 1.0, 0.01, -1.0};
+  optimizer_step(optimizer, weights, descent);
+  check_close(weights[0], 0.001, 1e-8);
+  check_close(weights[1], 0.001, 1e-8);
+  check_close(weights[2], 0.001, 1e-8);
+  check_close(weights[3], -0.001, 1e-8);
+  optimizer_free(optimizer);
+}
+
+
+static double minimize_quadratic(const OptimizerConfig * config, int n_steps) {
+  Optimizer optimizer = optimizer_new(config, 1);
+  double w[] = {0.0};
+  for (int t = 0; t < n_steps; t++) {
+    double descent[] = {3.0 - w[0]};
+    optimizer_step(optimizer, w, descent);
+  }
+  optimizer_free(optimizer);
+  return w[0];
+}
+
+
+// Every optimizer reaches the minimum of f(w) = 1/2 (w - 3)^2 with no network around. rmsprop and adam move
+// each weight about eta per step even next to the minimum, so with a fixed eta they end up hovering around
+// it within a few eta instead of settling on it.
+static void test_optimizers_minimize_a_quadratic(void) {
+  OptimizerConfig momentum = { .name = "momentum", .eta = 0.1, .momentum = 0.9 };
+  OptimizerConfig rmsprop = { .name = "rmsprop", .eta = 0.01, .decay = 0.9, .epsilon = 1e-8 };
+  OptimizerConfig adam = { .name = "adam", .eta = 0.01, .beta1 = 0.9, .beta2 = 0.999, .epsilon = 1e-8 };
+  check_close(minimize_quadratic(&momentum, 1000), 3.0, 1e-6);
+  check_close(minimize_quadratic(&rmsprop, 3000), 3.0, 0.05);
+  check_close(minimize_quadratic(&adam, 3000), 3.0, 0.05);
+}
+
+
 static void test_network_eta(void) {
   int sizes[] = {2, 3, 1};
   Network network = new_network(2, sizes, "tanh", 0.1, 1);
@@ -658,6 +754,11 @@ int main(void) {
     { "callback stops training", test_training_stops_when_callback_asks },
     { "gd step by hand", test_gd_step_by_hand },
     { "gd minimizes a quadratic", test_gd_minimizes_a_quadratic },
+    { "momentum steps by hand", test_momentum_steps_by_hand },
+    { "momentum without alpha is gd", test_momentum_without_alpha_is_gd },
+    { "rmsprop first step", test_rmsprop_first_step },
+    { "adam first step", test_adam_first_step },
+    { "optimizers minimize a quadratic", test_optimizers_minimize_a_quadratic },
     { "network eta get/set", test_network_eta },
     { "dataset loading", test_dataset_loading },
     { "dataset split", test_dataset_split },
