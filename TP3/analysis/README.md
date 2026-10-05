@@ -33,7 +33,7 @@ Hasta 8 variantes por serie (un color cada una). Se puede variar cualquier clave
 
 Las primeras series con 3 seeds; las marcadas con (10) usan 10 seeds.
 
-**Dígitos** (Ejercicio 2). Base: `neuron/config.json.digits.example`, es decir train `more_digits_prepared.csv`,
+**Dígitos** (Ejercicios 2 y 3). Ojo: las series de esta tabla hasta `series_depth` parten de `more_digits` y usan `digits_test` como validación (sirven para explorar, no para elegir hiperparámetros del Ejercicio 2: el enunciado reserva `digits_test` como «mundo real»). Base: `neuron/config.json.digits.example`, es decir train `more_digits_prepared.csv`,
 validación `digits_test_prepared.csv`, `logistic`, `[64]`, η = 0.01 online, 50 épocas.
 
 | Serie | Qué varía | Pregunta |
@@ -47,6 +47,8 @@ validación `digits_test_prepared.csv`, `logistic`, `[64]`, η = 0.01 online, 50
 | `series_depth` (10) | `hidden_layers`: `[96]`, `[64, 32]`, `[48, 32, 16]`, `[32, 32, 32]` | ¿Qué pasa con las mismas neuronas repartidas en más capas? |
 | `series_eta_{gd,adaptive,momentum,rmsprop,adam}` y `series_eta_edges*` | η de cada optimizador, ampliando la grilla hasta el pico (base `neuron/config.json.digits_optimizers.example`: validación = 20 % de `digits_prepared`) | ¿Cuál es el mejor η de cada optimizador? |
 | `series_optimizer` y `series_optimizer_test` (10 seeds) | los cinco optimizadores, cada uno con su mejor η; la segunda entrena con `more_digits` y evalúa sobre `digits_test` (`neuron/config.json.digits_test.example`) | ¿Hay un optimizador mejor? |
+| `series_optimizer_digits_test` (10 seeds) | igual que `series_optimizer`, pero entrenando solo con `digits_prepared` y evaluando sobre `digits_test` (`neuron/config.json.digits_only_test.example`) | Ejercicio 2: ¿cuánto rinde en el «mundo real» sin el 8? |
+| `series_architecture_digits` (5 seeds) | `hidden_layers`: `[]`, `[16]`, `[32]`, `[64]`, `[128]`, `[64, 32]`, con η adaptativo; validación = 20 % de `digits_prepared` | Ejercicio 2: ¿qué arquitectura? |
 
 **Fraude** (Ejercicio 1, parte 1). Base: `neuron/config.json.fraud.example`, es decir `logistic`, η = 0.001, 1000 épocas,
 online, sin capas ocultas, train = validación = dataset completo. Antes hay que correr

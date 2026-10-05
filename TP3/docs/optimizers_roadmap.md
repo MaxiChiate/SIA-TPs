@@ -11,6 +11,7 @@
   `series_optimizer_test.json` (entrenando con `more_digits`, sobre `digits_test`). GD, momentum y η adaptativo
   no se distinguen; RMSProp y Adam quedan 0.4 a 0.7 puntos abajo (p < 0.03, Holm). Con 5 seeds no se veía
   ninguna diferencia (el p mínimo era 0.0625). Ver `DECISIONS.md`.
+- **Evaluación final:** el Ejercicio 2 se evalúa entrenando solo con `digits.csv` (`series_optimizer_digits_test.json`) y el Ejercicio 3 con `more_digits.csv` (`series_optimizer_test.json`); ver `DECISIONS.md`.
 - **Paso 9 (documentar): hecho.** `DECISIONS.md`, `CLAUDE.md` y `neuron/README.md` (sección Optimizadores).
 - **Ideas si se sigue:** más épocas o `tolerance`; otras arquitecturas con cada optimizador; otras
   particiones de los datos (la variación probada es la de pesos iniciales y shuffle); investigar por qué el

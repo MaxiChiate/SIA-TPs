@@ -183,19 +183,45 @@ RMSProp 0.001 (96.14 %) y Adam 0.0005 (96.45 %). Etapa 2: `series_optimizer.json
 - GD con η 0.5 y momentum con η 0.05 rinden igual: es el paso η/(1−α) con α = 0.9.
 - Alcance: la variación que se prueba es la de pesos iniciales y shuffle, con una sola partición de datos.
 
-**Elección y evaluación final:** el ganador por validación es η adaptativo (η 0.5), que se usa en la
-evaluación final: accuracy en test 95.5 ± 0.4 % (94.9 a 96.3; mediana 95.52). Se elige con validación y no
-con test, aunque en test momentum quede primero, para no usar el test en la elección. La matriz de confusión
-y los aciertos por clase son de la seed 4 (95.47 %, 113 errores en 2497), a menos de 0.05 de la mediana.
-Entrenada con `digits.csv`, que no tiene ningún 8: 86.30 % y el 8 tiene 0 % de aciertos (sus 243 imágenes
-van sobre todo a 3, 5 y 9); con `more_digits.csv`: 95.47 % y el 8 llega a 90.1 %. El 5 es la clase más
-débil (86.5 %, 542 ejemplos).
+**Elección y evaluación final:** el ganador por validación es η adaptativo (η 0.5). Se usa en las dos
+evaluaciones finales, y cada una responde a un ejercicio (ver la entrada siguiente).
 
 **Por qué:**
 - El accuracy global no alcanza: oculta que una clase entera falle. Por eso el reporte trae matriz de
   confusión y aciertos y precisión por clase.
 - `digits_test.csv` se usa solo en la evaluación final.
 - Límites: validación con una sola partición (`split_seed` 1); 50 épocas sin `tolerance`.
+
+## Ejercicios 2 y 3: qué datos se usan en cada uno, y arquitectura
+
+**Qué:** el enunciado dice que `digits.csv` se usa para ajustar parámetros e hiperparámetros, que `digits_test.csv`
+es el «mundo real» (no se usa para elegir nada), y que el Ejercicio 3 agrega `more_data_digits.csv` (en el
+repo, `more_digits.csv`) con la meta de accuracy ≥ 98 %. Por eso:
+- **Ejercicio 2** = solo `digits.csv`. Hiperparámetros con una validación de 20 % de `digits.csv`
+  (`validation_split`). Evaluación final: entrenar con `digits.csv` y medir en `digits_test.csv`
+  (`series_optimizer_digits_test.json`, 10 seeds): η adaptativo 86.26 ± 0.22 %, momentum 86.08, GD 86.07, Adam
+  85.98, RMSProp 85.13. El 8, que no está en `digits.csv`, tiene 0 % de aciertos y es el 9.7 % del test, así que
+  el techo es ≈ 90 %; en los otros 9 dígitos da 95.6 % (seed 4). Es el resultado «no satisfactorio» que
+  motiva el Ejercicio 3.
+- **Ejercicio 3** = `more_digits.csv` para entrenar, mismo test (`series_optimizer_test.json`): η adaptativo
+  95.5 ± 0.4 %. **No alcanza el 98 %**: faltan 2.5 puntos (113 errores en 2497; el 98 % admite 50). El 8 explica
+  8.8 de los 9.2 puntos de mejora entre ejercicios (0 a 90 % de aciertos en 243 imágenes). Los hiperparámetros
+  son los del Ejercicio 2 y no se reajustaron con `more_digits.csv`.
+- **Arquitectura** (`series_architecture_digits.json`, η adaptativo, validación de `digits.csv`, 5 seeds):
+  sin capa oculta 92.79 %, `[16]` 94.22, `[32]` 95.65, `[64]` 96.62, `[128]` 96.83, `[64, 32]` 96.37. `[128]` suma
+  0.2 puntos y cuesta el doble (41 s contra 22 s por corrida), y dos capas no mejoran a una: se usa `[64]` por
+  costo contra beneficio (la diferencia de 0.2 no se probó estadísticamente).
+
+**Por qué:**
+- Es lo que pide el enunciado, y evita elegir hiperparámetros mirando el test.
+- Las series viejas de dígitos (`series_eta`, `series_architecture`, `series_batch_size`, `series_train_dataset`,
+  `series_activation`, `series_shuffle`, `series_depth`) usan `more_digits` para entrenar y `digits_test` como
+  validación: sirven para explorar, pero no para elegir hiperparámetros del Ejercicio 2 según esta aclaración.
+  Las de optimizadores y arquitectura que se usan en la presentación parten de `digits.csv` con
+  `validation_split`.
+- Pendientes del Ejercicio 3: capacidad (`[128]` o más), aumento de datos, regularización, más épocas, y reajustar
+  η y arquitectura con una validación de `more_digits.csv`. Opcionales sin hacer (Ejercicios 2 y 3): robustez al
+  ruido gaussiano e interpretabilidad con métodos de atribución.
 
 ## Pesos iniciales: aleatorios uniformes en [−0.5, 0.5]
 

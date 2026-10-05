@@ -66,7 +66,7 @@ Se trabaja en la rama `dev-perceptron`.
 Cuatro herramientas: perceptrón simple **escalón**, **lineal** y **no lineal**, y perceptrón
 **multicapa**.
 
-**Ejercicio (validación)** — no se presenta, pero fija el contrato de cada módulo. Los cuatro
+**Ejercicio (validación)** — el enunciado dice que **no se presenta**, pero fija el contrato de cada módulo. Los cuatro
 casos: AND lógico con escalón, ~50 muestras
 de `y = x` con el lineal, ~50 de `y = tanh(x)` con el no lineal, y XOR multicapa con
 arquitecturas `[2,2,1]` y `[2,3,2,1]` (conviene hacer las cuentas a mano).
@@ -88,12 +88,28 @@ así que el rango útil es `(0, 1)` → `logistic`, no `tanh`.
 El enunciado insiste en explorar el dataset antes de modelar: documentación de cada columna,
 rangos, composición, datos limpios o no.
 
-**Ejercicio 2 — Dígitos manuscritos.** Clasificación 0–9 con perceptrón multicapa.
-`digits.csv` para aprendizaje, `digits_test.csv` para generalización. Primera pregunta del
-enunciado: cómo evaluar el desempeño del sistema.
+**Ejercicio 2 — Dígitos manuscritos.** Clasificación 0–9 con perceptrón multicapa. `digits.csv` para
+aprendizaje y `digits_test.csv` para generalización. Preguntas: (a) ¿cómo evalúo el desempeño del sistema?,
+(b) ¿qué variantes hago para encontrar la solución? Como **mínimo**: variantes de tasa de aprendizaje, de
+arquitectura y de mecanismos de optimización (y otros hiperparámetros si se quiere). **Aclaración: `digits.csv`
+se usa tanto para ajustar parámetros como hiperparámetros; `digits_test.csv` es el «mundo real» (equivale a poner
+el modelo en producción) y no se usa para elegir nada.** Lo mismo vale para el Ejercicio 3.
 
-**Opcionales** (no arrancar antes de tener lo obligatorio): ReLU en el no lineal y su efecto en
-las conclusiones; feature engineering sobre el dataset de fraude; calibración de probabilidades.
+**Ejercicio 3 — Más datos, meta 98 %.** La primera iteración no fue satisfactoria: el cliente pide **accuracy
+≥ 98 %** y pone a disposición `more_data_digits.csv` (en el repo, `more_digits.csv`, el que sí tiene 8).
+(a) ¿Cuál es el mejor resultado con el dataset nuevo? (b) ¿Qué técnicas se usaron para mejorar respecto del caso
+anterior? (c) Además de las técnicas propias, ¿qué otros factores influyeron en el cambio de rendimiento entre
+este ejercicio y el anterior?
+
+**Opcionales** (no arrancar antes de tener lo obligatorio). *Ejercicio 1:* ReLU en el no lineal y su efecto en
+las conclusiones (práctico); feature engineering sobre el dataset de fraude: qué otros features construir y
+cuáles descartar (teórico); calibración de probabilidades (teórico). *Ejercicios 2 y 3:* robustez al ruido, p. ej.
+ruido gaussiano sobre las imágenes de generalización (práctico); interpretabilidad de la red con métodos de
+atribución (práctico).
+
+**Recomendaciones del enunciado** (no obligatorias): operaciones matriciales para el rendimiento; reportar
+progreso al correr; configuración extensible y guardada; guardar y levantar un modelo para seguir entrenando
+(`initial_weights`); separar la información de cada experimento del análisis (gráficos, tablas).
 
 ## Diseño del perceptrón simple — decisiones tomadas
 
@@ -135,10 +151,14 @@ en C todavía no cubre todo (ver Pendiente).
 - **Ejercicio 1**: hecho, con los opcionales de ReLU y calibración: parte 1 (lineal vs. logistic vs. ReLU) y
   parte 2 (split estratificado 70/15/15, 6 entradas, **umbral 0.78**, que depende del split: ver
   `DECISIONS.md`). Falta, si se quiere: el feature engineering (opcional).
-- **Ejercicio 2**: hecho (etapas 1 y 2 con 10 seeds, ver `DECISIONS.md` y `docs/optimizers_roadmap.md`):
-  GD, momentum y η adaptativo no se distinguen y superan a RMSProp y Adam; test 95.5 ± 0.4 % con η adaptativo.
+- **Ejercicio 2** (solo `digits.csv`; ver `DECISIONS.md`): optimizadores (10 seeds), η y arquitectura hechos:
+  GD, momentum y η adaptativo se igualan y superan a RMSProp y Adam; `[64]`. Test (`digits_test.csv`): 86.3 ± 0.2 %,
+  limitado por el 8, que `digits.csv` no tiene.
+- **Ejercicio 3** (`more_digits.csv`): 95.5 ± 0.4 % en test. **Meta 98 % no alcanzada.** Falta: capacidad
+  (`[128]`+), aumento de datos, regularización, más épocas, reajustar con una validación de `more_digits.csv`; y los
+  opcionales de robustez al ruido e interpretabilidad (Ejercicios 2 y 3).
 - **Presentación**: Artifact con gráficos (https://claude.ai/artifact/NpkJsGnWfG1tzxKzwyiywZ); hay que
-  mantenerla alineada con este archivo y con `DECISIONS.md`. Hoy no le quedan resultados pendientes; la revisión visual la hace quien la presenta.
+  mantenerla alineada con este archivo y con `DECISIONS.md`. Tiene una sección por ejercicio (1, 2 y 3) más un anexo con la validación; la revisión visual la hace quien la presenta.
 
 ## Convenciones
 
