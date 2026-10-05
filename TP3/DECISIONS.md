@@ -2,6 +2,12 @@
 
 Decisiones que nos pueden preguntar en la defensa. Cada una dice qué hicimos y por qué.
 
+**Índice por ejercicio.** *Ejercicio 1 (fraude):* normalización, exploración, elección del TinyModel, generalización (split,
+entradas, umbral), calibración, ReLU, activación logistic. *Ejercicio 2 (dígitos, solo `digits.csv`):* optimizadores (etapa 2),
+datos de cada ejercicio y arquitectura, comparación de optimizadores, η adaptativo, hiperparámetros del optimizador.
+*Ejercicio 3:* cómo se llegó a 98,7 %. *Núcleo de la red (transversal):* pesos iniciales, `batch_size`, backprop, medición del
+error, métricas, fin del entrenamiento, shuffle, `validation_split`, ReLU, módulo de optimizadores, signo de los pasos, gráficos.
+
 ## Normalización de entradas (fraude): z-score sobre cada columna
 
 **Qué:** `scripts/prepare_fraud_dataset.py` lleva cada input a `(x − media) / desvío`. El

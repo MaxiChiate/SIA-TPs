@@ -6,11 +6,11 @@ desde acá — así se puede limpiar el chat sin perder lo decidido.
 Materia: Sistemas de Inteligencia Artificial (ITBA), 2° cuatrimestre 2026, Grupo 9.
 Enunciado: `docs/Enunciado TP3 - 2Q 2026.pdf`.
 
-## Estado
+## Estado técnico (código)
 
 **Multicapa en C con backpropagation.** Entrena y valida sobre CSVs; tests con `make test` (en `neuron/tests/`). XOR con
 `[2,2,1]` y `tanh` (GD, η 0.1, online, 1000 épocas) converge en 2 de 6 seeds (4/6 caen en una meseta
-o un mínimo local); con `[2,3,2,1]` convergió en las 6 (medido el 4/10 sobre `4259949`). Lo que existe:
+o un mínimo local); con `[2,3,2,1]` convergió en las 6 (medido el 4/10). Lo que existe:
 
 ```
 docs/Enunciado TP3 - 2Q 2026.pdf
@@ -35,7 +35,7 @@ scripts/
 analysis/                        # README.md explica cómo correrlo
   sweep.py                       # serie de corridas variando un parámetro × seeds, en paralelo -> summary.csv
   sweep_report.py                # report.html de la serie: curvas promedio por variante, resultado final por seed
-  series_*.json                  # series sobre dígitos (more_digits vs digits_test): eta, hidden_layers, batch_size, train
+  series_*.json                  # una serie por pregunta (fraude, optimizadores, arquitectura, Ejercicio 3); la tabla está en analysis/README.md
   fraud_threshold.py             # métricas (precisión, recall, PR-AUC) y umbral del TinyModel, elegido en validación
   fraud_calibration.py           # calibración (Platt, isotónica) de la salida del TinyModel contra flagged_fraud
   fraud_split_variability.py     # cuánto cambian el umbral y las métricas con otros splits
@@ -113,55 +113,83 @@ atribución (práctico).
 progreso al correr; configuración extensible y guardada; guardar y levantar un modelo para seguir entrenando
 (`initial_weights`); separar la información de cada experimento del análisis (gráficos, tablas).
 
-## Diseño del perceptrón simple — decisiones tomadas
+## Diseño de la red — lo cerrado (el detalle y el porqué están en `DECISIONS.md`)
 
-El pseudocódigo original se borró; lo cerrado queda acá, para no volver a discutirlo. La neurona
-en C todavía no cubre todo (ver Pendiente).
+- **Una sola implementación para los cuatro perceptrones**: capas de neuronas en C (`network.c`, `neuron.c`); el simple es
+  `hidden_layers: []`. **Una sola activación para toda la red** (`sign`, `lineal`, `tanh`, `logistic`, `relu`): por eso ReLU en
+  las ocultas con salida logistic no se puede combinar.
+- **El bias es `weights[0]`**, con entrada fija 1: se actualiza con la misma fórmula que el resto. Convención `w += Δw`.
+- **Backprop acumula `d = −∂E/∂w` sin η** (primero todos los δ, después los pesos) y **el optimizador decide el paso**
+  (`optimizer/`: `gd`, `momentum`, `rmsprop`, `adam`, `adaptive_eta`; genérico, uno por neurona). El escalón no tiene rama
+  aparte: `sign_prime` devuelve 1 y la regla delta da exactamente la de Rosenblatt.
+- **`batch_size` unifica online (1), mini-batch y batch completo (N)** en un solo camino. `shuffle` por época es opcional.
+- **Se guarda la mejor época de train, no la última**; convergencia: cero mal clasificadas con `sign`, `tolerance` opcional con el resto.
+- **El error se mide en una pasada aparte al final de cada época** (MSE, MAE y máx |e|; E = ½·Σ(ζ − O)²); validación y train son dos curvas.
+- **Hiperparámetros del optimizador sin default** en el config: cada `config.json` de corrida dice con qué valores entrenó.
+- Pesos iniciales aleatorios uniformes en [−0.5, 0.5] con el RNG propio inyectado (una instancia por corrida).
 
-- **Cuatro módulos**, frontera clara entre ellos: `activations` (θ, θ', rango), `update_rules`
-  (Δw), `model` (pesos y predicción), `trainer` (loop de entrenamiento).
-- **El bias va en `weights[0]`**, con entrada fija `x0 = 1` agregada por `with_bias`. Así el
-  bias se actualiza con la misma fórmula que el resto de los pesos, sin caso especial.
-- **Convención de update**: `w_nuevo = w_viejo + Δw`. El menos del gradiente ya está adentro
-  de Δw.
-- **Única bifurcación entre el escalón y el resto**: el flag `uses_gradient` de la activación
-  elige entre `rosenblatt_update` y `gradient_update`. La regla del escalón **no** sale de
-  derivar el error — θ' = 0 daría Δw = 0 siempre; se justifica porque mueve `h` hacia el lado
-  correcto de la frontera.
-- **`batch_size` unifica los tres regímenes** en un solo camino de código: 1 = online (N
-  updates por época), N = batch full (1 update por época), intermedio = mini-batch. Un solo
-  update por batch, acumulando Δw.
-- **El trainer guarda el mejor error visto, no el último**: el error no baja monótonamente,
-  una corrección puede romper otra muestra.
-- **Criterio de convergencia según la activación**: `misclassified == 0` si es discreta
-  (escalón), `error < tolerance` si no (con floats un 0 exacto nunca pasa).
-- **Métricas por época sobre todo el dataset**, con los pesos ya actualizados, guardadas en un
-  `EpochRecord` (época, error, mal clasificadas, pesos, cantidad de updates).
-- `load_weights` existe para retomar un entrenamiento sin arrancar de cero.
-- `decision_boundary` solo tiene sentido con 2 entradas; devuelve la recta `h = 0`.
+## Estado de la entrega
+
+**Los tres ejercicios están resueltos; la presentación está armada. Lo que queda es opcional o de revisión.** Los números
+de cada resultado, con su porqué, están en `DECISIONS.md` (una entrada por decisión). Resumen:
+
+- **Ejercicio 1** (fraude, `neuron/data/fraud_dataset.csv`, el `transactions.csv` del enunciado): exploración
+  (`scripts/explore_fraud_dataset.py`); parte 1 con todo el dataset: la logistic (R² 0.881) gana al lineal (0.714) y
+  una capa oculta casi no suma; ReLU sin capa oculta rinde como el lineal. Parte 2: split estratificado 70/15/15,
+  6 entradas (sin `timestamp`, `device_screen_resolution`, `time_since_last_login_s`), **umbral 0.78** (mediana de
+  10 splits; el 0.82 del split 1 era frágil), calibración (Platt/isotónica: ECE de 0.31 a ≤ 0.02). Opcional que falta:
+  feature engineering (teórico: qué features construir).
+- **Ejercicio 2** (solo `digits.csv`; el enunciado reserva `digits_test.csv` como «mundo real»): η por optimizador,
+  cinco optimizadores con 10 seeds (GD, momentum y η adaptativo se igualan y superan a RMSProp y Adam), arquitectura
+  `[64]`. En test 86.3 ± 0.2 %: el 8 no está en `digits.csv`.
+- **Ejercicio 3** (`more_digits.csv` = el `more_data_digits.csv` del enunciado): **98.7 % en test** (meta 98 %) con la
+  unión de `digits.csv` + `more_digits.csv`, `[512]`, aumento de datos (desplazamientos ±2 px, rotaciones ±10°) y
+  ensemble de 9 redes. Búsqueda con una validación apartada de la unión; **test mirado una sola vez**.
+- **Presentación**: Artifact https://claude.ai/artifact/NpkJsGnWfG1tzxKzwyiywZ (privado), una sección por ejercicio
+  más un anexo con la validación (el enunciado dice que esa no se presenta). **La fuente es el Artifact**: se lee con la
+  herramienta Artifact (`action: read`) y se republica con la misma `url`; los gráficos los genera
+  `analysis/plots_presentation.py` como HTML de diapositiva y se pegan en los archivos de cada slide. Hay una copia vieja
+  en Google Slides del usuario que **no se puede editar** desde acá (no hay conector de edición); si se entrega desde
+  Drive hay que volver a exportar desde el Artifact.
 
 ## Pendiente
 
-- **Dígitos**: `scripts/prepare_digits_dataset.py` los deja en one-hot (`x1..x784,zeta_0..zeta_9`) y
-  la red ya entrena con 10 salidas; el reporte muestra aciertos por argmax. El reporte ya trae matriz de
-  confusión y aciertos/precisión por clase (probada solo con datos sintéticos). `digits.csv` no tiene ningún 8 y tiene pocos 5 (271);
-  `more_digits.csv` sí tiene 8.
-- **Datasets**: ya están en `neuron/data/` (gitignoreado): `fraud_dataset.csv` (7500 filas, el
-  `transactions.csv` del enunciado), `digits.csv`, `digits_test.csv`, `more_digits.csv` y
-  `fraud_dataset_documentation.pdf`. `scripts/explore_fraud_dataset.py` es la exploración del
-  fraude (resultados en `DECISIONS.md`).
-- **Ejercicio 1**: hecho, con los opcionales de ReLU y calibración: parte 1 (lineal vs. logistic vs. ReLU) y
-  parte 2 (split estratificado 70/15/15, 6 entradas, **umbral 0.78**, que depende del split: ver
-  `DECISIONS.md`). Falta, si se quiere: el feature engineering (opcional).
-- **Ejercicio 2** (solo `digits.csv`; ver `DECISIONS.md`): optimizadores (10 seeds), η y arquitectura hechos:
-  GD, momentum y η adaptativo se igualan y superan a RMSProp y Adam; `[64]`. Test (`digits_test.csv`): 86.3 ± 0.2 %,
-  limitado por el 8, que `digits.csv` no tiene.
-- **Ejercicio 3**: **meta cumplida: 98,7 % en test** (ensemble de 9 redes; una `[512]` sola, 98,3 %). Unión de
-  `digits.csv` y `more_digits.csv`, `[512]`, aumento de datos y ensemble; búsqueda con una validación apartada,
-  test mirado una sola vez (`DECISIONS.md`). Faltan solo los opcionales (Ejercicios 2 y 3): robustez al ruido
-  e interpretabilidad.
-- **Presentación**: Artifact con gráficos (https://claude.ai/artifact/NpkJsGnWfG1tzxKzwyiywZ); hay que
-  mantenerla alineada con este archivo y con `DECISIONS.md`. Tiene una sección por ejercicio (1, 2 y 3) más un anexo con la validación; la revisión visual la hace quien la presenta.
+- **Opcionales de los Ejercicios 2 y 3** (el usuario los dejó para el día siguiente): robustez al ruido (agregar ruido
+  gaussiano a las imágenes de `digits_test.csv` y medir el ensemble, con distintos σ) e interpretabilidad con métodos de
+  atribución (p. ej. gradiente o saliency sobre la entrada, que la red permite calcular con la derivada de la
+  activación). Nada de eso está hecho. Opcional del Ejercicio 1: feature engineering.
+- **Revisión visual de la presentación**: nunca se renderizó ni se miró; la hace el usuario. Las diapositivas más cargadas
+  son la 10, 11, 17 y 22.
+- Cualquier cambio de resultados: actualizar `DECISIONS.md`, este archivo y el Artifact a la vez.
+
+## Cómo reproducir (los resultados no se versionan)
+
+`analysis/results/` y `neuron/results/` están gitignoreados: **los números de `DECISIONS.md` y de la presentación salen de
+corridas que hay que repetir si se pierden**. Todo es determinista (misma seed y config, mismo resultado). Con el binario
+compilado (`cd neuron && make`) y `python3` sin dependencias (solo `plots_main.py` pide plotly):
+
+1. Datos (a `neuron/data/`, gitignoreado): `python3 scripts/prepare_fraud_dataset.py`; `python3 scripts/prepare_digits_dataset.py`;
+   `python3 scripts/prepare_fraud_split.py --seed 1 --name fraud_drop3 --drop timestamp device_screen_resolution time_since_last_login_s`
+   (y las variantes de `analysis/README.md`); `python3 scripts/prepare_digits_ex3.py --name ex3_base --seed 1`
+   (más `ex3_c --center`, `ex3_a2 --augment 2`, `ex3_ca2 --center --augment 2`, `ex3_a4 --augment 4`).
+2. Series: `python3 analysis/sweep.py analysis/series_<nombre>.json --no-run-reports` (la tabla de series está en
+   `analysis/README.md`). Tiempos: las de fraude, segundos; las de optimizadores en dígitos, ~1 min; las del Ejercicio 3
+   con `[256]` o más y datos aumentados, **10 a 17 min por corrida** (9 en paralelo).
+3. Evaluación y gráficos: `analysis/fraud_threshold.py`, `fraud_calibration.py`, `fraud_split_variability.py`,
+   `digits_ensemble.py`, `plots_presentation.py` (ver `--help` de cada uno).
+
+## Trampas conocidas
+
+- **`sweep.py`: el `set` de una variante pisa el `set` de la serie.** Una vez se evaluó el «test» sobre la validación por
+  eso. Antes de leer números de una evaluación final, comprobar el `validation_dataset` de cada `config.json`.
+- `sweep.py` admite como máximo 8 variantes por serie. Un config no puede tener `validation_split` y `validation_dataset`.
+- **`digits_test.csv` no se usa para elegir nada** (Ejercicios 2 y 3): hiperparámetros con validación apartada del
+  entrenamiento, test una sola vez al final. Las series viejas de dígitos (`series_eta`, `series_architecture`, etc.)
+  usan `digits_test` como validación: sirven para explorar, no para elegir.
+- El shell es zsh: no divide palabras en variables sin comillas. `ls` está aliasado (agrega íconos) y rompe
+  pipelines; usar `printf '%s\n' patrón*` o `find`. No hay pandas, numpy ni matplotlib.
+- La carpeta de trabajo del Artifact está en un directorio temporal que no sobrevive: no es fuente de verdad.
+- Otras personas del equipo empujan a la misma rama (`dev-perceptron`): hacer `git fetch` y `git pull --rebase` antes de pushear.
 
 ## Convenciones
 
@@ -187,6 +215,6 @@ en C todavía no cubre todo (ver Pendiente).
   preguntar en la defensa. Una entrada por decisión, concisa y concreta: **Qué** + **Por qué**.
 - Si algo tiene más de una forma razonable de resolverse, plantear las opciones en vez de
   elegir solo.
-- Commits chicos y atómicos, con mensaje de una sola línea.
-- **Nunca `git push` sin confirmación explícita, cada vez.**
+- Commits chicos y atómicos, con mensaje de una sola línea y el trailer `Co-Authored-By` que indique la sesión.
+- **Nunca `git push` sin confirmación explícita, cada vez** (el usuario suele confirmar con «dale, pusheá»).
 - No se trabaja en `main`: rama `dev-perceptron`.
