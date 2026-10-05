@@ -1,0 +1,68 @@
+{
+  "_comment": "Ejercicio 2: arquitectura. η adaptativo (η 0.5, el ganador de la etapa 2) con distintas capas ocultas; train y validación salen de digits.csv (validation_split 0.2, split_seed 1). 5 seeds.",
+  "base_config": "../neuron/config.json.digits_optimizers.example",
+  "set": {
+    "optimizer": "adaptive_eta",
+    "eta": 0.5,
+    "eta_increase": 0.05,
+    "eta_decrease": 0.5,
+    "eta_patience_up": 3,
+    "eta_patience_down": 3
+  },
+  "variants": [
+    {
+      "label": "[] (simple)",
+      "set": {
+        "hidden_layers": []
+      }
+    },
+    {
+      "label": "[16]",
+      "set": {
+        "hidden_layers": [
+          16
+        ]
+      }
+    },
+    {
+      "label": "[32]",
+      "set": {
+        "hidden_layers": [
+          32
+        ]
+      }
+    },
+    {
+      "label": "[64]",
+      "set": {
+        "hidden_layers": [
+          64
+        ]
+      }
+    },
+    {
+      "label": "[128]",
+      "set": {
+        "hidden_layers": [
+          128
+        ]
+      }
+    },
+    {
+      "label": "[64, 32]",
+      "set": {
+        "hidden_layers": [
+          64,
+          32
+        ]
+      }
+    }
+  ],
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ]
+}
