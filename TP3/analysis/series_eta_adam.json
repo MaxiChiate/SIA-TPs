@@ -1,0 +1,8 @@
+{
+  "_comment": "Ej. 2, comparación de optimizadores, etapa 1: el mejor η de adam (β1 = 0.9, β2 = 0.999, ε = 1e-8, los del paper). Grilla alrededor del 0.001 del paper: cada peso se mueve ≈ η por paso.",
+  "base_config": "../neuron/config.json.digits_optimizers.example",
+  "set": {"optimizer": "adam", "adam_beta1": 0.9, "adam_beta2": 0.999, "optimizer_epsilon": 1e-8},
+  "vary": "eta",
+  "values": [0.0001, 0.0005, 0.001, 0.005],
+  "seeds": [1, 2, 3]
+}

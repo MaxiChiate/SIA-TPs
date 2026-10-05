@@ -1,0 +1,12 @@
+{
+  "_comment": "Ej. 2, comparación de optimizadores, etapa 1: el mejor η inicial de adaptive_eta. a = 10% del η inicial (sumarle un valor fijo a η de escalas distintas no sería comparable), b = 0.5, k = k' = 3 (con 50 épocas, una paciencia mayor casi no lo deja actuar).",
+  "base_config": "../neuron/config.json.digits_optimizers.example",
+  "set": {"optimizer": "adaptive_eta", "eta_decrease": 0.5, "eta_patience_up": 3, "eta_patience_down": 3},
+  "variants": [
+    {"label": "0.001", "set": {"eta": 0.001, "eta_increase": 0.0001}},
+    {"label": "0.005", "set": {"eta": 0.005, "eta_increase": 0.0005}},
+    {"label": "0.01", "set": {"eta": 0.01, "eta_increase": 0.001}},
+    {"label": "0.05", "set": {"eta": 0.05, "eta_increase": 0.005}}
+  ],
+  "seeds": [1, 2, 3]
+}
