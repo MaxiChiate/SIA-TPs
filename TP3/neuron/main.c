@@ -93,9 +93,17 @@ static double random_weight(void * context) {
 }
 
 
-// Plain gradient descent with the config's eta
+// The config already checked the optimizer and its hyperparameters; the ones it doesn't read are 0
 static OptimizerConfig optimizer_config(const Config * config) {
-  return (OptimizerConfig) { .name = "gd", .eta = config->eta };
+  return (OptimizerConfig) {
+    .name = config->optimizer,
+    .eta = config->eta,
+    .momentum = config->momentum,
+    .decay = config->rmsprop_decay,
+    .beta1 = config->adam_beta1,
+    .beta2 = config->adam_beta2,
+    .epsilon = config->optimizer_epsilon,
+  };
 }
 
 

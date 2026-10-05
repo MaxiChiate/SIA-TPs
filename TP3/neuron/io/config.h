@@ -22,11 +22,19 @@ typedef struct {
   unsigned int split_seed; // seed of that split, independent of seed; required with validation_split
   char initial_weights[CONFIG_STRING_MAX]; // optional: an earlier run's directory or weights.csv to keep
                                            // training from; "" (the default) draws random weights
+  char optimizer[CONFIG_STRING_MAX]; // optional: "gd" (the default), "momentum", "rmsprop" or "adam"
+  // The optimizer's hyperparameters: each one is required with the optimizers that read it and refused with
+  // the rest, so they stay at 0 when unused
+  double momentum;          // alpha, momentum
+  double rmsprop_decay;     // gamma, rmsprop
+  double adam_beta1;        // adam
+  double adam_beta2;        // adam
+  double optimizer_epsilon; // rmsprop and adam
 } Config;
 
 // Reads a flat JSON object with the Config fields as keys. Every key is required except the optional
 // ones, which default to zero / "". Exactly one of validation_dataset and validation_split must be given,
-// and split_seed goes with validation_split.
+// and split_seed goes with validation_split. The optimizer comes with exactly the hyperparameters it reads.
 // Returns 1 on success; on failure prints the reason to stderr and returns 0.
 int config_load(const char * path, Config * config);
 

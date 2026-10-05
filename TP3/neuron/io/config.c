@@ -32,9 +32,48 @@ static const Field FIELDS[] = {
   { "validation_split",   FIELD_DOUBLE,    offsetof(Config, validation_split), 0, 1 },
   { "split_seed",         FIELD_UINT,      offsetof(Config, split_seed), 0, 1 },
   { "initial_weights",    FIELD_STRING,    offsetof(Config, initial_weights), 0, 1 },
+  { "optimizer",          FIELD_STRING,    offsetof(Config, optimizer), 0, 1 },
+  { "momentum",           FIELD_DOUBLE,    offsetof(Config, momentum), 0, 1 },
+  { "rmsprop_decay",      FIELD_DOUBLE,    offsetof(Config, rmsprop_decay), 0, 1 },
+  { "adam_beta1",         FIELD_DOUBLE,    offsetof(Config, adam_beta1), 0, 1 },
+  { "adam_beta2",         FIELD_DOUBLE,    offsetof(Config, adam_beta2), 0, 1 },
+  { "optimizer_epsilon",  FIELD_DOUBLE,    offsetof(Config, optimizer_epsilon), 0, 1 },
 };
 
 #define N_FIELDS ((int) (sizeof(FIELDS) / sizeof(FIELDS[0])))
+
+// Optimizer hyperparameters. None has a default: the run's config.json shows every value it trained with.
+typedef struct {
+  const char * key;
+  const char * typical; // suggested when it's missing (class 12.1 and the Adam paper)
+  int fraction;         // 1: in [0, 1); 0: positive
+} Hyperparameter;
+
+static const Hyperparameter HYPERPARAMETERS[] = {
+  { "momentum",          "0.9",   1 },
+  { "rmsprop_decay",     "0.9",   1 },
+  { "adam_beta1",        "0.9",   1 },
+  { "adam_beta2",        "0.999", 1 },
+  { "optimizer_epsilon", "1e-8",  0 },
+};
+
+#define N_HYPERPARAMETERS ((int) (sizeof(HYPERPARAMETERS) / sizeof(HYPERPARAMETERS[0])))
+#define MAX_OPTIMIZER_KEYS 3
+
+// Which hyperparameters each optimizer reads. The names must match the optimizer module's (a test checks it).
+typedef struct {
+  const char * name;
+  const char * keys[MAX_OPTIMIZER_KEYS]; // NULL after the last one
+} OptimizerKeys;
+
+static const OptimizerKeys OPTIMIZERS[] = {
+  { "gd",       { NULL } },
+  { "momentum", { "momentum" } },
+  { "rmsprop",  { "rmsprop_decay", "optimizer_epsilon" } },
+  { "adam",     { "adam_beta1", "adam_beta2", "optimizer_epsilon" } },
+};
+
+#define N_OPTIMIZERS ((int) (sizeof(OPTIMIZERS) / sizeof(OPTIMIZERS[0])))
 
 typedef struct {
   const char * path;
@@ -196,6 +235,72 @@ static int check_validation_source(const Parser * parser, const int seen[]) {
 }
 
 
+static const OptimizerKeys * find_optimizer(const char * name) {
+  for (int i = 0; i < N_OPTIMIZERS; i++) {
+    if (strcmp(OPTIMIZERS[i].name, name) == 0) return &OPTIMIZERS[i];
+  }
+  return NULL;
+}
+
+
+static int reads_key(const OptimizerKeys * optimizer, const char * key) {
+  for (int i = 0; i < MAX_OPTIMIZER_KEYS && optimizer->keys[i] != NULL; i++) {
+    if (strcmp(optimizer->keys[i], key) == 0) return 1;
+  }
+  return 0;
+}
+
+
+static int unknown_optimizer(const Parser * parser, const char * name) {
+  fprintf(stderr, "%s: unknown optimizer \"%s\" (available:", parser->path, name);
+  for (int i = 0; i < N_OPTIMIZERS; i++) {
+    fprintf(stderr, "%s %s", i == 0 ? "" : ",", OPTIMIZERS[i].name);
+  }
+  fprintf(stderr, ")\n");
+  return 0;
+}
+
+
+static int check_hyperparameter_range(const Parser * parser, const Config * config, const Hyperparameter * hyperparameter) {
+  double value = *(const double *) ((const char *) config + find_field(hyperparameter->key)->offset);
+  if (hyperparameter->fraction && !(value >= 0 && value < 1)) {
+    fprintf(stderr, "%s: \"%s\" must be in [0, 1)\n", parser->path, hyperparameter->key);
+    return 0;
+  }
+  if (!hyperparameter->fraction && !(value > 0)) {
+    fprintf(stderr, "%s: \"%s\" must be positive\n", parser->path, hyperparameter->key);
+    return 0;
+  }
+  return 1;
+}
+
+
+// Without "optimizer" it's gd. Every hyperparameter the optimizer reads is required, and any other refused.
+static int check_optimizer(const Parser * parser, Config * config, const int seen[]) {
+  if (!was_given(seen, "optimizer")) strcpy(config->optimizer, "gd");
+  const OptimizerKeys * optimizer = find_optimizer(config->optimizer);
+  if (optimizer == NULL) return unknown_optimizer(parser, config->optimizer);
+
+  for (int i = 0; i < N_HYPERPARAMETERS; i++) {
+    const Hyperparameter * hyperparameter = &HYPERPARAMETERS[i];
+    int reads = reads_key(optimizer, hyperparameter->key);
+    int given = was_given(seen, hyperparameter->key);
+    if (reads && !given) {
+      fprintf(stderr, "%s: missing key \"%s\" for optimizer \"%s\" (typical: %s)\n", parser->path,
+              hyperparameter->key, optimizer->name, hyperparameter->typical);
+      return 0;
+    }
+    if (!reads && given) {
+      fprintf(stderr, "%s: \"%s\" doesn't go with optimizer \"%s\"\n", parser->path, hyperparameter->key,
+              optimizer->name);
+      return 0;
+    }
+    if (reads && !check_hyperparameter_range(parser, config, hyperparameter)) return 0;
+  }
+  return 1;
+}
+
+
 static int parse_object(Parser * parser, Config * config) {
   int seen[N_FIELDS] = {0};
 
@@ -238,7 +343,7 @@ static int parse_object(Parser * parser, Config * config) {
     }
   }
 
-  return check_validation_source(parser, seen);
+  return check_validation_source(parser, seen) && check_optimizer(parser, config, seen);
 }
 
 

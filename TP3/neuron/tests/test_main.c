@@ -732,6 +732,47 @@ static void test_config_loading(void) {
 }
 
 
+// Each optimizer with exactly the hyperparameters it reads
+static const char * OPTIMIZER_CONFIGS[][2] = {
+  { "gd",       ",\"optimizer\":\"gd\"" },
+  { "momentum", ",\"optimizer\":\"momentum\",\"momentum\":0.9" },
+  { "rmsprop",  ",\"optimizer\":\"rmsprop\",\"rmsprop_decay\":0.9,\"optimizer_epsilon\":1e-8" },
+  { "adam",     ",\"optimizer\":\"adam\",\"adam_beta1\":0.9,\"adam_beta2\":0.999,\"optimizer_epsilon\":1e-8" },
+};
+
+static void test_optimizer_config(void) {
+  Config config;
+  check(load_config_with("", &config) && strcmp(config.optimizer, "gd") == 0); // the default
+
+  // Every optimizer the config accepts exists in the optimizer module
+  for (int i = 0; i < 4; i++) {
+    check(load_config_with(OPTIMIZER_CONFIGS[i][1], &config));
+    check(strcmp(config.optimizer, OPTIMIZER_CONFIGS[i][0]) == 0);
+    OptimizerConfig optimizer = { .name = config.optimizer, .eta = config.eta };
+    Optimizer created = optimizer_new(&optimizer, 1);
+    check(created != NULL);
+    if (created != NULL) optimizer_free(created);
+  }
+  check(load_config_with(OPTIMIZER_CONFIGS[3][1], &config));
+  check_close(config.adam_beta1, 0.9, 0);
+  check_close(config.adam_beta2, 0.999, 0);
+  check_close(config.optimizer_epsilon, 1e-8, 0);
+  check(load_config_with(",\"optimizer\":\"momentum\",\"momentum\":0", &config)); // alpha = 0 is allowed
+
+  fprintf(stderr, "  (expected errors follow)\n");
+  check(!load_config_with(",\"optimizer\":\"nope\"", &config));
+  check(!load_config_with(",\"optimizer\":\"\"", &config));
+  check(!load_config_with(",\"optimizer\":\"momentum\"", &config)); // missing alpha, suggests 0.9
+  check(!load_config_with(",\"optimizer\":\"adam\",\"adam_beta1\":0.9,\"optimizer_epsilon\":1e-8", &config));
+  check(!load_config_with(",\"momentum\":0.9", &config)); // belongs to momentum, not to gd
+  check(!load_config_with(",\"optimizer\":\"adam\",\"adam_beta1\":0.9,\"adam_beta2\":0.999,"
+                          "\"optimizer_epsilon\":1e-8,\"momentum\":0.9", &config));
+  check(!load_config_with(",\"optimizer\":\"momentum\",\"momentum\":1", &config));
+  check(!load_config_with(",\"optimizer\":\"momentum\",\"momentum\":-0.1", &config));
+  check(!load_config_with(",\"optimizer\":\"rmsprop\",\"rmsprop_decay\":0.9,\"optimizer_epsilon\":0", &config));
+}
+
+
 typedef void (*Test)(void);
 
 int main(void) {
@@ -763,6 +804,7 @@ int main(void) {
     { "dataset loading", test_dataset_loading },
     { "dataset split", test_dataset_split },
     { "config loading", test_config_loading },
+    { "optimizer config", test_optimizer_config },
   };
   int n_tests = (int) (sizeof(tests) / sizeof(tests[0]));
 
