@@ -36,6 +36,8 @@ analysis/                        # README.md explica cómo correrlo
   sweep_report.py                # report.html de la serie: curvas promedio por variante, resultado final por seed
   series_*.json                  # series sobre dígitos (more_digits vs digits_test): eta, hidden_layers, batch_size, train
   fraud_threshold.py             # métricas (precisión, recall, PR-AUC) y umbral del TinyModel, elegido en validación
+  fraud_calibration.py           # calibración (Platt, isotónica) de la salida del TinyModel contra flagged_fraud
+  fraud_split_variability.py     # cuánto cambian el umbral y las métricas con otros splits
   plots_presentation.py          # gráficos de la presentación como HTML de diapositiva (solo stdlib)
   plots_main.py                  # gráficos de plotly de cada serie + index.html (como TP2); necesita plotly
   plots_data.py / plots_compare.py / plots_index.py / plots_style.py   # carga y bandas, estadística pareada, índice con modales (i), paleta
@@ -130,15 +132,13 @@ en C todavía no cubre todo (ver Pendiente).
   `transactions.csv` del enunciado), `digits.csv`, `digits_test.csv`, `more_digits.csv` y
   `fraud_dataset_documentation.pdf`. `scripts/explore_fraud_dataset.py` es la exploración del
   fraude (resultados en `DECISIONS.md`).
-- **Ejercicio 1**: hecho en lo central: parte 1 (lineal vs. logistic vs. ReLU) y parte 2 (split
-  estratificado 70/15/15, 6 entradas, umbral 0.82 con test precisión 0.76 y recall 0.96); ver
-  `DECISIONS.md`. Falta, si se quiere: variar el split (seeds) para medir cuánto mueve el umbral, y
-  calibración de probabilidades (opcional).
-- **Ejercicio 2**: optimizadores hechos (etapas 1 y 2, ver `DECISIONS.md` y `docs/optimizers_roadmap.md`):
-  sin diferencias significativas entre los cinco con su mejor η; test 95.4 ± 0.5 % con η adaptativo.
-  Falta documentar los optimizadores en `neuron/README.md`.
+- **Ejercicio 1**: hecho, con los opcionales de ReLU y calibración: parte 1 (lineal vs. logistic vs. ReLU) y
+  parte 2 (split estratificado 70/15/15, 6 entradas, **umbral 0.78**, que depende del split: ver
+  `DECISIONS.md`). Falta, si se quiere: el feature engineering (opcional).
+- **Ejercicio 2**: hecho (etapas 1 y 2 con 10 seeds, ver `DECISIONS.md` y `docs/optimizers_roadmap.md`):
+  GD, momentum y η adaptativo no se distinguen y superan a RMSProp y Adam; test 95.5 ± 0.4 % con η adaptativo.
 - **Presentación**: Artifact con gráficos (https://claude.ai/artifact/NpkJsGnWfG1tzxKzwyiywZ); hay que
-  mantenerla alineada con este archivo y con `DECISIONS.md`. Hoy no le quedan resultados pendientes; falta revisarla visualmente.
+  mantenerla alineada con este archivo y con `DECISIONS.md`. Hoy no le quedan resultados pendientes; la revisión visual la hace quien la presenta.
 
 ## Convenciones
 

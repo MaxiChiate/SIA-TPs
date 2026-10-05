@@ -7,12 +7,14 @@
 - **Etapa 1 (η por optimizador): hecha.** Se amplió la grilla hacia arriba hasta encontrar el pico de cada
   uno (`analysis/series_eta_{gd,adaptive,momentum,rmsprop,adam}.json` y `series_eta_edges*.json`). Mejor η:
   GD 0.5, η adaptativo 0.5, momentum 0.05, RMSProp 0.001, Adam 0.0005.
-- **Etapa 2 (los cinco con su mejor η, 5 seeds): hecha.** `analysis/series_optimizer.json` (validación) y
-  `series_optimizer_test.json` (entrenando con `more_digits`, sobre `digits_test`). Sin diferencias
-  significativas; ver `DECISIONS.md`.
-- **Falta (paso 9, documentar):** `neuron/README.md`. `DECISIONS.md` y `CLAUDE.md` ya están.
-- **Ideas si se sigue:** más épocas o `tolerance`; otras arquitecturas con cada optimizador; más seeds
-  (con 5, el p mínimo del test exacto es 0.0625: para poder rechazar a 0.05 hacen falta 6 o más).
+- **Etapa 2 (los cinco con su mejor η, 10 seeds): hecha.** `analysis/series_optimizer.json` (validación) y
+  `series_optimizer_test.json` (entrenando con `more_digits`, sobre `digits_test`). GD, momentum y η adaptativo
+  no se distinguen; RMSProp y Adam quedan 0.4 a 0.7 puntos abajo (p < 0.03, Holm). Con 5 seeds no se veía
+  ninguna diferencia (el p mínimo era 0.0625). Ver `DECISIONS.md`.
+- **Paso 9 (documentar): hecho.** `DECISIONS.md`, `CLAUDE.md` y `neuron/README.md` (sección Optimizadores).
+- **Ideas si se sigue:** más épocas o `tolerance`; otras arquitecturas con cada optimizador; otras
+  particiones de los datos (la variación probada es la de pesos iniciales y shuffle); investigar por qué el
+  MSE de validación de η adaptativo sube hacia el final.
 
 Plan para sumar a la red los optimizadores de la Clase 12.1: **momentum**, **η adaptativo**, **RMSProp**
 y **Adam**. El enunciado pide como mínimo comparar "variantes de mecanismos de optimización" en dígitos,

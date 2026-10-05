@@ -79,10 +79,23 @@ shuffle, 5 seeds).
 - Tamaño del train: con 262 muestras (5 %) MSE 0.0112 y con 5250 (100 %) 0.0108.
 - Final: 6 entradas, monto sin transformar, train completo. Train 0.0109 y validación 0.0108: sin sobreajuste.
 
-**Umbral:** el más alto con recall ≥ 95 % en validación, redondeado hacia abajo a 0.01 (el exacto es 0.8248,
-y 0.825 ya no llega al 95 %). Da **0.82**: validación precisión 0.810 y recall 0.954; test (1125
-transacciones) precisión 0.762, recall 0.962, F1 0.850, TP 125, FP 39, FN 5, TN 956, PR-AUC 0.956.
-Otros umbrales en test: 0.80 recall 0.977 con 48 FP; 0.85 recall 0.915 con 34 FP.
+**Umbral:** el más alto con recall ≥ 95 % en validación, redondeado hacia abajo a 0.01 (en el split 1 el exacto
+es 0.8248, y 0.825 ya no llega al 95 %). En el split 1 da 0.82: validación precisión 0.810 y recall 0.954; test
+(1125 transacciones) precisión 0.762, recall 0.962, F1 0.850, TP 125, FP 39, FN 5, TN 956, PR-AUC 0.956.
+**Pero depende del split** (`analysis/fraud_split_variability.py`, 10 splits, la seed de la red fija): el umbral
+elegido va de 0.77 a 0.84 (0.793 ± 0.022), la precisión en test es 0.736 ± 0.038 y el recall 0.962 ± 0.022 (bajo
+0.95 en 1 de 10). Con un umbral fijo, evaluado en el test de los 10 splits:
+
+| Umbral | Precisión | Recall | Splits con recall < 0.95 |
+|---|---|---|---|
+| 0.75 | 0.672 | 0.982 | 0 de 10 |
+| 0.78 | 0.713 | 0.968 | 0 de 10 |
+| 0.80 | 0.751 | 0.962 | 3 de 10 |
+| 0.82 | 0.777 | 0.945 | 6 de 10 |
+| 0.85 | 0.805 | 0.898 | 10 de 10 |
+
+**Se recomienda 0.78**, la mediana de los umbrales elegidos en validación: recall mínimo 0.954 en los 10 tests
+y precisión 0.713. El 0.82 del split 1 era de los altos y deja el recall bajo 0.95 en 6 de 10 splits.
 
 **Por qué:**
 - Estratificado: con 11.6 % de fraudes, un split al azar puede dejar pocos positivos en validación.
@@ -96,8 +109,32 @@ Otros umbrales en test: 0.80 recall 0.977 con 48 FP; 0.85 recall 0.915 con 34 FP
   revisada. El 95 % es una elección nuestra; el cliente puede pedir otro, y en test el recall mueve
   casi un punto por cada fraude (130 en total).
 - El test se usó una sola vez, para reportar el umbral ya elegido.
-- Límite: las diferencias entre variantes son de milésimas y se midieron con seeds distintas sobre un
-  solo split, no con splits distintos.
+- Límites: las diferencias entre variantes de entradas y de tamaño de train son de milésimas y se midieron con
+  seeds distintas sobre un solo split. Los 10 splits del umbral se arman con los mismos 7500 datos y no son
+  independientes (los tests se solapan).
+
+## Calibración de probabilidades del fraude (opcional)
+
+**Qué:** `analysis/fraud_calibration.py`. Se mide qué tan cerca está la salida del TinyModel de
+P(fraude | salida) usando `flagged_fraud`, y se prueban dos calibraciones ajustadas en validación y medidas en
+test (split 1, 1125 transacciones, 130 fraudes): Platt (sigmoide de la salida, dos parámetros, Newton) y
+regresión isotónica (pool adjacent violators).
+
+| Salida | Brier | Log loss | ECE |
+|---|---|---|---|
+| BigModel (probabilidad original) | 0.160 | 0.468 | 0.307 |
+| TinyModel sin calibrar | 0.156 | 0.476 | 0.308 |
+| TinyModel + Platt (σ(22.6·salida − 19.7)) | 0.023 | 0.074 | 0.021 |
+| TinyModel + isotónica | 0.021 | 0.073 | 0.008 |
+
+**Por qué importa:**
+- La probabilidad de BigModel no es probabilidad de fraude: `flagged_fraud` es 1 exactamente cuando pasa 0.85,
+  así que la relación real es un escalón. Una salida de 0.55 corresponde a 0 % de fraudes (0 de 101 en test).
+  El TinyModel hereda eso porque imita a BigModel.
+- Calibrar baja el ECE de 0.31 a 0.02 o menos. La isotónica queda apenas mejor, pero con 130 fraudes en
+  validación puede sobreajustar; Platt tiene dos parámetros.
+- Con la salida calibrada, el umbral puede expresarse como probabilidad de fraude.
+- Límite: un solo split; los intervalos intermedios del diagrama de confiabilidad tienen 6 a 19 muestras.
 
 ## ReLU en fraude (opcional): sin capa oculta no suma, con capa oculta iguala a logistic
 
@@ -121,38 +158,44 @@ original GD y η adaptativo tenían el mejor valor en el borde (η 0.05, 96.0 %)
 η 2 da 93.7 % y η 5 diverge), η adaptativo 0.5 (96.57 %), momentum 0.05 (96.57 %; 0.5 diverge, 16 %),
 RMSProp 0.001 (96.14 %) y Adam 0.0005 (96.45 %). Etapa 2: `series_optimizer.json` (validación, 20 % de
 `digits.csv`) y `series_optimizer_test.json` (entrenando con `more_digits.csv`, evaluando sobre
-`digits_test.csv`), 5 seeds, `[64]` logistic, online con shuffle, 50 épocas.
+`digits_test.csv`), **10 seeds**, `[64]` logistic, online con shuffle, 50 épocas.
 
 | Optimizador | Validación | Test | Segundos por corrida |
 |---|---|---|---|
-| η adaptativo | 96.62 ± 0.13 | 95.44 ± 0.50 | 23 |
-| GD | 96.57 ± 0.23 | 95.39 ± 0.28 | 23 |
-| Momentum | 96.49 ± 0.15 | 95.67 ± 0.19 | 36 |
-| Adam | 96.30 ± 0.21 | 95.07 ± 0.08 | 46 |
-| RMSProp | 95.99 ± 0.21 | 95.11 ± 0.34 | 48 |
+| η adaptativo | 96.57 ± 0.15 | 95.47 ± 0.38 | 22 |
+| GD | 96.56 ± 0.19 | 95.41 ± 0.23 | 23 |
+| Momentum | 96.48 ± 0.14 | 95.68 ± 0.25 | 37 |
+| Adam | 96.14 ± 0.27 | 95.01 ± 0.16 | 46 |
+| RMSProp | 96.10 ± 0.26 | 95.16 ± 0.25 | 50 |
 
-**Conclusiones:**
-- Ninguna diferencia es significativa: con 5 seeds el p mínimo del test exacto pareado es 0.0625, y el mejor
-  contra el segundo en validación da p = 0.56. El orden cambia entre validación y test.
-- Con su mejor η los cinco quedan a menos de 0.7 puntos. Lo que más importa es el η: el mismo optimizador
-  pasa de 90 % a 96.6 % según η.
-- Todos bajan de MSE de validación 0.010 en 2 a 4 épocas; la validación se estabiliza hacia la época 25
-  y Adam empeora levemente (0.0065 a 0.0069) mientras su error de train sigue bajando.
+**Conclusiones** (test de permutación exacto pareado por seed, corrección de Holm):
+- GD, momentum y η adaptativo no se distinguen. RMSProp y Adam quedan 0.4 a 0.7 puntos por debajo del
+  mejor en las dos particiones: en validación η adaptativo contra RMSProp p = 0.029 y contra Adam 0.023; en
+  test momentum contra RMSProp 0.012 y contra Adam 0.008 (momentum contra GD 0.074 y contra η adaptativo 0.20).
+- Con 5 seeds no se había encontrado ninguna diferencia (el p mínimo posible era 0.0625): era falta de
+  potencia, no ausencia de diferencia. Con 10 el p mínimo es 0.002.
+- El mejor cambia entre validación (η adaptativo) y test (momentum), pero entre los tres de arriba no hay
+  diferencia significativa.
+- Lo que más importa es el η: el mismo optimizador pasa de 90 % a 96.6 % según η.
+- Todos bajan de MSE de validación 0.010 en 2 o 3 épocas y después casi no mejoran; η adaptativo sube hacia
+  el final (0.0060 a la época 25 y 0.0070 a la 50) y no se investigó la causa.
 - GD y η adaptativo cuestan la mitad de tiempo por corrida que Adam y RMSProp.
 - GD con η 0.5 y momentum con η 0.05 rinden igual: es el paso η/(1−α) con α = 0.9.
+- Alcance: la variación que se prueba es la de pesos iniciales y shuffle, con una sola partición de datos.
 
 **Elección y evaluación final:** el ganador por validación es η adaptativo (η 0.5), que se usa en la
-evaluación final: accuracy en test 95.4 ± 0.5 % (94.9 a 96.3). Se elige con validación y no con test, aunque
-en test momentum quede primero, para no usar el test en la elección. La matriz de confusión y los aciertos por
-clase son de la seed mediana (4: 95.47 %, 113 errores en 2497). Entrenada con `digits.csv`, que no tiene
-ningún 8: 86.30 % y el 8 tiene 0 % de aciertos (sus 243 imágenes van sobre todo a 3, 5 y 9); con
-`more_digits.csv`: 95.47 % y el 8 llega a 90.1 %. El 5 es la clase más débil (86.5 %, 542 ejemplos).
+evaluación final: accuracy en test 95.5 ± 0.4 % (94.9 a 96.3; mediana 95.52). Se elige con validación y no
+con test, aunque en test momentum quede primero, para no usar el test en la elección. La matriz de confusión
+y los aciertos por clase son de la seed 4 (95.47 %, 113 errores en 2497), a menos de 0.05 de la mediana.
+Entrenada con `digits.csv`, que no tiene ningún 8: 86.30 % y el 8 tiene 0 % de aciertos (sus 243 imágenes
+van sobre todo a 3, 5 y 9); con `more_digits.csv`: 95.47 % y el 8 llega a 90.1 %. El 5 es la clase más
+débil (86.5 %, 542 ejemplos).
 
 **Por qué:**
 - El accuracy global no alcanza: oculta que una clase entera falle. Por eso el reporte trae matriz de
   confusión y aciertos y precisión por clase.
 - `digits_test.csv` se usa solo en la evaluación final.
-- Límites: validación con una sola partición (`split_seed` 1) y 5 seeds; 50 épocas sin `tolerance`.
+- Límites: validación con una sola partición (`split_seed` 1); 50 épocas sin `tolerance`.
 
 ## Pesos iniciales: aleatorios uniformes en [−0.5, 0.5]
 

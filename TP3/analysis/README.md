@@ -46,7 +46,7 @@ validación `digits_test_prepared.csv`, `logistic`, `[64]`, η = 0.01 online, 50
 | `series_shuffle` (10) | online y mini-batch de 32, con y sin `shuffle` | ¿Cambia algo mezclar las muestras en cada época? |
 | `series_depth` (10) | `hidden_layers`: `[96]`, `[64, 32]`, `[48, 32, 16]`, `[32, 32, 32]` | ¿Qué pasa con las mismas neuronas repartidas en más capas? |
 | `series_eta_{gd,adaptive,momentum,rmsprop,adam}` y `series_eta_edges*` | η de cada optimizador, ampliando la grilla hasta el pico (base `neuron/config.json.digits_optimizers.example`: validación = 20 % de `digits_prepared`) | ¿Cuál es el mejor η de cada optimizador? |
-| `series_optimizer` y `series_optimizer_test` (5 seeds) | los cinco optimizadores, cada uno con su mejor η; la segunda entrena con `more_digits` y evalúa sobre `digits_test` (`neuron/config.json.digits_test.example`) | ¿Hay un optimizador mejor? |
+| `series_optimizer` y `series_optimizer_test` (10 seeds) | los cinco optimizadores, cada uno con su mejor η; la segunda entrena con `more_digits` y evalúa sobre `digits_test` (`neuron/config.json.digits_test.example`) | ¿Hay un optimizador mejor? |
 
 **Fraude** (Ejercicio 1, parte 1). Base: `neuron/config.json.fraud.example`, es decir `logistic`, η = 0.001, 1000 épocas,
 online, sin capas ocultas, train = validación = dataset completo. Antes hay que correr
@@ -68,6 +68,10 @@ Todas con 5 seeds, `logistic` η = 0.01, 200 épocas con shuffle, sin capas ocul
 | `series_fraud_features` | 9 o 6 entradas, con y sin `log(amount)` | ¿Qué entradas usar? |
 | `series_fraud_train_size` | 5, 10, 25, 50 y 100 % del train | ¿Cuántos datos hacen falta? |
 | `series_fraud_final` | validación y test con el modelo elegido (6 entradas, train completo) | ¿Cómo generaliza? Se evalúa con `python3 analysis/fraud_threshold.py` |
+
+Dos scripts más sobre ese modelo: `python3 analysis/fraud_calibration.py` (calibración de las probabilidades; mismos
+argumentos que `fraud_threshold.py`) y `python3 analysis/fraud_split_variability.py --seeds 1 2 3 4 5 6 7 8 9 10 --fixed 0.78 0.80 0.82`
+(repite todo con otros splits: genera `data/fraud_split<N>_*.csv` y entrena solo, sin dejar carpetas en `results/`).
 
 Una serie de 15 corridas tarda ~1.5 min con 20 cores y ocupa ~270 MB (cada corrida de dígitos deja
 ~18 MB, igual que con `make run`; ~6 MB es su `report.html`). Las de dígitos con 10 seeds son 30 a 40
