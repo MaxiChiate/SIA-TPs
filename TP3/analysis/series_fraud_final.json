@@ -1,0 +1,10 @@
+{
+  "_comment": "Ejercicio 1, parte 2: modelo final (perceptrón logistic, 6 entradas, train completo). Una variante evalúa sobre validación (para elegir el umbral) y otra sobre test (solo para reportar). Mismas seeds, así los pesos son idénticos en las dos.",
+  "base_config": "../neuron/config.json.fraud.example",
+  "set": {"activation": "logistic", "eta": 0.01, "epochs": 200, "shuffle": true, "hidden_layers": [], "train_dataset": "data/fraud_drop3_train.csv"},
+  "variants": [
+    {"label": "validacion", "set": {"validation_dataset": "data/fraud_drop3_validation.csv"}},
+    {"label": "test", "set": {"validation_dataset": "data/fraud_drop3_test.csv"}}
+  ],
+  "seeds": [1, 2, 3, 4, 5]
+}

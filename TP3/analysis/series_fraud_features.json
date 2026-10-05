@@ -1,0 +1,12 @@
+{
+  "_comment": "Ejercicio 1, parte 2: qué entradas usar. Perceptrón logistic sobre el split estratificado 70/15/15 (seed 1), z-score solo de train. all = las 9 entradas; drop3 = sin timestamp, device_screen_resolution y time_since_last_login_s; _log = log(amount_usd).",
+  "base_config": "../neuron/config.json.fraud.example",
+  "set": {"activation": "logistic", "eta": 0.01, "epochs": 200, "shuffle": true, "hidden_layers": []},
+  "variants": [
+    {"label": "9 entradas", "set": {"train_dataset": "data/fraud_all_train.csv", "validation_dataset": "data/fraud_all_validation.csv"}},
+    {"label": "6 entradas", "set": {"train_dataset": "data/fraud_drop3_train.csv", "validation_dataset": "data/fraud_drop3_validation.csv"}},
+    {"label": "9 entradas, log(amount)", "set": {"train_dataset": "data/fraud_all_log_train.csv", "validation_dataset": "data/fraud_all_log_validation.csv"}},
+    {"label": "6 entradas, log(amount)", "set": {"train_dataset": "data/fraud_drop3_log_train.csv", "validation_dataset": "data/fraud_drop3_log_validation.csv"}}
+  ],
+  "seeds": [1, 2, 3, 4, 5]
+}

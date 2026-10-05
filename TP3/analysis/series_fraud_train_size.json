@@ -1,0 +1,55 @@
+{
+  "_comment": "Ejercicio 1, parte 2: cuánto entrenamiento hace falta. Perceptrón logistic con las 6 entradas; fracciones estratificadas del train (el z-score usa solo lo que queda), misma validación.",
+  "base_config": "../neuron/config.json.fraud.example",
+  "set": {
+    "activation": "logistic",
+    "eta": 0.01,
+    "epochs": 200,
+    "shuffle": true,
+    "hidden_layers": []
+  },
+  "variants": [
+    {
+      "label": "5 % del train",
+      "set": {
+        "train_dataset": "data/fraud_drop3_f5_train.csv",
+        "validation_dataset": "data/fraud_drop3_f5_validation.csv"
+      }
+    },
+    {
+      "label": "10 % del train",
+      "set": {
+        "train_dataset": "data/fraud_drop3_f10_train.csv",
+        "validation_dataset": "data/fraud_drop3_f10_validation.csv"
+      }
+    },
+    {
+      "label": "25 % del train",
+      "set": {
+        "train_dataset": "data/fraud_drop3_f25_train.csv",
+        "validation_dataset": "data/fraud_drop3_f25_validation.csv"
+      }
+    },
+    {
+      "label": "50 % del train",
+      "set": {
+        "train_dataset": "data/fraud_drop3_f50_train.csv",
+        "validation_dataset": "data/fraud_drop3_f50_validation.csv"
+      }
+    },
+    {
+      "label": "100 % del train",
+      "set": {
+        "train_dataset": "data/fraud_drop3_train.csv",
+        "validation_dataset": "data/fraud_drop3_validation.csv"
+      }
+    }
+  ],
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ]
+}
