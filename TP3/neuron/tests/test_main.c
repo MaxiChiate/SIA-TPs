@@ -45,11 +45,27 @@ static double random_weight(void * context) {
   return rng_uniform(context) - 0.5;
 }
 
-static Network new_network(int n_layers, const int sizes[], const char * activation, double eta, unsigned int seed) {
+static Network new_network_with(int n_layers, const int sizes[], const char * activation,
+                                const OptimizerConfig * optimizer, unsigned int seed) {
   Rng rng = rng_new(seed);
-  OptimizerConfig gd = { .name = "gd", .eta = eta };
-  return network_new(n_layers, sizes, activation_find(activation), &gd, random_weight, &rng);
+  return network_new(n_layers, sizes, activation_find(activation), optimizer, random_weight, &rng);
 }
+
+// With plain gradient descent
+static Network new_network(int n_layers, const int sizes[], const char * activation, double eta, unsigned int seed) {
+  OptimizerConfig gd = { .name = "gd", .eta = eta };
+  return new_network_with(n_layers, sizes, activation, &gd, seed);
+}
+
+// One of each, with the typical hyperparameters of class 12.1
+static const OptimizerConfig TEST_OPTIMIZERS[] = {
+  { .name = "gd",       .eta = 0.1 },
+  { .name = "momentum", .eta = 0.01, .momentum = 0.9 },
+  { .name = "rmsprop",  .eta = 0.01, .decay = 0.9, .epsilon = 1e-8 },
+  { .name = "adam",     .eta = 0.01, .beta1 = 0.9, .beta2 = 0.999, .epsilon = 1e-8 },
+};
+
+#define N_TEST_OPTIMIZERS ((int) (sizeof(TEST_OPTIMIZERS) / sizeof(TEST_OPTIMIZERS[0])))
 
 static void set_weights(Network network, const double * weights) {
   network_set_weights(network, weights);
@@ -558,6 +574,49 @@ static void test_optimizers_minimize_a_quadratic(void) {
 }
 
 
+// Inside a network, with every optimizer: the same seed gives the same weights, full batch doesn't depend on
+// the order of the samples (the descent is summed before the optimizer sees it), and the weights do move
+static void test_optimizers_in_a_network(void) {
+  int sizes[] = {2, 2, 1};
+  const double reversed_inputs[] = {1, 1, 1, -1, -1, 1, -1, -1};
+  const double reversed_zetas[] = {-1, 1, 1, -1};
+  for (int k = 0; k < N_TEST_OPTIMIZERS; k++) {
+    const OptimizerConfig * optimizer = &TEST_OPTIMIZERS[k];
+    Network a = new_network_with(2, sizes, "tanh", optimizer, 3);
+    Network b = new_network_with(2, sizes, "tanh", optimizer, 3);
+    Network reversed = new_network_with(2, sizes, "tanh", optimizer, 3);
+    double initial[9], wa[9], wb[9], wr[9];
+    network_get_weights(a, initial);
+
+    network_train(a, XOR_INPUTS, XOR_ZETAS, 4, 20, 4, NULL, NULL, NULL);
+    network_train(b, XOR_INPUTS, XOR_ZETAS, 4, 20, 4, NULL, NULL, NULL);
+    network_train(reversed, reversed_inputs, reversed_zetas, 4, 20, 4, NULL, NULL, NULL);
+    network_get_weights(a, wa);
+    network_get_weights(b, wb);
+    network_get_weights(reversed, wr);
+
+    check(memcmp(wa, wb, sizeof(wa)) == 0);
+    for (int i = 0; i < 9; i++) check_close(wa[i], wr[i], 1e-12);
+    check(memcmp(wa, initial, sizeof(wa)) != 0);
+    network_free(a); network_free(b); network_free(reversed);
+  }
+}
+
+
+// Every optimizer lowers the error of a net that can solve XOR (the one GD solves in "XOR [2,3,2,1] converges").
+// Only lower, not solved: any of them may stop at a local minimum, but a step with the wrong sign makes it grow.
+static void test_optimizers_learn_xor(void) {
+  int sizes[] = {2, 3, 2, 1};
+  for (int k = 0; k < N_TEST_OPTIMIZERS; k++) {
+    Network network = new_network_with(3, sizes, "tanh", &TEST_OPTIMIZERS[k], 1);
+    double before = network_error(network, XOR_INPUTS, XOR_ZETAS, 4).mse;
+    network_train(network, XOR_INPUTS, XOR_ZETAS, 4, 1000, 1, NULL, NULL, NULL);
+    check(network_error(network, XOR_INPUTS, XOR_ZETAS, 4).mse < before);
+    network_free(network);
+  }
+}
+
+
 static void test_network_eta(void) {
   int sizes[] = {2, 3, 1};
   Network network = new_network(2, sizes, "tanh", 0.1, 1);
@@ -800,6 +859,8 @@ int main(void) {
     { "rmsprop first step", test_rmsprop_first_step },
     { "adam first step", test_adam_first_step },
     { "optimizers minimize a quadratic", test_optimizers_minimize_a_quadratic },
+    { "optimizers in a network", test_optimizers_in_a_network },
+    { "optimizers learn XOR", test_optimizers_learn_xor },
     { "network eta get/set", test_network_eta },
     { "dataset loading", test_dataset_loading },
     { "dataset split", test_dataset_split },
