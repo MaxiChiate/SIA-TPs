@@ -64,6 +64,72 @@ y R² = 1 − MSE / varianza del objetivo (0.0915):
 - Límite de esta conclusión: es error de entrenamiento sobre todo el dataset. Qué tan bien
   generaliza se estudia en la parte 2.
 
+## Generalización del fraude (parte 2): split, entradas, tamaño de train y umbral
+
+**Qué:** `scripts/prepare_fraud_split.py --seed 1` parte el dataset en train / validación / test
+70/15/15 (5250 / 1125 / 1125), estratificado por `flagged_fraud` (609, 130 y 130 fraudes: 11.6 % en cada
+parte). El z-score usa media y desvío solo de train. `flagged_fraud` va a un archivo de labels aparte.
+`analysis/fraud_threshold.py` calcula métricas y elige el umbral. Series: `series_fraud_features.json`,
+`series_fraud_train_size.json` y `series_fraud_final.json` (logistic, η 0.01, 200 épocas online con
+shuffle, 5 seeds).
+
+**Resultados (validación):**
+- Entradas: 9 entradas MSE 0.0107 y PR-AUC 0.962; 6 entradas (sin `timestamp`, `device_screen_resolution` ni
+  `time_since_last_login_s`) MSE 0.0108 y PR-AUC 0.962; con `log(amount)` MSE 0.0156 y PR-AUC 0.956.
+- Tamaño del train: con 262 muestras (5 %) MSE 0.0112 y con 5250 (100 %) 0.0108.
+- Final: 6 entradas, monto sin transformar, train completo. Train 0.0109 y validación 0.0108: sin sobreajuste.
+
+**Umbral:** el más alto con recall ≥ 95 % en validación, redondeado hacia abajo a 0.01 (el exacto es 0.8248,
+y 0.825 ya no llega al 95 %). Da **0.82**: validación precisión 0.810 y recall 0.954; test (1125
+transacciones) precisión 0.762, recall 0.962, F1 0.850, TP 125, FP 39, FN 5, TN 956, PR-AUC 0.956.
+Otros umbrales en test: 0.80 recall 0.977 con 48 FP; 0.85 recall 0.915 con 34 FP.
+
+**Por qué:**
+- Estratificado: con 11.6 % de fraudes, un split al azar puede dejar pocos positivos en validación.
+- Métricas: precisión, recall y PR-AUC contra `flagged_fraud`. El accuracy no sirve (decir siempre «no
+  fraude» acierta 88.4 %); el MSE y el MAE miden qué tan bien imita a BigModel.
+- Se descartan las tres columnas porque no aportan: mismo error con menos pesos (7 contra 10). Se confirmó
+  entrenando, no solo con la correlación de Pearson.
+- `log(amount)` empeora, así que el monto crudo ajusta mejor; no se usa.
+- Con pocos datos ya se llega al mismo error: el modelo tiene 7 pesos, el límite no son los datos.
+- Umbral por recall mínimo: en fraude un caso que se escapa suele costar más que una compra legítima
+  revisada. El 95 % es una elección nuestra; el cliente puede pedir otro, y en test el recall mueve
+  casi un punto por cada fraude (130 en total).
+- El test se usó una sola vez, para reportar el umbral ya elegido.
+- Límite: las diferencias entre variantes son de milésimas y se midieron con seeds distintas sobre un
+  solo split, no con splits distintos.
+
+## ReLU en fraude (opcional): sin capa oculta no suma, con capa oculta iguala a logistic
+
+**Qué:** `analysis/series_fraud_relu.json`, 10 seeds, dataset completo, 1000 épocas online. R² (MSE):
+lineal 0.714 (0.0262), ReLU 0.717 (0.0259), logistic 0.881 (0.0109), ReLU con `[16]` 0.883 (0.0107),
+logistic con `[16]` 0.886 (0.0105).
+
+**Por qué importa:**
+- ReLU sin capa oculta es una sola neurona con `max(0, h)`: rinde como el lineal. La mejora de la
+  logistic no viene de "no ser lineal" a secas, sino de acotar la salida a (0, 1).
+- Con `[16]` ReLU llega al nivel de la logistic, pero la salida (también ReLU, hay una sola activación
+  para toda la red) no está acotada: puede predecir probabilidades fuera de [0, 1]. Para este problema
+  se mantiene logistic.
+
+## Dígitos: evaluación final sobre `digits_test.csv` y el efecto de los 8
+
+**Qué:** Adam, η 0.0005 (el mejor de la etapa 1), `[64]` logistic, online con shuffle, 50 épocas, seed 1,
+evaluada sobre `digits_test.csv` (2497 imágenes, 223 a 283 por clase). Entrenada con `more_digits.csv`:
+accuracy 95.03 % (124 errores), aciertos por clase entre 85.7 % (el 5) y 98.9 %. Entrenada con
+`digits.csv`: 85.74 %, y el 8, que no está en el entrenamiento, tiene 0 % de aciertos (sus 243
+imágenes se reparten sobre todo en 5, 3 y 9).
+
+**Por qué:**
+- El accuracy global no alcanza: oculta que una clase entera falla. Por eso el reporte incluye
+  matriz de confusión y aciertos y precisión por clase.
+- `digits_test.csv` se usa solo acá: el η se eligió con la validación (20 % de `digits.csv`) de la
+  etapa 1, no con el test.
+- Es una sola seed. Para dar la accuracy final con dispersión falta la etapa 2 (los cinco optimizadores,
+  cada uno con su mejor η y 5 seeds).
+- Los datos pesan más que el optimizador: agregar los 8 sube 9.3 puntos; entre los cinco optimizadores
+  la validación de la etapa 1 queda entre 96.0 % y 96.5 %.
+
 ## Pesos iniciales: aleatorios uniformes en [−0.5, 0.5]
 
 **Qué:** `main` crea un único `Rng` (`neuron/rng.c`, splitmix64) con la `seed` del `config.json` y
@@ -331,6 +397,7 @@ validación contra η, una línea por optimizador, y elige el mejor η de cada u
   para todos) y las mismas seeds (mismos pesos iniciales). Solo se busca η; el resto, típicos de la clase.
 - El gráfico de sensibilidad dice además qué tan delicado es elegir η en cada optimizador.
 - Ya se vio: momentum con α = 0.9 da casi lo mismo que GD con η 10 veces más grande (el paso η/(1−α)):
-  en dígitos el gradiente es suave y momentum solo acelera. En XOR `[2,2,1]` GD queda en una meseta
-  (MSE ≈ 1, contesta 0 a todo) en 5 de 6 seeds; momentum, RMSProp y Adam nunca, y cuando fallan es en un
-  mínimo local (MSE ≈ 0.5), del que ningún optimizador garantiza salir.
+  en dígitos el gradiente es suave y momentum solo acelera. En XOR `[2,2,1]` (`series_optimizer_xor.json`, 6 seeds,
+  medido el 4/10 sobre `4259949`) convergen GD 2, momentum 5, RMSProp 3 y Adam 3. GD queda en una meseta
+  (MSE ≈ 1, contesta 0 a todo) en 4 de 6 seeds; RMSProp cae en una meseta una vez, y los demás fallos
+  son un mínimo local (MSE ≈ 0.5), del que ningún optimizador garantiza salir.

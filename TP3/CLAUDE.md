@@ -9,8 +9,8 @@ Enunciado: `docs/Enunciado TP3 - 2Q 2026.pdf`.
 ## Estado
 
 **Multicapa en C con backpropagation.** Entrena y valida sobre CSVs; tests con `make test` (en `neuron/tests/`). XOR con
-`[2,2,1]` y `tanh` converge en 3 de 6 seeds probadas (el resto cae en un mínimo local); con
-`[2,3,2,1]` convergió en las 6. Lo que existe:
+`[2,2,1]` y `tanh` (GD, η 0.1, online, 1000 épocas) converge en 2 de 6 seeds (4/6 caen en una meseta
+o un mínimo local); con `[2,3,2,1]` convergió en las 6 (medido el 4/10 sobre `4259949`). Lo que existe:
 
 ```
 docs/Enunciado TP3 - 2Q 2026.pdf
@@ -20,10 +20,13 @@ neuron/                          # C11 + make; README.md explica cómo correrlo
   network.c/h                    # capas de neuronas: forward, backprop, loop por batch
   neuron.c/h                     # la neurona: pesos (n_inputs + 1) y Δw pendiente
   activation/                    # sign, lineal, tanh, logistic, relu (θ y θ'), elegidas por nombre
+  optimizer/                     # gd, momentum, rmsprop, adam y adaptive_eta (η por época); genérico, no conoce la red
   io/                            # config.json (JSON plano), datasets CSV y results/ de cada corrida
   config.json.example            # se versiona este; config.json está gitignoreado
 scripts/
-  prepare_fraud_dataset.py       # fraude crudo -> CSV de la red (z-score) + labels aparte
+  prepare_fraud_dataset.py       # fraude crudo -> CSV de la red (z-score) + labels aparte (parte 1, dataset completo)
+  prepare_fraud_split.py         # fraude: split estratificado train/validación/test, z-score solo de train, variantes de entradas
+  explore_fraud_dataset.py       # exploración del fraude: limpieza, rangos, composición, correlaciones
   prepare_digits_dataset.py      # dígitos crudos -> x1..x784 + zeta_0..zeta_9 (one-hot)
   run_error.py                   # métricas de error de una corrida
   run_report.py                  # report.html de la corrida (lo llama make run): curva, gráficos, tablas
@@ -32,6 +35,8 @@ analysis/                        # README.md explica cómo correrlo
   sweep.py                       # serie de corridas variando un parámetro × seeds, en paralelo -> summary.csv
   sweep_report.py                # report.html de la serie: curvas promedio por variante, resultado final por seed
   series_*.json                  # series sobre dígitos (more_digits vs digits_test): eta, hidden_layers, batch_size, train
+  fraud_threshold.py             # métricas (precisión, recall, PR-AUC) y umbral del TinyModel, elegido en validación
+  plots_presentation.py          # gráficos de la presentación como HTML de diapositiva (solo stdlib)
   plots_main.py                  # gráficos de plotly de cada serie + index.html (como TP2); necesita plotly
   plots_data.py / plots_compare.py / plots_index.py / plots_style.py   # carga y bandas, estadística pareada, índice con modales (i), paleta
 ```
@@ -125,11 +130,14 @@ en C todavía no cubre todo (ver Pendiente).
   `transactions.csv` del enunciado), `digits.csv`, `digits_test.csv`, `more_digits.csv` y
   `fraud_dataset_documentation.pdf`. `scripts/explore_fraud_dataset.py` es la exploración del
   fraude (resultados en `DECISIONS.md`).
-- Ejercicio 1: falta la comparación lineal vs. logistic con validación, el estudio de
-  generalización (split estratificado, métricas) y el umbral. Ejercicio 2: falta cerrar
-  conclusiones de las series.
-- Presentación: esqueleto de 13 diapositivas como Artifact, con `[__]` donde falta un resultado
-  (https://claude.ai/artifact/NpkJsGnWfG1tzxKzwyiywZ).
+- **Ejercicio 1**: hecho en lo central: parte 1 (lineal vs. logistic vs. ReLU) y parte 2 (split
+  estratificado 70/15/15, 6 entradas, umbral 0.82 con test precisión 0.76 y recall 0.96); ver
+  `DECISIONS.md`. Falta, si se quiere: variar el split (seeds) para medir cuánto mueve el umbral, y
+  calibración de probabilidades (opcional).
+- **Ejercicio 2**: optimizadores en curso, ver `docs/optimizers_roadmap.md` (etapa 1: η por optimizador;
+  etapa 2: los cinco con su mejor η, 5 seeds). Falta la evaluación final sobre `digits_test.csv`.
+- **Presentación**: Artifact con gráficos (https://claude.ai/artifact/NpkJsGnWfG1tzxKzwyiywZ); lo que
+  no tiene resultado todavía queda como `[__]`. Hay que mantenerla alineada con este archivo y con `DECISIONS.md`.
 
 ## Convenciones
 

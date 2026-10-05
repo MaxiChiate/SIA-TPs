@@ -116,3 +116,9 @@ puede poner un `"title"` en el JSON de la serie.
 
 "Convergió" es que cumplió el criterio de corte (`tolerance`, o cero mal clasificadas con `sign`); sin
 criterio en el config queda vacío. Una corrida que cortó antes queda en las curvas con su último valor.
+
+## Gráficos para la presentación
+
+`python3 analysis/plots_presentation.py --out <carpeta> [--confusion <predictions.csv>] [--recall <predictions.csv de digits> <predictions.csv de more_digits>]`
+genera fragmentos de HTML (barras, mapa de calor y líneas, solo biblioteca estándar) a partir de las últimas series y de los
+datos; se pegan en las diapositivas.
