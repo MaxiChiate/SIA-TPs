@@ -96,9 +96,10 @@ lo pasa a `network_new`; `random_weight` (`neuron/main.c`) asigna a cada peso de
 
 ## Actualización de pesos: online, batch y mini-batch con `batch_size`
 
-**Qué:** cada muestra calcula su Δw = η·δ·x y lo suma a un acumulador de la neurona; los pesos
-cambian recién cuando se completa el batch. `batch_size = 1` es online, `≥ N` es batch, en el
-medio mini-batch. Las muestras van en el orden del CSV.
+**Qué:** cada muestra calcula su δ·x y lo suma a un acumulador de la neurona; cuando se completa el
+batch, el optimizador convierte esa suma en el paso de los pesos (con `gd`, Δw = η·Σ δ·x; ver
+«Optimizadores»). `batch_size = 1` es online, `≥ N` es batch, en el medio mini-batch. Las muestras van
+en el orden del CSV, salvo con `shuffle`.
 
 **Por qué:**
 - Un solo camino de código: los tres regímenes se comparan cambiando un número del config.
@@ -107,8 +108,8 @@ medio mini-batch. Las muestras van en el orden del CSV.
 - El último batch de la época puede quedar incompleto y se aplica igual, para no descartar
   muestras.
 
-> **Sin decidir:** promediar en vez de sumar, y mezclar las muestras en cada época (hoy los
-> mini-batches son siempre los mismos).
+> **Sin decidir:** promediar en vez de sumar. (Mezclar las muestras ya está: ver «Shuffle por época».)
+> Con RMSProp y Adam importa menos, porque su paso no depende de la escala del gradiente.
 
 ## Backpropagation: primero todos los δ, después los pesos
 
@@ -249,3 +250,87 @@ tablas traen test de permutación pareado, IC95% bootstrap y corrección de Holm
 - `plotly.min.js` se escribe una vez por serie (`include_plotlyjs="directory"`): funciona sin internet
   como un plotly embebido, y la serie pesa ~4 MB en lugar de ~4 MB por gráfico.
 - `sweep.py` y su `report.html` siguen sin dependencias; plotly solo se pide para `plots_main.py`.
+
+## Optimizadores: un módulo aparte que no conoce la red
+
+**Qué:** `neuron/optimizer/` implementa `gd`, `momentum`, `rmsprop`, `adam` y `adaptive_eta` (se elige
+con `optimizer` en el config). Backprop acumula en cada neurona d = Σ δ·x (= −∂E/∂w, sin η) y, al cerrar
+el batch, `optimizer_step(pesos, d)` decide el paso. El optimizador trabaja sobre un arreglo de números:
+no incluye nada de neuronas, redes ni datasets. Cada neurona tiene su propio optimizador.
+
+**Por qué:**
+- Antes η estaba dentro del acumulador (se sumaba η·δ·x): así RMSProp y Adam no pueden reescalar cada
+  peso por separado. Backprop da el gradiente; qué hacer con él es otro problema (clase 12.1).
+- Genérico: si cambia el problema, el optimizador no se toca. Por eso se puede testear sin red
+  (minimizan f(w) = ½(w − 3)²).
+- Uno por neurona porque los pesos viven en cada neurona; uno solo para toda la red obligaba a juntarlos
+  en un arreglo, un refactor mucho más grande, con el mismo resultado. `t` de Adam cuenta actualizaciones
+  (batches), no épocas.
+- Con `gd` la red da idéntico a antes del cambio: se verificó comparando `epochs.csv` de XOR (`[2,2,1]` y
+  `[2,3,2,1]`, 6 seeds) y fraude, antes y después.
+- Limitación: con `initial_weights` el estado del optimizador (m, v, S, Δw anterior) arranca en 0; retomar
+  con Adam no es exactamente seguir la misma corrida.
+
+## Signo de los pasos: d = −∂E/∂w, así que todo suma
+
+**Qué:** momentum Δw = α·Δw_prev + η·d; RMSProp S = γS + (1−γ)d², Δw = η·d/√(S+ε); Adam con m y v de d y
+corrección de sesgo, Δw = η·m̂/(√v̂+ε). Todos se suman a los pesos.
+
+**Por qué:** el paper de Adam resta porque usa g = +∂E/∂w. Con d = −g, m cambia de signo y v no (está al
+cuadrado), así que el paso queda con +. Es el error más fácil de cometer: hay un test que pide que con
+d > 0 el peso suba, y otros con los números de la clase (momentum 0.1, 0.19, 0.271…; primer paso de Adam =
+η para gradientes de 100, 1 y 0.01).
+
+## η adaptativo: quinto optimizador, sobre el E de train
+
+**Qué:** `adaptive_eta` da el paso de `gd`, y una vez por época `optimizer/eta_schedule.c` mira el E de
+train: tras `eta_patience_up` épocas seguidas bajando, η += `eta_increase`; tras `eta_patience_down`
+subiendo, η ×= (1 − `eta_decrease`). Un E igual al anterior corta las dos rachas. `epochs.csv` guarda en
+la columna `eta` el η con el que se entrenó cada época.
+
+**Por qué:**
+- Sube sumando y baja multiplicando (clase 12.1): un η demasiado grande puede divergir, uno chico solo
+  es lento.
+- E de train, no de validación: si η se ajustara mirando validación, la validación pasaría a ser parte del
+  entrenamiento. Se mide sobre todo el train al final de cada época (ya se calculaba), no muestra a
+  muestra, que en online oscila sola.
+- "Igual" no cuenta como subir: en la meseta del XOR, GD repite E exacto cientos de épocas, y contarlo
+  como subida partiría η a la mitad una y otra vez hasta casi 0.
+- En fraude llega al plateau en 24 épocas contra 68 de GD con η fijo (mismo error final); en el plateau η
+  oscila solo entre ~0.001 y ~0.002.
+
+## Hiperparámetros del optimizador: obligatorios, sin default
+
+**Qué:** cada optimizador exige exactamente sus claves (`momentum`; `rmsprop_decay` y
+`optimizer_epsilon`; `adam_beta1`, `adam_beta2` y `optimizer_epsilon`; `eta_increase`, `eta_decrease`,
+`eta_patience_up` y `eta_patience_down`). Si falta una, el error sugiere el valor típico de la clase
+(0.9, 0.999, 1e-8, 0.5, 5); una clave de otro optimizador es un error. Sin `optimizer` es `gd`, así que
+los configs viejos andan igual.
+
+**Por qué:**
+- Un default en 0 sería un error silencioso (momentum con α = 0 es GD). Un default "de la clase"
+  correría, pero el `config.json` de la corrida no diría con qué valores entrenó.
+- La tabla de qué clave va con qué optimizador vive en `io/config.c`, no en `optimizer/`: los nombres de
+  las claves del JSON son cosa del config; si no, el optimizador dejaría de ser genérico. Un test chequea
+  que los nombres de las dos listas coincidan.
+
+## Comparación de optimizadores (Ej. 2): cada uno con su mejor η
+
+**Qué:** etapa 1, una serie de η por optimizador (`analysis/series_eta_*.json`, 4 valores × 3 seeds),
+con grillas a la escala de cada uno: GD 0.001–0.05, momentum 10 veces más chica, RMSProp y Adam alrededor
+de 0.001. Etapa 2, los cinco con su mejor η. `analysis/plots_eta_sensitivity.py` grafica accuracy de
+validación contra η, una línea por optimizador, y elige el mejor η de cada uno.
+
+**Por qué:**
+- El mismo η no significa lo mismo: en GD el paso es η × gradiente, en momentum (α = 0.9) crece hasta
+  ×10 y en Adam/RMSProp cada peso se mueve ≈ η. Con un único η se compararía el η, no el método.
+- Mejor η por accuracy de validación (clasificación, y lo que pide el Ej. 3), con la validación separada
+  de `digits.csv`: `digits_test.csv` no se usa para elegir nada. Empate: el η más chico. Si el mejor es el
+  borde de la grilla, se agrega un valor más allá.
+- Fijo en todas: datos, `[64]` logistic, online con shuffle, 50 épocas sin `tolerance` (mismo trabajo
+  para todos) y las mismas seeds (mismos pesos iniciales). Solo se busca η; el resto, típicos de la clase.
+- El gráfico de sensibilidad dice además qué tan delicado es elegir η en cada optimizador.
+- Ya se vio: momentum con α = 0.9 da casi lo mismo que GD con η 10 veces más grande (el paso η/(1−α)):
+  en dígitos el gradiente es suave y momentum solo acelera. En XOR `[2,2,1]` GD queda en una meseta
+  (MSE ≈ 1, contesta 0 a todo) en 5 de 6 seeds; momentum, RMSProp y Adam nunca, y cuando fallan es en un
+  mínimo local (MSE ≈ 0.5), del que ningún optimizador garantiza salir.
