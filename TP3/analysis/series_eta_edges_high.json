@@ -1,0 +1,71 @@
+{
+  "_comment": "Ejercicio 2, etapa 1 (bordes, segunda tanda): GD, η adaptativo y momentum seguían mejorando en el máximo de series_eta_edges.json. Se sigue hasta que baje.",
+  "base_config": "../neuron/config.json.digits_optimizers.example",
+  "variants": [
+    {
+      "label": "gd 0.5",
+      "set": {
+        "optimizer": "gd",
+        "eta": 0.5
+      }
+    },
+    {
+      "label": "gd 1",
+      "set": {
+        "optimizer": "gd",
+        "eta": 1.0
+      }
+    },
+    {
+      "label": "adaptive 0.5",
+      "set": {
+        "optimizer": "adaptive_eta",
+        "eta": 0.5,
+        "eta_increase": 0.05,
+        "eta_decrease": 0.5,
+        "eta_patience_up": 3,
+        "eta_patience_down": 3
+      }
+    },
+    {
+      "label": "adaptive 1",
+      "set": {
+        "optimizer": "adaptive_eta",
+        "eta": 1.0,
+        "eta_increase": 0.1,
+        "eta_decrease": 0.5,
+        "eta_patience_up": 3,
+        "eta_patience_down": 3
+      }
+    },
+    {
+      "label": "momentum 0.1",
+      "set": {
+        "optimizer": "momentum",
+        "momentum": 0.9,
+        "eta": 0.1
+      }
+    },
+    {
+      "label": "momentum 0.2",
+      "set": {
+        "optimizer": "momentum",
+        "momentum": 0.9,
+        "eta": 0.2
+      }
+    },
+    {
+      "label": "momentum 0.5",
+      "set": {
+        "optimizer": "momentum",
+        "momentum": 0.9,
+        "eta": 0.5
+      }
+    }
+  ],
+  "seeds": [
+    1,
+    2,
+    3
+  ]
+}
