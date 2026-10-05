@@ -5,7 +5,9 @@
 #include "io/dataset.h"
 #include "io/results.h"
 #include "network.h"
+#include "optimizer/eta_schedule.h"
 #include "rng.h"
+#include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -181,7 +183,9 @@ typedef struct {
   ErrorMetrics * train_errors;
   ErrorMetrics * validation_errors;
   double * elapsed;    // seconds spent training up to each epoch; evaluating the errors is left out
-  double * eta;        // learning rate at the end of each epoch
+  double * eta;        // learning rate each epoch trained with (epoch 0: the initial one)
+  int adaptive_eta;    // optimizer adaptive_eta: eta_schedule moves eta after every epoch
+  EtaSchedule eta_schedule;
   double started_at;   // wall clock, error evaluation included
   double resumed_at;   // when training last resumed after record_epoch
   double reported_at;  // when progress was last printed
@@ -245,6 +249,14 @@ static int has_converged(const TrainingHistory * history, int epoch, Network net
 }
 
 
+// adaptive_eta: the train E of this epoch, measured on the whole train set, decides the eta of the next one
+static void adapt_eta(TrainingHistory * history, int epoch, Network network) {
+  double eta = network_eta(network);
+  double next = eta_schedule_update(&history->eta_schedule, eta, history->train_errors[epoch].energy);
+  if (next != eta) network_set_eta(network, next);
+}
+
+
 static int record_epoch(int epoch, Network network, void * context) {
   TrainingHistory * history = context;
   double paused_at = now_seconds();
@@ -262,6 +274,7 @@ static int record_epoch(int epoch, Network network, void * context) {
 
   keep_if_best(history, epoch, network);
   int converged = epoch > 0 && has_converged(history, epoch, network);
+  if (history->adaptive_eta) adapt_eta(history, epoch, network);
 
   report_progress(history, converged ? history->epochs : epoch);
   history->resumed_at = now_seconds();
@@ -295,6 +308,9 @@ static TrainingHistory new_training_history(const Dataset train, const Dataset v
     .validation_errors = malloc((epochs + 1) * sizeof(ErrorMetrics)),
     .elapsed = malloc((epochs + 1) * sizeof(double)),
     .eta = malloc((epochs + 1) * sizeof(double)),
+    .adaptive_eta = strcmp(config->optimizer, "adaptive_eta") == 0,
+    .eta_schedule = eta_schedule_new(config->eta_increase, config->eta_decrease, config->eta_patience_up,
+                                     config->eta_patience_down),
   };
   history.n_snapshots = snapshot_epochs(epochs, history.snapshot_epochs);
   history.snapshot_predictions = malloc((size_t) history.n_snapshots * dataset_n_samples(validation)

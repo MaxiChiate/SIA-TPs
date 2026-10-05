@@ -5,6 +5,7 @@
 #include "../io/config.h"
 #include "../io/dataset.h"
 #include "../network.h"
+#include "../optimizer/eta_schedule.h"
 #include "../optimizer/optimizer.h"
 #include "../rng.h"
 #include <math.h>
@@ -617,6 +618,58 @@ static void test_optimizers_learn_xor(void) {
 }
 
 
+// Feeds errors one epoch at a time; etas[t] gets the eta after the error of epoch t
+static void run_schedule(EtaSchedule * schedule, double eta, const double errors[], int n, double etas[]) {
+  for (int t = 0; t < n; t++) {
+    eta = eta_schedule_update(schedule, eta, errors[t]);
+    etas[t] = eta;
+  }
+}
+
+
+static void test_eta_schedule(void) {
+  double etas[8];
+
+  // Falling for 3 epochs in a row (k = 3): eta + a once, and the streak starts over
+  EtaSchedule up = eta_schedule_new(0.01, 0.5, 3, 2);
+  double falling[] = {10, 9, 8, 7, 6};
+  run_schedule(&up, 0.1, falling, 5, etas);
+  check_close(etas[2], 0.1, 1e-15);
+  check_close(etas[3], 0.11, 1e-15);
+  check_close(etas[4], 0.11, 1e-15);
+
+  // Rising for 2 epochs in a row (k' = 2): eta * (1 - b)
+  EtaSchedule down = eta_schedule_new(0.01, 0.5, 3, 2);
+  double rising[] = {1, 2, 3};
+  run_schedule(&down, 0.1, rising, 3, etas);
+  check_close(etas[1], 0.1, 1e-15);
+  check_close(etas[2], 0.05, 1e-15);
+
+  // Going up and down is no streak; neither is an error that repeats exactly (a plateau)
+  EtaSchedule mixed = eta_schedule_new(0.01, 0.5, 2, 2);
+  double zigzag[] = {5, 4, 5, 4, 5, 4, 4, 4};
+  run_schedule(&mixed, 0.1, zigzag, 8, etas);
+  for (int t = 0; t < 8; t++) check_close(etas[t], 0.1, 1e-15);
+
+  // a = b = 0: eta never changes
+  EtaSchedule fixed = eta_schedule_new(0, 0, 1, 1);
+  double any[] = {3, 2, 1, 2, 3, 4, 1, 0.5};
+  run_schedule(&fixed, 0.1, any, 8, etas);
+  for (int t = 0; t < 8; t++) check_close(etas[t], 0.1, 1e-15);
+}
+
+
+// adaptive_eta steps exactly like gd; only its eta is moved from outside
+static void test_adaptive_eta_steps_like_gd(void) {
+  OptimizerConfig adaptive = { .name = "adaptive_eta", .eta = 0.05 };
+  OptimizerConfig gd = { .name = "gd", .eta = 0.05 };
+  double descents[] = {0.3, -0.2, 0.5, 0.1}, adaptive_steps[4], gd_steps[4];
+  steps_on_one_weight(&adaptive, descents, 4, adaptive_steps);
+  steps_on_one_weight(&gd, descents, 4, gd_steps);
+  for (int t = 0; t < 4; t++) check_close(adaptive_steps[t], gd_steps[t], 0);
+}
+
+
 static void test_network_eta(void) {
   int sizes[] = {2, 3, 1};
   Network network = new_network(2, sizes, "tanh", 0.1, 1);
@@ -797,14 +850,18 @@ static const char * OPTIMIZER_CONFIGS[][2] = {
   { "momentum", ",\"optimizer\":\"momentum\",\"momentum\":0.9" },
   { "rmsprop",  ",\"optimizer\":\"rmsprop\",\"rmsprop_decay\":0.9,\"optimizer_epsilon\":1e-8" },
   { "adam",     ",\"optimizer\":\"adam\",\"adam_beta1\":0.9,\"adam_beta2\":0.999,\"optimizer_epsilon\":1e-8" },
+  { "adaptive_eta", ",\"optimizer\":\"adaptive_eta\",\"eta_increase\":0.001,\"eta_decrease\":0.5,"
+                    "\"eta_patience_up\":5,\"eta_patience_down\":3" },
 };
+
+#define N_OPTIMIZER_CONFIGS ((int) (sizeof(OPTIMIZER_CONFIGS) / sizeof(OPTIMIZER_CONFIGS[0])))
 
 static void test_optimizer_config(void) {
   Config config;
   check(load_config_with("", &config) && strcmp(config.optimizer, "gd") == 0); // the default
 
   // Every optimizer the config accepts exists in the optimizer module
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < N_OPTIMIZER_CONFIGS; i++) {
     check(load_config_with(OPTIMIZER_CONFIGS[i][1], &config));
     check(strcmp(config.optimizer, OPTIMIZER_CONFIGS[i][0]) == 0);
     OptimizerConfig optimizer = { .name = config.optimizer, .eta = config.eta };
@@ -817,6 +874,12 @@ static void test_optimizer_config(void) {
   check_close(config.adam_beta2, 0.999, 0);
   check_close(config.optimizer_epsilon, 1e-8, 0);
   check(load_config_with(",\"optimizer\":\"momentum\",\"momentum\":0", &config)); // alpha = 0 is allowed
+  check(load_config_with(OPTIMIZER_CONFIGS[4][1], &config));
+  check_close(config.eta_increase, 0.001, 0);
+  check_close(config.eta_decrease, 0.5, 0);
+  check(config.eta_patience_up == 5 && config.eta_patience_down == 3);
+  check(load_config_with(",\"optimizer\":\"adaptive_eta\",\"eta_increase\":0,\"eta_decrease\":0,"
+                         "\"eta_patience_up\":1,\"eta_patience_down\":1", &config)); // a = b = 0: a fixed eta
 
   fprintf(stderr, "  (expected errors follow)\n");
   check(!load_config_with(",\"optimizer\":\"nope\"", &config));
@@ -829,6 +892,17 @@ static void test_optimizer_config(void) {
   check(!load_config_with(",\"optimizer\":\"momentum\",\"momentum\":1", &config));
   check(!load_config_with(",\"optimizer\":\"momentum\",\"momentum\":-0.1", &config));
   check(!load_config_with(",\"optimizer\":\"rmsprop\",\"rmsprop_decay\":0.9,\"optimizer_epsilon\":0", &config));
+  check(!load_config_with(",\"optimizer\":\"adaptive_eta\",\"eta_decrease\":0.5,\"eta_patience_up\":5,"
+                          "\"eta_patience_down\":5", &config)); // missing a, which has no typical value
+  check(!load_config_with(",\"optimizer\":\"adaptive_eta\",\"eta_increase\":-0.1,\"eta_decrease\":0.5,"
+                          "\"eta_patience_up\":5,\"eta_patience_down\":5", &config));
+  check(!load_config_with(",\"optimizer\":\"adaptive_eta\",\"eta_increase\":0.1,\"eta_decrease\":1,"
+                          "\"eta_patience_up\":5,\"eta_patience_down\":5", &config));
+  check(!load_config_with(",\"optimizer\":\"adaptive_eta\",\"eta_increase\":0.1,\"eta_decrease\":0.5,"
+                          "\"eta_patience_up\":0,\"eta_patience_down\":5", &config));
+  check(!load_config_with(",\"optimizer\":\"adaptive_eta\",\"eta_increase\":0.1,\"eta_decrease\":0.5,"
+                          "\"eta_patience_up\":2.5,\"eta_patience_down\":5", &config));
+  check(!load_config_with(",\"eta_patience_up\":5", &config)); // belongs to adaptive_eta, not to gd
 }
 
 
@@ -861,6 +935,8 @@ int main(void) {
     { "optimizers minimize a quadratic", test_optimizers_minimize_a_quadratic },
     { "optimizers in a network", test_optimizers_in_a_network },
     { "optimizers learn XOR", test_optimizers_learn_xor },
+    { "eta schedule", test_eta_schedule },
+    { "adaptive_eta steps like gd", test_adaptive_eta_steps_like_gd },
     { "network eta get/set", test_network_eta },
     { "dataset loading", test_dataset_loading },
     { "dataset split", test_dataset_split },

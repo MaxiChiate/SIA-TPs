@@ -22,7 +22,7 @@ typedef struct {
   unsigned int split_seed; // seed of that split, independent of seed; required with validation_split
   char initial_weights[CONFIG_STRING_MAX]; // optional: an earlier run's directory or weights.csv to keep
                                            // training from; "" (the default) draws random weights
-  char optimizer[CONFIG_STRING_MAX]; // optional: "gd" (the default), "momentum", "rmsprop" or "adam"
+  char optimizer[CONFIG_STRING_MAX]; // optional: "gd" (the default), "momentum", "rmsprop", "adam" or "adaptive_eta"
   // The optimizer's hyperparameters: each one is required with the optimizers that read it and refused with
   // the rest, so they stay at 0 when unused
   double momentum;          // alpha, momentum
@@ -30,6 +30,10 @@ typedef struct {
   double adam_beta1;        // adam
   double adam_beta2;        // adam
   double optimizer_epsilon; // rmsprop and adam
+  double eta_increase;      // adaptive_eta: a, added to eta after eta_patience_up epochs with the train E falling
+  double eta_decrease;      // adaptive_eta: b, eta *= 1 - b after eta_patience_down epochs with it rising
+  int eta_patience_up;      // adaptive_eta: k
+  int eta_patience_down;    // adaptive_eta: k'
 } Config;
 
 // Reads a flat JSON object with the Config fields as keys. Every key is required except the optional

@@ -6,7 +6,8 @@
 
 // Only the fields of the chosen optimizer are read; it trusts their values (checking them is the config's job)
 typedef struct {
-  const char * name;   // "gd", "momentum", "rmsprop" or "adam"
+  const char * name;   // "gd", "momentum", "rmsprop", "adam" or "adaptive_eta" (gd whose eta is changed from
+                       // outside with optimizer_set_eta, see eta_schedule.h)
   double eta;          // learning rate
   double momentum;     // alpha, for momentum
   double decay;        // gamma, for rmsprop

@@ -38,27 +38,44 @@ static const Field FIELDS[] = {
   { "adam_beta1",         FIELD_DOUBLE,    offsetof(Config, adam_beta1), 0, 1 },
   { "adam_beta2",         FIELD_DOUBLE,    offsetof(Config, adam_beta2), 0, 1 },
   { "optimizer_epsilon",  FIELD_DOUBLE,    offsetof(Config, optimizer_epsilon), 0, 1 },
+  { "eta_increase",       FIELD_DOUBLE,    offsetof(Config, eta_increase), 0, 1 },
+  { "eta_decrease",       FIELD_DOUBLE,    offsetof(Config, eta_decrease), 0, 1 },
+  { "eta_patience_up",    FIELD_INT,       offsetof(Config, eta_patience_up), 0, 1 },
+  { "eta_patience_down",  FIELD_INT,       offsetof(Config, eta_patience_down), 0, 1 },
 };
 
 #define N_FIELDS ((int) (sizeof(FIELDS) / sizeof(FIELDS[0])))
 
+enum hyperparameter_range { UNIT_INTERVAL, POSITIVE, NON_NEGATIVE, AT_LEAST_ONE };
+
+static const char * const RANGE_MESSAGES[] = {
+  [UNIT_INTERVAL] = "must be in [0, 1)",
+  [POSITIVE]      = "must be positive",
+  [NON_NEGATIVE]  = "can't be negative",
+  [AT_LEAST_ONE]  = "must be at least 1",
+};
+
 // Optimizer hyperparameters. None has a default: the run's config.json shows every value it trained with.
 typedef struct {
   const char * key;
-  const char * typical; // suggested when it's missing (class 12.1 and the Adam paper)
-  int fraction;         // 1: in [0, 1); 0: positive
+  const char * typical; // suggested when it's missing (class 12.1 and the Adam paper); NULL if none fits all
+  enum hyperparameter_range range;
 } Hyperparameter;
 
 static const Hyperparameter HYPERPARAMETERS[] = {
-  { "momentum",          "0.9",   1 },
-  { "rmsprop_decay",     "0.9",   1 },
-  { "adam_beta1",        "0.9",   1 },
-  { "adam_beta2",        "0.999", 1 },
-  { "optimizer_epsilon", "1e-8",  0 },
+  { "momentum",          "0.9",   UNIT_INTERVAL },
+  { "rmsprop_decay",     "0.9",   UNIT_INTERVAL },
+  { "adam_beta1",        "0.9",   UNIT_INTERVAL },
+  { "adam_beta2",        "0.999", UNIT_INTERVAL },
+  { "optimizer_epsilon", "1e-8",  POSITIVE },
+  { "eta_increase",      NULL,    NON_NEGATIVE }, // depends on the scale of eta
+  { "eta_decrease",      "0.5",   UNIT_INTERVAL },
+  { "eta_patience_up",   "5",     AT_LEAST_ONE },
+  { "eta_patience_down", "5",     AT_LEAST_ONE },
 };
 
 #define N_HYPERPARAMETERS ((int) (sizeof(HYPERPARAMETERS) / sizeof(HYPERPARAMETERS[0])))
-#define MAX_OPTIMIZER_KEYS 3
+#define MAX_OPTIMIZER_KEYS 4
 
 // Which hyperparameters each optimizer reads. The names must match the optimizer module's (a test checks it).
 typedef struct {
@@ -71,6 +88,7 @@ static const OptimizerKeys OPTIMIZERS[] = {
   { "momentum", { "momentum" } },
   { "rmsprop",  { "rmsprop_decay", "optimizer_epsilon" } },
   { "adam",     { "adam_beta1", "adam_beta2", "optimizer_epsilon" } },
+  { "adaptive_eta", { "eta_increase", "eta_decrease", "eta_patience_up", "eta_patience_down" } },
 };
 
 #define N_OPTIMIZERS ((int) (sizeof(OPTIMIZERS) / sizeof(OPTIMIZERS[0])))
@@ -261,17 +279,39 @@ static int unknown_optimizer(const Parser * parser, const char * name) {
 }
 
 
+// The hyperparameters are doubles, except the patiences, which are ints
+static double numeric_value(const Config * config, const Field * field) {
+  const char * target = (const char *) config + field->offset;
+  return field->type == FIELD_INT ? *(const int *) target : *(const double *) target;
+}
+
+
+static int in_range(double value, enum hyperparameter_range range) {
+  switch (range) {
+    case UNIT_INTERVAL: return value >= 0 && value < 1;
+    case POSITIVE:      return value > 0;
+    case NON_NEGATIVE:  return value >= 0;
+    case AT_LEAST_ONE:  return value >= 1;
+  }
+  return 0;
+}
+
+
 static int check_hyperparameter_range(const Parser * parser, const Config * config, const Hyperparameter * hyperparameter) {
-  double value = *(const double *) ((const char *) config + find_field(hyperparameter->key)->offset);
-  if (hyperparameter->fraction && !(value >= 0 && value < 1)) {
-    fprintf(stderr, "%s: \"%s\" must be in [0, 1)\n", parser->path, hyperparameter->key);
-    return 0;
+  if (in_range(numeric_value(config, find_field(hyperparameter->key)), hyperparameter->range)) return 1;
+  fprintf(stderr, "%s: \"%s\" %s\n", parser->path, hyperparameter->key, RANGE_MESSAGES[hyperparameter->range]);
+  return 0;
+}
+
+
+static int missing_hyperparameter(const Parser * parser, const Hyperparameter * hyperparameter, const char * optimizer) {
+  fprintf(stderr, "%s: missing key \"%s\" for optimizer \"%s\" ", parser->path, hyperparameter->key, optimizer);
+  if (hyperparameter->typical != NULL) {
+    fprintf(stderr, "(typical: %s)\n", hyperparameter->typical);
+  } else {
+    fprintf(stderr, "(no typical value, it depends on the problem)\n");
   }
-  if (!hyperparameter->fraction && !(value > 0)) {
-    fprintf(stderr, "%s: \"%s\" must be positive\n", parser->path, hyperparameter->key);
-    return 0;
-  }
-  return 1;
+  return 0;
 }
 
 
@@ -285,11 +325,7 @@ static int check_optimizer(const Parser * parser, Config * config, const int see
     const Hyperparameter * hyperparameter = &HYPERPARAMETERS[i];
     int reads = reads_key(optimizer, hyperparameter->key);
     int given = was_given(seen, hyperparameter->key);
-    if (reads && !given) {
-      fprintf(stderr, "%s: missing key \"%s\" for optimizer \"%s\" (typical: %s)\n", parser->path,
-              hyperparameter->key, optimizer->name, hyperparameter->typical);
-      return 0;
-    }
+    if (reads && !given) return missing_hyperparameter(parser, hyperparameter, optimizer->name);
     if (!reads && given) {
       fprintf(stderr, "%s: \"%s\" doesn't go with optimizer \"%s\"\n", parser->path, hyperparameter->key,
               optimizer->name);

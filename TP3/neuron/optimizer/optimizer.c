@@ -74,11 +74,13 @@ static void adam_step(Optimizer optimizer, double weights[], const double descen
 }
 
 
+// adaptive_eta steps like gd: what changes is eta itself, once per epoch, by an EtaSchedule (eta_schedule.h)
 static const OptimizerKind OPTIMIZERS[] = {
-  { "gd",       gd_step,       0 },
-  { "momentum", momentum_step, 1 },
-  { "rmsprop",  rmsprop_step,  1 },
-  { "adam",     adam_step,     2 },
+  { "gd",           gd_step,       0 },
+  { "momentum",     momentum_step, 1 },
+  { "rmsprop",      rmsprop_step,  1 },
+  { "adam",         adam_step,     2 },
+  { "adaptive_eta", gd_step,       0 },
 };
 
 #define N_OPTIMIZERS ((int) (sizeof(OPTIMIZERS) / sizeof(OPTIMIZERS[0])))
@@ -136,5 +138,5 @@ void optimizer_set_eta(Optimizer optimizer, double eta) {
 
 
 const char * optimizer_names(void) {
-  return "gd, momentum, rmsprop, adam";
+  return "gd, momentum, rmsprop, adam, adaptive_eta";
 }

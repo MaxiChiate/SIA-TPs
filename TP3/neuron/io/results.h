@@ -7,7 +7,7 @@
 //   weights.csv      one row per weight: layer, neuron, weight (0 = bias), initial and final value
 //   predictions.csv  validation inputs, zeta and the network's prediction
 //   epochs.csv       E, MSE, MAE and max |e| on train and validation after every epoch (0 = initial weights),
-//                    the seconds spent training so far and the learning rate the epoch ended with
+//                    the seconds spent training so far and the learning rate the epoch trained with
 //   predictions_by_epoch.csv  validation zeta and the prediction at a few epochs, one column per epoch
 // With several outputs every zeta and prediction column becomes one per output: zeta_0, zeta_1, ...,
 // prediction_0, ..., epoch_<e>_0, ...
