@@ -1,5 +1,5 @@
 {
-  "_comment": "Ejercicio 2, etapa 2: los cinco optimizadores, cada uno con su mejor η de la etapa 1 (series_eta_*.json y series_eta_edges*.json), 5 seeds. Validación = 20 % de digits_prepared (split_seed 1).",
+  "_comment": "Ejercicio 2, etapa 2: los cinco optimizadores, cada uno con su mejor η de la etapa 1 (series_eta_*.json y series_eta_edges*.json), 10 seeds. Validación = 20 % de digits_prepared (split_seed 1).",
   "base_config": "../neuron/config.json.digits_optimizers.example",
   "title": "Optimizadores con su mejor η",
   "variants": [
@@ -54,6 +54,11 @@
     2,
     3,
     4,
-    5
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
   ]
 }
