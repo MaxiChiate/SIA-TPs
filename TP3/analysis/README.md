@@ -45,6 +45,8 @@ validación `digits_test_prepared.csv`, `logistic`, `[64]`, η = 0.01 online, 50
 | `series_activation` (10) | logistic (η 0.01), tanh (η 0.01) y lineal (η 0.001); sin ReLU: con una sola activación para toda la red no aprende en dígitos | ¿Cuánto importa la no linealidad? |
 | `series_shuffle` (10) | online y mini-batch de 32, con y sin `shuffle` | ¿Cambia algo mezclar las muestras en cada época? |
 | `series_depth` (10) | `hidden_layers`: `[96]`, `[64, 32]`, `[48, 32, 16]`, `[32, 32, 32]` | ¿Qué pasa con las mismas neuronas repartidas en más capas? |
+| `series_eta_{gd,adaptive,momentum,rmsprop,adam}` y `series_eta_edges*` | η de cada optimizador, ampliando la grilla hasta el pico (base `neuron/config.json.digits_optimizers.example`: validación = 20 % de `digits_prepared`) | ¿Cuál es el mejor η de cada optimizador? |
+| `series_optimizer` y `series_optimizer_test` (5 seeds) | los cinco optimizadores, cada uno con su mejor η; la segunda entrena con `more_digits` y evalúa sobre `digits_test` (`neuron/config.json.digits_test.example`) | ¿Hay un optimizador mejor? |
 
 **Fraude** (Ejercicio 1, parte 1). Base: `neuron/config.json.fraud.example`, es decir `logistic`, η = 0.001, 1000 épocas,
 online, sin capas ocultas, train = validación = dataset completo. Antes hay que correr
@@ -55,6 +57,17 @@ online, sin capas ocultas, train = validación = dataset completo. Antes hay que
 | `series_fraud_activation` | lineal (η 0.0001, 0.001) contra logistic (η 0.001, 0.01, 0.1) | ¿Hay underfitting en el lineal? ¿Cuál elegir? |
 | `series_fraud_capacity` | `hidden_layers`: `[]`, `[4]`, `[16]`, `[16, 8]` | ¿El perceptrón simple ya agotó su capacidad? |
 | `series_fraud_relu` (10) | lineal, logistic y ReLU, sin capa oculta y con `[16]` (cada una con su η) | ¿Cambian las conclusiones con ReLU? |
+
+**Fraude, parte 2** (generalización). Antes hay que generar el split estratificado 70/15/15
+(`python3 scripts/prepare_fraud_split.py --seed 1 --name fraud_drop3 --drop timestamp device_screen_resolution time_since_last_login_s`,
+y las variantes `fraud_all`, `fraud_all_log`, `fraud_drop3_log` y `fraud_drop3_f{5,10,25,50}` con `--train-fraction`).
+Todas con 5 seeds, `logistic` η = 0.01, 200 épocas con shuffle, sin capas ocultas.
+
+| Serie | Qué varía | Pregunta |
+|---|---|---|
+| `series_fraud_features` | 9 o 6 entradas, con y sin `log(amount)` | ¿Qué entradas usar? |
+| `series_fraud_train_size` | 5, 10, 25, 50 y 100 % del train | ¿Cuántos datos hacen falta? |
+| `series_fraud_final` | validación y test con el modelo elegido (6 entradas, train completo) | ¿Cómo generaliza? Se evalúa con `python3 analysis/fraud_threshold.py` |
 
 Una serie de 15 corridas tarda ~1.5 min con 20 cores y ocupa ~270 MB (cada corrida de dígitos deja
 ~18 MB, igual que con `make run`; ~6 MB es su `report.html`). Las de dígitos con 10 seeds son 30 a 40

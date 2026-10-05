@@ -1,28 +1,18 @@
 # Roadmap — Optimizadores (Ejercicio 2)
 
-## Estado (4/10, para quien siga)
+## Estado (5/10, para quien siga)
 
-- **Pasos 0 a 7: hechos y en `dev-perceptron`.** Los cinco optimizadores (`gd`, `momentum`, `rmsprop`,
-  `adam`, `adaptive_eta`) están implementados, con tests (`make test`) y elegibles desde el config (ver
-  `neuron/config.json.adam.example` y `neuron/config.json.adaptive_eta.example`). Con `gd` la red da
-  idéntico a antes del refactor.
-- **Paso 8, etapa 1: corriendo.** Archivos: `neuron/config.json.digits_optimizers.example` (la base) y
-  `analysis/series_eta_{gd,adaptive,momentum,rmsprop,adam}.json`. Cada serie tarda ~12-15 min con 8
-  núcleos (no 2-3 como se estimó: 8 corridas en paralelo se frenan entre sí). Se corren con:
-  `for s in gd adaptive momentum rmsprop adam; do python3 analysis/sweep.py analysis/series_eta_$s.json --no-run-reports; done`
-- **Lo que ya salió de la etapa 1** (accuracy de validación, promedio de 3 seeds):
-  - `gd`: 0.001 → 90.1%, 0.005 → 93.7%, 0.01 → 95.0%, **0.05 → 96.0%** (en el borde de la grilla).
-  - `adaptive_eta`: 0.001 → 91.3%, 0.005 → 94.7%, 0.01 → 95.6%, **0.05 → 96.0%** (en el borde). Le gana
-    a `gd` con η chicos porque η sube solo (termina ~2.5× el inicial).
-  - `momentum` (α = 0.9) da casi idéntico a `gd` con η 10 veces más grande (0.0005 ≈ gd 0.005, 0.001 ≈
-    gd 0.01, 0.005 ≈ gd 0.05): es el paso η/(1−α) de la clase 12.1. Buen punto para la defensa.
-- **Lo que sigue:**
-  1. Cuando terminen las 5 series: `python3 analysis/plots_eta_sensitivity.py` imprime el mejor η de cada
-     optimizador (y avisa si quedó en el borde) y arma `analysis/results/eta_sensitivity.html`.
-  2. Bordes: `gd` y `adaptive_eta` ganaron en η = 0.05, el máximo probado. Agregar η = 0.1 y 0.2 (y lo
-     que marque el script para los demás) antes de la etapa 2.
-  3. Etapa 2: `analysis/series_optimizer.json` con los 5 optimizadores, cada uno con su mejor η, 5 seeds.
-  4. Paso 9: documentar (`DECISIONS.md`, `neuron/README.md`, `CLAUDE.md`).
+- **Pasos 0 a 8: hechos y en `dev-perceptron`.** Los cinco optimizadores (`gd`, `momentum`, `rmsprop`,
+  `adam`, `adaptive_eta`) están implementados, con tests, y elegibles desde el config.
+- **Etapa 1 (η por optimizador): hecha.** Se amplió la grilla hacia arriba hasta encontrar el pico de cada
+  uno (`analysis/series_eta_{gd,adaptive,momentum,rmsprop,adam}.json` y `series_eta_edges*.json`). Mejor η:
+  GD 0.5, η adaptativo 0.5, momentum 0.05, RMSProp 0.001, Adam 0.0005.
+- **Etapa 2 (los cinco con su mejor η, 5 seeds): hecha.** `analysis/series_optimizer.json` (validación) y
+  `series_optimizer_test.json` (entrenando con `more_digits`, sobre `digits_test`). Sin diferencias
+  significativas; ver `DECISIONS.md`.
+- **Falta (paso 9, documentar):** `neuron/README.md`. `DECISIONS.md` y `CLAUDE.md` ya están.
+- **Ideas si se sigue:** más épocas o `tolerance`; otras arquitecturas con cada optimizador; más seeds
+  (con 5, el p mínimo del test exacto es 0.0625: para poder rechazar a 0.05 hacen falta 6 o más).
 
 Plan para sumar a la red los optimizadores de la Clase 12.1: **momentum**, **η adaptativo**, **RMSProp**
 y **Adam**. El enunciado pide como mínimo comparar "variantes de mecanismos de optimización" en dígitos,

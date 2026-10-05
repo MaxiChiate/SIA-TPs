@@ -112,23 +112,47 @@ logistic con `[16]` 0.886 (0.0105).
   para toda la red) no está acotada: puede predecir probabilidades fuera de [0, 1]. Para este problema
   se mantiene logistic.
 
-## Dígitos: evaluación final sobre `digits_test.csv` y el efecto de los 8
+## Optimizadores (Ej. 2), etapa 2: resultados y evaluación final sobre `digits_test.csv`
 
-**Qué:** Adam, η 0.0005 (el mejor de la etapa 1), `[64]` logistic, online con shuffle, 50 épocas, seed 1,
-evaluada sobre `digits_test.csv` (2497 imágenes, 223 a 283 por clase). Entrenada con `more_digits.csv`:
-accuracy 95.03 % (124 errores), aciertos por clase entre 85.7 % (el 5) y 98.9 %. Entrenada con
-`digits.csv`: 85.74 %, y el 8, que no está en el entrenamiento, tiene 0 % de aciertos (sus 243
-imágenes se reparten sobre todo en 5, 3 y 9).
+**Qué:** la etapa 1 se amplió hacia arriba hasta encontrar el pico de cada optimizador
+(`series_eta_edges.json`, `series_eta_edges_high.json`, `series_eta_edges_higher.json`): con la grilla
+original GD y η adaptativo tenían el mejor valor en el borde (η 0.05, 96.0 %) y siguieron subiendo. Mejor
+η (accuracy de validación, 3 seeds): GD 0.5 (96.57 %; el 1.0 da 96.57 pero ya queda pegado a donde cae,
+η 2 da 93.7 % y η 5 diverge), η adaptativo 0.5 (96.57 %), momentum 0.05 (96.57 %; 0.5 diverge, 16 %),
+RMSProp 0.001 (96.14 %) y Adam 0.0005 (96.45 %). Etapa 2: `series_optimizer.json` (validación, 20 % de
+`digits.csv`) y `series_optimizer_test.json` (entrenando con `more_digits.csv`, evaluando sobre
+`digits_test.csv`), 5 seeds, `[64]` logistic, online con shuffle, 50 épocas.
+
+| Optimizador | Validación | Test | Segundos por corrida |
+|---|---|---|---|
+| η adaptativo | 96.62 ± 0.13 | 95.44 ± 0.50 | 23 |
+| GD | 96.57 ± 0.23 | 95.39 ± 0.28 | 23 |
+| Momentum | 96.49 ± 0.15 | 95.67 ± 0.19 | 36 |
+| Adam | 96.30 ± 0.21 | 95.07 ± 0.08 | 46 |
+| RMSProp | 95.99 ± 0.21 | 95.11 ± 0.34 | 48 |
+
+**Conclusiones:**
+- Ninguna diferencia es significativa: con 5 seeds el p mínimo del test exacto pareado es 0.0625, y el mejor
+  contra el segundo en validación da p = 0.56. El orden cambia entre validación y test.
+- Con su mejor η los cinco quedan a menos de 0.7 puntos. Lo que más importa es el η: el mismo optimizador
+  pasa de 90 % a 96.6 % según η.
+- Todos bajan de MSE de validación 0.010 en 2 a 4 épocas; la validación se estabiliza hacia la época 25
+  y Adam empeora levemente (0.0065 a 0.0069) mientras su error de train sigue bajando.
+- GD y η adaptativo cuestan la mitad de tiempo por corrida que Adam y RMSProp.
+- GD con η 0.5 y momentum con η 0.05 rinden igual: es el paso η/(1−α) con α = 0.9.
+
+**Elección y evaluación final:** el ganador por validación es η adaptativo (η 0.5), que se usa en la
+evaluación final: accuracy en test 95.4 ± 0.5 % (94.9 a 96.3). Se elige con validación y no con test, aunque
+en test momentum quede primero, para no usar el test en la elección. La matriz de confusión y los aciertos por
+clase son de la seed mediana (4: 95.47 %, 113 errores en 2497). Entrenada con `digits.csv`, que no tiene
+ningún 8: 86.30 % y el 8 tiene 0 % de aciertos (sus 243 imágenes van sobre todo a 3, 5 y 9); con
+`more_digits.csv`: 95.47 % y el 8 llega a 90.1 %. El 5 es la clase más débil (86.5 %, 542 ejemplos).
 
 **Por qué:**
-- El accuracy global no alcanza: oculta que una clase entera falla. Por eso el reporte incluye
-  matriz de confusión y aciertos y precisión por clase.
-- `digits_test.csv` se usa solo acá: el η se eligió con la validación (20 % de `digits.csv`) de la
-  etapa 1, no con el test.
-- Es una sola seed. Para dar la accuracy final con dispersión falta la etapa 2 (los cinco optimizadores,
-  cada uno con su mejor η y 5 seeds).
-- Los datos pesan más que el optimizador: agregar los 8 sube 9.3 puntos; entre los cinco optimizadores
-  la validación de la etapa 1 queda entre 96.0 % y 96.5 %.
+- El accuracy global no alcanza: oculta que una clase entera falle. Por eso el reporte trae matriz de
+  confusión y aciertos y precisión por clase.
+- `digits_test.csv` se usa solo en la evaluación final.
+- Límites: validación con una sola partición (`split_seed` 1) y 5 seeds; 50 épocas sin `tolerance`.
 
 ## Pesos iniciales: aleatorios uniformes en [−0.5, 0.5]
 

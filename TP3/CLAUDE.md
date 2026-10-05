@@ -134,10 +134,11 @@ en C todavía no cubre todo (ver Pendiente).
   estratificado 70/15/15, 6 entradas, umbral 0.82 con test precisión 0.76 y recall 0.96); ver
   `DECISIONS.md`. Falta, si se quiere: variar el split (seeds) para medir cuánto mueve el umbral, y
   calibración de probabilidades (opcional).
-- **Ejercicio 2**: optimizadores en curso, ver `docs/optimizers_roadmap.md` (etapa 1: η por optimizador;
-  etapa 2: los cinco con su mejor η, 5 seeds). Falta la evaluación final sobre `digits_test.csv`.
-- **Presentación**: Artifact con gráficos (https://claude.ai/artifact/NpkJsGnWfG1tzxKzwyiywZ); lo que
-  no tiene resultado todavía queda como `[__]`. Hay que mantenerla alineada con este archivo y con `DECISIONS.md`.
+- **Ejercicio 2**: optimizadores hechos (etapas 1 y 2, ver `DECISIONS.md` y `docs/optimizers_roadmap.md`):
+  sin diferencias significativas entre los cinco con su mejor η; test 95.4 ± 0.5 % con η adaptativo.
+  Falta documentar los optimizadores en `neuron/README.md`.
+- **Presentación**: Artifact con gráficos (https://claude.ai/artifact/NpkJsGnWfG1tzxKzwyiywZ); hay que
+  mantenerla alineada con este archivo y con `DECISIONS.md`. Hoy no le quedan resultados pendientes; falta revisarla visualmente.
 
 ## Convenciones
 
