@@ -186,8 +186,7 @@ compilado (`cd neuron && make`) y `python3` sin dependencias (solo `plots_main.p
 - **`digits_test.csv` no se usa para elegir nada** (Ejercicios 2 y 3): hiperparámetros con validación apartada del
   entrenamiento, test una sola vez al final. Las series viejas de dígitos (`series_eta`, `series_architecture`, etc.)
   usan `digits_test` como validación: sirven para explorar, no para elegir.
-- El shell es zsh: no divide palabras en variables sin comillas. `ls` está aliasado (agrega íconos) y rompe
-  pipelines; usar `printf '%s\n' patrón*` o `find`. No hay pandas, numpy ni matplotlib.
+- Los scripts de `scripts/` y `analysis/` usan solo la librería estándar de Python (plotly solo para `plots_main.py`): no hace falta instalar nada. Los comandos de ejemplo de este archivo son de un shell POSIX; si algo no se comporta igual en otro shell, usar Python o comillas explícitas.
 - La carpeta de trabajo del Artifact está en un directorio temporal que no sobrevive: no es fuente de verdad.
 - Otras personas del equipo empujan a la misma rama (`dev-perceptron`): hacer `git fetch` y `git pull --rebase` antes de pushear.
 
