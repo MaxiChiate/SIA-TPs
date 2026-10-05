@@ -1,0 +1,59 @@
+{
+  "_comment": "Ejercicio 2, etapa 2, evaluación final: igual que series_optimizer.json pero entrenando con more_digits (tiene 8) y evaluando sobre digits_test, que no se usó para elegir ningún η.",
+  "base_config": "../neuron/config.json.digits_test.example",
+  "title": "Optimizadores sobre digits_test",
+  "variants": [
+    {
+      "label": "GD",
+      "set": {
+        "optimizer": "gd",
+        "eta": 0.5
+      }
+    },
+    {
+      "label": "Momentum",
+      "set": {
+        "optimizer": "momentum",
+        "momentum": 0.9,
+        "eta": 0.05
+      }
+    },
+    {
+      "label": "RMSProp",
+      "set": {
+        "optimizer": "rmsprop",
+        "rmsprop_decay": 0.9,
+        "optimizer_epsilon": 1e-08,
+        "eta": 0.001
+      }
+    },
+    {
+      "label": "Adam",
+      "set": {
+        "optimizer": "adam",
+        "adam_beta1": 0.9,
+        "adam_beta2": 0.999,
+        "optimizer_epsilon": 1e-08,
+        "eta": 0.0005
+      }
+    },
+    {
+      "label": "η adaptativo",
+      "set": {
+        "optimizer": "adaptive_eta",
+        "eta": 0.5,
+        "eta_increase": 0.05,
+        "eta_decrease": 0.5,
+        "eta_patience_up": 3,
+        "eta_patience_down": 3
+      }
+    }
+  ],
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ]
+}
