@@ -19,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fraud_calibration  # noqa: E402
+import digits_ensemble  # noqa: E402
 import fraud_threshold  # noqa: E402
 
 TP_DIR = Path(__file__).resolve().parent.parent
@@ -388,7 +389,21 @@ def optimizer_digits_test_dots() -> str:
     return optimizer_dots("series_optimizer_digits_test", 84.5, 87.0, [84.5, 85.0, 85.5, 86.0, 86.5, 87.0])
 
 
-CHARTS = {"digits_vs_test": digits_vs_test, "architecture_dots": architecture_dots, "optimizer_digits_test_dots": optimizer_digits_test_dots,
+def ex3_ablation() -> str:
+    """Validation accuracy after each technique of Exercise 3 (one dot per seed), and the ensemble of 9 networks."""
+    def accuracies(prefix: str, label: str) -> list[float]:
+        return [100 * float(r["accuracy"]) for r in rows(sorted(RESULTS.glob(f"{prefix}_2*"))[-1] / "summary.csv") if r["label"] == label]
+    step3 = sorted(RESULTS.glob("series_ex3_step3_2*"))[-1]
+    loaded = [digits_ensemble.load(step3 / "runs" / r["run"] / "predictions.csv") for r in rows(step3 / "summary.csv")]
+    ensemble = 100 * digits_ensemble.accuracy(loaded[0][0], digits_ensemble.average([o for _, o in loaded]))
+    steps = [("[64], more_digits", accuracies("series_ex3_step1", "more [64]")), ("+ unión de datos", accuracies("series_ex3_step1", "unión [64]")),
+             ("+ [256]", accuracies("series_ex3_step1", "unión [256]")), ("+ aumento ×3", accuracies("series_ex3_step2", "aumento x3")),
+             ("+ [512]", accuracies("series_ex3_step3", "a2 [512]")), ("Ensemble de 9", [ensemble])]
+    return dot_plot([(name, values, SERIES[1] if name.startswith("Ensemble") else SERIES[0]) for name, values in steps], 96.0, 99.0,
+                    [96.0, 97.0, 98.0, 99.0], width=1000)
+
+
+CHARTS = {"ex3_ablation": ex3_ablation, "digits_vs_test": digits_vs_test, "architecture_dots": architecture_dots, "optimizer_digits_test_dots": optimizer_digits_test_dots,
           "fraud_reliability": fraud_reliability, "fraud_feature_bars": fraud_feature_bars, "fraud_size_curve": fraud_size_curve, "threshold_curve": threshold_curve,
           "fraud_histogram": fraud_histogram, "fraud_curves": fraud_curves, "fraud_r2": fraud_r2,
           "digits_distribution": digits_distribution, "xor_convergence": xor_convergence, "eta_sensitivity": eta_sensitivity,
