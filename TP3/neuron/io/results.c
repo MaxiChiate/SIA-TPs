@@ -220,17 +220,17 @@ static void write_metrics(FILE * file, const ErrorMetrics * metrics) {
 
 
 int results_write_epochs(const Results * results, int n_epochs, const ErrorMetrics train[],
-                         const ErrorMetrics validation[], const double elapsed[]) {
+                         const ErrorMetrics validation[], const double elapsed[], const double eta[]) {
   FILE * file = open_in_run_dir(results, "epochs.csv");
   if (file == NULL) return 0;
 
   fprintf(file, "epoch,train_error,train_mse,train_mae,train_max_error,"
-                "validation_error,validation_mse,validation_mae,validation_max_error,elapsed_s\n");
+                "validation_error,validation_mse,validation_mae,validation_max_error,elapsed_s,eta\n");
   for (int epoch = 0; epoch <= n_epochs; epoch++) {
     fprintf(file, "%d", epoch);
     write_metrics(file, &train[epoch]);
     write_metrics(file, &validation[epoch]);
-    fprintf(file, ",%.6f\n", elapsed[epoch]);
+    fprintf(file, ",%.6f,%.10g\n", elapsed[epoch], eta[epoch]);
   }
 
   return fclose(file) == 0;

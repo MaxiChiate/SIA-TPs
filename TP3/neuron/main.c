@@ -181,6 +181,7 @@ typedef struct {
   ErrorMetrics * train_errors;
   ErrorMetrics * validation_errors;
   double * elapsed;    // seconds spent training up to each epoch; evaluating the errors is left out
+  double * eta;        // learning rate at the end of each epoch
   double started_at;   // wall clock, error evaluation included
   double resumed_at;   // when training last resumed after record_epoch
   double reported_at;  // when progress was last printed
@@ -251,6 +252,7 @@ static int record_epoch(int epoch, Network network, void * context) {
 
   history->train_errors[epoch] = dataset_error(network, history->train);
   history->validation_errors[epoch] = dataset_error(network, history->validation);
+  history->eta[epoch] = network_eta(network);
 
   if (history->next_snapshot < history->n_snapshots && history->snapshot_epochs[history->next_snapshot] == epoch) {
     int n_values = dataset_n_samples(history->validation) * dataset_n_outputs(history->validation);
@@ -292,12 +294,13 @@ static TrainingHistory new_training_history(const Dataset train, const Dataset v
     .train_errors = malloc((epochs + 1) * sizeof(ErrorMetrics)),
     .validation_errors = malloc((epochs + 1) * sizeof(ErrorMetrics)),
     .elapsed = malloc((epochs + 1) * sizeof(double)),
+    .eta = malloc((epochs + 1) * sizeof(double)),
   };
   history.n_snapshots = snapshot_epochs(epochs, history.snapshot_epochs);
   history.snapshot_predictions = malloc((size_t) history.n_snapshots * dataset_n_samples(validation)
                                         * dataset_n_outputs(validation) * sizeof(double));
   if (history.train_errors == NULL || history.validation_errors == NULL || history.elapsed == NULL
-      || history.snapshot_predictions == NULL || history.best_weights == NULL) {
+      || history.eta == NULL || history.snapshot_predictions == NULL || history.best_weights == NULL) {
     die("couldn't allocate training history");
   }
   return history;
@@ -308,6 +311,7 @@ static void free_training_history(TrainingHistory * history) {
   free(history->train_errors);
   free(history->validation_errors);
   free(history->elapsed);
+  free(history->eta);
   free(history->snapshot_predictions);
   free(history->best_weights);
 }
@@ -329,7 +333,7 @@ static void train_network(Network network, const Dataset train, const Config * c
 
 static void save_history(const Results * results, const TrainingHistory * history) {
   int ok = results_write_epochs(results, history->epochs_run, history->train_errors, history->validation_errors,
-                                history->elapsed)
+                                history->elapsed, history->eta)
         && results_write_snapshots(results, history->next_snapshot, history->snapshot_epochs,
                                    dataset_n_samples(history->validation), dataset_n_outputs(history->validation),
                                    dataset_zetas(history->validation),

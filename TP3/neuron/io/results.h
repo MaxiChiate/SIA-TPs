@@ -7,7 +7,7 @@
 //   weights.csv      one row per weight: layer, neuron, weight (0 = bias), initial and final value
 //   predictions.csv  validation inputs, zeta and the network's prediction
 //   epochs.csv       E, MSE, MAE and max |e| on train and validation after every epoch (0 = initial weights),
-//                    and the seconds spent training so far
+//                    the seconds spent training so far and the learning rate the epoch ended with
 //   predictions_by_epoch.csv  validation zeta and the prediction at a few epochs, one column per epoch
 // With several outputs every zeta and prediction column becomes one per output: zeta_0, zeta_1, ...,
 // prediction_0, ..., epoch_<e>_0, ...
@@ -39,9 +39,9 @@ int results_read_weights(const char * path, int n_layers, const int sizes[], dou
 int results_write_predictions(const Results * results, int n_inputs, int n_outputs, const double inputs[][n_inputs],
                               const double zetas[], const double predictions[], int n_samples);
 
-// train, validation and elapsed have n_epochs + 1 elements; epoch 0 is the untrained network
+// train, validation, elapsed and eta have n_epochs + 1 elements; epoch 0 is the untrained network
 int results_write_epochs(const Results * results, int n_epochs, const ErrorMetrics train[],
-                         const ErrorMetrics validation[], const double elapsed[]);
+                         const ErrorMetrics validation[], const double elapsed[], const double eta[]);
 
 // zetas is n_samples x n_outputs and predictions n_snapshots x n_samples x n_outputs, both row-major:
 // predictions[k] holds every prediction at epochs[k]
