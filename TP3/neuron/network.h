@@ -2,14 +2,16 @@
 #define __NETWORK_H__
 
 #include "activation/activation.h"
+#include "optimizer/optimizer.h"
 #include "rng.h"
 
 typedef struct network * Network;
 
 // sizes has n_layers + 1 elements: sizes[0] = inputs, sizes[l] = neurons in layer l (the last one is
 // the output). {2, 2, 1} is the 2-2-1 net; {n, 1} is a simple perceptron.
+// Every neuron gets its own optimizer built from optimizer (same name and hyperparameters, its own state).
 // draw_weight(context) is called once per weight, layer by layer and neuron by neuron, bias first.
-Network network_new(int n_layers, const int sizes[], const Activation * activation, double eta,
+Network network_new(int n_layers, const int sizes[], const Activation * activation, const OptimizerConfig * optimizer,
                     double (*draw_weight)(void * context), void * context);
 
 void network_free(Network network);
@@ -26,6 +28,12 @@ void network_get_weights(const Network network, double out[]);
 
 // Inverse of network_get_weights: weights is laid out the same way
 void network_set_weights(Network network, const double weights[]);
+
+// The learning rate, shared by every neuron's optimizer
+double network_eta(const Network network);
+
+// Changes it in every neuron's optimizer at once
+void network_set_eta(Network network, double eta);
 
 // output must have room for network_n_outputs elements
 void network_predict(Network network, const double input[], double output[]);

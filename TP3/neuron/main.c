@@ -93,6 +93,12 @@ static double random_weight(void * context) {
 }
 
 
+// Plain gradient descent with the config's eta
+static OptimizerConfig optimizer_config(const Config * config) {
+  return (OptimizerConfig) { .name = "gd", .eta = config->eta };
+}
+
+
 // {n_inputs, hidden_layers..., n_outputs}: one output neuron per zeta column of the dataset
 static int layer_sizes(const Config * config, int n_inputs, int n_outputs, int sizes[]) {
   sizes[0] = n_inputs;
@@ -355,7 +361,8 @@ int main(int argc, char * argv[]) {
   int n_layers = layer_sizes(&config, n_inputs, n_outputs, sizes);
 
   Rng rng = rng_new(config.seed);
-  Network network = network_new(n_layers, sizes, activation, config.eta, random_weight, &rng);
+  OptimizerConfig optimizer = optimizer_config(&config);
+  Network network = network_new(n_layers, sizes, activation, &optimizer, random_weight, &rng);
   if (config.initial_weights[0] != '\0') load_initial_weights(config.initial_weights, network, n_layers, sizes);
   double * initial_weights = snapshot_weights(network);
 

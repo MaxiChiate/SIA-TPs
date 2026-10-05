@@ -7,7 +7,7 @@ LDLIBS  := -lm
 BUILD_DIR := build
 TARGET    := $(BUILD_DIR)/neuron
 
-SOURCES := $(wildcard *.c io/*.c activation/*.c)
+SOURCES := $(wildcard *.c io/*.c activation/*.c optimizer/*.c)
 OBJECTS := $(SOURCES:%.c=$(BUILD_DIR)/%.o)
 
 TEST_TARGET  := $(BUILD_DIR)/tests/test_main

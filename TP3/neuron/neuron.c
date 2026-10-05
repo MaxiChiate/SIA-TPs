@@ -4,18 +4,24 @@ struct neuron {
   int n_inputs;
   double (*theta)(double);
   double (*theta_prime)(double);
-  double eta;
+  Optimizer optimizer; // its own, so per-weight state (momentum, adam) belongs to this neuron's weights
   double * gradient; // descent direction delta * input accumulated since the last neuron_apply, points into storage
   double * weights;  // n_inputs + 1 elements, weights[0] = w0, points into storage
   double storage[];
 };
 
 
-Neuron neuron_new(int n_inputs, double (*func)(double), double (*func_prime)(double), const double weights[], double eta) {
+Neuron neuron_new(int n_inputs, double (*func)(double), double (*func_prime)(double), const double weights[],
+                  const OptimizerConfig * optimizer) {
 
   Neuron neuron = malloc(sizeof(struct neuron) + 2 * (n_inputs + 1) * sizeof(double));
   if (neuron == NULL) {
     fprintf(stderr, "FATAL: couldn't allocate neuron\n");
+    abort();
+  }
+  neuron->optimizer = optimizer_new(optimizer, n_inputs + 1);
+  if (neuron->optimizer == NULL) {
+    fprintf(stderr, "FATAL: unknown optimizer \"%s\" (available: %s)\n", optimizer->name, optimizer_names());
     abort();
   }
   neuron->n_inputs = n_inputs;
@@ -25,7 +31,6 @@ Neuron neuron_new(int n_inputs, double (*func)(double), double (*func_prime)(dou
   memcpy(neuron->weights, weights, (n_inputs + 1) * sizeof(double));
   neuron->theta = func;
   neuron->theta_prime = func_prime;
-  neuron->eta = eta;
 
   return neuron;
 
@@ -33,6 +38,7 @@ Neuron neuron_new(int n_inputs, double (*func)(double), double (*func_prime)(dou
 
 
 void neuron_free(Neuron neuron) {
+  optimizer_free(neuron->optimizer);
   free(neuron);
 }
 
@@ -93,9 +99,17 @@ void neuron_accumulate(Neuron neuron, const double input[], double delta) {
 
 void neuron_apply(Neuron neuron) {
 
-  for (int i = 0; i <= neuron->n_inputs; i++) {
-    neuron->weights[i] += neuron->eta * neuron->gradient[i];
-    neuron->gradient[i] = 0.0;
-  }
+  optimizer_step(neuron->optimizer, neuron->weights, neuron->gradient);
+  memset(neuron->gradient, 0, (neuron->n_inputs + 1) * sizeof(double));
 
+}
+
+
+double neuron_eta(const Neuron neuron) {
+  return optimizer_eta(neuron->optimizer);
+}
+
+
+void neuron_set_eta(Neuron neuron, double eta) {
+  optimizer_set_eta(neuron->optimizer, eta);
 }

@@ -22,16 +22,17 @@ static void * checked_malloc(size_t size) {
 }
 
 
-static Neuron new_neuron(int n_inputs, const Activation * activation, double eta, double (*draw_weight)(void *), void * context) {
+static Neuron new_neuron(int n_inputs, const Activation * activation, const OptimizerConfig * optimizer,
+                         double (*draw_weight)(void *), void * context) {
   double weights[n_inputs + 1];
   for (int i = 0; i <= n_inputs; i++) {
     weights[i] = draw_weight(context);
   }
-  return neuron_new(n_inputs, activation->theta, activation->theta_prime, weights, eta);
+  return neuron_new(n_inputs, activation->theta, activation->theta_prime, weights, optimizer);
 }
 
 
-Network network_new(int n_layers, const int sizes[], const Activation * activation, double eta,
+Network network_new(int n_layers, const int sizes[], const Activation * activation, const OptimizerConfig * optimizer,
                     double (*draw_weight)(void *), void * context) {
 
   Network network = checked_malloc(sizeof(struct network));
@@ -52,7 +53,7 @@ Network network_new(int n_layers, const int sizes[], const Activation * activati
   for (int l = 1; l <= n_layers; l++) {
     network->layers[l] = checked_malloc(sizes[l] * sizeof(Neuron));
     for (int j = 0; j < sizes[l]; j++) {
-      network->layers[l][j] = new_neuron(sizes[l-1], activation, eta, draw_weight, context);
+      network->layers[l][j] = new_neuron(sizes[l-1], activation, optimizer, draw_weight, context);
     }
     network->v[l] = checked_malloc(sizes[l] * sizeof(double));
     network->h[l] = checked_malloc(sizes[l] * sizeof(double));
@@ -119,6 +120,21 @@ void network_set_weights(Network network, const double weights[]) {
     for (int j = 0; j < network->sizes[l]; j++) {
       neuron_set_weights(network->layers[l][j], weights);
       weights += network->sizes[l-1] + 1;
+    }
+  }
+}
+
+
+// Every neuron's optimizer has the same eta, so any of them answers for the network
+double network_eta(const Network network) {
+  return neuron_eta(network->layers[1][0]);
+}
+
+
+void network_set_eta(Network network, double eta) {
+  for (int l = 1; l <= network->n_layers; l++) {
+    for (int j = 0; j < network->sizes[l]; j++) {
+      neuron_set_eta(network->layers[l][j], eta);
     }
   }
 }

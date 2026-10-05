@@ -5,6 +5,7 @@
 #include "../io/config.h"
 #include "../io/dataset.h"
 #include "../network.h"
+#include "../optimizer/optimizer.h"
 #include "../rng.h"
 #include <math.h>
 #include <stdio.h>
@@ -46,7 +47,8 @@ static double random_weight(void * context) {
 
 static Network new_network(int n_layers, const int sizes[], const char * activation, double eta, unsigned int seed) {
   Rng rng = rng_new(seed);
-  return network_new(n_layers, sizes, activation_find(activation), eta, random_weight, &rng);
+  OptimizerConfig gd = { .name = "gd", .eta = eta };
+  return network_new(n_layers, sizes, activation_find(activation), &gd, random_weight, &rng);
 }
 
 static void set_weights(Network network, const double * weights) {
@@ -411,13 +413,61 @@ static void test_training_stops_when_callback_asks(void) {
 
 static void test_error_metrics_by_hand(void) {
   int sizes[] = {1, 1};
-  Network network = network_new(1, sizes, activation_find("lineal"), 0.1, zero_weight, NULL); // O = 0 always
+  OptimizerConfig gd = { .name = "gd", .eta = 0.1 };
+  Network network = network_new(1, sizes, activation_find("lineal"), &gd, zero_weight, NULL); // O = 0 always
   double inputs[] = {0, 0, 0}, zetas[] = {1.0, -2.0, 0.0};
   ErrorMetrics error = network_error(network, inputs, zetas, 3);
   check_close(error.energy, 0.5 * 5.0, 1e-12);
   check_close(error.mse, 5.0 / 3, 1e-12);
   check_close(error.mae, 1.0, 1e-12);
   check_close(error.max_abs_error, 2.0, 1e-12);
+  network_free(network);
+}
+
+
+// ---------- optimizer ----------
+
+
+static void test_gd_step_by_hand(void) {
+  OptimizerConfig config = { .name = "gd", .eta = 0.1 };
+  Optimizer optimizer = optimizer_new(&config, 2);
+  double weights[] = {1.0, 1.0}, descent[] = {1.0, -2.0};
+  optimizer_step(optimizer, weights, descent); // Δw = eta * descent
+  check_close(weights[0], 1.1, 1e-12);
+  check_close(weights[1], 0.8, 1e-12);
+
+  optimizer_set_eta(optimizer, 0.5);
+  check_close(optimizer_eta(optimizer), 0.5, 1e-12);
+  optimizer_step(optimizer, weights, descent);
+  check_close(weights[0], 1.6, 1e-12);
+  check_close(weights[1], -0.2, 1e-12);
+  optimizer_free(optimizer);
+
+  OptimizerConfig unknown = { .name = "nope", .eta = 0.1 };
+  check(optimizer_new(&unknown, 2) == NULL);
+}
+
+
+// The optimizer on its own, no network: f(w) = 1/2 (w - 3)^2, whose descent direction is -f'(w) = 3 - w
+static void test_gd_minimizes_a_quadratic(void) {
+  OptimizerConfig config = { .name = "gd", .eta = 0.1 };
+  Optimizer optimizer = optimizer_new(&config, 1);
+  double w[] = {0.0};
+  for (int t = 0; t < 300; t++) {
+    double descent[] = {3.0 - w[0]};
+    optimizer_step(optimizer, w, descent);
+  }
+  check_close(w[0], 3.0, 1e-9);
+  optimizer_free(optimizer);
+}
+
+
+static void test_network_eta(void) {
+  int sizes[] = {2, 3, 1};
+  Network network = new_network(2, sizes, "tanh", 0.1, 1);
+  check_close(network_eta(network), 0.1, 1e-12);
+  network_set_eta(network, 0.02);
+  check_close(network_eta(network), 0.02, 1e-12);
   network_free(network);
 }
 
@@ -606,6 +656,9 @@ int main(void) {
     { "shuffled training", test_shuffled_training },
     { "relu network learns", test_relu_network_learns },
     { "callback stops training", test_training_stops_when_callback_asks },
+    { "gd step by hand", test_gd_step_by_hand },
+    { "gd minimizes a quadratic", test_gd_minimizes_a_quadratic },
+    { "network eta get/set", test_network_eta },
     { "dataset loading", test_dataset_loading },
     { "dataset split", test_dataset_split },
     { "config loading", test_config_loading },
