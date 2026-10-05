@@ -196,19 +196,83 @@ def xor_convergence() -> str:
     return hbars([(name, value, color, f"{value} de 6") for name, value, color in items], vmax=6, label_w=240, track_w=720)
 
 
+OPTIMIZERS = [("gd", "GD"), ("adaptive", "η adaptativo"), ("momentum", "Momentum"), ("rmsprop", "RMSProp"), ("adam", "Adam")]
+OPTIMIZER_COLOR = {name: SERIES[i] for i, (_, name) in enumerate(OPTIMIZERS)}  # same color for the same optimizer in every chart
+
+
+def eta_accuracies() -> dict[str, dict[float, float]]:
+    """Mean validation accuracy (%) per optimizer and eta: the stage-1 grids plus the series that extend them."""
+    found: dict[tuple[str, float], list[float]] = {}
+    for key, _ in OPTIMIZERS:
+        for row in rows(latest(f"series_eta_{key}") / "summary.csv"):
+            found.setdefault((key, float(row["label"].replace("eta=", ""))), []).append(float(row["accuracy"]))
+    for prefix in ("series_eta_edges", "series_eta_edges_high", "series_eta_edges_higher"):
+        for row in rows(sorted(RESULTS.glob(f"{prefix}_2*"))[-1] / "summary.csv"):
+            key, eta = row["label"].split()
+            found.setdefault((key, float(eta)), []).append(float(row["accuracy"]))
+    result: dict[str, dict[float, float]] = {key: {} for key, _ in OPTIMIZERS}
+    for (key, eta), values in found.items():
+        result[key][eta] = 100 * statistics.fmean(values)
+    return result
+
+
 def eta_sensitivity() -> str:
-    names = [("gd", "GD"), ("adaptive", "η adaptativo"), ("momentum", "Momentum"), ("rmsprop", "RMSProp"), ("adam", "Adam")]
+    by_optimizer = eta_accuracies()
     lines = []
-    for index, (key, name) in enumerate(names):
-        directory = latest(f"series_eta_{key}")
-        by_eta: dict[float, list[float]] = {}
-        for row in rows(directory / "summary.csv"):
-            eta = float(row["label"].replace("eta=", "").replace("eta ", ""))
-            by_eta.setdefault(eta, []).append(float(row["accuracy"]))
-        lines.append(Line(name, [(eta, 100 * statistics.fmean(v)) for eta, v in sorted(by_eta.items())], SERIES[index]))
-    chart = line_chart(lines, 1500, 500, [0.0001, 0.001, 0.01, 0.1], [90, 92, 94, 96, 98], xlog=True,
+    for key, name in OPTIMIZERS:
+        points = [(eta, acc) for eta, acc in sorted(by_optimizer[key].items()) if acc >= 90 and eta <= 1]
+        lines.append(Line(name, points, OPTIMIZER_COLOR[name]))
+    chart = line_chart(lines, 1500, 500, [0.0001, 0.001, 0.01, 0.1, 1], [90, 92, 94, 96, 98], xlog=True,
                        xlabel="Tasa de aprendizaje η (escala logarítmica)", ylabel="Accuracy de validación (%)",
-                       fmt_x=lambda v: fmt(v, 4).rstrip("0").rstrip(","), fmt_y=lambda v: f"{v:g} %")
+                       fmt_x=lambda v: fmt(v, 4).rstrip("0").rstrip(",") if v < 1 else "1", fmt_y=lambda v: f"{v:g} %")
+    return legend([(line.label, line.color) for line in lines]) + chart
+
+
+def dot_plot(groups: list[tuple[str, list[float], str]], lo: float, hi: float, ticks: list[float], width: int = 780, row: int = 64) -> str:
+    """One row per group: a dot per seed and a dark bar at the mean."""
+    left, top = 210, 8
+    plot_w, height = width - left - 20, top + row * len(groups) + 56
+    px = lambda v: left + plot_w * (v - lo) / (hi - lo)
+    svg = [f'<svg aria-label="Accuracy por seed y media de cada optimizador" style="position:absolute;left:0px;top:0px;width:{width}px;height:{height}px" '
+           f'width="{width}" height="{height}" viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg">']
+    for tick in ticks:
+        svg.append(f'<line x1="{px(tick):.1f}" y1="{top}" x2="{px(tick):.1f}" y2="{top + row * len(groups)}" stroke="{GRID}" stroke-width="2"/>')
+    labels = [pinned(f"{tick:.1f}".replace(".", ","), px(tick) - 50, top + row * len(groups) + 8, 100, align="center") for tick in ticks]
+    for index, (name, values, color) in enumerate(groups):
+        y = top + row * index + row / 2
+        mean = statistics.fmean(values)
+        svg.append(f'<line x1="{px(mean):.1f}" y1="{y - 18:.1f}" x2="{px(mean):.1f}" y2="{y + 18:.1f}" stroke="{INK}" stroke-width="5"/>')
+        for value in values:
+            svg.append(f'<circle cx="{px(value):.1f}" cy="{y:.1f}" r="9" fill="{color}" stroke="#F5F3EC" stroke-width="2"/>')
+        labels.append(pinned(name, 0, y - 16, left - 24, size=28, align="right", color=INK))
+    svg.append("</svg>")
+    return f'<div style="position:relative;width:{width}px;height:{height}px">{"".join(svg)}{"".join(labels)}</div>'
+
+
+def optimizer_dots(prefix: str, lo: float, hi: float, ticks: list[float]) -> str:
+    runs = rows(sorted(RESULTS.glob(f"{prefix}_2*"))[-1] / "summary.csv")
+    groups = [(name, [100 * float(r["accuracy"]) for r in runs if r["label"] == name], OPTIMIZER_COLOR[name]) for _, name in OPTIMIZERS]
+    return dot_plot(groups, lo, hi, ticks)
+
+
+def optimizer_validation_dots() -> str:
+    return optimizer_dots("series_optimizer", 95.5, 97.0, [95.5, 96.0, 96.5, 97.0])
+
+
+def optimizer_test_dots() -> str:
+    return optimizer_dots("series_optimizer_test", 94.5, 96.5, [94.5, 95.0, 95.5, 96.0, 96.5])
+
+
+def optimizer_curves() -> str:
+    directory = sorted(RESULTS.glob("series_optimizer_2*"))[-1]
+    runs = rows(directory / "summary.csv")
+    lines = []
+    for _, name in OPTIMIZERS:
+        curves = [[float(e["validation_mse"]) for e in rows(directory / "runs" / r["run"] / "epochs.csv")] for r in runs if r["label"] == name]
+        mean = [statistics.fmean(values) for values in zip(*curves)]
+        lines.append(Line(name, [(epoch, mean[epoch]) for epoch in range(1, 51)], OPTIMIZER_COLOR[name]))
+    chart = line_chart(lines, 1500, 480, [1, 10, 20, 30, 40, 50], [0.006, 0.008, 0.010, 0.012, 0.014, 0.016], xlabel="Épocas", ylabel="MSE de validación",
+                       fmt_y=lambda v: fmt(v, 3))
     return legend([(line.label, line.color) for line in lines]) + chart
 
 
@@ -292,7 +356,8 @@ def threshold_curve(chosen: float = 0.82) -> str:
 
 CHARTS = {"fraud_feature_bars": fraud_feature_bars, "fraud_size_curve": fraud_size_curve, "threshold_curve": threshold_curve,
           "fraud_histogram": fraud_histogram, "fraud_curves": fraud_curves, "fraud_r2": fraud_r2,
-          "digits_distribution": digits_distribution, "xor_convergence": xor_convergence, "eta_sensitivity": eta_sensitivity}
+          "digits_distribution": digits_distribution, "xor_convergence": xor_convergence, "eta_sensitivity": eta_sensitivity,
+          "optimizer_validation_dots": optimizer_validation_dots, "optimizer_test_dots": optimizer_test_dots, "optimizer_curves": optimizer_curves}
 
 
 def main() -> None:
