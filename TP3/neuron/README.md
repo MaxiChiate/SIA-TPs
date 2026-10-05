@@ -73,7 +73,7 @@ epoch 3/5 ( 60%)  train MSE 0.007156  validation MSE 0.02374  1.3s, ~0.8s left
 | `config.json`     | Copia exacta del config con el que se corrió                         |
 | `weights.csv`     | Una fila por peso: `layer`, `neuron`, `weight` (0 es el bias), `initial`, `final` |
 | `predictions.csv` | Por muestra de validación: entradas (`x1`…`xn`), `zeta`, `prediction` (con varias salidas, `zeta_0`… y `prediction_0`…) |
-| `epochs.csv`      | Por época: `epoch` y, para `train_` y `validation_`, `error`, `mse`, `mae`, `max_error` (época 0 = pesos iniciales), y `elapsed_s` |
+| `epochs.csv`      | Por época: `epoch` y, para `train_` y `validation_`, `error`, `mse`, `mae`, `max_error` (época 0 = pesos iniciales), `elapsed_s` y `eta` (la tasa de aprendizaje con la que se entrenó esa época; cambia solo con `adaptive_eta`) |
 | `predictions_by_epoch.csv` | Por muestra de validación: `zeta` y la predicción en 11 épocas (`epoch_0` … `epoch_<epochs>`, cada 10%; con varias salidas, `epoch_<e>_<salida>`) |
 | `report.html`     | Resumen para abrir en el navegador: config, curva de aprendizaje, error de validación, gráficos, pesos y predicciones |
 
@@ -115,6 +115,14 @@ opcionales, y una clave desconocida es un error:
 | `validation_split`   | número | Opcional. En lugar de `validation_dataset`: la parte de `train_dataset` (entre 0 y 1, sin incluirlos) que se aparta como validación al azar; el resto es train |
 | `split_seed`         | entero | Semilla de ese split. Obligatoria con `validation_split` y solo va con ella |
 | `initial_weights`    | string | Opcional. Carpeta de una corrida anterior (o su `weights.csv`) para seguir entrenando desde sus pesos finales; sin ella, pesos al azar |
+| `optimizer`          | string | Opcional: `gd` (por defecto), `momentum`, `rmsprop`, `adam` o `adaptive_eta`. Ver [Optimizadores](#optimizadores) |
+| `momentum`           | número | α de momentum, en [0, 1). Obligatoria con `momentum` y solo va con él |
+| `rmsprop_decay`      | número | γ de RMSProp, en [0, 1). Obligatoria con `rmsprop` |
+| `adam_beta1`, `adam_beta2` | número | β₁ y β₂ de Adam, en [0, 1). Obligatorias con `adam` |
+| `optimizer_epsilon`  | número | ε de RMSProp y de Adam, mayor a 0. Obligatoria con ellos |
+| `eta_increase`       | número | Con `adaptive_eta`: cuánto se suma a η al subir, mayor o igual a 0 |
+| `eta_decrease`       | número | Con `adaptive_eta`: η se multiplica por (1 − `eta_decrease`) al bajar, en [0, 1) |
+| `eta_patience_up`, `eta_patience_down` | entero | Con `adaptive_eta`: épocas seguidas que hacen falta para subir o bajar η, al menos 1 |
 
 Al terminar, la red queda con los pesos de la época de menor MSE de train (no los de la última), y
 `epochs.csv` llega solo hasta la última época entrenada.
@@ -147,6 +155,45 @@ conserva el orden del CSV y el reparto se imprime por stderr. No es estratificad
 ```
 
 Se versiona solo `config.json.example`; `config.json` está gitignoreado.
+
+## Optimizadores
+
+Backprop acumula en cada neurona la dirección de descenso d = −∂E/∂w sumada sobre el batch, sin η, y al
+cerrar el batch el optimizador decide el paso. Vive en `optimizer/` y no sabe nada de neuronas, redes ni
+datasets: recibe un arreglo de pesos y uno de d. Cada neurona tiene el suyo, con su propio estado.
+Todos los pasos se **suman** a los pesos (d ya trae el signo).
+
+| `optimizer` | Paso Δw | Claves propias |
+|---|---|---|
+| `gd` | η·d | ninguna |
+| `momentum` | v = α·v + η·d; Δw = v | `momentum` (típico 0.9) |
+| `rmsprop` | S = γ·S + (1−γ)·d²; Δw = η·d / √(S + ε) | `rmsprop_decay` (0.9), `optimizer_epsilon` (1e-8) |
+| `adam` | m = β₁·m + (1−β₁)·d; v = β₂·v + (1−β₂)·d²; Δw = η·m̂ / (√v̂ + ε), con m̂ y v̂ corregidos por 1−βᵗ | `adam_beta1` (0.9), `adam_beta2` (0.999), `optimizer_epsilon` (1e-8) |
+| `adaptive_eta` | como `gd`, pero η cambia una vez por época según el E de train | `eta_increase`, `eta_decrease` (0.5), `eta_patience_up`, `eta_patience_down` (5) |
+
+Los hiperparámetros del optimizador **no tienen default**: si falta uno, el error sugiere el valor típico, y una
+clave de otro optimizador es un error. Así el `config.json` de cada corrida dice con qué valores entrenó. Sin
+`optimizer` es `gd`, así que los configs viejos dan lo mismo que antes.
+
+`adaptive_eta` (clase 12.1): si el E de train baja `eta_patience_up` épocas seguidas, η += `eta_increase`; si
+sube `eta_patience_down` épocas seguidas, η ×= (1 − `eta_decrease`). Un E igual al anterior corta las dos
+rachas. Sube sumando y baja multiplicando. La `eta` del config es el valor inicial, y la que se usó en cada
+época queda en la columna `eta` de `epochs.csv`.
+
+El mismo η no significa lo mismo en cada método: en GD el paso es η·d, en momentum con α = 0.9 llega a crecer 10
+veces (el paso efectivo es η/(1−α)) y en RMSProp y Adam cada peso se mueve más o menos η por paso. Por eso
+cada uno necesita su propia grilla de η. Límite: con `initial_weights` el estado del optimizador (v, m, S) arranca
+en cero, así que retomar con Adam no es exactamente seguir la misma corrida.
+
+```json
+{"train_dataset": "data/more_digits_prepared.csv", "validation_dataset": "data/digits_test_prepared.csv",
+ "activation": "logistic", "optimizer": "adam", "adam_beta1": 0.9, "adam_beta2": 0.999,
+ "optimizer_epsilon": 1e-8, "eta": 0.0005, "epochs": 50, "batch_size": 1, "shuffle": true,
+ "hidden_layers": [64], "seed": 1}
+```
+
+Ver `config.json.adam.example` y `config.json.adaptive_eta.example`. Los tests del módulo (`make test`)
+minimizan f(w) = ½(w − 3)² sin red, y chequean el signo de los pasos y los números de la clase.
 
 ## Formato de los datasets
 
