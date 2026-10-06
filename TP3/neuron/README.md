@@ -106,7 +106,7 @@ opcionales, y una clave desconocida es un error:
 | `validation_dataset` | string | CSV de validación. Va este **o** `validation_split` (exactamente uno) |
 | `activation`         | string | `sign`, `lineal`, `tanh`, `logistic` o `relu`      |
 | `eta`                | número | Tasa de aprendizaje, mayor a 0                     |
-| `epochs`             | entero | Épocas de entrenamiento, mayor a 0                 |
+| `epochs`             | entero | Épocas de entrenamiento, mayor o igual a 0. Con 0 solo evalúa: necesita `initial_weights` |
 | `batch_size`         | entero | Muestras por update: 1 online, ≥ N batch, en el medio mini-batch |
 | `hidden_layers`      | lista  | Neuronas por capa oculta, p. ej. `[2]`; `[]` es perceptrón simple |
 | `tolerance`          | número | Opcional. Corta el entrenamiento cuando el MSE de train baja de este valor; sin ella (o 0) corre todas las épocas. Con `sign` se corta solo al clasificar bien todo el train |
@@ -130,7 +130,15 @@ Al terminar, la red queda con los pesos de la época de menor MSE de train (no l
 Con `initial_weights`, la arquitectura (entradas, `hidden_layers` y salidas) tiene que ser la
 misma que la de esa corrida. La corrida nueva numera sus épocas desde 0 (la época 0 es donde
 terminó la anterior), y su `weights.csv` tiene como `initial` los pesos cargados, así que se puede
-encadenar. Para agregar una clave opcional: el campo en `Config` y una fila en `FIELDS`
+encadenar. `weights.csv` guarda 17 dígitos significativos: al leerlo se recuperan exactamente los mismos pesos.
+
+**Modo evaluación (`epochs: 0`).** Con `initial_weights` y `epochs: 0` no entrena: carga los pesos, mide
+`train_dataset` y `validation_dataset` (época 0 de `epochs.csv`) y escribe `predictions.csv` sobre la
+validación, en el formato de siempre. Sirve para evaluar una red ya entrenada sobre otro CSV (p. ej. el test con
+ruido); `train_dataset` sigue siendo obligatorio y puede ser el mismo CSV que la validación. El optimizador y `eta`
+no se usan, pero se piden igual.
+
+Para agregar una clave opcional: el campo en `Config` y una fila en `FIELDS`
 (`io/config.c`) con `optional` en 1; si falta, queda en cero / `""`. Los tipos son string, double,
 int, uint (sin signo), bool (`true`/`false`) y lista de enteros.
 

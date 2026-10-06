@@ -4,6 +4,7 @@
 #include "../activation/activation.h"
 #include "../io/config.h"
 #include "../io/dataset.h"
+#include "../io/results.h"
 #include "../network.h"
 #include "../optimizer/eta_schedule.h"
 #include "../optimizer/optimizer.h"
@@ -816,6 +817,9 @@ static void test_config_loading(void) {
   check_close(config.tolerance, 0.001, 0);
   check(strcmp(config.initial_weights, "results/x") == 0);
 
+  // epochs 0: evaluation only, so it needs the weights to evaluate
+  check(load_config_with(",\"epochs\":0,\"initial_weights\":\"results/x\"", &config) && config.epochs == 0);
+
   check(!config.shuffle && config.validation_split == 0 && config.split_seed == 0);
   check(strcmp(config.validation_dataset, "b") == 0);
 
@@ -836,6 +840,8 @@ static void test_config_loading(void) {
   check(!load_config_without_validation_dataset(",\"validation_split\":1,\"split_seed\":7", &config));
   check(!load_config_without_validation_dataset(",\"validation_split\":1.5,\"split_seed\":7", &config));
   check(!load_config_with(",\"tolerance\":-1", &config));
+  check(!load_config_with(",\"epochs\":0", &config)); // nothing to evaluate
+  check(!load_config_with(",\"epochs\":-1,\"initial_weights\":\"results/x\"", &config));
   check(!load_config_with(",\"nope\":1", &config));
   write_tmp("{\"eta\":0.1}");
   check(!config_load(TMP_FILE, &config)); // required keys missing
@@ -906,6 +912,26 @@ static void test_optimizer_config(void) {
 }
 
 
+// epochs 0 evaluates the weights read back from weights.csv: they have to be the very same doubles
+static void test_weights_file_roundtrip(void) {
+  int sizes[] = {3, 4, 2};
+  Network network = new_network(2, sizes, "tanh", 0.1, 1);
+  double written[26], read[26];
+  network_get_weights(network, written); // random: every bit of the mantissa in use
+  written[0] = 1.0 / 3;
+  written[1] = -1e-300;
+  written[2] = 123456789.123456789;
+
+  Results results = { .dir = "build" };
+  check(results_write_weights(&results, 2, sizes, written, written));
+  check(results_read_weights("build/weights.csv", 2, sizes, read));
+  check(memcmp(written, read, sizeof(written)) == 0);
+
+  remove("build/weights.csv");
+  network_free(network);
+}
+
+
 typedef void (*Test)(void);
 
 int main(void) {
@@ -942,6 +968,7 @@ int main(void) {
     { "dataset split", test_dataset_split },
     { "config loading", test_config_loading },
     { "optimizer config", test_optimizer_config },
+    { "weights.csv write/read roundtrip", test_weights_file_roundtrip },
   };
   int n_tests = (int) (sizeof(tests) / sizeof(tests[0]));
 
