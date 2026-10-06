@@ -409,8 +409,13 @@ static int validate(const char * path, const Config * config) {
     fprintf(stderr, "%s: \"eta\" must be positive\n", path);
     return 0;
   }
-  if (config->epochs <= 0) {
-    fprintf(stderr, "%s: \"epochs\" must be positive\n", path);
+  if (config->epochs < 0) {
+    fprintf(stderr, "%s: \"epochs\" can't be negative\n", path);
+    return 0;
+  }
+  // epochs 0 only evaluates: it needs weights to evaluate
+  if (config->epochs == 0 && config->initial_weights[0] == '\0') {
+    fprintf(stderr, "%s: \"epochs\": 0 (evaluation only) needs \"initial_weights\"\n", path);
     return 0;
   }
   if (config->batch_size <= 0) {

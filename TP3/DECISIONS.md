@@ -5,8 +5,9 @@ Decisiones que nos pueden preguntar en la defensa. Cada una dice qué hicimos y 
 **Índice por ejercicio.** *Ejercicio 1 (fraude):* normalización, exploración, elección del TinyModel, generalización (split,
 entradas, umbral), calibración, ReLU, activación logistic. *Ejercicio 2 (dígitos, solo `digits.csv`):* optimizadores (etapa 2),
 datos de cada ejercicio y arquitectura, comparación de optimizadores, η adaptativo, hiperparámetros del optimizador.
-*Ejercicio 3:* cómo se llegó a 98,7 %. *Núcleo de la red (transversal):* pesos iniciales, `batch_size`, backprop, medición del
-error, métricas, fin del entrenamiento, shuffle, `validation_split`, ReLU, módulo de optimizadores, signo de los pasos, gráficos.
+*Ejercicio 3:* cómo se llegó a 98,7 %. *Opcionales de los Ejercicios 2 y 3:* robustez al ruido, interpretabilidad (atribución). *Núcleo de la red (transversal):* pesos iniciales, `batch_size`, backprop, medición del
+error, métricas, fin del entrenamiento, shuffle, `validation_split`, ReLU, módulo de optimizadores, signo de los pasos, gráficos,
+modo evaluación (`epochs: 0`).
 
 ## Normalización de entradas (fraude): z-score sobre cada columna
 
@@ -222,8 +223,8 @@ repo, `more_digits.csv`) con la meta de accuracy ≥ 98 %. Por eso:
   validación: sirven para explorar, pero no para elegir hiperparámetros del Ejercicio 2 según esta aclaración.
   Las de optimizadores y arquitectura que se usan en la presentación parten de `digits.csv` con
   `validation_split`.
-- Opcionales sin hacer (Ejercicios 2 y 3): robustez al ruido gaussiano e interpretabilidad con métodos de
-  atribución.
+- Opcionales de los Ejercicios 2 y 3 (robustez al ruido gaussiano e interpretabilidad con métodos de atribución):
+  hechos, ver sus entradas más abajo.
 
 ## Ejercicio 3: cómo se llegó a 98,7 % en test
 
@@ -263,6 +264,98 @@ puntos (98.90 contra 98.72). Aciertos por clase entre 96.9 % (el 5) y 100 %.
   se había mirado. Lección: verificar el `validation_dataset` del `config.json` de cada corrida antes de leer números.
 - Límites: una sola partición de validación y una sola evaluación en test (con 2497 imágenes, 98.7 tiene ±0.2 de
   incertidumbre). No se probó regularización ni otras activaciones (una sola activación para toda la red).
+
+## Robustez al ruido (opcional, Ejercicios 2 y 3): ruido gaussiano sobre el test
+
+**Qué:** a las imágenes de `digits_test.csv` (preprocesadas, píxeles en [0, 1]) se les suma ruido N(0, σ²) por píxel,
+recortado a [0, 1], con σ ∈ {0, 0.05, 0.1, 0.2, 0.3, 0.5} y 10 seeds de ruido, y se mide el accuracy de cuatro
+modelos ya entrenados: una red y el ensemble de cada ejercicio (`analysis/models/`). Una sola herramienta para los
+dos ejercicios (`scripts/perturb_dataset.py`, `analysis/robustness.py`); lo único que cambia son las redes.
+
+| σ | Ej. 2, una red | Ej. 2, ensemble de 10 | Ej. 3, una red | Ej. 3, ensemble de 9 |
+|---|---|---|---|---|
+| 0 | 85.98 | 86.70 | 98.28 | 98.72 |
+| 0.1 | 85.01 ± 0.21 | 86.38 ± 0.12 | 97.75 ± 0.09 | 98.35 ± 0.10 |
+| 0.2 | 81.35 ± 0.28 | 84.02 ± 0.30 | 88.06 ± 0.44 | 91.10 ± 0.35 |
+| 0.3 | 70.91 ± 0.52 | 73.56 ± 0.39 | 67.05 ± 0.38 | 68.39 ± 0.63 |
+| 0.5 | 49.59 ± 0.66 | 54.99 ± 0.40 | 35.86 ± 0.60 | 37.26 ± 0.58 |
+
+(% en test, media ± desvío entre las 10 seeds de ruido.)
+
+**Por qué así:**
+- **Clip a [0, 1]:** una imagen real no tiene píxeles fuera de ese rango; sin el clip, el ruido mueve también la
+  intensidad media de la imagen, que es otra perturbación.
+- **Misma seed, mismo ruido escalado:** cada seed usa las mismas normales estándar para todos los σ, así que la curva
+  de una seed no salta de un patrón de ruido a otro.
+- **10 seeds de ruido, test de permutación pareado:** las seeds dan la variabilidad del sorteo del ruido. Con 10, el p
+  mínimo es 0.002, y todas las diferencias de la tabla tienen el mismo signo en las 10 seeds (p = 0.002). Ojo con lo
+  que eso dice: que la diferencia no depende del ruido que tocó, **no** que otra red entrenada con otra seed daría lo
+  mismo (cada «una red» es una sola corrida).
+- El test se usa solo para medir; no se eligió nada con él.
+
+**Qué se ve:**
+- Hasta σ 0.1 el ruido casi no afecta: todos pierden menos de 1 punto (la red sola del Ej. 2, la que más: 0.97).
+- El **Ej. 3 cae más rápido**: a σ 0.2 sigue arriba (91 contra 84), pero desde σ 0.3 queda **por debajo del Ej. 2**
+  (68 contra 74; a σ 0.5, 37 contra 55). Era la hipótesis del roadmap: el aumento de datos del Ej. 3 (desplazamientos y
+  rotaciones) no entrena contra ruido de píxel. Que caiga *por debajo* del Ej. 2 no estaba previsto. Una explicación
+  posible, sin comprobar: las redes del Ej. 3 son más grandes (`[512]` contra `[64]`) y suman más píxeles ruidosos por
+  neurona. Para ver dónde miran está la atribución.
+- **El ensemble siempre ayuda**, y más cuanto más ruido en el Ej. 2 (+0.7 puntos sin ruido, +5.4 a σ 0.5). En el Ej. 3
+  ayuda menos (+1.4 a σ 0.5): sus 9 redes probablemente se equivocan en las mismas imágenes ruidosas.
+- El Ej. 2 tiene techo de ~90 %: no vio ningún 8, así que con cualquier σ el 8 queda en 0 %.
+- **Con ruido, el 1 es el que más cae, y en el Ej. 3 se va a 8:** a σ 0.2 el ensemble del Ej. 3 pasa de 100 a 71 % en
+  el 1 (la red sola, a 52 %), mientras el 8 sube de 98 a 99 %. Con la seed de ruido 1, 78 de los 283 unos van a 8: el
+  ruido pone «tinta» alrededor de un trazo fino y el 8 es el dígito con más tinta repartida. El Ej. 2 no puede elegir 8
+  (nunca lo vio) y sus unos van a 3 y 2 (de 99 a 88 % el ensemble). Explica buena parte de por qué el Ej. 3 cae más.
+
+## Interpretabilidad (opcional, Ejercicios 2 y 3): métodos de atribución
+
+**Qué:** `analysis/attribution.py` calcula, para la clase que predice el modelo (O_k), cuatro mapas por imagen:
+saliency (∂O_k/∂x_i), gradiente × entrada, integrated gradients (50 pasos desde una imagen en negro) y oclusión de
+parches de 4×4 (cuánto cae O_k al apagar el parche). Forward y backward en Python sobre los pesos de las corridas: el
+mismo backprop de `network.c`, una capa más abajo, hasta las entradas. Para un ensemble, el promedio de los
+gradientes. Mismos cuatro modelos que la robustez. Gráficos en `plots_presentation.py`: métodos (una fila por
+método), modelos (una fila por modelo), mapa medio por dígito (50 imágenes por clase), errores y pesos de la primera capa.
+
+**Por qué así:**
+- **Más de un método:** saliency en una MLP sobre píxeles sale granulado y marca también el fondo; gradiente × entrada
+  e integrated gradients se quedan en el trazo. La oclusión no usa gradientes, así que sirve de control.
+- **Chequeos antes de mirar mapas** (`--self-check`, pasan los cuatro modelos):
+  - el forward en Python coincide con el C hasta ~1e-11 (los 10 dígitos de `predictions.csv`);
+  - el gradiente analítico coincide con diferencias finitas (error relativo < 1e-5);
+  - integrated gradients suma O_k(x) − O_k(0), a menos de 0.003.
+- **Sin numpy:** la primera capa se recorre por columna y solo sobre los píxeles encendidos (~19 %). Los mapas de un
+  dígito por clase, con los cuatro métodos y los cuatro modelos, tardan ~40 s.
+- Cada mapa se escala por su propio percentil 99 de |a|: compara formas, no magnitudes entre mapas.
+
+**Qué se ve:**
+- **Errores del Ej. 3:** son dígitos ambiguos (un 3 de barra plana que pasa a 5, un 2 con rulo que pasa a 0), y la
+  evidencia a favor cae en la parte que se parece a la clase elegida.
+- **El 8 del Ej. 2:** nunca vio uno; el 8 del ejemplo lo manda a 6 (una red y el ensemble), con la evidencia sobre
+  todo en el rulo de abajo. El Ej. 3 lo acierta.
+- **Los pesos de los píxeles que valen 0 en todo el train quedan exactamente en su valor inicial** (el gradiente es 0):
+  son 97 píxeles en el Ej. 2 (el borde, que en los mapas de pesos se ve como ruido uniforme) y 4 en el Ej. 3 (la unión y
+  los desplazamientos encienden casi todo). No explica la fragilidad del Ej. 3 frente al ruido: es al revés.
+- **Saturación:** en las imágenes limpias, las redes del Ej. 3 dan O_k ≈ 1 y el gradiente ‖∇ₓO_k‖ es prácticamente
+  0 (mediana 1e-6 una red y 2e-5 el ensemble, contra 2e-3 y 7e-3 del Ej. 2; 500 imágenes). Por eso la sensibilidad local no anticipa la caída con
+  σ ≥ 0.3: es el límite de cualquier método de atribución por gradiente. Mostrar los mapas como sensibilidad local, no
+  como «lo que la red entiende».
+
+## Modo evaluación en C (`epochs: 0`) y `weights.csv` con 17 dígitos
+
+**Qué:** con `epochs: 0` e `initial_weights`, el binario carga los pesos, mide la validación y escribe
+`predictions.csv` sin entrenar. `weights.csv` pasó de 10 a 17 dígitos significativos.
+
+**Por qué:**
+- Los opcionales de los Ejercicios 2 y 3 (robustez al ruido) evalúan las redes ya entrenadas sobre muchas versiones
+  del test: 10 seeds de ruido × varios σ × hasta 9 redes. En C es un solo forward rápido y sale en el formato de
+  `predictions.csv` que ya leen los scripts; reimplementarlo en Python sería más lento y una segunda versión del
+  forward.
+- Con 10 dígitos, recargar los pesos cambiaba las salidas en ~1e-9 (las clases predichas eran las mismas). Con 17 la
+  lectura devuelve exactamente los mismos doubles, así que evaluar con `epochs: 0` reproduce bit a bit el
+  `predictions.csv` de la corrida, y los chequeos se pueden hacer con tolerancia cero. El costo: el archivo pesa ~1.6×.
+- `train_dataset` sigue siendo obligatorio (en evaluación puede ser el mismo CSV): hacerlo opcional tocaba la carga
+  de datos y la validación de `n_inputs` en `main.c`, y no hacía falta.
 
 ## Pesos iniciales: aleatorios uniformes en [−0.5, 0.5]
 
