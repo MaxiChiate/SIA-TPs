@@ -1,0 +1,8 @@
+{
+  "_comment": "Ejercicio 1, parte 1: diagnóstico de capacidad. Logistic sin capa oculta contra con capa oculta, sobre todo el dataset de fraude (train = validación).",
+  "base_config": "../neuron/config.json.fraud.example",
+  "set": {"activation": "logistic", "eta": 0.01},
+  "vary": "hidden_layers",
+  "values": [[], [4], [16], [16, 8]],
+  "seeds": [1, 2, 3]
+}

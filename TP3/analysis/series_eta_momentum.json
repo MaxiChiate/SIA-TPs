@@ -1,0 +1,8 @@
+{
+  "_comment": "Ej. 2, comparación de optimizadores, etapa 1: el mejor η de momentum (α = 0.9). La grilla es ~10 veces más chica que la de gd porque con α = 0.9 el paso efectivo crece hasta ×10.",
+  "base_config": "../neuron/config.json.digits_optimizers.example",
+  "set": {"optimizer": "momentum", "momentum": 0.9},
+  "vary": "eta",
+  "values": [0.0005, 0.001, 0.005, 0.01],
+  "seeds": [1, 2, 3]
+}

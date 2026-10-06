@@ -1,0 +1,13 @@
+{
+  "_comment": "Ejercicio 1, parte 1: perceptrón lineal vs logistic sobre todo el dataset de fraude (train = validación). Varias tasas de aprendizaje para que la diferencia no sea de eta.",
+  "title": "perceptrón lineal contra logistic",
+  "base_config": "../neuron/config.json.fraud.example",
+  "variants": [
+    {"label": "lineal eta 0.0001", "set": {"activation": "lineal", "eta": 0.0001}},
+    {"label": "lineal eta 0.001", "set": {"activation": "lineal", "eta": 0.001}},
+    {"label": "logistic eta 0.001", "set": {"activation": "logistic", "eta": 0.001}},
+    {"label": "logistic eta 0.01", "set": {"activation": "logistic", "eta": 0.01}},
+    {"label": "logistic eta 0.1", "set": {"activation": "logistic", "eta": 0.1}}
+  ],
+  "seeds": [1, 2, 3]
+}

@@ -1,0 +1,64 @@
+{
+  "_comment": "Ejercicio 2, etapa 2: los cinco optimizadores, cada uno con su mejor η de la etapa 1 (series_eta_*.json y series_eta_edges*.json), 10 seeds. Validación = 20 % de digits_prepared (split_seed 1).",
+  "base_config": "../neuron/config.json.digits_optimizers.example",
+  "title": "Optimizadores con su mejor η",
+  "variants": [
+    {
+      "label": "GD",
+      "set": {
+        "optimizer": "gd",
+        "eta": 0.5
+      }
+    },
+    {
+      "label": "Momentum",
+      "set": {
+        "optimizer": "momentum",
+        "momentum": 0.9,
+        "eta": 0.05
+      }
+    },
+    {
+      "label": "RMSProp",
+      "set": {
+        "optimizer": "rmsprop",
+        "rmsprop_decay": 0.9,
+        "optimizer_epsilon": 1e-08,
+        "eta": 0.001
+      }
+    },
+    {
+      "label": "Adam",
+      "set": {
+        "optimizer": "adam",
+        "adam_beta1": 0.9,
+        "adam_beta2": 0.999,
+        "optimizer_epsilon": 1e-08,
+        "eta": 0.0005
+      }
+    },
+    {
+      "label": "η adaptativo",
+      "set": {
+        "optimizer": "adaptive_eta",
+        "eta": 0.5,
+        "eta_increase": 0.05,
+        "eta_decrease": 0.5,
+        "eta_patience_up": 3,
+        "eta_patience_down": 3
+      }
+    }
+  ],
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ]
+}

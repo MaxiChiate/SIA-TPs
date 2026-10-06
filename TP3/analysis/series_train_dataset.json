@@ -1,0 +1,7 @@
+{
+  "_comment": "Conjunto de entrenamiento: digits.csv (sin ningún 8, pocos 5) contra more_digits.csv. Validación siempre digits_test.",
+  "base_config": "../neuron/config.json.digits.example",
+  "vary": "train_dataset",
+  "values": ["data/digits_prepared.csv", "data/more_digits_prepared.csv"],
+  "seeds": [1, 2, 3]
+}

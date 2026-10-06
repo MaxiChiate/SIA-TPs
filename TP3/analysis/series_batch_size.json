@@ -1,0 +1,11 @@
+{
+  "_comment": "Régimen de actualización en dígitos, [64] con logistic. Δw se suma sobre el batch, así que η se divide por batch_size para que el paso de cada update sea comparable.",
+  "title": "régimen de actualización",
+  "base_config": "../neuron/config.json.digits.example",
+  "variants": [
+    {"label": "online", "set": {"batch_size": 1, "eta": 0.01}},
+    {"label": "mini-batch 32", "set": {"batch_size": 32, "eta": 0.0003125}},
+    {"label": "mini-batch 256", "set": {"batch_size": 256, "eta": 0.0000390625}}
+  ],
+  "seeds": [1, 2, 3]
+}

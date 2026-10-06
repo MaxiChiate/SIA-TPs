@@ -1,0 +1,42 @@
+{
+  "_comment": "Ejercicio 3, paso 3: con aumento de datos, más capacidad y más copias. ex3_a2 = +2 copias aumentadas (x3 datos), ex3_a4 = +4 copias (x5). Validación = 20 % de la unión (igual en todas).",
+  "base_config": "../neuron/config.json.digits_ex3.example",
+  "variants": [
+    {
+      "label": "a2 [512]",
+      "set": {
+        "train_dataset": "data/ex3_a2_train_union.csv",
+        "validation_dataset": "data/ex3_a2_validation.csv",
+        "hidden_layers": [
+          512
+        ]
+      }
+    },
+    {
+      "label": "a2 [256, 128]",
+      "set": {
+        "train_dataset": "data/ex3_a2_train_union.csv",
+        "validation_dataset": "data/ex3_a2_validation.csv",
+        "hidden_layers": [
+          256,
+          128
+        ]
+      }
+    },
+    {
+      "label": "a4 [256]",
+      "set": {
+        "train_dataset": "data/ex3_a4_train_union.csv",
+        "validation_dataset": "data/ex3_a4_validation.csv",
+        "hidden_layers": [
+          256
+        ]
+      }
+    }
+  ],
+  "seeds": [
+    1,
+    2,
+    3
+  ]
+}

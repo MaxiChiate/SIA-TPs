@@ -1,0 +1,14 @@
+{
+  "_comment": "Ejercicio 2, etapa 1 (bordes): valores de η más allá de la grilla de series_eta_{gd,adaptive,momentum,rmsprop}.json, donde el mejor quedó en el máximo probado. Misma base y seeds.",
+  "base_config": "../neuron/config.json.digits_optimizers.example",
+  "variants": [
+    {"label": "gd 0.1", "set": {"optimizer": "gd", "eta": 0.1}},
+    {"label": "gd 0.2", "set": {"optimizer": "gd", "eta": 0.2}},
+    {"label": "adaptive 0.1", "set": {"optimizer": "adaptive_eta", "eta": 0.1, "eta_increase": 0.01, "eta_decrease": 0.5, "eta_patience_up": 3, "eta_patience_down": 3}},
+    {"label": "adaptive 0.2", "set": {"optimizer": "adaptive_eta", "eta": 0.2, "eta_increase": 0.02, "eta_decrease": 0.5, "eta_patience_up": 3, "eta_patience_down": 3}},
+    {"label": "momentum 0.02", "set": {"optimizer": "momentum", "momentum": 0.9, "eta": 0.02}},
+    {"label": "momentum 0.05", "set": {"optimizer": "momentum", "momentum": 0.9, "eta": 0.05}},
+    {"label": "rmsprop 0.01", "set": {"optimizer": "rmsprop", "rmsprop_decay": 0.9, "optimizer_epsilon": 1e-8, "eta": 0.01}}
+  ],
+  "seeds": [1, 2, 3]
+}

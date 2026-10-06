@@ -1,0 +1,8 @@
+{
+  "_comment": "Profundidad en dígitos con logistic, η = 0.01 online: ~96 neuronas ocultas repartidas en 1 a 3 capas. Complementa series_architecture, que mezcla ancho y profundidad. La cantidad de pesos no es igual entre variantes: depende de cómo se reparten las neuronas.",
+  "title": "profundidad",
+  "base_config": "../neuron/config.json.digits.example",
+  "vary": "hidden_layers",
+  "values": [[96], [64, 32], [48, 32, 16], [32, 32, 32]],
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+}

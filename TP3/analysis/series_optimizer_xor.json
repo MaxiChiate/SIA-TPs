@@ -1,0 +1,12 @@
+{
+  "_comment": "Control de que los cuatro optimizadores aprenden: XOR [2,2,1] con tanh, online, 1000 épocas, mismas seeds. Con GD convergen pocas seeds (el resto queda en un mínimo local). Los η no están ajustados (no es la comparación justa de dígitos): GD 0.1 como hasta ahora, momentum 0.01 porque con α = 0.9 el paso efectivo crece hasta ×10, rmsprop y adam 0.01 (cada peso se mueve ≈ η por paso). Hiperparámetros: los típicos de la clase 12.1.",
+  "base_config": "../neuron/config.json.xor.example",
+  "set": {"hidden_layers": [2]},
+  "variants": [
+    {"label": "gd", "set": {"optimizer": "gd", "eta": 0.1}},
+    {"label": "momentum", "set": {"optimizer": "momentum", "eta": 0.01, "momentum": 0.9}},
+    {"label": "rmsprop", "set": {"optimizer": "rmsprop", "eta": 0.01, "rmsprop_decay": 0.9, "optimizer_epsilon": 1e-8}},
+    {"label": "adam", "set": {"optimizer": "adam", "eta": 0.01, "adam_beta1": 0.9, "adam_beta2": 0.999, "optimizer_epsilon": 1e-8}}
+  ],
+  "seeds": [1, 2, 3, 4, 5, 6]
+}

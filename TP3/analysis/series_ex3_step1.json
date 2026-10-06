@@ -1,0 +1,66 @@
+{
+  "_comment": "Ejercicio 3, paso 1: ¿ayuda la unión de digits.csv y more_digits.csv, y cuánto la capacidad? Validación = 20 % de la unión (scripts/prepare_digits_ex3.py --name ex3_base --seed 1). η adaptativo 0.5. Test no se usa.",
+  "base_config": "../neuron/config.json.digits_ex3.example",
+  "variants": [
+    {
+      "label": "more [64]",
+      "set": {
+        "train_dataset": "data/ex3_base_train_more.csv",
+        "hidden_layers": [
+          64
+        ]
+      }
+    },
+    {
+      "label": "unión [64]",
+      "set": {
+        "train_dataset": "data/ex3_base_train_union.csv",
+        "hidden_layers": [
+          64
+        ]
+      }
+    },
+    {
+      "label": "unión [128]",
+      "set": {
+        "train_dataset": "data/ex3_base_train_union.csv",
+        "hidden_layers": [
+          128
+        ]
+      }
+    },
+    {
+      "label": "unión [256]",
+      "set": {
+        "train_dataset": "data/ex3_base_train_union.csv",
+        "hidden_layers": [
+          256
+        ]
+      }
+    },
+    {
+      "label": "unión [512]",
+      "set": {
+        "train_dataset": "data/ex3_base_train_union.csv",
+        "hidden_layers": [
+          512
+        ]
+      }
+    },
+    {
+      "label": "unión [256, 128]",
+      "set": {
+        "train_dataset": "data/ex3_base_train_union.csv",
+        "hidden_layers": [
+          256,
+          128
+        ]
+      }
+    }
+  ],
+  "seeds": [
+    1,
+    2,
+    3
+  ]
+}

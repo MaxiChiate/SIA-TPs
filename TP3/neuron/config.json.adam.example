@@ -1,0 +1,14 @@
+{
+  "train_dataset": "data/xor.csv",
+  "validation_dataset": "data/xor.csv",
+  "activation": "tanh",
+  "eta": 0.01,
+  "epochs": 1000,
+  "batch_size": 1,
+  "hidden_layers": [2],
+  "seed": 1,
+  "optimizer": "adam",
+  "adam_beta1": 0.9,
+  "adam_beta2": 0.999,
+  "optimizer_epsilon": 1e-8
+}

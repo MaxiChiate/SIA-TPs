@@ -1,0 +1,36 @@
+{
+  "_comment": "Ejercicio 2, etapa 1 (bordes, tercera tanda): GD empata en 0.5 y 1; se confirma con valores mayores que no sigue subiendo.",
+  "base_config": "../neuron/config.json.digits_optimizers.example",
+  "variants": [
+    {
+      "label": "gd 2",
+      "set": {
+        "optimizer": "gd",
+        "eta": 2.0
+      }
+    },
+    {
+      "label": "gd 5",
+      "set": {
+        "optimizer": "gd",
+        "eta": 5.0
+      }
+    },
+    {
+      "label": "adaptive 2",
+      "set": {
+        "optimizer": "adaptive_eta",
+        "eta": 2.0,
+        "eta_increase": 0.2,
+        "eta_decrease": 0.5,
+        "eta_patience_up": 3,
+        "eta_patience_down": 3
+      }
+    }
+  ],
+  "seeds": [
+    1,
+    2,
+    3
+  ]
+}

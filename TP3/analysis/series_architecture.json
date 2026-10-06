@@ -1,0 +1,7 @@
+{
+  "_comment": "Arquitectura en dígitos con logistic, η = 0.01 online: ancho de una capa oculta contra dos capas.",
+  "base_config": "../neuron/config.json.digits.example",
+  "vary": "hidden_layers",
+  "values": [[16], [32], [64], [128], [64, 32]],
+  "seeds": [1, 2, 3]
+}

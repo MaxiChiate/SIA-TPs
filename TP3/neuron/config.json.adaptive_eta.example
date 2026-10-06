@@ -1,0 +1,15 @@
+{
+  "train_dataset": "data/fraud_features.csv",
+  "validation_dataset": "data/fraud_features.csv",
+  "activation": "logistic",
+  "eta": 0.001,
+  "epochs": 1000,
+  "batch_size": 1,
+  "hidden_layers": [],
+  "seed": 1,
+  "optimizer": "adaptive_eta",
+  "eta_increase": 0.001,
+  "eta_decrease": 0.5,
+  "eta_patience_up": 5,
+  "eta_patience_down": 5
+}

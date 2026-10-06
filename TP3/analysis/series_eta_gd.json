@@ -1,0 +1,8 @@
+{
+  "_comment": "Ej. 2, comparación de optimizadores, etapa 1: el mejor η de gd. Dígitos con validación separada de digits.csv (digits_test no se usa para elegir), [64] logistic, online con shuffle, 50 épocas.",
+  "base_config": "../neuron/config.json.digits_optimizers.example",
+  "set": {"optimizer": "gd"},
+  "vary": "eta",
+  "values": [0.001, 0.005, 0.01, 0.05],
+  "seeds": [1, 2, 3]
+}

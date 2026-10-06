@@ -1,0 +1,11 @@
+{
+  "train_dataset": "data/more_digits_prepared.csv",
+  "validation_dataset": "data/digits_test_prepared.csv",
+  "activation": "logistic",
+  "eta": 0.01,
+  "epochs": 50,
+  "batch_size": 1,
+  "shuffle": true,
+  "hidden_layers": [64],
+  "seed": 1
+}

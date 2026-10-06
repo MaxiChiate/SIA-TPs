@@ -1,0 +1,42 @@
+{
+  "_comment": "Ejercicio 3, evaluación final (se mira una sola vez): las 9 redes de series_ex3_step3.json (3 configuraciones x 3 seeds), mismo entrenamiento, evaluadas sobre digits_test.csv. El ensemble de las 9 es el resultado final, elegido con la validación antes de ver el test.",
+  "base_config": "../neuron/config.json.digits_ex3.example",
+  "variants": [
+    {
+      "label": "a2 [512]",
+      "set": {
+        "train_dataset": "data/ex3_a2_train_union.csv",
+        "validation_dataset": "data/ex3_base_test.csv",
+        "hidden_layers": [
+          512
+        ]
+      }
+    },
+    {
+      "label": "a2 [256, 128]",
+      "set": {
+        "train_dataset": "data/ex3_a2_train_union.csv",
+        "validation_dataset": "data/ex3_base_test.csv",
+        "hidden_layers": [
+          256,
+          128
+        ]
+      }
+    },
+    {
+      "label": "a4 [256]",
+      "set": {
+        "train_dataset": "data/ex3_a4_train_union.csv",
+        "validation_dataset": "data/ex3_base_test.csv",
+        "hidden_layers": [
+          256
+        ]
+      }
+    }
+  ],
+  "seeds": [
+    1,
+    2,
+    3
+  ]
+}
