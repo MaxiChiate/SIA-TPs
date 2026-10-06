@@ -29,6 +29,7 @@ scripts/
   explore_fraud_dataset.py       # exploración del fraude: limpieza, rangos, composición, correlaciones
   prepare_digits_dataset.py      # dígitos crudos -> x1..x784 + zeta_0..zeta_9 (one-hot)
   prepare_digits_ex3.py          # Ejercicio 3: unión, validación apartada, centrado y aumento de datos
+  perturb_dataset.py             # ruido gaussiano (y clip) sobre las entradas de cualquier CSV preparado, con seed
   run_error.py                   # métricas de error de una corrida
   run_report.py                  # report.html de la corrida (lo llama make run): curva, gráficos, tablas
   report_server.py               # make serve: reporte de la última corrida en localhost, se recarga solo
@@ -39,7 +40,12 @@ analysis/                        # README.md explica cómo correrlo
   fraud_threshold.py             # métricas (precisión, recall, PR-AUC) y umbral del TinyModel, elegido en validación
   fraud_calibration.py           # calibración (Platt, isotónica) de la salida del TinyModel contra flagged_fraud
   fraud_split_variability.py     # cuánto cambian el umbral y las métricas con otros splits
-  digits_ensemble.py             # accuracy del promedio de las salidas de varias redes de dígitos
+  digits_ensemble.py             # accuracy del promedio de las salidas de varias redes de dígitos (o de un modelo)
+  model.py                       # modelo = red o ensemble ya entrenado (models/*.json): forward en Python y evaluación en C (epochs 0)
+  models/                        # ex2_single, ex2_ensemble, ex3_single, ex3_ensemble: qué corridas forman cada modelo
+  robustness.py                  # accuracy de modelos con ruido gaussiano sobre un dataset (σ × seeds de ruido) -> robustness.csv
+  paired_stats.py                # test de permutación pareado, bootstrap y Holm (stdlib; lo usan plots_compare y robustness)
+  attribution.py                 # mapas de atribución (saliency, grad×input, integrated gradients, oclusión) -> attributions.csv
   plots_presentation.py          # gráficos de la presentación como HTML de diapositiva (solo stdlib)
   plots_main.py                  # gráficos de plotly de cada serie + index.html (como TP2); necesita plotly
   plots_data.py / plots_compare.py / plots_index.py / plots_style.py   # carga y bandas, estadística pareada, índice con modales (i), paleta
@@ -150,14 +156,23 @@ de cada resultado, con su porqué, están en `DECISIONS.md` (una entrada por dec
   herramienta Artifact (`action: read`) y se republica con la misma `url`; los gráficos los genera
   `analysis/plots_presentation.py` como HTML de diapositiva y se pegan en los archivos de cada slide. Hay una copia vieja
   en Google Slides del usuario que **no se puede editar** desde acá (no hay conector de edición); si se entrega desde
-  Drive hay que volver a exportar desde el Artifact.
+  Drive hay que volver a exportar desde el Artifact. **Ojo:** desde la cuenta de Magdalena ese Artifact figura como de
+  otra organización y no se puede editar (6/10); lo tiene otra persona del equipo.
+- **Opcionales de los Ejercicios 2 y 3 (hechos)**: robustez al ruido gaussiano y atribución, con los cuatro modelos de
+  `analysis/models/`. Resultados en `DECISIONS.md` («Robustez al ruido», «Interpretabilidad»); plan y estado en
+  `docs/digits_optionals_roadmap.md`. Diapositivas con notas para el orador en un deck aparte, con el mismo estilo:
+  https://claude.ai/artifact/7ZPzZRoJbMGLBHiLLpgNPH (privado, cuenta de Magdalena), 8 diapos pensadas como 26–33 de la
+  presentación (entre «Las tres preguntas» y «Conclusiones»).
 
 ## Pendiente
 
-- **Opcionales de los Ejercicios 2 y 3** (el usuario los dejó para el día siguiente): robustez al ruido (agregar ruido
-  gaussiano a las imágenes de `digits_test.csv` y medir el ensemble, con distintos σ) e interpretabilidad con métodos de
-  atribución (p. ej. gradiente o saliency sobre la entrada, que la red permite calcular con la derivada de la
-  activación). Nada de eso está hecho. Opcional del Ejercicio 1: feature engineering.
+- **Pasar las 8 diapos de los opcionales a la presentación principal** (lo hace quien tenga acceso de edición), y al
+  hacerlo: agregar «Opcionales: ruido e interpretabilidad» a la agenda, renumerar desde Conclusiones (pasa a 34) y sacar
+  de las notas de Conclusiones la frase «Pendientes del enunciado: los opcionales de robustez al ruido e
+  interpretabilidad».
+- Opcional del Ejercicio 1: feature engineering (teórico).
+- Extensión posible de la robustez: ruido como aumento de datos (σ elegido con una validación con ruido, nunca con el
+  test); el hallazgo de los unos que van a 8 lo motiva.
 - **Revisión visual de la presentación**: nunca se renderizó ni se miró; la hace el usuario. Las diapositivas más cargadas
   son la 10, 11, 17 y 22.
 - Cualquier cambio de resultados: actualizar `DECISIONS.md`, este archivo y el Artifact a la vez.
