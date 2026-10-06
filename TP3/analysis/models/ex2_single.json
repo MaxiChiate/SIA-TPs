@@ -1,0 +1,6 @@
+{
+  "label": "Ej. 2 — [64], η adaptativo, seed 1",
+  "runs": [
+    "series_optimizer_digits_test/040_adaptativo_seed1"
+  ]
+}
