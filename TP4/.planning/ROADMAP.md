@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Existe la matriz z-scored con su scaler guardado (`.meta.json`), y un creador nuevo se puede mapear al mismo espacio usando solo ese archivo.
   5. La PCA por autovalores muestra scree, loadings y biplot PC1/PC2 con una justificación escrita de si se reduce dimensionalidad y cómo se leen las componentes; la corrida de sensibilidad con las 31 columnas está etiquetada como tal y comparada contra el conjunto auditado.
 
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans executed
 
 Plans:
 **Wave 1**
@@ -53,7 +53,7 @@ Plans:
 - [x] 01-07-PLAN.md — Una serie por modelo desde la raíz, `make`/`make sweep`/`make clean`, `make test` (3 tests de C + pytest) y `make debug`
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 01-08-PLAN.md — PCA por autovalores (scree, loadings, biplot, decisión 80 %/Kaiser), sensibilidad con 31 columnas e interpretación escrita
+- [x] 01-08-PLAN.md — PCA por autovalores (scree, loadings, biplot, decisión 80 %/Kaiser), sensibilidad con 31 columnas e interpretación escrita
 
 ### Phase 2: Kohonen SOM
 
@@ -132,7 +132,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Fundación, auditoría de datos y PCA | 7/8 | In Progress|  |
+| 1. Fundación, auditoría de datos y PCA | 8/8 | In Progress|  |
 | 2. Kohonen SOM | 0/TBD | Not started | - |
 | 3. Oja y decisiones de campaña | 0/TBD | Not started | - |
 | 4. Hopfield núcleo y letras | 0/TBD | Not started | - |
