@@ -27,6 +27,12 @@ static const KeySpec OJA_KEYS[] = {
   { NULL, KEY_INT, 0, NULL },
 };
 
+// noise_levels: fractions of pixels to flip, each in [0, 1]. Phases 4 and 5 append the rows of the real network
+static const KeySpec HOPFIELD_KEYS[] = {
+  { "noise_levels", KEY_NUMBER_ARRAY, 1, NULL },
+  { NULL, KEY_INT, 0, NULL },
+};
+
 typedef struct {
   const char * name;
   const KeySpec * keys;
@@ -36,6 +42,7 @@ typedef struct {
 static const ModelKeys MODEL_KEYS[] = {
   { "kohonen", KOHONEN_KEYS },
   { "oja", OJA_KEYS },
+  { "hopfield", HOPFIELD_KEYS },
 };
 
 #define N_MODEL_KEYS ((int) (sizeof(MODEL_KEYS) / sizeof(MODEL_KEYS[0])))
