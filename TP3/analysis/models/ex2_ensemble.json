@@ -1,0 +1,15 @@
+{
+  "label": "Ej. 2 — ensemble de 10 seeds",
+  "runs": [
+    "series_optimizer_digits_test/040_adaptativo_seed1",
+    "series_optimizer_digits_test/041_adaptativo_seed2",
+    "series_optimizer_digits_test/042_adaptativo_seed3",
+    "series_optimizer_digits_test/043_adaptativo_seed4",
+    "series_optimizer_digits_test/044_adaptativo_seed5",
+    "series_optimizer_digits_test/045_adaptativo_seed6",
+    "series_optimizer_digits_test/046_adaptativo_seed7",
+    "series_optimizer_digits_test/047_adaptativo_seed8",
+    "series_optimizer_digits_test/048_adaptativo_seed9",
+    "series_optimizer_digits_test/049_adaptativo_seed10"
+  ]
+}

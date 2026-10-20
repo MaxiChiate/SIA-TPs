@@ -97,7 +97,8 @@ int results_write_weights(const Results * results, int n_layers, const int sizes
   for (int l = 1; l <= n_layers; l++) {
     for (int j = 0; j < sizes[l]; j++) {
       for (int w = 0; w <= sizes[l-1]; w++, index++) {
-        fprintf(file, "%d,%d,%d,%.10g,%.10g\n", l, j + 1, w, initial[index], final[index]);
+        // 17 significant digits: reading them back gives the same doubles, so epochs 0 evaluates the same network
+        fprintf(file, "%d,%d,%d,%.17g,%.17g\n", l, j + 1, w, initial[index], final[index]);
       }
     }
   }

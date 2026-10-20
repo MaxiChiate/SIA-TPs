@@ -49,7 +49,7 @@ validación `digits_test_prepared.csv`, `logistic`, `[64]`, η = 0.01 online, 50
 | `series_optimizer` y `series_optimizer_test` (10 seeds) | los cinco optimizadores, cada uno con su mejor η; la segunda entrena con `more_digits` y evalúa sobre `digits_test` (`neuron/config.json.digits_test.example`) | ¿Hay un optimizador mejor? |
 | `series_optimizer_digits_test` (10 seeds) | igual que `series_optimizer`, pero entrenando solo con `digits_prepared` y evaluando sobre `digits_test` (`neuron/config.json.digits_only_test.example`) | Ejercicio 2: ¿cuánto rinde en el «mundo real» sin el 8? |
 | `series_architecture_digits` (5 seeds) | `hidden_layers`: `[]`, `[16]`, `[32]`, `[64]`, `[128]`, `[64, 32]`, con η adaptativo; validación = 20 % de `digits_prepared` | Ejercicio 2: ¿qué arquitectura? |
-| `series_ex3_step1`, `step2`, `step3` y `series_ex3_final` (3 seeds) | Ejercicio 3: unión de datos y capacidad; centrado, aumento, épocas y η; capacidad con aumento; evaluación final en test. Antes: `python3 scripts/prepare_digits_ex3.py --name ex3_base --seed 1` (y `ex3_c --center`, `ex3_a2 --augment 2`, `ex3_ca2`, `ex3_a4 --augment 4`; base `neuron/config.json.digits_ex3.example`). Con `digits_ensemble.py` se promedian las salidas de varias corridas. Cuidado: el `set` de una variante pisa el de la serie (por eso `series_ex3_final` repite `validation_dataset` en cada variante) | ¿Cómo llegar al 98 %? |
+| `series_ex3_step1`, `step2`, `step3` y `series_ex3_final` (3 seeds) | Ejercicio 3: unión de datos y capacidad; centrado, aumento, épocas y η; capacidad con aumento; evaluación final en test. Antes: `python3 scripts/prepare_digits_ex3.py --name ex3_base --seed 1` (y `ex3_c --center`, `ex3_a2 --augment 2`, `ex3_ca2`, `ex3_a4 --augment 4`; base `neuron/config.json.digits_ex3.example`). Con `digits_ensemble.py` se promedian las salidas de varias corridas (o de un modelo de `models/`). Cuidado: el `set` de una variante pisa el de la serie (por eso `series_ex3_final` repite `validation_dataset` en cada variante) | ¿Cómo llegar al 98 %? |
 
 **Fraude** (Ejercicio 1, parte 1). Base: `neuron/config.json.fraud.example`, es decir `logistic`, η = 0.001, 1000 épocas,
 online, sin capas ocultas, train = validación = dataset completo. Antes hay que correr
@@ -97,6 +97,80 @@ de aprendizaje de cada variante (promedio de las seeds, train o validación, con
 opcional), el resultado final por variante con un punto por seed, y la lista de corridas con link a
 cada reporte. Zoom en los gráficos arrastrando un rectángulo (en el de resultado final, solo en y); doble
 clic vuelve.
+
+## Modelos: redes ya entrenadas (`models/` y `model.py`)
+
+Para los opcionales de los Ejercicios 2 y 3 (robustez al ruido, atribución), un **modelo** es una red o un ensemble
+de redes ya entrenadas, descripto en `models/<nombre>.json`:
+
+```json
+{ "label": "Ej. 3 — ensemble de 9", "runs": ["series_ex3_final/000_a2-512_seed1", "..."] }
+```
+
+Cada corrida es `<serie>/<corrida>`: se toma la ejecución más reciente de esa serie en `results/` que la tenga, así
+que el JSON sigue sirviendo cuando se repite la serie (también acepta la ruta a una carpeta de corrida). La salida
+del modelo es el promedio de las salidas de sus redes; una red sola es un ensemble de 1.
+
+| Modelo | Corridas | Serie que hay que haber corrido |
+|---|---|---|
+| `ex2_single` | `[64]`, η adaptativo, seed 1 | `series_optimizer_digits_test` |
+| `ex2_ensemble` | las 10 seeds de η adaptativo | ídem |
+| `ex3_single` | `a2 [512]`, seed 1 | `series_ex3_final` |
+| `ex3_ensemble` | las 9 del resultado final | ídem |
+
+`model.py` los carga (pesos, `hidden_layers` y `activation` del `config.json` de cada corrida) y ofrece `predict`
+(forward en Python, para pocas muestras) y `evaluate` (el binario con `epochs: 0`, una vez por red y en paralelo, para
+un CSV entero). No sabe de dígitos: entradas son las columnas `x*`, salidas las `zeta*`. Como script, chequea un
+modelo sobre un dataset: accuracy de cada red y del ensemble, la evaluación en C contra el `predictions.csv` de cada
+corrida (si fue sobre ese dataset) y el forward en Python contra el C:
+
+```bash
+python3 analysis/model.py analysis/models/ex2_ensemble.json --dataset data/digits_test_prepared.csv
+```
+
+`digits_ensemble.py` promedia con lo mismo, a partir de `predictions.csv` o de un modelo:
+
+```bash
+python3 analysis/digits_ensemble.py --model analysis/models/ex3_ensemble.json --dataset data/ex3_base_test.csv  # 98.72 %
+```
+
+### Robustez al ruido (`robustness.py`)
+
+`scripts/perturb_dataset.py` suma ruido gaussiano N(0, σ²) a las entradas de cualquier CSV preparado (nunca a las
+`zeta_*`), con `--seed` obligatoria y `--clip MIN MAX` opcional. Con la misma seed, todos los σ usan las mismas normales
+estándar: el ruido de una seed a σ 0.2 es el de σ 0.1 multiplicado por 2. `robustness.py` lo usa una vez por σ y seed
+de ruido y evalúa encima cada modelo (cada red una sola vez aunque esté en dos modelos):
+
+```bash
+python3 analysis/robustness.py --models ex2_single ex2_ensemble ex3_single ex3_ensemble \
+    --dataset data/digits_test_prepared.csv --gaussian 0 0.05 0.1 0.2 0.3 0.5 --noise-seeds 1-10 --clip 0 1   # ~5 min
+```
+
+Escribe `results/robustness_<fecha>_<hora>/`: `robustness.csv` (`model, label, sigma, noise_seed, accuracy,
+accuracy_0..accuracy_9`: una fila por modelo × σ × seed; σ 0 una sola vez, como seed 0) y `run.json` (los argumentos).
+Imprime la media ± desvío entre seeds y, en cada σ, la diferencia entre cada par de modelos con el test de permutación
+pareado por seed de ruido (`paired_stats.py`, el mismo de `plots_compare.py`). Los gráficos (`robustness_curve`,
+`noise_examples`, `robustness_by_class`) los arma `plots_presentation.py` a partir de la última corrida.
+
+### Atribución (`attribution.py`)
+
+Mapas de qué entradas pesaron en la clase que predice el modelo: `saliency`, `grad_input`, `integrated` (integrated
+gradients) y `occlusion` (parches con `--input-shape 28x28`). Forward y backward en Python sobre los pesos de
+`model.py`. **Antes de mirar mapas, `--self-check`**: compara el forward con el C, el gradiente con diferencias
+finitas y la suma de integrated gradients con O_k(x) − O_k(0).
+
+```bash
+python3 analysis/attribution.py --models ex2_single ex2_ensemble ex3_single ex3_ensemble --dataset data/digits_test_prepared.csv --self-check
+python3 analysis/attribution.py --models ex2_single ex2_ensemble ex3_single ex3_ensemble --dataset data/digits_test_prepared.csv \
+    --samples per-class:1 --input-shape 28x28 --name per_class                                  # ~40 s
+python3 analysis/attribution.py ... --samples per-class:50 --methods saliency grad_input --name class_means
+python3 analysis/attribution.py ... --samples errors:10 --input-shape 28x28 --name errors
+```
+
+Escribe `results/attribution_<name>_<fecha>_<hora>/attributions.csv` (`model, sample, true, predicted, method,
+a1..a784`) y `run.json`. `plots_presentation.py` toma la última de cada nombre: `attribution_methods` y
+`attribution_models` (de `per_class`), `attribution_class_means`, `attribution_errors` y `first_layer_weights` (pesos
+de la primera capa de `ex2_single`, sin corrida previa).
 
 ## Gráficos de las series
 

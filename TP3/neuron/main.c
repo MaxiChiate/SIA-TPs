@@ -221,9 +221,9 @@ static void report_progress(TrainingHistory * history, int epoch) {
   history->reported_at = now;
 
   double wall = now - history->started_at;
+  double percent = history->epochs > 0 ? 100.0 * epoch / history->epochs : 100.0; // epochs 0: evaluation only
   fprintf(stderr, "epoch %d/%d (%3.0f%%)  train MSE %.4g  validation MSE %.4g  %.1fs", epoch, history->epochs,
-          100.0 * epoch / history->epochs, history->train_errors[epoch].mse, history->validation_errors[epoch].mse,
-          wall);
+          percent, history->train_errors[epoch].mse, history->validation_errors[epoch].mse, wall);
   if (!last && epoch > 0) fprintf(stderr, ", ~%.1fs left", wall / epoch * (history->epochs - epoch));
   fputc('\n', stderr);
 }

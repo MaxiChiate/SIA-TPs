@@ -11,16 +11,20 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import math
+import random
 import statistics
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import fraud_calibration  # noqa: E402
-import digits_ensemble  # noqa: E402
 import fraud_threshold  # noqa: E402
+import model  # noqa: E402
+import perturb_dataset  # noqa: E402
 
 TP_DIR = Path(__file__).resolve().parent.parent
 DATA = TP_DIR / "neuron" / "data"
@@ -36,6 +40,7 @@ class Line:
     label: str
     points: list[tuple[float, float]]
     color: str
+    band: list[tuple[float, float, float]] | None = None  # (x, low, high): a translucent area behind the line
 
 
 def latest(prefix: str) -> Path:
@@ -129,6 +134,11 @@ def line_chart(lines: list[Line], width: int, height: int, xticks: list[float], 
     svg.append(f'<line x1="{left}" y1="{top + plot_h}" x2="{left + plot_w}" y2="{top + plot_h}" stroke="{MUTED}" stroke-width="2"/>')
     for value, _ in vlines or []:
         svg.append(f'<line x1="{px(value):.1f}" y1="{top}" x2="{px(value):.1f}" y2="{top + plot_h}" stroke="{INK}" stroke-width="3" stroke-dasharray="10 8"/>')
+    for line in lines:
+        if line.band:
+            outline = [(x, high) for x, _, high in line.band] + [(x, low) for x, low, _ in reversed(line.band)]
+            area = " ".join(f"{px(x):.1f},{py(y):.1f}" for x, y in outline)
+            svg.append(f'<polygon points="{area}" fill="{line.color}" fill-opacity="0.18" stroke="none"/>')
     for line in lines:
         pts = " ".join(f"{px(x):.1f},{py(y):.1f}" for x, y in line.points)
         svg.append(f'<polyline points="{pts}" fill="none" stroke="{line.color}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>')
@@ -394,8 +404,8 @@ def ex3_ablation() -> str:
     def accuracies(prefix: str, label: str) -> list[float]:
         return [100 * float(r["accuracy"]) for r in rows(sorted(RESULTS.glob(f"{prefix}_2*"))[-1] / "summary.csv") if r["label"] == label]
     step3 = sorted(RESULTS.glob("series_ex3_step3_2*"))[-1]
-    loaded = [digits_ensemble.load(step3 / "runs" / r["run"] / "predictions.csv") for r in rows(step3 / "summary.csv")]
-    ensemble = 100 * digits_ensemble.accuracy(loaded[0][0], digits_ensemble.average([o for _, o in loaded]))
+    loaded = [model.load_predictions(step3 / "runs" / r["run"] / "predictions.csv") for r in rows(step3 / "summary.csv")]
+    ensemble = 100 * model.accuracy(model.average(loaded))
     steps = [("[64], more_digits", accuracies("series_ex3_step1", "more [64]")), ("+ unión de datos", accuracies("series_ex3_step1", "unión [64]")),
              ("+ [256]", accuracies("series_ex3_step1", "unión [256]")), ("+ aumento ×3", accuracies("series_ex3_step2", "aumento x3")),
              ("+ [512]", accuracies("series_ex3_step3", "a2 [512]")), ("Ensemble de 9", [ensemble])]
@@ -403,7 +413,212 @@ def ex3_ablation() -> str:
                     [96.0, 97.0, 98.0, 99.0], width=1000)
 
 
-CHARTS = {"ex3_ablation": ex3_ablation, "digits_vs_test": digits_vs_test, "architecture_dots": architecture_dots, "optimizer_digits_test_dots": optimizer_digits_test_dots,
+ROBUSTNESS_NAMES = {"ex2_single": "Ej. 2, una red", "ex2_ensemble": "Ej. 2, ensemble de 10",
+                    "ex3_single": "Ej. 3, una red", "ex3_ensemble": "Ej. 3, ensemble de 9"}
+
+
+def robustness_rows() -> tuple[Path, list[dict[str, str]], list[str]]:
+    """The latest analysis/robustness.py output: its directory, rows and models in their order (= color slot)."""
+    directory = latest("robustness")
+    found = rows(directory / "robustness.csv")
+    return directory, found, list(dict.fromkeys(row["model"] for row in found))
+
+
+def robustness_name(model: str, found: list[dict[str, str]]) -> str:
+    return ROBUSTNESS_NAMES.get(model) or next(row["label"] for row in found if row["model"] == model)
+
+
+def robustness_curve() -> str:
+    """Accuracy against σ of the Gaussian noise: mean over the noise seeds, with a ± standard deviation band."""
+    _, found, models = robustness_rows()
+    lines = []
+    for index, name in enumerate(models):
+        by_sigma: dict[float, list[float]] = {}
+        for row in found:
+            if row["model"] == name:
+                by_sigma.setdefault(float(row["sigma"]), []).append(100 * float(row["accuracy"]))
+        stats = [(sigma, statistics.fmean(v), statistics.stdev(v) if len(v) > 1 else 0.0) for sigma, v in sorted(by_sigma.items())]
+        lines.append(Line(robustness_name(name, found), [(s, m) for s, m, _ in stats], SERIES[index], [(s, m - d, m + d) for s, m, d in stats]))
+    sigmas = sorted({x for line in lines for x, _ in line.points})
+    low = math.floor(min(y for line in lines for _, y in line.points) / 10) * 10
+    chart = line_chart(lines, 1040, 560, sigmas, list(range(low, 101, 10)), xlabel="Desvío σ del ruido gaussiano (píxeles en [0, 1])",
+                       ylabel="Accuracy en test (%)", fmt_x=lambda v: fmt(v, 2).rstrip("0").rstrip(","), fmt_y=lambda v: f"{v:g} %")
+    return legend([(line.label, line.color) for line in lines]) + chart
+
+
+def pixel_paths(keys: list, side: int) -> dict:
+    """svg path data per key (a color or level; None = background), one rectangle per horizontal run of equal keys."""
+    paths: dict = {}
+    for row in range(side):
+        col = 0
+        while col < side:
+            key, start = keys[row * side + col], col
+            while col < side and keys[row * side + col] == key:
+                col += 1
+            if key is not None:
+                paths.setdefault(key, []).append(f"M{start} {row}h{col - start}v1h-{col - start}z")
+    return paths
+
+
+def pixel_image(values: list[float], side: int = 28, size: int = 196) -> str:
+    """A grayscale image as one svg path per gray level (16 levels): dark ink on white, value 1 = ink."""
+    levels = [round(15 * min(1.0, max(0.0, value))) or None for value in values]
+    paths = pixel_paths(levels, side)
+    shapes = "".join(f'<path d="{"".join(parts)}" fill="{INK}" fill-opacity="{level / 15:.2f}"/>' for level, parts in sorted(paths.items()))
+    return (f'<svg aria-label="Imagen de {side}×{side} píxeles" width="{side}" height="{side}" viewBox="0 0 {side} {side}" style="width:{size}px;height:{size}px" shape-rendering="crispEdges" '
+            f'xmlns="http://www.w3.org/2000/svg"><rect width="{side}" height="{side}" fill="#FFFFFF" stroke="{GRID}" stroke-width="0.3"/>{shapes}</svg>')
+
+
+def noise_examples(sample: int = 0, seed: int = 1) -> str:
+    """One test image at every σ of the robustness run, with the exact noise the models saw (same seed, same clip)."""
+    run = json.loads((latest("robustness") / "run.json").read_text())
+    table = perturb_dataset.load(Path(run["dataset"]))
+    clip = run["clip"]
+    cells = []
+    for sigma in sorted(run["gaussian"]):
+        rng = random.Random(seed)
+        perturbations = ([perturb_dataset.gaussian(sigma, rng)] if sigma > 0 else []) + ([perturb_dataset.clip(*clip)] if clip else [])
+        row = perturb_dataset.perturbed(perturb_dataset.Table(table.header, table.n_inputs, table.rows[:sample + 1]), perturbations)[sample]
+        image = pixel_image([float(value) for value in row[:table.n_inputs]])
+        cells.append(f'<div style="display:flex;flex-direction:column;align-items:center;gap:10px">{image}'
+                     f'<p style="font-size:26px;color:{INK}">σ = {fmt(sigma, 2).rstrip("0").rstrip(",")}</p></div>')
+    return f'<div style="display:flex;gap:28px">{"".join(cells)}</div>'
+
+
+def robustness_by_class(sigma: float = 0.2) -> str:
+    """Accuracy per digit at one σ (mean over the noise seeds): a row per model, darker = higher."""
+    _, found, models = robustness_rows()
+    n_classes = sum(1 for key in found[0] if key.startswith("accuracy_"))
+    cell, name_w = 92, 330
+    parts = [f'<div style="width:{name_w}px"></div>'] + [f'<p style="color:{MUTED}">{k}</p>' for k in range(n_classes)]
+    for name in models:
+        chosen = [row for row in found if row["model"] == name and abs(float(row["sigma"]) - sigma) < 1e-9]
+        parts.append(f'<p style="text-align:right;padding:0 16px 0 0">{robustness_name(name, found)}</p>')
+        for k in range(n_classes):
+            value = statistics.fmean(float(row[f"accuracy_{k}"]) for row in chosen)
+            color = f"#{round(251 - value * 209):02x}{round(250 - value * 130):02x}{round(246 - value * 32):02x}"
+            ink = ";color:#FFFFFF" if value > 0.55 else ""
+            parts.append(f'<p style="background:{color}{ink}">{fmt(100 * value, 0)}</p>')
+    return (f'<div style="display:grid;grid-template-columns:{name_w}px repeat({n_classes}, {cell}px);gap:2px;font-size:26px;line-height:2.2;'
+            f'text-align:center;color:{INK}">{"".join(parts)}</div>')
+
+
+POSITIVE, NEGATIVE, NEUTRAL = "#e34948", "#2a78d6", "#f0efec"  # dataviz diverging pair: red <-> blue, gray midpoint
+METHOD_NAMES = {"saliency": "Saliency", "grad_input": "Gradiente × entrada", "integrated": "Integrated gradients", "occlusion": "Oclusión 4×4"}
+
+
+def diverging_image(values: list[float], side: int = 28, size: int = 100) -> str:
+    """Red where the value pushes the class up, blue where it pushes it down, gray at 0. Scaled per map by the 99th
+    percentile of |value|, so one extreme pixel doesn't wash out the rest; 8 opacity steps per arm."""
+    magnitudes = sorted(abs(v) for v in values)
+    scale = magnitudes[int(0.99 * (len(magnitudes) - 1))] or magnitudes[-1] or 1.0
+    levels = [round(8 * min(1.0, abs(value) / scale)) for value in values]
+    paths = pixel_paths([(POSITIVE if value > 0 else NEGATIVE, level) if level else None for value, level in zip(values, levels)], side)
+    shapes = "".join(f'<path d="{"".join(parts)}" fill="{color}" fill-opacity="{level / 8:.2f}"/>' for (color, level), parts in sorted(paths.items()))
+    return (f'<svg aria-label="Mapa de atribución" width="{side}" height="{side}" viewBox="0 0 {side} {side}" style="width:{size}px;height:{size}px" shape-rendering="crispEdges" '
+            f'xmlns="http://www.w3.org/2000/svg"><rect width="{side}" height="{side}" fill="{NEUTRAL}"/>{shapes}</svg>')
+
+
+def attribution_rows(prefix: str) -> tuple[list[dict[str, str]], list[list[float]]]:
+    """The latest attribution_<prefix> output: its rows (without the a* columns) and the dataset's inputs."""
+    directory = latest(prefix)
+    run = json.loads((directory / "run.json").read_text())
+    inputs, _ = model.load_dataset(Path(run["dataset"]))
+    found = []
+    with (directory / "attributions.csv").open(newline="") as file:
+        reader = csv.reader(file)
+        header = next(reader)
+        first = header.index("a1")
+        for row in reader:
+            entry = dict(zip(header[:first], row[:first]))
+            entry["values"] = [float(v) for v in row[first:]]
+            found.append(entry)
+    return found, inputs
+
+
+def map_grid(columns: list[str], rows: list[tuple[str, list[str]]], label_w: int = 300, cell: int = 100) -> str:
+    """rows: (label, one svg per column)."""
+    head = [f'<div style="width:{label_w}px"></div>'] + [f'<p style="text-align:center;color:{MUTED}">{c}</p>' for c in columns]
+    body = [cell for label, cells in rows for cell in [f'<p style="text-align:right;padding:0 14px 0 0;align-self:center">{label}</p>', *cells]]
+    return (f'<div style="display:grid;grid-template-columns:{label_w}px repeat({len(columns)}, {cell}px);gap:8px;font-size:24px;color:{INK}">'
+            f'{"".join(head + body)}</div>')
+
+
+def diverging_legend() -> str:
+    return legend([("a favor de la clase predicha", POSITIVE), ("en contra", NEGATIVE)])
+
+
+def attribution_methods(name: str = "ex3_ensemble") -> str:
+    """One sample per digit: the image, then a row per method (one model)."""
+    found, inputs = attribution_rows("attribution_per_class")
+    mine = [row for row in found if row["model"] == name]
+    samples = list(dict.fromkeys(row["sample"] for row in mine))
+    methods = list(dict.fromkeys(row["method"] for row in mine))
+    by = {(row["sample"], row["method"]): row for row in mine}
+    grid = [("Imagen", [pixel_image(inputs[int(s)], size=100) for s in samples])]
+    grid += [(METHOD_NAMES[m], [diverging_image(by[s, m]["values"]) for s in samples]) for m in methods]
+    columns = [f'{by[s, methods[0]]["true"]} → {by[s, methods[0]]["predicted"]}' for s in samples]
+    return diverging_legend() + map_grid(columns, grid)
+
+
+def attribution_models(method: str = "integrated") -> str:
+    """One sample per digit: the image, then a row per model (one method)."""
+    found, inputs = attribution_rows("attribution_per_class")
+    mine = [row for row in found if row["method"] == method]
+    samples = list(dict.fromkeys(row["sample"] for row in mine))
+    models = list(dict.fromkeys(row["model"] for row in mine))
+    by = {(row["sample"], row["model"]): row for row in mine}
+    grid = [("Imagen", [pixel_image(inputs[int(s)], size=100) for s in samples])]
+    for name in models:
+        cells = []
+        for s in samples:
+            row = by[s, name]
+            wrong = row["predicted"] != row["true"]
+            frame = f'<div style="box-shadow:0 0 0 4px {INK}">' if wrong else "<div>"
+            cells.append(f"{frame}{diverging_image(row['values'])}</div>")
+        grid.append((f"{ROBUSTNESS_NAMES.get(name, name)}", cells))
+    columns = [str(by[s, models[0]]["true"]) for s in samples]
+    return diverging_legend() + map_grid(columns, grid, label_w=330)
+
+
+def attribution_class_means(method: str = "grad_input") -> str:
+    """Mean map per true class, a row per model: what each one looks at for each digit, on average."""
+    found, _ = attribution_rows("attribution_class_means")
+    mine = [row for row in found if row["method"] == method]
+    models = list(dict.fromkeys(row["model"] for row in mine))
+    classes = sorted({row["true"] for row in mine}, key=int)
+    grid = []
+    for name in models:
+        cells = []
+        for c in classes:
+            maps = [row["values"] for row in mine if row["model"] == name and row["true"] == c]
+            cells.append(diverging_image([statistics.fmean(values) for values in zip(*maps)]))
+        grid.append((ROBUSTNESS_NAMES.get(name, name), cells))
+    return diverging_legend() + map_grid(classes, grid, label_w=330)
+
+
+def attribution_errors(name: str = "ex3_ensemble", method: str = "integrated", n: int = 10) -> str:
+    """The first errors of a model: the image and the map toward the class it wrongly picked."""
+    found, inputs = attribution_rows("attribution_errors")
+    mine = [row for row in found if row["model"] == name and row["method"] == method][:n]
+    grid = [("Imagen", [pixel_image(inputs[int(row["sample"])], size=100) for row in mine]),
+            (METHOD_NAMES[method], [diverging_image(row["values"]) for row in mine])]
+    return diverging_legend() + map_grid([f'{row["true"]} → {row["predicted"]}' for row in mine], grid)
+
+
+def first_layer_weights(name: str = "ex2_single", n: int = 32) -> str:
+    """The input weights of the first n hidden neurons of a single network, as 28×28 maps."""
+    run = model.load_model(TP_DIR / "analysis" / "models" / f"{name}.json").runs[0]
+    cells = [diverging_image(weights[1:], size=88) for weights in run.layers[0][:n]]
+    return (legend([("peso positivo", POSITIVE), ("peso negativo", NEGATIVE)])
+            + f'<div style="display:grid;grid-template-columns:repeat(8, 88px);gap:8px">{"".join(cells)}</div>')
+
+
+CHARTS = {"attribution_methods": attribution_methods, "attribution_models": attribution_models,
+          "attribution_class_means": attribution_class_means, "attribution_errors": attribution_errors,
+          "first_layer_weights": first_layer_weights,
+          "robustness_curve": robustness_curve, "noise_examples": noise_examples, "robustness_by_class": robustness_by_class,
+          "ex3_ablation": ex3_ablation, "digits_vs_test": digits_vs_test, "architecture_dots": architecture_dots, "optimizer_digits_test_dots": optimizer_digits_test_dots,
           "fraud_reliability": fraud_reliability, "fraud_feature_bars": fraud_feature_bars, "fraud_size_curve": fraud_size_curve, "threshold_curve": threshold_curve,
           "fraud_histogram": fraud_histogram, "fraud_curves": fraud_curves, "fraud_r2": fraud_r2,
           "digits_distribution": digits_distribution, "xor_convergence": xor_convergence, "eta_sensitivity": eta_sensitivity,

@@ -1,0 +1,14 @@
+{
+  "label": "Ej. 3 — ensemble de 9",
+  "runs": [
+    "series_ex3_final/000_a2-512_seed1",
+    "series_ex3_final/001_a2-512_seed2",
+    "series_ex3_final/002_a2-512_seed3",
+    "series_ex3_final/003_a2-256-128_seed1",
+    "series_ex3_final/004_a2-256-128_seed2",
+    "series_ex3_final/005_a2-256-128_seed3",
+    "series_ex3_final/006_a4-256_seed1",
+    "series_ex3_final/007_a4-256_seed2",
+    "series_ex3_final/008_a4-256_seed3"
+  ]
+}
