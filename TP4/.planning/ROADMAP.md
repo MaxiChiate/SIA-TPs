@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Existe la matriz z-scored con su scaler guardado (`.meta.json`), y un creador nuevo se puede mapear al mismo espacio usando solo ese archivo.
   5. La PCA por autovalores muestra scree, loadings y biplot PC1/PC2 con una justificación escrita de si se reduce dimensionalidad y cómo se leen las componentes; la corrida de sensibilidad con las 31 columnas está etiquetada como tal y comparada contra el conjunto auditado.
 
-**Plans:** 2/8 plans executed
+**Plans:** 4/8 plans executed
 
 Plans:
 **Wave 1**
@@ -42,8 +42,8 @@ Plans:
 - [x] 01-02-PLAN.md — Chequeo de legitimidad de paquetes, `.venv` fijado con `uv` y Makefile raíz (solo `venv`)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 01-03-PLAN.md — `sweep.py`: serie multi-seed → `summary.csv` reproducible, corridas fallidas registradas, `--dry-run`
-- [ ] 01-04-PLAN.md — Loader 50×33, auditoría, z-score con `.meta.json`, variante de 31 columnas, mapeo de creador nuevo y 5 tests de pytest
+- [x] 01-03-PLAN.md — `sweep.py`: serie multi-seed → `summary.csv` reproducible, corridas fallidas registradas, `--dry-run`
+- [x] 01-04-PLAN.md — Loader 50×33, auditoría, z-score con `.meta.json`, variante de 31 columnas, mapeo de creador nuevo y 5 tests de pytest
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 01-05-PLAN.md — Stubs kohonen y hopfield con claves estrictas por modelo; configs de oja y kohonen sobre `datos/prepared`
@@ -132,7 +132,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Fundación, auditoría de datos y PCA | 2/8 | In Progress|  |
+| 1. Fundación, auditoría de datos y PCA | 4/8 | In Progress|  |
 | 2. Kohonen SOM | 0/TBD | Not started | - |
 | 3. Oja y decisiones de campaña | 0/TBD | Not started | - |
 | 4. Hopfield núcleo y letras | 0/TBD | Not started | - |

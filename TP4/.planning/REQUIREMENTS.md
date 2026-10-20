@@ -9,7 +9,7 @@
 
 - [ ] **INFRA-01**: Un solo binario en C despacha por la clave `model` (kohonen / oja / hopfield) a partir de un `config.json`, compilable con `make`
 - [ ] **INFRA-02**: Cada corrida escribe en su directorio una copia de la config, un `metrics.json` plano y los CSV propios del modelo, con seed fija y reproducible
-- [ ] **INFRA-03**: `sweep.py` corre series con varias seeds para cualquier modelo y arma un `summary.csv` con las claves de `metrics.json` y las claves variadas
+- [x] **INFRA-03**: `sweep.py` corre series con varias seeds para cualquier modelo y arma un `summary.csv` con las claves de `metrics.json` y las claves variadas
 - [x] **INFRA-04**: Existe un `.venv` con dependencias fijadas y tests del núcleo en C con `make test`
 
 ### Datos y PCA
@@ -85,7 +85,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | INFRA-01 | Phase 1 | Pending |
 | INFRA-02 | Phase 1 | Pending |
-| INFRA-03 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Complete |
 | INFRA-04 | Phase 1 | Complete |
 | DATA-01 | Phase 1 | Pending |
 | DATA-02 | Phase 1 | Pending |
