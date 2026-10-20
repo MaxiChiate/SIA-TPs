@@ -83,13 +83,42 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (pendiente de roadmap) | — | Pending |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| DATA-05 | Phase 1 | Pending |
+| SOM-01 | Phase 2 | Pending |
+| SOM-02 | Phase 2 | Pending |
+| SOM-03 | Phase 2 | Pending |
+| SOM-04 | Phase 2 | Pending |
+| SOM-05 | Phase 2 | Pending |
+| OJA-01 | Phase 3 | Pending |
+| OJA-02 | Phase 3 | Pending |
+| OJA-03 | Phase 3 | Pending |
+| CAMP-01 | Phase 3 | Pending |
+| CAMP-02 | Phase 3 | Pending |
+| CAMP-03 | Phase 3 | Pending |
+| HOP-01 | Phase 4 | Pending |
+| HOP-02 | Phase 4 | Pending |
+| HOP-03 | Phase 4 | Pending |
+| HOP-04 | Phase 5 | Pending |
+| HOP-05 | Phase 5 | Pending |
+| HOP-06 | Phase 5 | Pending |
+| HOP-07 | Phase 5 | Pending |
+| DELIV-01 | Phase 6 | Pending |
+| DELIV-02 | Phase 6 | Pending |
+| DELIV-03 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 29 total
-- Mapped to phases: 0
-- Unmapped: 29 ⚠️
+- v1 requirements: 30 total
+- Mapped to phases: 30 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-10-20*
-*Last updated: 2026-10-20 after initial definition*
+*Last updated: 2026-10-20 after roadmap creation*
