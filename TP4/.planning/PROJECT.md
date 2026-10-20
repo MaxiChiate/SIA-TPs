@@ -2,7 +2,7 @@
 
 ## What This Is
 
-TP4 de Sistemas de Inteligencia Artificial (ITBA, 2026, Grupo 9). Dos ejercicios: (1) seleccionar creadores de contenido para campañas de marketing de una agencia usando EDA, PCA, red de Kohonen y regla de Oja sobre `datos/creadores.csv` (49 creadores, 31 variables); (2) memoria asociativa con red de Hopfield para recuperar códigos QR deteriorados (5 QR de 37×37) y patrones de letras 5×5. Entregables: código, análisis, slides para presentar e informe para entender el proyecto.
+TP4 de Sistemas de Inteligencia Artificial (ITBA, 2026, Grupo 9). Dos ejercicios: (1) seleccionar creadores de contenido para campañas de marketing de una agencia usando EDA, PCA, red de Kohonen y regla de Oja sobre `datos/creadores.csv` (50 creadores, 31 variables); (2) memoria asociativa con red de Hopfield para recuperar códigos QR deteriorados (5 QR de 37×37) y patrones de letras 5×5. Entregables: código, análisis, slides para presentar e informe para entender el proyecto.
 
 ## Core Value
 
