@@ -27,6 +27,21 @@ The loop is: `datos/creadores.csv` -> `scripts/prepare_creadores.py` (audit + z-
 | Directory layout | `neuron/` (C: `io/`, `models/`, `vendor/`, `tests/`), `scripts/` (data prep: `creadores.py`, `prepare_creadores.py`, `map_creator.py`), `analysis/` (`sweep.py`, `eda.py`, `pca.py`, `plots_style.py`, `tests/`), `datos/prepared/` (versioned prepared inputs), `deliverables/` (versioned narrative fragments per phase, assembled in Phase 6) | D-05; prepared inputs are small and deterministic, so the C core runs from a fresh clone |
 | Versioning | Versioned: sources, example configs, `series_*.json`, `datos/prepared/*`, `deliverables/*.md`. Not versioned: `neuron/build/`, `neuron/results/`, `neuron/config.json`, `analysis/results/`, `.venv/` | PROJECT.md: generated results are not versioned (as TP3) |
 
+## Slice Order in Phase 1
+
+The tracer is plan 01-01 Task 1 (oja config → binary → run directory); every other plan expands from it.
+
+| Wave | Plan | Slice |
+|---|---|---|
+| 1 | 01-01 | C tracer (oja on a fixture) + strict per-model config |
+| 1 | 01-02 | Package legitimacy gate, pinned `.venv`, root `Makefile` (`venv`) |
+| 2 | 01-03 | `analysis/sweep.py` → `summary.csv`, failed runs recorded, `--dry-run` |
+| 2 | 01-04 | `datos/prepared/` (audited + all31), saved scaler, new-creator mapping, 5 pytest tests |
+| 3 | 01-05 | kohonen and hopfield stubs; oja and kohonen on `datos/prepared` |
+| 3 | 01-06 | EDA, audit table, `make prepare`/`make eda`, PCA rule written before the scree |
+| 4 | 01-07 | One series per model, root `all`/`sweep`/`test`/`clean`, C test runner, `make debug` |
+| 5 | 01-08 | PCA, sensitivity run, written interpretation |
+
 ## Stack Touched in Phase 1
 
 - [x] Project scaffold: `neuron/Makefile` (all, run, test-c, test, debug, clean), root `Makefile` (all, venv, prepare, sweep, eda, pca, test, clean), C test runner, pytest

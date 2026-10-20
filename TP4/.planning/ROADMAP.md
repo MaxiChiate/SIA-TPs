@@ -32,14 +32,17 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. El loader falla con un error claro si `creadores.csv` no tiene n=50 filas y 33 columnas; el EDA muestra distribuciones y correlaciones, y la tabla de auditoría documenta las 5 dependencias lineales exactas y la regla escrita de selección de variables.
   4. Existe la matriz z-scored con su scaler guardado (`.meta.json`), y un creador nuevo se puede mapear al mismo espacio usando solo ese archivo.
   5. La PCA por autovalores muestra scree, loadings y biplot PC1/PC2 con una justificación escrita de si se reduce dimensionalidad y cómo se leen las componentes; la corrida de sensibilidad con las 31 columnas está etiquetada como tal y comparada contra el conjunto auditado.
-**Plans:** 5 plans
+**Plans:** 8 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Walking skeleton (tracer): config.json → binario C (stub oja) → directorio de corrida reproducible → sweep.py → summary.csv
-- [ ] 01-02-PLAN.md — `.venv` fijado (con chequeo de legitimidad de paquetes), Makefile raíz, loader 50×33, auditoría, z-score con `.meta.json`, variante de 31 columnas y 5 tests de pytest
-- [ ] 01-03-PLAN.md — Stubs kohonen y hopfield, configs sobre `datos/prepared`, una serie por modelo, `make test` (3 tests de C + pytest) y `make debug`
-- [ ] 01-04-PLAN.md — EDA (distribuciones, correlaciones, dependencias), tabla de auditoría generada y fragmento escrito con la regla de PCA fijada antes del scree
-- [ ] 01-05-PLAN.md — PCA por autovalores (scree, loadings, biplot, decisión 80 %/Kaiser), sensibilidad con 31 columnas e interpretación escrita
+- [ ] 01-01-PLAN.md — Walking skeleton (tracer): config.json → binario C (stub oja) → directorio de corrida reproducible; validación estricta de config por modelo
+- [ ] 01-02-PLAN.md — Chequeo de legitimidad de paquetes, `.venv` fijado con `uv` y Makefile raíz (solo `venv`)
+- [ ] 01-03-PLAN.md — `sweep.py`: serie multi-seed → `summary.csv` reproducible, corridas fallidas registradas, `--dry-run`
+- [ ] 01-04-PLAN.md — Loader 50×33, auditoría, z-score con `.meta.json`, variante de 31 columnas, mapeo de creador nuevo y 5 tests de pytest
+- [ ] 01-05-PLAN.md — Stubs kohonen y hopfield con claves estrictas por modelo; configs de oja y kohonen sobre `datos/prepared`
+- [ ] 01-06-PLAN.md — EDA (distribuciones, correlaciones, dependencias), tabla de auditoría generada, `make prepare`/`make eda` y fragmento escrito con la regla de PCA fijada antes del scree
+- [ ] 01-07-PLAN.md — Una serie por modelo desde la raíz, `make`/`make sweep`/`make clean`, `make test` (3 tests de C + pytest) y `make debug`
+- [ ] 01-08-PLAN.md — PCA por autovalores (scree, loadings, biplot, decisión 80 %/Kaiser), sensibilidad con 31 columnas e interpretación escrita
 
 ### Phase 2: Kohonen SOM
 **Goal:** As a campaign analyst, I want to train a Kohonen map of the 50 creators with a grid chosen by a rule fixed beforehand, so that I can read creator profiles by region and contrast them with PC1/PC2.
@@ -108,7 +111,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Fundación, auditoría de datos y PCA | 0/5 | Planned | - |
+| 1. Fundación, auditoría de datos y PCA | 0/8 | Planned | - |
 | 2. Kohonen SOM | 0/TBD | Not started | - |
 | 3. Oja y decisiones de campaña | 0/TBD | Not started | - |
 | 4. Hopfield núcleo y letras | 0/TBD | Not started | - |
