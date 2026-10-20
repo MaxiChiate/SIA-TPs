@@ -1,0 +1,5 @@
+# TP4: dependencias fijadas. Crear el entorno con: make venv
+numpy==2.5.4
+matplotlib==3.11.2
+Pillow==13.0.0
+pytest==9.1.1
