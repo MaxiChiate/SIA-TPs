@@ -1,0 +1,9 @@
+{
+  "_comment": "Smoke test: hopfield stub on the fixture letters",
+  "base_config": "../neuron/config.json.hopfield.example",
+  "variants": [
+    {"label": "low", "set": {"noise_levels": [0.0, 0.1]}},
+    {"label": "high", "set": {"noise_levels": [0.3, 0.5]}}
+  ],
+  "seeds": [1, 2]
+}

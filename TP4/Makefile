@@ -3,11 +3,25 @@
 
 PY ?= .venv/bin/python
 UV ?= uv
+SERIES ?= analysis/series_smoke_oja.json
 
-.PHONY: venv prepare eda
+.DEFAULT_GOAL := all
 
-# Primer target: un make sin argumentos en TP4/ crea el entorno hasta que
-# otro plan defina el objetivo por defecto.
+.PHONY: all venv prepare eda sweep clean
+
+# Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
+# regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
+all: prepare
+	$(MAKE) -C neuron
+
+# Una serie de corridas (cualquier modelo): make sweep SERIES=analysis/series_smoke_kohonen.json
+sweep: prepare
+	$(PY) analysis/sweep.py $(SERIES)
+
+# Borra la compilacion; datos/prepared/ y .venv quedan.
+clean:
+	$(MAKE) -C neuron clean
+
 venv: .venv/.installed
 
 .venv/.installed: analysis/requirements.txt
