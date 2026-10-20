@@ -1,0 +1,5 @@
+{
+  "model": "oja",
+  "seed": 1,
+  "input": "tests/fixtures/zscore_small.csv"
+}
