@@ -4,7 +4,7 @@
 PY ?= .venv/bin/python
 UV ?= uv
 
-.PHONY: venv
+.PHONY: venv prepare eda
 
 # Primer target: un make sin argumentos en TP4/ crea el entorno hasta que
 # otro plan defina el objetivo por defecto.
@@ -14,3 +14,11 @@ venv: .venv/.installed
 	test -x .venv/bin/python || $(UV) venv --python 3.12 .venv
 	$(UV) pip install --python .venv/bin/python -r analysis/requirements.txt
 	touch $@
+
+# datos/prepared/ se genera (no se versiona): todo target que lo lea depende de prepare.
+prepare: venv
+	$(PY) scripts/prepare_creadores.py
+
+# EDA y tabla de auditoria en analysis/results/eda/ (no se versiona).
+eda: venv
+	$(PY) analysis/eda.py
