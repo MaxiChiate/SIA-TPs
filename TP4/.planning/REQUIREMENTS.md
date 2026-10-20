@@ -7,14 +7,14 @@
 
 ### Infraestructura
 
-- [ ] **INFRA-01**: Un solo binario en C despacha por la clave `model` (kohonen / oja / hopfield) a partir de un `config.json`, compilable con `make`
-- [ ] **INFRA-02**: Cada corrida escribe en su directorio una copia de la config, un `metrics.json` plano y los CSV propios del modelo, con seed fija y reproducible
+- [x] **INFRA-01**: Un solo binario en C despacha por la clave `model` (kohonen / oja / hopfield) a partir de un `config.json`, compilable con `make`
+- [x] **INFRA-02**: Cada corrida escribe en su directorio una copia de la config, un `metrics.json` plano y los CSV propios del modelo, con seed fija y reproducible
 - [x] **INFRA-03**: `sweep.py` corre series con varias seeds para cualquier modelo y arma un `summary.csv` con las claves de `metrics.json` y las claves variadas
 - [x] **INFRA-04**: Existe un `.venv` con dependencias fijadas y tests del núcleo en C con `make test`
 
 ### Datos y PCA
 
-- [ ] **DATA-01**: El loader verifica n=50 filas y 33 columnas, y falla si no coinciden
+- [x] **DATA-01**: El loader verifica n=50 filas y 33 columnas, y falla si no coinciden
 - [ ] **DATA-02**: EDA de distribuciones y correlaciones, con tabla de auditoría de variables que documenta las 5 dependencias lineales exactas y la regla de selección
 - [ ] **DATA-03**: Z-score en Python con scaler guardado (`.meta.json`) para mapear creadores nuevos
 - [ ] **DATA-04**: PCA por autovalores con scree, loadings y biplot, y justificación escrita de reducir o no la dimensionalidad
@@ -83,11 +83,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
+| INFRA-01 | Phase 1 | Complete |
+| INFRA-02 | Phase 1 | Complete |
 | INFRA-03 | Phase 1 | Complete |
 | INFRA-04 | Phase 1 | Complete |
-| DATA-01 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 1 | Pending |
 | DATA-03 | Phase 1 | Pending |
 | DATA-04 | Phase 1 | Pending |
