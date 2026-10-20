@@ -1,0 +1,7 @@
+{
+  "_comment": "Smoke test: kohonen stub on the audited data, grid_k varies",
+  "base_config": "../neuron/config.json.kohonen.example",
+  "vary": "grid_k",
+  "values": [2, 3, 4],
+  "seeds": [1, 2, 3]
+}
