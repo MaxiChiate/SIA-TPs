@@ -22,6 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Fundación, auditoría de datos y PCA
+
 **Goal:** As a campaign analyst, I want to run a reproducible C/Python pipeline over an audited, standardized creadores.csv with PCA, so that every later result rests on justified variables.
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
@@ -32,19 +33,30 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. El loader falla con un error claro si `creadores.csv` no tiene n=50 filas y 33 columnas; el EDA muestra distribuciones y correlaciones, y la tabla de auditoría documenta las 5 dependencias lineales exactas y la regla escrita de selección de variables.
   4. Existe la matriz z-scored con su scaler guardado (`.meta.json`), y un creador nuevo se puede mapear al mismo espacio usando solo ese archivo.
   5. La PCA por autovalores muestra scree, loadings y biplot PC1/PC2 con una justificación escrita de si se reduce dimensionalidad y cómo se leen las componentes; la corrida de sensibilidad con las 31 columnas está etiquetada como tal y comparada contra el conjunto auditado.
+
 **Plans:** 8 plans
 
 Plans:
+**Wave 1**
 - [ ] 01-01-PLAN.md — Walking skeleton (tracer): config.json → binario C (stub oja) → directorio de corrida reproducible; validación estricta de config por modelo
 - [ ] 01-02-PLAN.md — Chequeo de legitimidad de paquetes, `.venv` fijado con `uv` y Makefile raíz (solo `venv`)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 01-03-PLAN.md — `sweep.py`: serie multi-seed → `summary.csv` reproducible, corridas fallidas registradas, `--dry-run`
 - [ ] 01-04-PLAN.md — Loader 50×33, auditoría, z-score con `.meta.json`, variante de 31 columnas, mapeo de creador nuevo y 5 tests de pytest
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 01-05-PLAN.md — Stubs kohonen y hopfield con claves estrictas por modelo; configs de oja y kohonen sobre `datos/prepared`
 - [ ] 01-06-PLAN.md — EDA (distribuciones, correlaciones, dependencias), tabla de auditoría generada, `make prepare`/`make eda` y fragmento escrito con la regla de PCA fijada antes del scree
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 01-07-PLAN.md — Una serie por modelo desde la raíz, `make`/`make sweep`/`make clean`, `make test` (3 tests de C + pytest) y `make debug`
+
+**Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 01-08-PLAN.md — PCA por autovalores (scree, loadings, biplot, decisión 80 %/Kaiser), sensibilidad con 31 columnas e interpretación escrita
 
 ### Phase 2: Kohonen SOM
+
 **Goal:** As a campaign analyst, I want to train a Kohonen map of the 50 creators with a grid chosen by a rule fixed beforehand, so that I can read creator profiles by region and contrast them with PC1/PC2.
 **Mode:** mvp
 **Depends on**: Phase 1
@@ -54,9 +66,11 @@ Plans:
   2. El barrido multi-seed de hiperparámetros produce un resumen y la regla de elección de grilla (QE, TE, ocupación, QE leave-one-out, estabilidad entre seeds) está escrita y commiteada antes de mirar los resultados; la grilla elegida se justifica con esa regla y no por menor QE.
   3. Para la grilla elegida existen el mapa de hits, la matriz U y los planos de componentes.
   4. Los perfiles por región están interpretados para el caso de uso de la agencia y contrastados con PC1/PC2 del biplot, con una respuesta escrita a qué indica una distancia alta en la matriz U.
+
 **Plans**: TBD
 
 ### Phase 3: Oja y decisiones de campaña
+
 **Goal:** As a campaign analyst, I want to build an Oja index and recommend creators per campaign against a followers-only strategy, so that I can choose with evidence and know when the index misleads.
 **Mode:** mvp
 **Depends on**: Phase 2 (también Phase 1: datos centrados y PCA)
@@ -67,9 +81,11 @@ Plans:
   3. Hay una interpretación escrita del índice, con evidencia (correlación con `followers` y con temas), de por qué elegir el máximo para cualquier campaña es incorrecto.
   4. Para cada campaña (fútbol, perros, maquillaje, arte) hay una recomendación justificada con Kohonen, Oja y PCA, comparada contra elegir solo por `followers` con el mismo k (overlap@k, proporción por tema, costo por alcance argentino) y sin afirmaciones de ROI.
   5. Hay respuestas concretas de mantenimiento para una campaña nueva, creadores o variables nuevas y la actualización mensual, apoyadas en el scaler guardado y en las decisiones de re-entrenamiento.
+
 **Plans**: TBD
 
 ### Phase 4: Hopfield núcleo y letras
+
 **Goal:** As a student, I want to validate a Hopfield core on four 5x5 letters, so that I understand recovery, energy, capacity and spurious states before moving to QR codes.
 **Mode:** mvp
 **Depends on**: Phase 1 (independiente del Ejercicio 1; puede intercalarse con las Fases 2 y 3)
@@ -79,9 +95,11 @@ Plans:
   2. Las 4 letras 5×5 se almacenan y se recuperan a partir de consultas con ruido, y los CSV muestran la energía por paso (no creciente en el modo asíncrono).
   3. El análisis de ortogonalidad (matriz de solapamientos) y de capacidad se hace sobre varios subconjuntos de letras, no solo sobre un conjunto.
   4. Un patrón muy ruidoso converge a un estado espurio que queda identificado y clasificado (inverso, mezcla u otro).
+
 **Plans**: TBD
 
 ### Phase 5: Hopfield con QR
+
 **Goal:** As a student, I want to store the five 37x37 QR codes in a Hopfield network and query them under noise, so that I can explain why Hebb fails and what the pseudo-inverse and a Hamming baseline show.
 **Mode:** mvp
 **Depends on**: Phase 4
@@ -91,9 +109,11 @@ Plans:
   2. Con la regla de Hebb existe un test de estabilidad a ruido cero y una curva con al menos 8 niveles de ruido y 30 o más ensayos por nivel, con energía e iteraciones por paso; si Hebb falla, el fallo se reporta como hallazgo.
   3. La regla de pseudo-inversa se compara contra Hebb y contra la línea base de Hamming al patrón almacenado más cercano, en los mismos niveles de ruido.
   4. Las limitaciones del caso de uso están explicadas con evidencia: correlación entre QR, sensibilidad a corrimientos, corrección de errores propia del QR y equivalencia con una tabla de búsqueda.
+
 **Plans**: TBD
 
 ### Phase 6: Slides e informe
+
 **Goal:** As a presenter, I want to deliver slides and a report as Artifacts with reproduction docs, so that I can present both exercises and anyone can understand and re-run the project.
 **Mode:** mvp
 **Depends on**: Phase 3, Phase 5
@@ -102,6 +122,7 @@ Plans:
   1. Las slides están publicadas como Artifact, con una sección por ejercicio, y se pueden recorrer para presentar.
   2. El informe está publicado como Artifact y su tabla mapea cada pregunta literal del enunciado a la sección donde se responde.
   3. `CLAUDE.md`, `DECISIONS.md` y el README indican cómo reproducir cada resultado (comando, config y seed), y esos pasos regeneran las figuras y tablas que muestran slides e informe.
+
 **Plans**: TBD
 
 ## Progress
