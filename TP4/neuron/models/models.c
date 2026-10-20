@@ -3,6 +3,7 @@
 
 // Table order is the order model_names lists them in
 static const Model MODELS[] = {
+  { "kohonen", run_kohonen },
   { "oja", run_oja },
 };
 

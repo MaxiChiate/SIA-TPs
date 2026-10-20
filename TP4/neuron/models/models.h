@@ -22,6 +22,10 @@ const Model * model_find(const char * name);
 // The registered names, comma-separated, in table order
 const char * model_names(void);
 
+// Phase 1 stub: sample-initialised k x k prototypes and the nearest prototype of every sample.
+// Phase 2 replaces the body with Kohonen training.
+int run_kohonen(const Config * config, Rng * rng, const Results * results);
+
 // Phase 1 stub: projects the input onto a random unit vector. Phase 3 replaces the body with Oja's rule.
 int run_oja(const Config * config, Rng * rng, const Results * results);
 

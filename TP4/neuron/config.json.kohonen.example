@@ -1,0 +1,6 @@
+{
+  "model": "kohonen",
+  "seed": 1,
+  "input": "../datos/prepared/creadores_zscore.csv",
+  "grid_k": 3
+}

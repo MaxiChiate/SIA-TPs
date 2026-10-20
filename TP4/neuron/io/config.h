@@ -2,7 +2,7 @@
 #define __CONFIG_H__
 
 // A run is described by one JSON file. The three keys every model shares:
-//   model   which runner to use (oja here; kohonen and hopfield come with plan 01-05)
+//   model   which runner to use (kohonen, oja or hopfield)
 //   seed    integer >= 0, seeds the run's single Rng
 //   input   numeric CSV with a header row, relative to the directory the binary runs from
 // Each model adds its own keys. Both sets are tables of KeySpec rows: a key that is not in the table, appears
