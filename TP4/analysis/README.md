@@ -75,4 +75,4 @@ la última línea de stdout sigue siendo `summary -> <ruta>` y el comando termin
 
 | Serie | Qué corre | Pregunta |
 |---|---|---|
-| `series_smoke_oja` | El stub de Oja sobre el fixture versionado (`neuron/tests/fixtures/zscore_small.csv`), 3 seeds | ¿Funciona el lazo config, binario, `summary.csv`? |
+| `series_smoke_oja` | El stub de Oja sobre los datos auditados (`datos/prepared/creadores_zscore.csv`, 50 x 26; hay que generarlo antes con `scripts/prepare_creadores.py`), 3 seeds | ¿Funciona el lazo config, binario, `summary.csv`? |

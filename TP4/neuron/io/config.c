@@ -16,8 +16,20 @@ static const KeySpec COMMON_KEYS[] = {
   { NULL, KEY_INT, 0, NULL },
 };
 
+// grid_k: side of the k x k grid of neurons. Phase 2 appends the rows of the real Kohonen training here
+static const KeySpec KOHONEN_KEYS[] = {
+  { "grid_k", KEY_INT, 1, NULL },
+  { NULL, KEY_INT, 0, NULL },
+};
+
 // The stub reads nothing else; Phase 3 appends the rows of the real Oja rule here
 static const KeySpec OJA_KEYS[] = {
+  { NULL, KEY_INT, 0, NULL },
+};
+
+// noise_levels: fractions of pixels to flip, each in [0, 1]. Phases 4 and 5 append the rows of the real network
+static const KeySpec HOPFIELD_KEYS[] = {
+  { "noise_levels", KEY_NUMBER_ARRAY, 1, NULL },
   { NULL, KEY_INT, 0, NULL },
 };
 
@@ -26,9 +38,11 @@ typedef struct {
   const KeySpec * keys;
 } ModelKeys;
 
-// Same names as the runner table in models/models.c; plan 01-05 adds kohonen before oja and hopfield after it
+// Same names, in the same order, as the runner table in models/models.c
 static const ModelKeys MODEL_KEYS[] = {
+  { "kohonen", KOHONEN_KEYS },
   { "oja", OJA_KEYS },
+  { "hopfield", HOPFIELD_KEYS },
 };
 
 #define N_MODEL_KEYS ((int) (sizeof(MODEL_KEYS) / sizeof(MODEL_KEYS[0])))

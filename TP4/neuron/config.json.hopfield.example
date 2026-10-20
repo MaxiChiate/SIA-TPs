@@ -1,0 +1,6 @@
+{
+  "model": "hopfield",
+  "seed": 1,
+  "input": "tests/fixtures/patterns_small.csv",
+  "noise_levels": [0.0, 0.1, 0.2]
+}
