@@ -7,6 +7,7 @@ fixture regenerates them with the same code path as scripts/prepare_creadores.py
 from __future__ import annotations
 
 import csv
+import shutil
 
 import numpy as np
 import pytest
@@ -15,8 +16,11 @@ import creadores
 from creadores import (
     PREPARED_DIR,
     RAW_PATH,
+    inverse_transform,
     load_creadores,
     load_meta,
+    scaler_from_meta,
+    transform_new_creator,
 )
 
 AUDITED = PREPARED_DIR / "creadores_zscore.csv"
@@ -96,3 +100,44 @@ def test_all31_correlation_has_five_null_eigenvalues(prepared):
     meta = load_meta(ALL31_META)
     assert meta["variant"] == "all31_sensitivity"
     assert meta["dropped"] == []
+
+
+def test_zscore_roundtrip_from_meta(prepared):
+    data = load_creadores()
+    meta = load_meta(AUDITED_META)
+    scaler = scaler_from_meta(meta)
+    header, z = read_matrix(AUDITED)
+    assert header == meta["features"]
+
+    index = [data.columns.index(name) for name in meta["features"]]
+    raw = data.values[:, index]
+    np.testing.assert_allclose(inverse_transform(scaler, z), raw, rtol=1e-12, atol=1e-9)
+
+    assert np.all(np.abs(z.mean(axis=0)) < 1e-12)
+    assert np.all(np.abs(z.std(axis=0, ddof=1) - 1.0) < 1e-12)
+
+
+def test_new_creator_mapped_with_scaler_only(prepared, tmp_path):
+    data = load_creadores()
+    copy = tmp_path / "only_meta.json"
+    shutil.copy(AUDITED_META, copy)
+    meta = load_meta(copy)
+
+    raw = dict(zip(data.columns, data.values[0]))
+    raw["creator_id"] = data.ids[0]  # extra keys are ignored
+    raw["name"] = data.names[0]
+    _, z = read_matrix(AUDITED)
+    np.testing.assert_allclose(transform_new_creator(meta, raw), z[0], rtol=0, atol=1e-12)
+
+    synthetic = {
+        name: mean + 2 * std
+        for name, mean, std in zip(meta["features"], meta["mean"], meta["std"])
+    }
+    np.testing.assert_allclose(transform_new_creator(meta, synthetic), 2.0, rtol=0, atol=1e-12)
+
+    missing = dict(synthetic)
+    victim = meta["features"][3]
+    del missing[victim]
+    with pytest.raises(KeyError) as error:
+        transform_new_creator(meta, missing)
+    assert victim in str(error.value)

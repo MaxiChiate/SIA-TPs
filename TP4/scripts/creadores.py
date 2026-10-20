@@ -13,6 +13,7 @@ import json
 import math
 import os
 import tempfile
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -211,10 +212,39 @@ def transform(scaler: Scaler, values: np.ndarray) -> np.ndarray:
     return (values - scaler.mean) / scaler.std
 
 
+def inverse_transform(scaler: Scaler, z: np.ndarray) -> np.ndarray:
+    """x = z * std + mean, the inverse of transform."""
+    return np.asarray(z, dtype=np.float64) * scaler.std + scaler.mean
+
+
 def load_meta(path: Path) -> dict:
     """Read a .meta.json written by write_prepared."""
     with Path(path).open(encoding="utf-8") as file:
         return json.load(file)
+
+
+def scaler_from_meta(meta: dict) -> Scaler:
+    """Rebuild the saved scaler: features, mean, std and ddof, nothing else."""
+    return Scaler(
+        features=list(meta["features"]),
+        mean=np.array(meta["mean"], dtype=np.float64),
+        std=np.array(meta["std"], dtype=np.float64),
+        ddof=int(meta["ddof"]),
+    )
+
+
+def transform_new_creator(meta: dict, raw: Mapping[str, float]) -> np.ndarray:
+    """Map one raw creator (column name -> value) into the saved z-score space (DATA-03).
+
+    Uses only the scaler in `meta`; creadores.csv is never read. Extra keys are ignored and a
+    missing feature raises a KeyError naming every missing one.
+    """
+    scaler = scaler_from_meta(meta)
+    missing = [name for name in scaler.features if name not in raw]
+    if missing:
+        raise KeyError(f"missing features for the saved scaler: {', '.join(missing)}")
+    row = np.array([[float(raw[name]) for name in scaler.features]], dtype=np.float64)
+    return transform(scaler, row)[0]
 
 
 def _atomic_write(path: Path, text: str) -> None:
