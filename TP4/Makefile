@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda sweep clean
+.PHONY: all venv prepare eda sweep test clean
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -17,6 +17,10 @@ all: prepare
 # Una serie de corridas (cualquier modelo): make sweep SERIES=analysis/series_smoke_kohonen.json
 sweep: prepare
 	$(PY) analysis/sweep.py $(SERIES)
+
+# Tests de C y de Python. Depende de prepare: un clone nuevo no tiene datos/prepared/ y pytest lo lee.
+test: prepare
+	$(MAKE) -C neuron test PY=$(abspath $(PY))
 
 # Borra la compilacion; datos/prepared/ y .venv quedan.
 clean:
