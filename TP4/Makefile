@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda sweep test clean
+.PHONY: all venv prepare eda pca sweep test clean
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -40,3 +40,8 @@ prepare: venv
 # EDA y tabla de auditoria en analysis/results/eda/ (no se versiona).
 eda: venv
 	$(PY) analysis/eda.py
+
+# PCA por autovalores de la matriz de correlacion: auditado y sensibilidad de 31 columnas,
+# en analysis/results/pca/ (no se versiona). Lee datos/prepared/, por eso depende de prepare.
+pca: prepare
+	$(PY) analysis/pca.py
