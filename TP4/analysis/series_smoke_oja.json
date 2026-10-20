@@ -1,0 +1,5 @@
+{
+  "_comment": "Smoke test of the loop: the oja stub, three seeds",
+  "base_config": "../neuron/config.json.oja.example",
+  "seeds": [1, 2, 3]
+}
