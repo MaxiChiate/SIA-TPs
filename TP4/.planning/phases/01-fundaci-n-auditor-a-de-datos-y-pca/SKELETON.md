@@ -1,0 +1,56 @@
+# Walking Skeleton — TP4 SIA (Aprendizaje no supervisado y memoria asociativa)
+
+**Phase:** 1
+**Generated:** 2026-10-20
+
+## Capability Proven End-to-End
+
+From one `config.json` whose `model` key is `kohonen`, `oja` or `hopfield`, `neuron/build/neuron` runs a deterministic seeded model stub over a Python-prepared input, writes a self-describing run directory (byte copy of the config, flat `metrics.json`, model CSVs) that is byte-identical for the same seed, and `analysis/sweep.py` turns a multi-seed series of such runs into one `summary.csv` with the metrics keys and the varied keys as columns.
+
+The loop is: `datos/creadores.csv` -> `scripts/prepare_creadores.py` (audit + z-score + `.meta.json`) -> `datos/prepared/creadores_zscore.csv` -> `neuron/config.json.<model>.example` -> `neuron/build/neuron` -> `results/{timestamp}_{model}_seed{N}/` -> `analysis/sweep.py` -> `analysis/results/{series}_{timestamp}/summary.csv`.
+
+## Architectural Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Core language / build | C11 (`-std=c11 -Wall -Wextra -Wpedantic -O2`), GNU Make 3.81-compatible `neuron/Makefile`, one binary `neuron/build/neuron` | Course constraint (C core, as TP3); `-O2` without TP3's float-reordering flags keeps C-vs-numpy comparisons exact (CLAUDE.md, D-05) |
+| Dispatch | One binary; `model` key selects a runner through the table in `neuron/models/models.c` (`model_find`) | One code path for config, RNG and outputs instead of three copies (D-03) |
+| Config format | JSON parsed with vendored cJSON v1.7.19 (`neuron/vendor/cjson/`, sha256 in `VERSION`), strict per-model `KeySpec` tables in `neuron/io/config.c`: unknown, duplicate, missing or wrong-typed keys abort | Later phases need nested objects and number arrays (D-01, costly to change); strictness keeps sweeps honest (D-02) |
+| Randomness | TP3 splitmix64 (`neuron/rng.c`), one `Rng` from `seed` created in `main` and passed down; no libc generator | Same seed, same bytes on every libc (CLAUDE.md) |
+| Run contract | `results/{timestamp}_{model}_seed{N}/` holding `config.json` (byte copy), `metrics.json` (flat, `%.17g`), model CSVs (`%.17g`, header row); stdout is exactly `results -> {dir}`; the timestamp exists only in the directory name and no file holds a time value or an absolute path | `diff -r` between two same-seed runs is the reproducibility proof (D-04, costly to change: every later analysis reads it) |
+| Data contract | Python prepares numeric CSVs with a header row plus a `.meta.json` scaler; C never reads `creadores.csv`, never selects, scales or drops columns | Feature selection is an EDA/PCA outcome; the saved scaler maps new creators (D-04, D-08, D-11) |
+| Variable set | Audited set = 31 numeric columns minus the 5 exact linear dependencies (`price_ars`, `organic_posts_pct`, `total_engagement_per_1000`, and the lowest-variance member of `topic_*` and of `content_*`, measured: `topic_art_pct`, `content_showcase_pct`) = 26 columns; all 31 z-scored columns exist as the labelled sensitivity variant | D-08, D-09; DATA-05 |
+| Orchestration | `analysis/sweep.py`, standard library only, series JSON (`base_config`, `set`, `vary`+`values` or `variants`, `seeds`, `workers`), dotted keys for nested overrides, per-run configs with paths relative to the sweep directory | Model-agnostic: summary columns = fixed run columns + varied keys + union of `metrics.json` keys (INFRA-03) |
+| Python environment | `.venv` created with `uv`, exact pins in `analysis/requirements.txt` (numpy 2.5.4, matplotlib 3.11.2, Pillow 13.0.0, pytest 9.1.1), no dataframe library; root `Makefile` uses `PY ?= .venv/bin/python` | D-05, D-06 |
+| Figures | matplotlib only, `analysis/plots_style.py` (TP3 palette, `svg.fonttype = path`), SVG + PNG into `analysis/results/` | D-06; SVG text survives Artifact embedding |
+| Tests | `make test` (from `neuron/` or TP4 root) = TP3-style C runner (3 tests) + pytest (6 tests): 9 tests in total, under the 10 cap | D-07 |
+| Directory layout | `neuron/` (C: `io/`, `models/`, `vendor/`, `tests/`), `scripts/` (data prep: `creadores.py`, `prepare_creadores.py`, `map_creator.py`), `analysis/` (`sweep.py`, `eda.py`, `pca.py`, `plots_style.py`, `tests/`), `datos/prepared/` (versioned prepared inputs), `deliverables/` (versioned narrative fragments per phase, assembled in Phase 6) | D-05; prepared inputs are small and deterministic, so the C core runs from a fresh clone |
+| Versioning | Versioned: sources, example configs, `series_*.json`, `datos/prepared/*`, `deliverables/*.md`. Not versioned: `neuron/build/`, `neuron/results/`, `neuron/config.json`, `analysis/results/`, `.venv/` | PROJECT.md: generated results are not versioned (as TP3) |
+
+## Stack Touched in Phase 1
+
+- [x] Project scaffold: `neuron/Makefile` (all, run, test-c, test, debug, clean), root `Makefile` (all, venv, prepare, sweep, eda, pca, test, clean), C test runner, pytest
+- [x] Routing: dispatch by `model` to `run_kohonen` / `run_oja` / `run_hopfield`
+- [x] Data read: C reads `datos/prepared/creadores_zscore.csv` (and a ±1 patterns fixture for hopfield); Python reads `datos/creadores.csv` with the 50 x 33 check
+- [x] Data write: run directories under `results/`, `summary.csv` under `analysis/results/`, prepared CSV + `.meta.json` under `datos/prepared/`
+- [x] User interaction: CLI (`./build/neuron config.json`, `make run CONFIG=...`, `python3 analysis/sweep.py series.json`, `scripts/map_creator.py`)
+- [x] Local full-stack run command: `make venv && make prepare && make && make sweep SERIES=analysis/series_smoke_oja.json && make test`
+
+## Out of Scope (Deferred to Later Slices)
+
+- Real Kohonen training, QE/TE, U-matrix, component planes (Phase 2; the stubs only draw sample prototypes and nearest assignments)
+- Real Oja learning, convergence, sign convention against PC1 (Phase 3; the stub only projects onto a random unit vector)
+- Real Hopfield storage, update rules, energy, spurious-state classification, letters and QR preparation (Phases 4-5; the stub only flips pixels and measures overlap)
+- Cartesian-product series, HTML sweep reports, plotly figures
+- Slides, informe, `DECISIONS.md` (Phase 6)
+- log1p sensitivity and a SOM over k principal components (deferred in CONTEXT.md)
+
+## Subsequent Slice Plan
+
+Each later phase replaces a stub body or adds analysis on top of this skeleton without changing the run contract, the config mechanism or the data contract:
+
+- Phase 2: `run_kohonen` becomes the real SOM (new keys appended to `KOHONEN_KEYS`), multi-seed sweeps through `sweep.py`, hit map / U-matrix / component planes from the run CSVs
+- Phase 3: `run_oja` becomes the real Oja rule on `creadores_zscore.csv`; comparison against `analysis/pca.py`; campaign decisions in Python
+- Phase 4: `run_hopfield` becomes the real network on 5x5 letters (new keys appended to `HOPFIELD_KEYS`)
+- Phase 5: QR preparation script (Pillow) and QR noise sweeps through the same binary and `sweep.py`
+- Phase 6: slides and informe assembled from `deliverables/*.md` and `analysis/results/` figures
