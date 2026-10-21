@@ -22,7 +22,7 @@
 
 ### Kohonen
 
-- [ ] **SOM-01**: SOM en C con grilla k×k, vecindad y η decrecientes, e inicialización con muestras
+- [x] **SOM-01**: SOM en C con grilla k×k, vecindad y η decrecientes, e inicialización con muestras
 - [ ] **SOM-02**: El SOM reporta QE, TE y ocupación por neurona
 - [ ] **SOM-03**: Barrido multi-seed de hiperparámetros con regla de elección de grilla multicriterio (QE, TE, ocupación, QE leave-one-out, estabilidad entre seeds), fijada antes de ver los resultados
 - [ ] **SOM-04**: Mapa de hits, matriz U y planos de componentes de la grilla elegida
@@ -92,7 +92,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-03 | Phase 1 | Complete |
 | DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 1 | Complete |
-| SOM-01 | Phase 2 | Pending |
+| SOM-01 | Phase 2 | Complete |
 | SOM-02 | Phase 2 | Pending |
 | SOM-03 | Phase 2 | Pending |
 | SOM-04 | Phase 2 | Pending |
