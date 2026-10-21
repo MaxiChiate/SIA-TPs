@@ -25,7 +25,7 @@
 - [x] **SOM-01**: SOM en C con grilla k×k, vecindad y η decrecientes, e inicialización con muestras
 - [x] **SOM-02**: El SOM reporta QE, TE y ocupación por neurona
 - [x] **SOM-03**: Barrido multi-seed de hiperparámetros con regla de elección de grilla multicriterio (QE, TE, ocupación, QE leave-one-out, estabilidad entre seeds), fijada antes de ver los resultados
-- [ ] **SOM-04**: Mapa de hits, matriz U y planos de componentes de la grilla elegida
+- [x] **SOM-04**: Mapa de hits, matriz U y planos de componentes de la grilla elegida
 - [ ] **SOM-05**: Perfiles por región interpretados para el caso de uso y contrastados con PC1/PC2 (biplot); respuesta escrita a qué indica una distancia alta en la matriz U
 
 ### Oja
@@ -95,7 +95,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SOM-01 | Phase 2 | Complete |
 | SOM-02 | Phase 2 | Complete |
 | SOM-03 | Phase 2 | Complete |
-| SOM-04 | Phase 2 | Pending |
+| SOM-04 | Phase 2 | Complete |
 | SOM-05 | Phase 2 | Pending |
 | OJA-01 | Phase 3 | Pending |
 | OJA-02 | Phase 3 | Pending |

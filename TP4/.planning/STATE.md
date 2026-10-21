@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Kohonen SOM
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-10-21T17:55:45.425Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-10-21T18:01:54.996Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 17
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-20)
 ## Current Position
 
 Phase: 02 (Kohonen SOM) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 02 execution started
 
@@ -59,6 +59,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 02 P01 | 4 min | 2 tasks | 6 files |
 | Phase 02 P02 | 8min | 3 tasks | 5 files |
 | Phase 02 P04 | 4 min | 3 tasks | 5 files |
+| Phase 02 P05 | 25 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-02: run_loo clears stale loo CSVs and reports the first failure in (variant, seed, fold) order; read_run also checks sample and neuron numbering
 - [Phase 02]: 02-04: Stage 1 under the committed rule chose k = 5 (step) by QE-LOO; tie band holds only k = 5
 - [Phase 02]: 02-04: Stage 2 verdict is no robusta (TE > 0,05 in radius0-5, eta0-0.25, eta0-0.9, epochs-50, epochs-520; occupancy passes everywhere); k not re-selected
+- [Phase 02]: 02-05: stability SD in stage-1 curves computed from stability.csv (ddof 1, 45 pairs); empty neurons hatched in z planes as well as raw planes; section 5 reads the figure run only, regions and PCA contrast left to 02-06
 
 ### Pending Todos
 
@@ -103,6 +105,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T17:55:45.378Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-10-21T18:01:54.951Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
