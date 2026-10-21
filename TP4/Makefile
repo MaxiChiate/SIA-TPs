@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures sweep test clean
+.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles sweep test clean
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -59,3 +59,8 @@ som-stage2: prepare
 # selection.json de make som-stage1 y se niega a correr si la regla cambio o no hay grilla elegida.
 som-figures: prepare
 	$(PY) analysis/som_figures.py
+
+# Regiones, perfiles en unidades originales y contraste con PC1/PC2 de la grilla elegida: necesita selection.json de
+# make som-stage1 y se niega a correr si la regla cambio o no hay grilla elegida.
+som-profiles: prepare
+	$(PY) analysis/som_profiles.py
