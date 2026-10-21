@@ -67,7 +67,7 @@ Plans:
   3. Para la grilla elegida existen el mapa de hits, la matriz U y los planos de componentes.
   4. Los perfiles por región están interpretados para el caso de uso de la agencia y contrastados con PC1/PC2 del biplot, con una respuesta escrita a qué indica una distancia alta en la matriz U.
 
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans executed
 
 Plans:
 **Wave 1**
@@ -86,7 +86,7 @@ Plans:
 - [x] 02-05-PLAN.md — Mapa de hits, matriz U, planos de componentes, curvas de la etapa 1 y traza de la grilla elegida; sección 5
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 02-06-PLAN.md — Regiones por regla, perfiles en unidades originales, contraste cuantificado con PC1/PC2, respuesta sobre la matriz U y cómo reproducir; secciones 6 y 7
+- [x] 02-06-PLAN.md — Regiones por regla, perfiles en unidades originales, contraste cuantificado con PC1/PC2, respuesta sobre la matriz U y cómo reproducir; secciones 6 y 7
 
 ### Phase 3: Oja y decisiones de campaña
 
@@ -152,7 +152,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fundación, auditoría de datos y PCA | 8/8 | Complete    | 2026-10-20 |
-| 2. Kohonen SOM | 5/6 | In Progress | - |
+| 2. Kohonen SOM | 6/6 | In Progress | - |
 | 3. Oja y decisiones de campaña | 0/TBD | Not started | - |
 | 4. Hopfield núcleo y letras | 0/TBD | Not started | - |
 | 5. Hopfield con QR | 0/TBD | Not started | - |

@@ -2,16 +2,16 @@
 gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Kohonen SOM
-status: executing
-stopped_at: Completed 02-05-PLAN.md
-last_updated: "2026-10-21T18:01:54.996Z"
+status: verifying
+stopped_at: Completed 02-06-PLAN.md
+last_updated: "2026-10-21T18:10:09.426Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
   percent: 17
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-20)
 
 Phase: 02 (Kohonen SOM) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-21 — Phase 02 execution started
 
 Progress: [██░░░░░░░░] 17%
@@ -60,6 +60,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase 02 P02 | 8min | 3 tasks | 5 files |
 | Phase 02 P04 | 4 min | 3 tasks | 5 files |
 | Phase 02 P05 | 25 min | 2 tasks | 5 files |
+| Phase 02 P06 | 6 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-04: Stage 1 under the committed rule chose k = 5 (step) by QE-LOO; tie band holds only k = 5
 - [Phase 02]: 02-04: Stage 2 verdict is no robusta (TE > 0,05 in radius0-5, eta0-0.25, eta0-0.9, epochs-50, epochs-520; occupancy passes everywhere); k not re-selected
 - [Phase 02]: 02-05: stability SD in stage-1 curves computed from stability.csv (ddof 1, 45 pairs); empty neurons hatched in z planes as well as raw planes; section 5 reads the figure run only, regions and PCA contrast left to 02-06
+- [Phase 02]: 02-06: the committed region rule yields one region (R1, 50 creators) on the k = 5 map; reported as is, percentile untouched
+- [Phase 02]: 02-06: map layout follows PC1 (R2 0,961, p = 0,001) but not PC2 (R2 0,055, p = 0,267); Mantel grid vs plane rho 0,599
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T18:01:54.951Z
-Stopped at: Completed 02-05-PLAN.md
+Last session: 2026-10-21T18:10:09.380Z
+Stopped at: Completed 02-06-PLAN.md
 Resume file: None
