@@ -67,7 +67,7 @@ Plans:
   3. Para la grilla elegida existen el mapa de hits, la matriz U y los planos de componentes.
   4. Los perfiles por región están interpretados para el caso de uso de la agencia y contrastados con PC1/PC2 del biplot, con una respuesta escrita a qué indica una distancia alta en la matriz U.
 
-**Plans:** 2/6 plans executed
+**Plans:** 3/6 plans executed
 
 Plans:
 **Wave 1**
@@ -77,7 +77,7 @@ Plans:
 - [x] 02-01-PLAN.md — SOM real en C (tracer, después del commit de la regla): 7 claves estrictas, entrenamiento escalón/gaussiana, QE/TE/ocupación, occupancy.csv y trace.csv, tests C bajo ASan/UBSan y neuron/README
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 02-02-PLAN.md — Lector de corridas y recomputación en numpy de QE/TE/ocupación, estabilidad entre seeds (Spearman con empates, medoide) y driver de QE leave-one-out con un directorio temporal por entrenamiento
+- [x] 02-02-PLAN.md — Lector de corridas y recomputación en numpy de QE/TE/ocupación, estabilidad entre seeds (Spearman con empates, medoide) y driver de QE leave-one-out con un directorio temporal por entrenamiento
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 02-04-PLAN.md — Driver de etapas con guardia: etapa 1 (140 corridas + LOO + estabilidad + selección), serie de la etapa 2 generada y commiteada, robustez; secciones 3 y 4
@@ -152,7 +152,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fundación, auditoría de datos y PCA | 8/8 | Complete    | 2026-10-20 |
-| 2. Kohonen SOM | 2/6 | In Progress | - |
+| 2. Kohonen SOM | 3/6 | In Progress | - |
 | 3. Oja y decisiones de campaña | 0/TBD | Not started | - |
 | 4. Hopfield núcleo y letras | 0/TBD | Not started | - |
 | 5. Hopfield con QR | 0/TBD | Not started | - |

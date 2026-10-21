@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Kohonen SOM
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-10-21T17:44:02.771Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-10-21T17:48:30.731Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 14
-  completed_plans: 10
+  completed_plans: 11
   percent: 17
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-20)
 ## Current Position
 
 Phase: 02 (Kohonen SOM) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-10-21 — Phase 02 execution started
 
@@ -57,6 +57,7 @@ Progress: [██░░░░░░░░] 17%
 |------|----------|-------|-------|
 | Phase 02 P03 | 25 min | 3 tasks | 4 files |
 | Phase 02 P01 | 4 min | 2 tasks | 6 files |
+| Phase 02 P02 | 8min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-03: rule commit ea7a0b1 holds rule text, som_select.py and stage-1 series; select_grid has only chosen and no_eligible_grid outcomes (occupancy never relaxed, D-14)
 - [Phase 02]: 02-01: step neighborhood uses d2 <= R^2 (D-01), so R = 1 updates the four adjacent cells and not the diagonals; radius clamped to radius_final
 - [Phase 02]: 02-01: grid_k 2..32 with no dependency on n (D-07); pick_prototypes reshuffles at every wrap of i % n so k^2 > n repeats samples and never over-reads
+- [Phase 02]: 02-02: run_loo clears stale loo CSVs and reports the first failure in (variant, seed, fold) order; read_run also checks sample and neuron numbering
 
 ### Pending Todos
 
@@ -98,6 +100,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T17:44:02.727Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-10-21T17:48:30.688Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
