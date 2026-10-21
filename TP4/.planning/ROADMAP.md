@@ -67,7 +67,24 @@ Plans:
   3. Para la grilla elegida existen el mapa de hits, la matriz U y los planos de componentes.
   4. Los perfiles por región están interpretados para el caso de uso de la agencia y contrastados con PC1/PC2 del biplot, con una respuesta escrita a qué indica una distancia alta en la matriz U.
 
-**Plans**: TBD
+**Plans:** 6 plans
+
+Plans:
+**Wave 1**
+- [ ] 02-01-PLAN.md — SOM real en C (tracer): 7 claves estrictas, entrenamiento escalón/gaussiana, QE/TE/ocupación, occupancy.csv y trace.csv, tests C bajo ASan/UBSan y recomputación en numpy
+- [ ] 02-03-PLAN.md — Regla de elección de grilla: checkpoint de decisión (caso sin grilla elegible y términos fijados), select_grid y guardia git testeados, regla y serie de la etapa 1 commiteadas antes de correr
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 02-02-PLAN.md — Estabilidad entre seeds (Spearman con empates, medoide) y driver de QE leave-one-out con un directorio temporal por entrenamiento
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 02-04-PLAN.md — Driver de etapas con guardia: etapa 1 (140 corridas + LOO + estabilidad + selección), serie de la etapa 2 generada y commiteada, robustez; secciones 3 y 4
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 02-05-PLAN.md — Mapa de hits, matriz U, planos de componentes, curvas de la etapa 1 y traza de la grilla elegida; sección 5
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 02-06-PLAN.md — Regiones por regla, perfiles en unidades originales, contraste cuantificado con PC1/PC2, respuesta sobre la matriz U y cómo reproducir; secciones 6 y 7
 
 ### Phase 3: Oja y decisiones de campaña
 
@@ -133,7 +150,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fundación, auditoría de datos y PCA | 8/8 | Complete    | 2026-10-20 |
-| 2. Kohonen SOM | 0/TBD | Not started | - |
+| 2. Kohonen SOM | 0/6 | Planned | - |
 | 3. Oja y decisiones de campaña | 0/TBD | Not started | - |
 | 4. Hopfield núcleo y letras | 0/TBD | Not started | - |
 | 5. Hopfield con QR | 0/TBD | Not started | - |
