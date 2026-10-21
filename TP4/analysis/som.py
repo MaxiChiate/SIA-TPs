@@ -251,3 +251,43 @@ def medoid_seed(matrix, seeds):
         if best_seed is None or value > best_value or (value == best_value and seed < best_seed):
             best_seed, best_value = seed, value
     return best_seed
+
+
+# ---------- grid adjacency and U-matrix (D-04, SOM-04) ----------
+
+def adjacent_pairs(k: int) -> list[tuple[int, int]]:
+    """Every pair (a, b) of 4-neighbouring neurons, a < b, b the right or the lower neighbour of a, in row-major
+    order of a (right neighbour first): 2 k (k - 1) pairs. Neuron = row * k + col."""
+    pairs = []
+    for row in range(k):
+        for col in range(k):
+            a = row * k + col
+            if col + 1 < k:
+                pairs.append((a, a + 1))
+            if row + 1 < k:
+                pairs.append((a, a + k))
+    return pairs
+
+
+def edge_distances(protos, k: int) -> np.ndarray:
+    """Euclidean distance between the prototypes of every adjacent pair, in the order of adjacent_pairs(k)."""
+    protos = np.asarray(protos, dtype=np.float64)
+    pairs = adjacent_pairs(k)
+    first = np.array([a for a, _b in pairs], dtype=np.int64)
+    second = np.array([b for _a, b in pairs], dtype=np.int64)
+    diff = protos[first] - protos[second]
+    return np.sqrt(np.sum(diff * diff, axis=1))
+
+
+def umatrix(protos, k: int) -> np.ndarray:
+    """k x k matrix: each cell is the mean Euclidean distance between that neuron's prototype and the prototypes
+    of its existing 4-neighbours (border cells average fewer). Empty neurons keep their value; the figures hatch
+    them (D-04, RESEARCH Pattern 5)."""
+    total = np.zeros(k * k, dtype=np.float64)
+    count = np.zeros(k * k, dtype=np.float64)
+    for (a, b), distance in zip(adjacent_pairs(k), edge_distances(protos, k)):
+        total[a] += distance
+        total[b] += distance
+        count[a] += 1
+        count[b] += 1
+    return (total / count).reshape(k, k)
