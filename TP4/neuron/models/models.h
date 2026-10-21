@@ -22,9 +22,19 @@ const Model * model_find(const char * name);
 // The registered names, comma-separated, in table order
 const char * model_names(void);
 
-// Phase 1 stub: sample-initialised k x k prototypes and the nearest prototype of every sample.
-// Phase 2 replaces the body with Kohonen training.
+// Kohonen map on a k x k grid: prototypes start as samples picked by the Rng, trained online for a number of
+// shuffled epochs with a step or gaussian neighborhood and exponentially decaying radius and learning rate.
+// Writes prototypes.csv, assignments.csv, occupancy.csv, trace.csv and metrics.json.
 int run_kohonen(const Config * config, Rng * rng, const Results * results);
+
+// Kohonen helpers, exported for tests/test_main.c
+// start * (end / start)^fraction: exponential decay from start (fraction 0) to end (fraction 1)
+double kohonen_decay(double start, double end, double fraction);
+// kohonen_decay of the radius, never below radius_final
+double kohonen_radius(double radius0, double radius_final, double fraction);
+// Weight of a neuron at squared grid distance d2 from the winner: step (gaussian 0) 1 if d2 <= radius^2 else 0;
+// gaussian exp(-d2 / (2 radius^2))
+double kohonen_neighbor_weight(int d2, double radius, int gaussian);
 
 // Phase 1 stub: projects the input onto a random unit vector. Phase 3 replaces the body with Oja's rule.
 int run_oja(const Config * config, Rng * rng, const Results * results);

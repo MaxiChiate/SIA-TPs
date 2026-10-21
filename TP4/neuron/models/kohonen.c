@@ -4,7 +4,7 @@
 // both decay exponentially from their start value to their final value over the whole run. The neighborhood is
 // either a step (every neuron within grid distance R of the winner) or a gaussian of sigma = R. After training
 // it measures the quantization error, the topographic error and the occupancy of every neuron on the training
-// samples, and writes them with the prototypes and the assignments.
+// samples, and writes them with the prototypes, the assignments and a per-epoch trace.
 
 #include "../io/matrix.h"
 #include "models.h"
@@ -16,6 +16,7 @@
 #define GRID_K_MAX 32
 #define EPOCHS_MAX 100000
 #define METRICS_COUNT 19
+#define TRACE_WIDTH 5 // epoch, eta, radius, qe, te
 
 
 // The seven Kohonen keys of the config, already checked
@@ -63,6 +64,25 @@ static int read_params(const Config * config, int n_rows, SomParams * params) {
   }
   if (n_rows < 2) {
     fprintf(stderr, "%s: the input needs at least 2 samples\n", config->path);
+    return 0;
+  }
+  if (params->radius0 < 1) {
+    fprintf(stderr, "%s: radius0 must be >= 1\n", config->path);
+    return 0;
+  }
+  double radius_low = params->gaussian ? 0 : 1; // the gaussian needs > 0, the step >= 1
+  if (params->radius_final > params->radius0 || params->radius_final < radius_low
+      || (params->gaussian && params->radius_final == 0)) {
+    fprintf(stderr, "%s: radius_final must be %s and <= radius0\n", config->path,
+            params->gaussian ? "> 0 for the gaussian neighborhood" : ">= 1 for the step neighborhood");
+    return 0;
+  }
+  if (!(params->eta0 > 0 && params->eta0 < 1)) {
+    fprintf(stderr, "%s: eta0 must be > 0 and < 1\n", config->path);
+    return 0;
+  }
+  if (!(params->eta_final > 0 && params->eta_final <= params->eta0)) {
+    fprintf(stderr, "%s: eta_final must be > 0 and <= eta0\n", config->path);
     return 0;
   }
   params->steps = (long long) params->epochs * n_rows;
@@ -139,64 +159,23 @@ static int nearest_two(const double sample[], const double prototypes[], int n_n
 
 
 // start * (end / start)^fraction: exponential decay from start (fraction 0) to end (fraction 1)
-static double kohonen_decay(double start, double end, double fraction) {
+double kohonen_decay(double start, double end, double fraction) {
   return start * pow(end / start, fraction);
 }
 
 
 // The neighborhood radius at a point of the run. The clamp keeps the last steps at radius_final when pow lands
 // one ulp below it.
-static double kohonen_radius(double radius0, double radius_final, double fraction) {
+double kohonen_radius(double radius0, double radius_final, double fraction) {
   return fmax(kohonen_decay(radius0, radius_final, fraction), radius_final);
 }
 
 
 // Weight of a neuron at squared grid distance d2 from the winner. Step: 1 within radius (<=, so radius 1 reaches the
 // four adjacent cells and not the diagonals), else 0. Gaussian: exp(-d2 / 2 sigma^2) with sigma = radius.
-static double kohonen_neighbor_weight(int d2, double radius, int gaussian) {
+double kohonen_neighbor_weight(int d2, double radius, int gaussian) {
   if (gaussian) return exp(-d2 / (2 * radius * radius));
   return d2 <= radius * radius + 1e-12 ? 1.0 : 0.0;
-}
-
-
-// Online training: epochs passes over the samples in a fresh shuffled order each time
-static int train(const SomParams * params, Rng * rng, const Matrix * input, double prototypes[]) {
-  int n = input->n_rows;
-  int n_cols = input->n_cols;
-  int k = params->grid_k;
-  int n_neurons = k * k;
-
-  int * order = malloc((size_t) n * sizeof(int));
-  if (order == NULL) {
-    fprintf(stderr, "kohonen: couldn't allocate the sample order\n");
-    return 0;
-  }
-  for (int i = 0; i < n; i++) order[i] = i;
-
-  long long step = 0;
-  for (int epoch = 0; epoch < params->epochs; epoch++) {
-    rng_shuffle(rng, order, n);
-    for (int i = 0; i < n; i++, step++) {
-      double fraction = (double) step / (double) (params->steps - 1);
-      double eta = kohonen_decay(params->eta0, params->eta_final, fraction);
-      double radius = kohonen_radius(params->radius0, params->radius_final, fraction);
-
-      const double * sample = input->data + (size_t) order[i] * n_cols;
-      double best;
-      int bmu = nearest(sample, prototypes, n_neurons, n_cols, &best);
-
-      for (int neuron = 0; neuron < n_neurons; neuron++) {
-        int dr = neuron / k - bmu / k;
-        int dc = neuron % k - bmu % k;
-        double h = kohonen_neighbor_weight(dr * dr + dc * dc, radius, params->gaussian);
-        if (h == 0) continue;
-        double * weights = prototypes + (size_t) neuron * n_cols;
-        for (int j = 0; j < n_cols; j++) weights[j] += eta * h * (sample[j] - weights[j]);
-      }
-    }
-  }
-  free(order);
-  return 1;
 }
 
 
@@ -253,6 +232,71 @@ static void measure(const Matrix * input, const double prototypes[], int k, Meas
     }
   }
   free(own);
+}
+
+
+// One trace row: epoch, eta, radius, then qe and te of the prototypes at that moment
+static void trace_row(const Matrix * input, const double prototypes[], int k, int hits[], double trace[], int epoch,
+                      double eta, double radius) {
+  Measures m;
+  measure(input, prototypes, k, &m, NULL, NULL, NULL, hits);
+  double * line = trace + (size_t) epoch * TRACE_WIDTH;
+  line[0] = epoch;
+  line[1] = eta;
+  line[2] = radius;
+  line[3] = m.qe;
+  line[4] = m.te;
+}
+
+
+// Online training: epochs passes over the samples in a fresh shuffled order each time. trace gets epochs + 1 rows:
+// row 0 is the starting prototypes with eta0 and radius0, row e the state after epoch e with the eta and radius of
+// that epoch's last step.
+static int train(const SomParams * params, Rng * rng, const Matrix * input, double prototypes[], double trace[]) {
+  int n = input->n_rows;
+  int n_cols = input->n_cols;
+  int k = params->grid_k;
+  int n_neurons = k * k;
+
+  int * order = malloc((size_t) n * sizeof(int));
+  int * hits = malloc((size_t) n_neurons * sizeof(int));
+  if (order == NULL || hits == NULL) {
+    fprintf(stderr, "kohonen: couldn't allocate the training buffers\n");
+    free(order);
+    free(hits);
+    return 0;
+  }
+  for (int i = 0; i < n; i++) order[i] = i;
+
+  trace_row(input, prototypes, k, hits, trace, 0, params->eta0, params->radius0);
+  long long step = 0;
+  for (int epoch = 1; epoch <= params->epochs; epoch++) {
+    rng_shuffle(rng, order, n);
+    double eta = 0;
+    double radius = 0;
+    for (int i = 0; i < n; i++, step++) {
+      double fraction = (double) step / (double) (params->steps - 1);
+      eta = kohonen_decay(params->eta0, params->eta_final, fraction);
+      radius = kohonen_radius(params->radius0, params->radius_final, fraction);
+
+      const double * sample = input->data + (size_t) order[i] * n_cols;
+      double best;
+      int bmu = nearest(sample, prototypes, n_neurons, n_cols, &best);
+
+      for (int neuron = 0; neuron < n_neurons; neuron++) {
+        int dr = neuron / k - bmu / k;
+        int dc = neuron % k - bmu % k;
+        double h = kohonen_neighbor_weight(dr * dr + dc * dc, radius, params->gaussian);
+        if (h == 0) continue;
+        double * weights = prototypes + (size_t) neuron * n_cols;
+        for (int j = 0; j < n_cols; j++) weights[j] += eta * h * (sample[j] - weights[j]);
+      }
+    }
+    trace_row(input, prototypes, k, hits, trace, epoch, eta, radius);
+  }
+  free(order);
+  free(hits);
+  return 1;
 }
 
 
@@ -370,6 +414,13 @@ static int write_outputs(const Config * config, const SomParams * params, const 
 }
 
 
+// trace.csv: epoch, eta, radius, qe, te; one row per epoch plus the starting state
+static int write_trace(const Results * results, int epochs, const double trace[]) {
+  const char * header[] = { "epoch", "eta", "radius", "qe", "te" };
+  return results_write_table(results, "trace.csv", TRACE_WIDTH, header, epochs + 1, trace);
+}
+
+
 int run_kohonen(const Config * config, Rng * rng, const Results * results) {
   Matrix input;
   if (!matrix_load(config->input, &input)) return 0;
@@ -378,18 +429,22 @@ int run_kohonen(const Config * config, Rng * rng, const Results * results) {
   int ok = read_params(config, input.n_rows, &params);
 
   double * prototypes = NULL;
+  double * trace = NULL;
   if (ok) {
     prototypes = malloc((size_t) params.grid_k * params.grid_k * input.n_cols * sizeof(double));
-    ok = prototypes != NULL;
-    if (!ok) fprintf(stderr, "kohonen: couldn't allocate the prototypes\n");
+    trace = malloc((size_t) (params.epochs + 1) * TRACE_WIDTH * sizeof(double));
+    ok = prototypes != NULL && trace != NULL;
+    if (!ok) fprintf(stderr, "kohonen: couldn't allocate the prototypes and the trace\n");
   }
 
   ok = ok && pick_prototypes(rng, &input, params.grid_k * params.grid_k, prototypes);
-  ok = ok && train(&params, rng, &input, prototypes);
+  ok = ok && train(&params, rng, &input, prototypes, trace);
   ok = ok && write_prototypes(results, &input, params.grid_k, prototypes);
   ok = ok && write_outputs(config, &params, results, &input, prototypes);
+  ok = ok && write_trace(results, params.epochs, trace);
 
   free(prototypes);
+  free(trace);
   matrix_free(&input);
   return ok;
 }

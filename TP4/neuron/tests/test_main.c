@@ -364,6 +364,151 @@ static void test_dispatch_by_model(void) {
 }
 
 
+// ---- Test 4: Kohonen training ----------------------------------------------------------------------------
+
+// Data lines of a CSV (everything after the header); -1 if it can't be read
+static int count_data_lines(const char * path) {
+  static char bytes[FILE_MAX_TEST];
+  long length = read_all(path, bytes);
+  if (length < 0) return -1;
+  int lines = 0;
+  for (long i = 0; i < length; i++) {
+    if (bytes[i] == '\n') lines++;
+  }
+  if (length > 0 && bytes[length - 1] != '\n') lines++;
+  return lines - 1;
+}
+
+
+// Value in column (0-based) of data row (0-based, after the header) of a CSV with plain numeric fields
+static int csv_value(const char * path, int data_row, int column, double * out) {
+  static char bytes[FILE_MAX_TEST];
+  long length = read_all(path, bytes);
+  if (length < 0) return 0;
+  bytes[length] = '\0';
+
+  const char * line = bytes;
+  for (int row = 0; row < data_row + 1; row++) { // skip the header and data_row lines
+    line = strchr(line, '\n');
+    if (line == NULL) return 0;
+    line++;
+  }
+  const char * field = line;
+  for (int col = 0; col < column; col++) {
+    while (*field != ',' && *field != '\n' && *field != '\0') field++;
+    if (*field != ',') return 0;
+    field++;
+  }
+  char * end;
+  *out = strtod(field, &end);
+  return end != field;
+}
+
+
+// A step or gaussian run on the 6-row fixture with the given values; 1 if the model accepts the config
+static int fixture_run_accepts(const char * neighborhood, double radius0, double radius_final, double eta0,
+                               double eta_final, int grid_k, int epochs) {
+  char text[1024];
+  snprintf(text, sizeof(text),
+           "{\"model\": \"kohonen\", \"seed\": 1, \"input\": \"" ZSCORE_FIXTURE "\", \"grid_k\": %d, "
+           "\"neighborhood\": \"%s\", \"radius0\": %.17g, \"radius_final\": %.17g, \"eta0\": %.17g, "
+           "\"eta_final\": %.17g, \"epochs\": %d}",
+           grid_k, neighborhood, radius0, radius_final, eta0, eta_final, epochs);
+  char path[PATH_MAX_TEST];
+  write_tmp("bad.json", text, path);
+  Config config;
+  if (!load_quiet(path, &config)) return -1; // the types must be valid: only the values are wrong
+  char dir[PATH_MAX_TEST];
+  int saved = silence();
+  int ok = run_into(&config, config.seed, "rejected", dir);
+  unsilence(saved);
+  config_free(&config);
+  return ok;
+}
+
+
+static void test_kohonen_training(void) {
+  // (a) the neighborhood: radius 1 reaches the four adjacent cells and not the diagonals
+  check_close(kohonen_neighbor_weight(0, 1.0, 0), 1.0, 0);
+  check_close(kohonen_neighbor_weight(1, 1.0, 0), 1.0, 0);
+  check_close(kohonen_neighbor_weight(2, 1.0, 0), 0.0, 0);
+  check_close(kohonen_neighbor_weight(4, 1.0, 0), 0.0, 0);
+  double last_radius = kohonen_radius(3.0, 1.0, 1.0);
+  check(last_radius >= 1.0);
+  check_close(kohonen_neighbor_weight(1, last_radius, 0), 1.0, 0);
+  check_close(kohonen_neighbor_weight(0, 1.0, 1), 1.0, 0);
+  check_close(kohonen_neighbor_weight(1, 1.0, 1), exp(-0.5), 1e-15);
+  check_close(kohonen_neighbor_weight(0, 0.001, 1), 1.0, 0);
+
+  // (b) the decay starts at the start value and ends at the end value
+  check_close(kohonen_decay(0.5, 0.01, 0.0), 0.5, 0);
+  check_close(kohonen_decay(0.5, 0.01, 1.0), 0.01, 1e-15);
+
+  // (c) more neurons (9) than samples (6): every sample is counted once and the trace follows the schedule
+  char path[PATH_MAX_TEST];
+  write_tmp("som.json",
+            "{\"model\": \"kohonen\", \"seed\": 3, \"input\": \"" ZSCORE_FIXTURE "\", \"grid_k\": 3, "
+            "\"neighborhood\": \"step\", \"radius0\": 1.5, \"radius_final\": 1, \"eta0\": 0.5, "
+            "\"eta_final\": 0.01, \"epochs\": 4}",
+            path);
+  Config config;
+  check(load_quiet(path, &config));
+  char dir[PATH_MAX_TEST];
+  check(run_into(&config, config.seed, "som", dir));
+  config_free(&config);
+
+  char file[PATH_MAX_TEST];
+  snprintf(file, sizeof(file), "%s/prototypes.csv", dir);
+  check(count_data_lines(file) == 9);
+
+  snprintf(file, sizeof(file), "%s/occupancy.csv", dir);
+  check(count_data_lines(file) == 9);
+  double hits_sum = 0;
+  for (int row = 0; row < 9; row++) {
+    double hits = -1;
+    check(csv_value(file, row, 3, &hits));
+    hits_sum += hits;
+  }
+  check_close(hits_sum, 6, 0);
+
+  snprintf(file, sizeof(file), "%s/trace.csv", dir);
+  check(count_data_lines(file) == 5);
+  double value;
+  check(csv_value(file, 0, 0, &value));
+  check_close(value, 0, 0);
+  check(csv_value(file, 0, 1, &value));
+  check_close(value, 0.5, 1e-12);
+  check(csv_value(file, 0, 2, &value));
+  check_close(value, 1.5, 1e-12);
+  check(csv_value(file, 4, 0, &value));
+  check_close(value, 4, 0);
+  check(csv_value(file, 4, 1, &value));
+  check_close(value, 0.01, 1e-12);
+  check(csv_value(file, 4, 2, &value));
+  check_close(value, 1.0, 1e-12);
+
+  // (d) the gaussian neighborhood is reproducible and depends on the seed
+  same_seed_same_bytes("kohonen_gaussian",
+                       "{\"model\": \"kohonen\", \"seed\": 5, \"input\": \"" ZSCORE_FIXTURE "\", "
+                       "\"grid_k\": 3, \"neighborhood\": \"gaussian\", \"radius0\": 1.5, \"radius_final\": 0.5, "
+                       "\"eta0\": 0.5, \"eta_final\": 0.01, \"epochs\": 5}",
+                       "prototypes.csv");
+
+  // (e) configs of the right types whose values the model refuses
+  check(fixture_run_accepts("step", 1.5, 1, 0.5, 0.01, 3, 5) == 1); // the baseline of the cases below
+  check(fixture_run_accepts("hex", 1.5, 1, 0.5, 0.01, 3, 5) == 0);
+  check(fixture_run_accepts("step", 1.5, 1, 1.0, 0.01, 3, 5) == 0);
+  check(fixture_run_accepts("step", 1.5, 1, 0.5, 0.6, 3, 5) == 0);
+  check(fixture_run_accepts("step", 1.5, 0.5, 0.5, 0.01, 3, 5) == 0);
+  check(fixture_run_accepts("gaussian", 1.5, 0, 0.5, 0.01, 3, 5) == 0);
+  check(fixture_run_accepts("step", 0.5, 0.5, 0.5, 0.01, 3, 5) == 0);
+  check(fixture_run_accepts("step", 1.5, 2, 0.5, 0.01, 3, 5) == 0);
+  check(fixture_run_accepts("step", 1.5, 1, 0.5, 0.01, 1, 5) == 0);
+  check(fixture_run_accepts("step", 1.5, 1, 0.5, 0.01, 33, 5) == 0);
+  check(fixture_run_accepts("step", 1.5, 1, 0.5, 0.01, 3, 0) == 0);
+}
+
+
 int main(void) {
 
   tmp_start();
@@ -375,6 +520,7 @@ int main(void) {
     { "config strict validation", test_config_strict_validation },
     { "same seed, same bytes", test_same_seed_same_bytes },
     { "dispatch by model", test_dispatch_by_model },
+    { "kohonen training", test_kohonen_training },
   };
   int n_tests = (int) (sizeof(tests) / sizeof(tests[0]));
 
