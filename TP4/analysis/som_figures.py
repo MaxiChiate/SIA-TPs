@@ -155,6 +155,7 @@ def plot_map(hits, U, k: int, title: str, caption: str, out_stem) -> None:
 
 def plot_planes(planes: list[Plane], k: int, hits, title: str, caption: str, out_stem, ncols: int = 4) -> None:
     from matplotlib.gridspec import GridSpec
+    from matplotlib.ticker import FuncFormatter
 
     plt = plots_style.apply_style()
     hits = np.asarray(hits).reshape(k, k)
@@ -162,8 +163,8 @@ def plot_planes(planes: list[Plane], k: int, hits, title: str, caption: str, out
     n = len(planes)
     nrows = math.ceil(n / ncols)
     cell = 2.5 if ncols >= 5 else 3.1
-    fig = plt.figure(figsize=(cell * ncols + 1.6, cell * nrows + 1.7))
-    grid = GridSpec(nrows, ncols + 1, figure=fig, width_ratios=[1.0] * ncols + [0.07], wspace=0.7, hspace=0.5)
+    fig = plt.figure(figsize=(cell * ncols * 0.85 + 1.8, cell * nrows * 0.85 + 1.7))
+    grid = GridSpec(nrows, ncols + 1, figure=fig, width_ratios=[1.0] * ncols + [0.07], wspace=0.5 if ncols < 5 else 0.85, hspace=0.45)
 
     z_values = [p.values for p in planes if p.kind == "z"]
     limit = max((float(np.nanmax(np.abs(v))) for v in z_values), default=1.0) or 1.0
@@ -179,21 +180,25 @@ def plot_planes(planes: list[Plane], k: int, hits, title: str, caption: str, out
             image = ax.imshow(values, cmap=cmap, aspect="equal")
             inset = ax.inset_axes([1.05, 0.0, 0.06, 1.0])
             bar = fig.colorbar(image, cax=inset)
-            bar.ax.tick_params(labelsize=7)
-            bar.set_label(plane.unit, fontsize=7)
+            bar.ax.tick_params(labelsize=6)
+            bar.formatter = FuncFormatter(lambda v, _pos: f"{v:,.0f}" if abs(v) >= 1000 else f"{v:g}")
+            bar.update_ticks()
         _hatch(ax, empty | np.isnan(plane.values))
         _grid_axes(ax, k, fontsize=7)
-        suffix = "" if plane.kind == "z" else " (media cruda)"
-        ax.set_title(plane.name + suffix, fontsize=8, loc="left")
+        if plane.kind == "z":
+            ax.set_title(plane.name, fontsize=8, loc="left")
+        else:
+            unit = f", {plane.unit}" if plane.unit else ""
+            ax.set_title(f"{plane.name}\n(media cruda{unit})", fontsize=8, loc="left")
     if z_image is not None:
         cax = fig.add_subplot(grid[:, ncols])
         bar = fig.colorbar(z_image, cax=cax)
         bar.set_label("valor del prototipo (z)", fontsize=8)
         bar.ax.tick_params(labelsize=7)
     fig.suptitle(title, fontsize=12, x=0.01, ha="left", y=0.995)
-    fig.subplots_adjust(left=0.04, right=0.97, top=1 - 0.55 / (cell * nrows + 1.7),
-                        bottom=1.1 / (cell * nrows + 1.7))
-    _caption(fig, caption, width=int(26 * ncols + 30))
+    height = cell * nrows * 0.85 + 1.7
+    fig.subplots_adjust(left=0.04, right=0.92, top=1 - 0.55 / height, bottom=1.1 / height)
+    _caption(fig, caption, width=int(22 * ncols + 30))
     plots_style.save_figure(fig, out_stem)
 
 
@@ -243,7 +248,7 @@ def plot_stage1_curves(rows: list[dict], selection: dict, out_stem) -> None:
             if argmin is not None:
                 value = next(float(r["qe_mean"]) for r in rows
                              if r["neighborhood"] == "step" and int(r["grid_k"]) == int(argmin))
-                ax.annotate(f"menor QE: k = {argmin}", (argmin, value), xytext=(-8, 14),
+                ax.annotate(f"menor QE: k = {argmin}", (argmin, value), xytext=(-70, 40),
                             textcoords="offset points", ha="right", fontsize=8,
                             color=plots_style.TEXT_PRIMARY,
                             arrowprops={"arrowstyle": "-", "color": plots_style.TEXT_SECONDARY})
@@ -387,7 +392,7 @@ def main(argv: list[str] | None = None) -> int:
     for row in rows:
         row["stability_sd"] = str(sd.get(row["label"], 0.0))
     plot_stage1_curves(rows, selection, out / "stage1_curves")
-    plot_trace(run.trace, f"Entrenamiento de la corrida dibujada: {ident}", out / "trace")
+    plot_trace(run.trace, f"Traza del entrenamiento de la corrida dibujada: k = {k}, seed {seed}", out / "trace")
 
     # who is in each neuron
     with (out / "hits_members.csv").open("w", newline="", encoding="utf-8") as file:
