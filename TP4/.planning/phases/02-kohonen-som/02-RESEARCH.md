@@ -320,7 +320,7 @@ The text committed under D-10 must pin each term below, because each is currentl
 2. **Whose "desvío" in D-11 step 3.** Recommend: the sample SD (ddof = 1) across seeds of the **winner's** QE-LOO, where each seed contributes its own mean over the 50 folds. Candidates: every survivor `k'` with `QE_LOO(k') - QE_LOO(winner) < SD(winner)`; the winner is in the set; among the set the highest mean stability wins; only if stabilities are exactly equal does the smaller k win.
 3. **NaN stability.** If every creator lands on one neuron in some seed, the distance vector is constant and Spearman is NaN. Define: pairs with NaN are dropped from the mean and their count is reported; if all are NaN, stability = 0 for that k.
 4. **TE filter** compares the seed-mean TE to 0.05 with `>` (a k with mean TE exactly 0.05 survives).
-5. **Fallback (D-14)** removes only the TE filter; the text must also say what happens if the occupancy filter alone leaves nothing: report "no eligible grid", do not relax it (D-14 forbids relaxing occupancy), and name the pre-declared fallback decision (planner/user must choose now; this is an open question below).
+5. **Fallback (D-14)** removes only the TE filter; the text must also say what happens if the occupancy filter alone leaves nothing: report "no eligible grid", do not relax it (D-14 forbids relaxing occupancy). Resolved: hard stop with no grid chosen (Open Question 1).
 6. **Figure seed.** Pre-declare how the seed for the deliverable figures is picked: recommend "the seed with the highest mean Spearman to the other nine on the chosen k" (a medoid by D-13, not by QE), so nobody can say it was cherry-picked.
 7. **Arithmetic consequence to state openly.** D-12 needs `occupied <= 25` (>= 2 per occupied) and `occupied >= 0.8 k²` (<= 20 % empty). Both hold only if `k² <= 31.25`, so k >= 6 cannot pass D-12 and k = 5 passes only with mean occupied in [20, 25]. Pure arithmetic, no results involved [VERIFIED: arithmetic from D-12]. The text should say the 6-8 rows exist to draw the QE / occupancy curve (D-07), not to compete.
 8. **Guard.** The stage-1 driver records `git rev-parse HEAD` and refuses to run if `git status --porcelain deliverables/02-kohonen.md analysis/series_som_stage1.json` is non-empty or the file has no commit: this makes "committed before looking" mechanical.
@@ -476,15 +476,19 @@ Current example content, for reference: `"model": "kohonen"`, `"seed": 1`, `"inp
 | A8 | Per-run disk use of about 0.3-0.5 GB if LOO went through `sweep.py` | Alternatives | Low: only motivates the custom driver |
 | A9 | 8-10 key component planes in the main figure, rest in an appendix grid | Pattern 7 | Low |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **What is the pre-declared outcome if D-12 leaves no eligible k?**
    - What we know: D-14 removes only the TE filter and never relaxes occupancy. By arithmetic, eligible k are limited to {2,3,4,5}; k = 2 and 3 have 12.5 and 5.6 creators per neuron, so the occupancy filter will almost surely admit them, and "nothing eligible" is unlikely but not impossible.
    - What's unclear: the text does not say what the report does in that case.
-   - Recommendation: write one sentence in the rule: "if no k passes occupancy, the chosen grid is the largest k whose mean empty fraction is <= 20 % regardless of creators per neuron, and the report says so", or declare a hard stop. User/planner decision before the commit.
-2. **Stage-2 requires the chosen k, so its series file cannot be written up front.** Recommendation: commit `series_som_stage2.json` after stage 1 and before running it; the plan should have that as an explicit step.
-3. **Should the figure seed come from the stage-1 seeds 1-10?** Recommendation: yes, the stability medoid among those 10 on the chosen k (rule item 6), so figures need no extra runs.
-4. **Optional 31-column sensitivity run for the SOM** (discretion): the existing `creadores_zscore_all31.csv` works with the same binary; one extra series on the chosen k is cheap. Not part of the rule. Recommend skipping unless time remains.
+   - Original recommendation (withdrawn): pick "the largest k whose mean empty fraction is <= 20 % regardless of creators per neuron". That drops the creators-per-neuron half of the D-12 occupancy filter, which D-14 forbids ("La ocupación no se relaja nunca"), so it is not an admissible outcome.
+   - **RESOLVED (by D-14, no user choice left open):** hard stop. If no step k passes the two occupancy filters after the TE filter is dropped, the rule chooses no grid: `select_grid` returns outcome `no_eligible_grid` with `chosen_k` null, and these are its only two outcomes (`chosen`, `no_eligible_grid`). The report lists the failing filter of every k. Plan 02-04 Task 2 ends at a blocking-human checkpoint, and plans 02-05 and 02-06 refuse to run (no chosen grid) until a new `/gsd-discuss-phase` decides. The rule text states this under **Si ninguna grilla pasa.** (plan 02-03 Task 3). The 02-03 checkpoint shows this term for information only and does not offer it as an option.
+2. **Stage-2 requires the chosen k, so its series file cannot be written up front.**
+   - **RESOLVED:** plan 02-04 Task 2 generates `analysis/series_som_stage2.json` with `som_stage.py write-stage2`, only from the chosen k and the ladders committed in the rule. It commits the file and only then lets Task 3 run it. `make som-stage2` refuses to run while the file is uncommitted or after the rule digest has changed.
+3. **Should the figure seed come from the stage-1 seeds 1-10?**
+   - **RESOLVED:** yes. It is the stability medoid among seeds 1-10 on the chosen k (smallest seed on ties). Rule term 7 (plan 02-03) fixes it, `som.medoid_seed` implements it (plan 02-02), and `selection.json` records it as `figure_seed` / `figure_run` (plan 02-04), so the figures need no extra runs.
+4. **Optional 31-column sensitivity run for the SOM** (discretion): the existing `creadores_zscore_all31.csv` works with the same binary; one extra series on the chosen k is cheap. Not part of the rule.
+   - **RESOLVED:** not run in Phase 2. CONTEXT lists it as an optional discretion item that never enters the rule, and no SOM-01..05 requirement or ROADMAP criterion depends on it. No plan includes it; plan 02-06 records the choice in its context.
 
 ## Environment Availability
 

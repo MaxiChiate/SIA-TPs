@@ -71,19 +71,21 @@ Plans:
 
 Plans:
 **Wave 1**
-- [ ] 02-01-PLAN.md — SOM real en C (tracer): 7 claves estrictas, entrenamiento escalón/gaussiana, QE/TE/ocupación, occupancy.csv y trace.csv, tests C bajo ASan/UBSan y recomputación en numpy
-- [ ] 02-03-PLAN.md — Regla de elección de grilla: checkpoint de decisión (caso sin grilla elegible y términos fijados), select_grid y guardia git testeados, regla y serie de la etapa 1 commiteadas antes de correr
+- [ ] 02-03-PLAN.md — Regla de elección de grilla: checkpoint de decisión (aprobar o editar los términos fijados; sin grilla elegible no se elige ninguna, D-14), select_grid y guardia git testeados, regla y serie de la etapa 1 commiteadas antes de entrenar el SOM sobre los datos
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 02-02-PLAN.md — Estabilidad entre seeds (Spearman con empates, medoide) y driver de QE leave-one-out con un directorio temporal por entrenamiento
+- [ ] 02-01-PLAN.md — SOM real en C (tracer, después del commit de la regla): 7 claves estrictas, entrenamiento escalón/gaussiana, QE/TE/ocupación, occupancy.csv y trace.csv, tests C bajo ASan/UBSan y recomputación en numpy
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 02-04-PLAN.md — Driver de etapas con guardia: etapa 1 (140 corridas + LOO + estabilidad + selección), serie de la etapa 2 generada y commiteada, robustez; secciones 3 y 4
+- [ ] 02-02-PLAN.md — Estabilidad entre seeds (Spearman con empates, medoide) y driver de QE leave-one-out con un directorio temporal por entrenamiento
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 02-05-PLAN.md — Mapa de hits, matriz U, planos de componentes, curvas de la etapa 1 y traza de la grilla elegida; sección 5
+- [ ] 02-04-PLAN.md — Driver de etapas con guardia: etapa 1 (140 corridas + LOO + estabilidad + selección), serie de la etapa 2 generada y commiteada, robustez; secciones 3 y 4
 
 **Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 02-05-PLAN.md — Mapa de hits, matriz U, planos de componentes, curvas de la etapa 1 y traza de la grilla elegida; sección 5
+
+**Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 02-06-PLAN.md — Regiones por regla, perfiles en unidades originales, contraste cuantificado con PC1/PC2, respuesta sobre la matriz U y cómo reproducir; secciones 6 y 7
 
 ### Phase 3: Oja y decisiones de campaña
