@@ -13,7 +13,7 @@ El TP4 tiene dos ejercicios que comparten una sola base técnica: un binario en 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Fundación, auditoría de datos y PCA** - Pipeline C/Python reproducible, `creadores.csv` auditado y estandarizado, PCA con decisión escrita (completed 2026-10-20)
-- [ ] **Phase 2: Kohonen SOM** - Mapa de los 50 creadores con grilla elegida por regla multicriterio fijada de antemano y perfiles por región
+- [x] **Phase 2: Kohonen SOM** - Mapa de los 50 creadores con grilla elegida por regla multicriterio fijada de antemano y perfiles por región (completed 2026-10-21)
 - [ ] **Phase 3: Oja y decisiones de campaña** - Índice de Oja contra PC1, recomendaciones por campaña, comparación contra solo `followers` y mantenimiento
 - [ ] **Phase 4: Hopfield núcleo y letras** - Núcleo validado con 4 letras 5×5: energía, ortogonalidad, capacidad y un estado espurio identificado
 - [ ] **Phase 5: Hopfield con QR** - Cinco QR de 37×37 con Hebb (falla reportada), pseudo-inversa, línea base de Hamming y limitaciones
@@ -67,7 +67,7 @@ Plans:
   3. Para la grilla elegida existen el mapa de hits, la matriz U y los planos de componentes.
   4. Los perfiles por región están interpretados para el caso de uso de la agencia y contrastados con PC1/PC2 del biplot, con una respuesta escrita a qué indica una distancia alta en la matriz U.
 
-**Plans:** 6/6 plans executed
+**Plans:** 6/6 plans complete
 
 Plans:
 **Wave 1**
@@ -152,7 +152,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fundación, auditoría de datos y PCA | 8/8 | Complete    | 2026-10-20 |
-| 2. Kohonen SOM | 6/6 | In Progress | - |
+| 2. Kohonen SOM | 6/6 | Complete    | 2026-10-21 |
 | 3. Oja y decisiones de campaña | 0/TBD | Not started | - |
 | 4. Hopfield núcleo y letras | 0/TBD | Not started | - |
 | 5. Hopfield con QR | 0/TBD | Not started | - |

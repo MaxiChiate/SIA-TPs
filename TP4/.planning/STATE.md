@@ -1,42 +1,42 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 02
-current_phase_name: Kohonen SOM
-status: verifying
-stopped_at: Completed 02-06-PLAN.md
-last_updated: "2026-10-21T18:10:09.426Z"
+current_phase: 3
+current_phase_name: Oja y decisiones de campaña
+status: planning
+stopped_at: Phase 02 complete, ready to plan Phase 3
+last_updated: "2026-10-21T18:34:19.891Z"
 last_activity: 2026-10-21
-last_activity_desc: Phase 02 execution started
+last_activity_desc: Phase 02 complete, transitioned to Phase 3
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 14
   completed_plans: 14
-  percent: 17
+  percent: 33
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-20)
+See: .planning/PROJECT.md (updated 2026-10-21)
 
 **Core value:** Interpretar correctamente los resultados de los métodos no supervisados para tomar decisiones de campaña fundamentadas en evidencia
-**Current focus:** Phase 02 — Kohonen SOM
+**Current focus:** Phase 3 — Oja y decisiones de campaña
 
 ## Current Position
 
-Phase: 02 (Kohonen SOM) — EXECUTING
-Plan: 6 of 6
-Status: Phase complete — ready for verification
-Last activity: 2026-10-21 — Phase 02 execution started
+Phase: 3 — Oja y decisiones de campaña
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-10-21 — Phase 02 complete, transitioned to Phase 3
 
-Progress: [██░░░░░░░░] 17%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 14
 - Average duration: - min
 - Total execution time: 0.0 hours
 
@@ -45,6 +45,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 8 | - | - |
+| 02 | 6 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -91,9 +92,8 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1]: Decidir parser JSON plano de TP3 vs cJSON (default: plano; cJSON solo si una config necesita anidamiento); omitir pandas por defecto
-- [Phase 1]: El dataset tiene 50 filas (el archivo no termina en newline); verificar n=50 y 33 columnas al cargar
-- [Phase 2]: Revisar contra los PDF del curso la estrictez de la vecindad en R=1, la topología y las definiciones de QE/TE
+- [Phase 2]: 02-REVIEW-DISPOSITION.md deja 11 hallazgos de code review abiertos; cualquier arreglo que toque la regla de grilla (p. ej. WR-01) pasa por /gsd-discuss-phase, no por edición in situ (rule_digest d1c69242…)
+- [Phase 2]: 02-VALIDATION.md sigue en draft (auditoría Nyquist sin correr: /gsd-validate-phase 2)
 - [Phase 4]: Hopfield síncrono (curso) vs asíncrono (energía monótona): implementar ambos, asíncrono como referencia
 - [Phase 5]: Sin verificar la pseudo-inversa bajo ruido alto ni la existencia de un decodificador de QR (HOP-09 está en v2)
 - [Phase 6]: Sin verificar el formato de Slides en Artifacts ni si plotly JS corre dentro de Artifacts
@@ -108,6 +108,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T18:10:09.380Z
-Stopped at: Completed 02-06-PLAN.md
+Last session: 2026-10-21T18:40:00Z
+Stopped at: Phase 02 complete, ready to plan Phase 3
 Resume file: None
