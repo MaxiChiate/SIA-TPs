@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -176,3 +177,77 @@ def run_binary(config: dict, cwd: Path) -> Path:
     if not printed:
         raise RuntimeError("the binary printed no results directory")
     return cwd / printed[-1][len(RESULT_PREFIX):].strip()
+
+
+# ---------- seed stability (D-13) ----------
+
+def average_ranks(v) -> np.ndarray:
+    """1-based ranks where a group of equal values shares the mean of its positions: [1,1,1,2,2,3] gives
+    [2,2,2,4.5,4.5,6]. pca.py's argsort-of-argsort rank is wrong with ties (RESEARCH Pitfall 1)."""
+    v = np.asarray(v, dtype=np.float64)
+    order = np.argsort(v, kind="stable")
+    ranks = np.empty(len(v), dtype=np.float64)
+    start = 0
+    while start < len(v):
+        end = start
+        while end + 1 < len(v) and v[order[end + 1]] == v[order[start]]:
+            end += 1
+        ranks[order[start:end + 1]] = (start + end) / 2.0 + 1.0
+        start = end + 1
+    return ranks
+
+
+def spearman_ties(a, b) -> float:
+    """Pearson correlation of the average ranks; NaN when either rank vector is constant."""
+    ra, rb = average_ranks(a), average_ranks(b)
+    ra, rb = ra - ra.mean(), rb - rb.mean()
+    denominator = math.sqrt(float(np.sum(ra * ra)) * float(np.sum(rb * rb)))
+    if denominator == 0.0:
+        return float("nan")
+    return float(np.sum(ra * rb)) / denominator
+
+
+def grid_distance_vector(bmu, k: int) -> np.ndarray:
+    """Euclidean distance between the grid coordinates (bmu // k, bmu % k) of every pair of creators, upper
+    triangle in row-major pair order (1 225 values for 50 creators)."""
+    bmu = np.asarray(bmu)
+    rows, cols = (bmu // k).astype(np.float64), (bmu % k).astype(np.float64)
+    i, j = np.triu_indices(len(bmu), 1)
+    return np.sqrt((rows[i] - rows[j]) ** 2 + (cols[i] - cols[j]) ** 2)
+
+
+def seed_spearman_matrix(bmus_by_seed, k: int) -> np.ndarray:
+    """s x s symmetric matrix of spearman_ties between the seeds' grid-distance vectors; diagonal NaN."""
+    vectors = [grid_distance_vector(bmu, k) for bmu in bmus_by_seed]
+    s = len(vectors)
+    matrix = np.full((s, s), np.nan)
+    for a in range(s):
+        for b in range(a + 1, s):
+            matrix[a, b] = matrix[b, a] = spearman_ties(vectors[a], vectors[b])
+    return matrix
+
+
+def stability(bmus_by_seed, k: int) -> tuple[float, int]:
+    """(mean over seed pairs of the Spearman, number of NaN pairs). NaN pairs are dropped from the mean and
+    counted; if every pair is NaN the value is 0.0 (term of the committed rule)."""
+    matrix = seed_spearman_matrix(bmus_by_seed, k)
+    upper = matrix[np.triu_indices(len(matrix), 1)]
+    finite = upper[~np.isnan(upper)]
+    nan_pairs = int(len(upper) - len(finite))
+    if len(finite) == 0:
+        return 0.0, nan_pairs
+    return float(finite.mean()), nan_pairs
+
+
+def medoid_seed(matrix, seeds):
+    """The seed with the highest mean Spearman to the other seeds (NaN ignored; a row with no finite entry
+    counts as -inf); the smallest seed on exact ties. This is the pre-declared figure seed (D-13)."""
+    matrix = np.asarray(matrix, dtype=np.float64)
+    best_seed, best_value = None, -math.inf
+    for row, seed in enumerate(seeds):
+        others = np.delete(matrix[row], row)
+        finite = others[~np.isnan(others)]
+        value = float(finite.mean()) if len(finite) else -math.inf
+        if best_seed is None or value > best_value or (value == best_value and seed < best_seed):
+            best_seed, best_value = seed, value
+    return best_seed
