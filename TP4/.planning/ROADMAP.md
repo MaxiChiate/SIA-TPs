@@ -67,11 +67,11 @@ Plans:
   3. Para la grilla elegida existen el mapa de hits, la matriz U y los planos de componentes.
   4. Los perfiles por región están interpretados para el caso de uso de la agencia y contrastados con PC1/PC2 del biplot, con una respuesta escrita a qué indica una distancia alta en la matriz U.
 
-**Plans:** 6 plans
+**Plans:** 1/6 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 02-03-PLAN.md — Regla de elección de grilla: checkpoint de decisión (aprobar o editar los términos fijados; sin grilla elegible no se elige ninguna, D-14), select_grid y guardia git testeados, regla y serie de la etapa 1 commiteadas antes de entrenar el SOM sobre los datos
+- [x] 02-03-PLAN.md — Regla de elección de grilla: checkpoint de decisión (aprobar o editar los términos fijados; sin grilla elegible no se elige ninguna, D-14), select_grid y guardia git testeados, regla y serie de la etapa 1 commiteadas antes de entrenar el SOM sobre los datos
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 02-01-PLAN.md — SOM real en C (tracer, después del commit de la regla): 7 claves estrictas, entrenamiento escalón/gaussiana, QE/TE/ocupación, occupancy.csv y trace.csv, tests C bajo ASan/UBSan y neuron/README
@@ -152,7 +152,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fundación, auditoría de datos y PCA | 8/8 | Complete    | 2026-10-20 |
-| 2. Kohonen SOM | 0/6 | Planned | - |
+| 2. Kohonen SOM | 1/6 | In Progress | - |
 | 3. Oja y decisiones de campaña | 0/TBD | Not started | - |
 | 4. Hopfield núcleo y letras | 0/TBD | Not started | - |
 | 5. Hopfield con QR | 0/TBD | Not started | - |
