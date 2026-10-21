@@ -86,3 +86,29 @@ Las cifras salen de `analysis/results/som/series_som_stage1/` (`aggregate.csv`, 
 - Semilla de las figuras: 4
 
 El QE de entrenamiento no decide (D-15): baja siempre al agrandar la grilla y por sí solo elegiría k = 8, que deja 48,1 % de neuronas vacías y 1,51 creadores por neurona ocupada. La semilla de las figuras es el medoide de estabilidad de k = 5 (sección 2), y la orientación del mapa es arbitraria.
+
+
+## 4. Etapa 2: robustez del schedule
+
+Las cifras salen de `analysis/results/som/series_som_stage2/` (`aggregate.csv`, `robustness.csv`, `robustness.json`), que escribe `make som-stage2` sobre `analysis/series_som_stage2.json`. Ese archivo lo generó `analysis/som_stage.py write-stage2` a partir de la k elegida (k = 5) y de las escaleras de la sección 2, y se commiteó antes de correr. Sobre k = 5 con el escalón se cambia una cosa a la vez respecto del baseline (R0 = 2,5; η0 = 0,5; 260 épocas): R0 en {1,25; 5}, η0 en {0,1; 0,25; 0,9} y épocas en {50; 130; 520; 1040}, con 10 seeds cada variante (10 variantes × 10 seeds = 100 corridas y 5 000 entrenamientos de leave-one-out; ninguno falló, D-06). Todas las cifras son media ± desvío (ddof 1) sobre las 10 seeds; en la estabilidad, sobre los 45 pares de seeds. La fila `base` repite la fila k = 5 de la sección 3.
+
+| variante | R0 | η0 | épocas | TE | % de neuronas vacías | creadores por neurona ocupada | pasa los filtros | QE-LOO | estabilidad |
+|---|---|---|---|---|---|---|---|---|---|
+| base | 2,5 | 0,5 | 260 | 0,046 ± 0,034 | 15,6 ± 7,9 | 2,39 ± 0,25 | sí | 3,295 ± 0,023 | 0,672 ± 0,182 |
+| radius0-1.25 | 1,25 | 0,5 | 260 | 0,034 ± 0,030 | 7,2 ± 4,1 | 2,16 ± 0,10 | sí | 3,334 ± 0,020 | 0,607 ± 0,113 |
+| radius0-5 | 5 | 0,5 | 260 | 0,056 ± 0,023 | 14,4 ± 8,0 | 2,36 ± 0,24 | no (TE) | 3,293 ± 0,011 | 0,603 ± 0,174 |
+| eta0-0.1 | 2,5 | 0,1 | 260 | 0,046 ± 0,038 | 14,0 ± 6,9 | 2,34 ± 0,21 | sí | 3,336 ± 0,016 | 0,589 ± 0,161 |
+| eta0-0.25 | 2,5 | 0,25 | 260 | 0,060 ± 0,021 | 14,4 ± 4,7 | 2,34 ± 0,12 | no (TE) | 3,305 ± 0,015 | 0,693 ± 0,156 |
+| eta0-0.9 | 2,5 | 0,9 | 260 | 0,052 ± 0,017 | 9,2 ± 3,8 | 2,21 ± 0,09 | no (TE) | 3,300 ± 0,020 | 0,612 ± 0,150 |
+| epochs-50 | 2,5 | 0,5 | 50 | 0,056 ± 0,028 | 12,0 ± 6,5 | 2,28 ± 0,18 | no (TE) | 3,299 ± 0,025 | 0,565 ± 0,099 |
+| epochs-130 | 2,5 | 0,5 | 130 | 0,042 ± 0,027 | 12,4 ± 8,5 | 2,31 ± 0,26 | sí | 3,307 ± 0,015 | 0,621 ± 0,138 |
+| epochs-520 | 2,5 | 0,5 | 520 | 0,056 ± 0,016 | 12,8 ± 3,2 | 2,30 ± 0,08 | no (TE) | 3,299 ± 0,014 | 0,623 ± 0,151 |
+| epochs-1040 | 2,5 | 0,5 | 1040 | 0,050 ± 0,017 | 16,4 ± 6,1 | 2,41 ± 0,20 | sí | 3,288 ± 0,013 | 0,642 ± 0,192 |
+
+**Cómo se mueven QE-LOO y estabilidad.** El QE-LOO casi no se mueve: va de 3,288 (1040 épocas) a 3,336 (η0 = 0,1), una franja de 0,05 que es del orden de dos desvíos del baseline (0,023). Con más épocas queda plano (3,299; 3,307; 3,295; 3,299; 3,288 para 50, 130, 260, 520 y 1040), y un R0 más chico (1,25) o un η0 más bajo (0,1) lo suben algo (3,334 y 3,336), mientras que R0 = 5 y η0 = 0,25 o 0,9 quedan junto al baseline. La estabilidad se mueve más: el baseline (0,672) es de las más altas, solo η0 = 0,25 la supera (0,693), y las demás variantes quedan entre 0,565 (50 épocas) y 0,642 (1040 épocas); con las épocas sube de 50 a 130 y 1040 pero no de forma monótona (0,565; 0,621; 0,672; 0,623; 0,642). Con un desvío de unos 0,15 a 0,20 entre pares de seeds, estas diferencias son chicas frente a la dispersión y no sostienen ordenar los schedules.
+
+**Qué falla.** Los dos filtros de ocupación pasan en las 10 variantes (neuronas vacías entre 7,2 % y 16,4 %, creadores por neurona ocupada entre 2,16 y 2,41). Lo que falla es el TE: en cinco variantes (R0 = 5, η0 = 0,25, η0 = 0,9, 50 épocas y 520 épocas) el TE medio queda entre 0,052 y 0,060, apenas sobre el máximo de 0,05, con desvíos de 0,016 a 0,028. El baseline ya estaba pegado al borde (0,046), así que la conclusión es que el TE de k = 5 depende del schedule en esa franja, y no que la ocupación se degrade. No hay una tendencia clara: 520 y 1040 épocas dan 0,056 y 0,050.
+
+- Veredicto de robustez: no robusta (radius0-5, eta0-0.25, eta0-0.9, epochs-50, epochs-520)
+
+La etapa 2 no vuelve a elegir k (sección 2, **Criterio de robustez.**): k = 5 sigue siendo la grilla elegida, y el veredicto dice cuánto de su cumplimiento del filtro de TE se sostiene al mover R0, η0 o las épocas.
