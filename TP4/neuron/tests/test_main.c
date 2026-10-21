@@ -203,7 +203,9 @@ static int loads(const char * text) {
 
 static void test_config_strict_validation(void) {
   check(loads("{\"model\": \"oja\", \"seed\": 1, \"input\": \"" ZSCORE_FIXTURE "\"}"));
-  check(loads("{\"model\": \"kohonen\", \"seed\": 1, \"input\": \"" ZSCORE_FIXTURE "\", \"grid_k\": 2}"));
+  check(loads("{\"model\": \"kohonen\", \"seed\": 1, \"input\": \"" ZSCORE_FIXTURE "\", "
+              "\"grid_k\": 3, \"neighborhood\": \"step\", \"radius0\": 1.5, \"radius_final\": 1, "
+              "\"eta0\": 0.5, \"eta_final\": 0.01, \"epochs\": 5}"));
   check(loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"" PATTERNS_FIXTURE "\", "
               "\"noise_levels\": [0.0, 0.5]}"));
 
@@ -303,8 +305,11 @@ static void same_seed_same_bytes(const char * name, const char * config_text, co
 static void test_same_seed_same_bytes(void) {
   same_seed_same_bytes("oja",
                        "{\"model\": \"oja\", \"seed\": 5, \"input\": \"" ZSCORE_FIXTURE "\"}", "weights.csv");
+  // 9 neurons on 6 rows: the case also covers more neurons than samples
   same_seed_same_bytes("kohonen",
-                       "{\"model\": \"kohonen\", \"seed\": 5, \"input\": \"" ZSCORE_FIXTURE "\", \"grid_k\": 2}",
+                       "{\"model\": \"kohonen\", \"seed\": 5, \"input\": \"" ZSCORE_FIXTURE "\", "
+                       "\"grid_k\": 3, \"neighborhood\": \"step\", \"radius0\": 1.5, \"radius_final\": 1, "
+                       "\"eta0\": 0.5, \"eta_final\": 0.01, \"epochs\": 5}",
                        "prototypes.csv");
   // The stub flips a number of pixels fixed by the level, so its CSVs hold no trace of the seed: only the
   // identical-bytes check applies. The Hopfield phases add a file that does depend on it.

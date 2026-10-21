@@ -16,9 +16,18 @@ static const KeySpec COMMON_KEYS[] = {
   { NULL, KEY_INT, 0, NULL },
 };
 
-// grid_k: side of the k x k grid of neurons. Phase 2 appends the rows of the real Kohonen training here
+// grid_k: side of the k x k grid of neurons (D-07). neighborhood: "step" updates every neuron within grid distance R
+// of the winner, "gaussian" weights them by exp(-d^2 / 2 sigma^2) (D-01). radius0, radius_final: R (or sigma) at the
+// first and the last step, decaying exponentially. eta0, eta_final: learning rate at the first and the last step
+// (D-02). epochs: passes over the shuffled samples (D-03). The ranges are checked in models/kohonen.c.
 static const KeySpec KOHONEN_KEYS[] = {
   { "grid_k", KEY_INT, 1, NULL },
+  { "neighborhood", KEY_STRING, 1, NULL },
+  { "radius0", KEY_NUMBER, 1, NULL },
+  { "radius_final", KEY_NUMBER, 1, NULL },
+  { "eta0", KEY_NUMBER, 1, NULL },
+  { "eta_final", KEY_NUMBER, 1, NULL },
+  { "epochs", KEY_INT, 1, NULL },
   { NULL, KEY_INT, 0, NULL },
 };
 

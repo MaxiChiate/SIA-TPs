@@ -2,5 +2,11 @@
   "model": "kohonen",
   "seed": 1,
   "input": "../datos/prepared/creadores_zscore.csv",
-  "grid_k": 3
+  "grid_k": 4,
+  "neighborhood": "step",
+  "radius0": 2.0,
+  "radius_final": 1.0,
+  "eta0": 0.5,
+  "eta_final": 0.01,
+  "epochs": 260
 }
