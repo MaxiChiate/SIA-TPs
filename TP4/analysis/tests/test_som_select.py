@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 import som_select
+import sweep
 
 TP_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -249,3 +250,24 @@ def test_stage2_series_one_at_a_time():
     small = som_select.stage2_series(2)
     radius_values = [v["set"]["radius0"] for v in small["variants"] if "radius0" in v["set"]]
     assert radius_values == [2.0]  # max(1, 2/4) = 1 equals the baseline max(1, 2/2) = 1 and is dropped
+
+
+def test_stage1_series_shape():
+    series = sweep.load_series(TP_DIR / "analysis" / "series_som_stage1.json")
+    tasks = sweep.plan(series)
+    assert len(tasks) == 140
+    expected = [f"k{k}-step" for k in range(2, 9)] + [f"k{k}-gaussian" for k in range(2, 9)]
+    seen = []
+    for task in tasks:
+        if task.label not in seen:
+            seen.append(task.label)
+    assert seen == expected
+    assert sorted({task.seed for task in tasks}) == list(range(1, 11))
+    for task in tasks:
+        config = task.config
+        mode = task.label.split("-")[1]
+        assert config["neighborhood"] == mode
+        assert config["grid_k"] == int(task.label[1:].split("-")[0])
+        assert config["radius0"] == max(1, config["grid_k"] / 2)
+        assert config["radius_final"] == 1.0
+        assert config["eta0"] == 0.5 and config["eta_final"] == 0.01 and config["epochs"] == 260
