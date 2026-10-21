@@ -15,10 +15,10 @@
 ### Datos y PCA
 
 - [x] **DATA-01**: El loader verifica n=50 filas y 33 columnas, y falla si no coinciden
-- [ ] **DATA-02**: EDA de distribuciones y correlaciones, con tabla de auditoría de variables que documenta las 5 dependencias lineales exactas y la regla de selección
-- [ ] **DATA-03**: Z-score en Python con scaler guardado (`.meta.json`) para mapear creadores nuevos
-- [ ] **DATA-04**: PCA por autovalores con scree, loadings y biplot, y justificación escrita de reducir o no la dimensionalidad
-- [ ] **DATA-05**: Corrida de sensibilidad con las 31 columnas, etiquetada, comparada contra el conjunto auditado
+- [x] **DATA-02**: EDA de distribuciones y correlaciones, con tabla de auditoría de variables que documenta las 5 dependencias lineales exactas y la regla de selección
+- [x] **DATA-03**: Z-score en Python con scaler guardado (`.meta.json`) para mapear creadores nuevos
+- [x] **DATA-04**: PCA por autovalores con scree, loadings y biplot, y justificación escrita de reducir o no la dimensionalidad
+- [x] **DATA-05**: Corrida de sensibilidad con las 31 columnas, etiquetada, comparada contra el conjunto auditado
 
 ### Kohonen
 
@@ -88,10 +88,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-03 | Phase 1 | Complete |
 | INFRA-04 | Phase 1 | Complete |
 | DATA-01 | Phase 1 | Complete |
-| DATA-02 | Phase 1 | Pending |
-| DATA-03 | Phase 1 | Pending |
-| DATA-04 | Phase 1 | Pending |
-| DATA-05 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Complete |
+| DATA-03 | Phase 1 | Complete |
+| DATA-04 | Phase 1 | Complete |
+| DATA-05 | Phase 1 | Complete |
 | SOM-01 | Phase 2 | Pending |
 | SOM-02 | Phase 2 | Pending |
 | SOM-03 | Phase 2 | Pending |
