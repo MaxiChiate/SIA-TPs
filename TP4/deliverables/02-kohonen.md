@@ -126,3 +126,96 @@ Las figuras salen de `analysis/results/som/figures/`, que escribe `make som-figu
 **`stage1_curves.svg`: por qué el QE solo no decide.** Seis paneles contra k (2 a 8), media ± desvío entre las 10 seeds, escalón y gaussiana: QE de entrenamiento, QE-LOO, TE, % de neuronas vacías, creadores por neurona ocupada y estabilidad, con los umbrales de la regla (TE 0,05; 20 % de vacías; 2 creadores por neurona ocupada), la k elegida marcada y el mínimo del QE de entrenamiento anotado. El QE de entrenamiento del escalón baja sin parar con k, de 3,802 (k = 2) a 1,918 (k = 8), y por sí solo elegiría k = 8 (D-07, D-15); en el mismo tramo las neuronas vacías suben de 0 % a 48,1 % y los creadores por neurona ocupada bajan de 12,5 a 1,51, o sea que la grilla grande baja el error repartiendo los 50 creadores en neuronas casi individuales. El QE-LOO baja mucho menos de k = 5 en adelante (3,295 en k = 5; 3,253 en k = 6) y la estabilidad cae con k. Los umbrales de la regla valen para el escalón; la gaussiana se muestra como comparación. La elección sale de los filtros de ocupación y TE más el QE-LOO, no de esta curva.
 
 **`trace.svg`: entrenamiento de la corrida dibujada.** QE (eje izquierdo) y TE (eje derecho) en cada una de las 260 épocas. Las dos medidas oscilan mucho al principio (en las primeras 60 épocas el TE llega a 0,68 y el QE a 3,95 en la época 7); el TE cae a entre 0,02 y 0,20 desde la época 65 y vale 0,06 sin cambios desde la época 175, y el QE queda entre 2,85 y 3,00 hasta la época 160 y baja a 2,72 hacia la 180. En el último 10 % de las épocas (de la 235 a la 260) las dos medidas quedan planas: el QE varía entre 2,7224 y 2,7239 y el TE vale 0,06 en todas. QE y TE finales de la corrida dibujada (2,724 y 0,06) quedan cerca de lo que muestran las 10 seeds de la sección 3 (QE de entrenamiento medio 2,732; TE medio 0,046 ± 0,034): esta seed no es un caso extremo en esas dos medidas.
+
+## 6. Regiones, perfiles y contraste con PC1/PC2
+
+Las cifras salen de `analysis/results/som/profiles/` (`regions.csv`, `region_profiles.csv`, `neuron_profiles.csv`, `pca_contrast.json`, `high_u_edges.csv`, `disagreements.csv`), que escribe `make som-profiles` sobre la misma corrida de la sección 5 (k = 5, `k5-step`, seed 4). El script se niega a correr si el sha256 de la regla cambió desde la etapa 1 o si no hay grilla elegida. La regla de regiones y los estadísticos del contraste son los de la sección 2, aplicados sin cambios: no se tocó el percentil, el mínimo de 2 creadores, el número de permutaciones (1000) ni la semilla (2026) después de ver el resultado.
+
+### 6.1 Regiones
+
+El percentil 75 de las 40 distancias entre prototipos de neuronas vecinas de la grilla vale 2,60, y esa es la distancia de corte (`pca_contrast.json`, `threshold`). Superan el umbral 10 aristas. Cinco de ellas tocan una neurona vacía ((0,3)-(1,3), (1,2)-(1,3), (1,2)-(2,2), (2,3)-(3,3) y (3,2)-(3,3)) y no separan nada: una neurona vacía no pertenece a ninguna región. Las otras cinco unen neuronas ocupadas: (1,4)-(2,4) con 3,67, (2,3)-(2,4) con 2,99, (2,1)-(2,2) con 2,98, (2,1)-(3,1) con 2,88 y (3,1)-(3,2) con 2,66. Con esos cortes, las 22 neuronas ocupadas siguen conectadas entre sí por aristas que no se cortaron, así que la regla da **una sola región, R1, con los 50 creadores**, que es interpretable (50 creadores, más de 2). No hay regiones ni neuronas rotuladas "no interpretable" por tamaño de región.
+
+Este es el resultado de la regla fijada de antemano y se informa como salió: con la regla de la sección 2, el mapa de 5 × 5 no se parte en grupos de creadores. Cambiar el percentil para obtener más regiones sería elegir la regla mirando el mapa, que es lo que la sección 2 prohíbe. La figura es `analysis/results/som/profiles/regions.svg` (celdas con su región y su número de creadores, neuronas vacías rayadas, las aristas cortadas como líneas gruesas). Ninguna de las cinco aristas cortadas entre neuronas ocupadas deja una neurona ocupada aislada.
+
+### 6.2 Perfiles por región
+
+Perfil de R1 en unidades originales, con las medias crudas de los 50 creadores (`region_profiles.csv` trae las 31 columnas de `datos/creadores.csv`). La última columna es la participación de cada tema dominante, solo descriptiva: los temas son entradas del mapa y su reparto no valida ninguna región.
+
+| Región | Creadores | Seguidores | Alcance en Argentina | Audiencia argentina (%) | Engagement por 1000 | Precio (USD) | Patrocinados (%) | Fútbol (%) | Maquillaje (%) | Perros (%) | Arte (%) | Tema dominante |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| R1 (22 neuronas) | 50 | 221 587 | 43 984 | 52,6 | 68,3 | 1 701 | 27,4 | 27,0 | 24,2 | 27,0 | 21,8 | fútbol (15 de 50) |
+
+Como R1 es todo el mapa, su perfil es el del creador promedio y no distingue grupos. Para leer cómo cambian los perfiles dentro del mapa se dan también los perfiles de las neuronas con al menos 2 creadores (`neuron_profiles.csv`). Son neuronas, no regiones: describen dónde está cada tipo de creador sobre la grilla y no son grupos validados.
+
+| Neurona (fila, col) | Creadores | Seguidores | Alcance en Argentina | Audiencia argentina (%) | Engagement por 1000 | Precio (USD) | Patrocinados (%) | Fútbol (%) | Maquillaje (%) | Perros (%) | Arte (%) | Tema dominante |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| (0, 0) | 5 | 21 612 | 3 448 | 73,6 | 59,7 | 175 | 15,9 | 8,7 | 11,1 | 69,4 | 10,8 | perros (5 de 5) |
+| (0, 2) | 4 | 49 736 | 7 201 | 48,2 | 67,8 | 349 | 11,6 | 11,4 | 10,4 | 56,7 | 21,4 | perros (3 de 4) |
+| (0, 4) | 4 | 175 422 | 25 097 | 54,3 | 71,6 | 880 | 7,5 | 8,4 | 38,4 | 26,4 | 26,8 | maquillaje (2 de 4) |
+| (1, 1) | 3 | 25 456 | 4 516 | 43,0 | 64,3 | 247 | 31,9 | 56,9 | 17,0 | 13,1 | 12,9 | fútbol (3 de 3) |
+| (1, 3) | 2 | 245 618 | 19 767 | 54,4 | 73,3 | 748 | 5,8 | 14,7 | 29,6 | 45,6 | 10,1 | empate: maquillaje y perros (1 de 2 cada uno) |
+| (2, 0) | 4 | 61 015 | 8 615 | 43,4 | 68,5 | 440 | 47,8 | 35,2 | 26,8 | 14,2 | 23,8 | fútbol (2 de 4) |
+| (2, 2) | 2 | 158 348 | 51 736 | 67,5 | 70,4 | 1 262 | 24,4 | 76,3 | 8,9 | 7,2 | 7,5 | fútbol (2 de 2) |
+| (2, 4) | 2 | 330 724 | 39 794 | 26,0 | 66,1 | 2 853 | 23,2 | 7,8 | 76,0 | 8,4 | 7,7 | maquillaje (2 de 2) |
+| (3, 0) | 2 | 164 860 | 16 617 | 37,0 | 67,1 | 1 161 | 47,6 | 17,4 | 11,3 | 17,9 | 53,4 | arte (2 de 2) |
+| (3, 4) | 3 | 674 103 | 146 513 | 60,7 | 62,5 | 5 197 | 15,2 | 12,5 | 66,2 | 11,8 | 9,4 | maquillaje (3 de 3) |
+| (4, 0) | 2 | 237 253 | 40 032 | 36,7 | 66,8 | 1 876 | 49,6 | 8,0 | 16,2 | 10,6 | 65,2 | arte (2 de 2) |
+| (4, 1) | 2 | 289 048 | 28 045 | 33,6 | 73,3 | 1 973 | 31,9 | 9,2 | 14,7 | 13,9 | 62,2 | arte (2 de 2) |
+| (4, 2) | 3 | 319 437 | 38 999 | 27,2 | 73,3 | 4 443 | 36,5 | 70,0 | 9,5 | 10,7 | 9,8 | fútbol (3 de 3) |
+| (4, 3) | 2 | 477 543 | 90 442 | 47,7 | 71,5 | 3 731 | 42,7 | 62,2 | 11,6 | 12,9 | 13,3 | fútbol (2 de 2) |
+| (4, 4) | 3 | 559 301 | 209 584 | 83,4 | 77,2 | 3 977 | 21,6 | 36,3 | 9,8 | 28,2 | 25,7 | empate: fútbol, perros y arte (1 de 3 cada uno) |
+
+Las 7 neuronas con un solo creador ((0,1), (1,0), (1,4), (2,1), (2,3), (3,1) y (3,2)) están marcadas con `flag_lt2` en `neuron_profiles.csv` y no se leen como grupo: su "perfil" es el de ese creador. Cada fila de la tabla sale de 2 a 5 creadores, así que una diferencia entre dos filas vecinas puede ser de un solo creador.
+
+### 6.3 Lectura para la agencia
+
+La regla fijada no ofrece regiones separadas que interpretar: hay una sola, R1, y su perfil es el del conjunto (221 587 seguidores, 52,6 % de audiencia argentina, USD 1 701 de precio medio, 27,4 % de publicaciones patrocinadas). La lectura útil para la agencia es entonces la de un continuo sobre el mapa, apoyada en los perfiles de neurona de 6.2 y siempre como descripción de perfiles. Las recomendaciones de campaña y la comparación contra seguidores son de la Fase 3.
+
+- **Tamaño y precio forman el eje principal del mapa.** En la mitad superior izquierda, (0,0), (0,2), (1,1) y (2,0) reúnen creadores chicos y baratos (de 21 612 a 61 015 seguidores; de USD 175 a USD 440). En la mitad inferior derecha, (3,4), (4,4), (4,3) y (4,2) reúnen creadores grandes y caros (de 319 437 a 674 103 seguidores; de USD 3 731 a USD 5 197). En el medio hay perfiles intermedios, como (1,3) con 245 618 seguidores y USD 748, o (4,0) con 237 253 seguidores y USD 1 876. El engagement por mil se mueve poco entre las neuronas de la tabla (de 59,7 a 77,2).
+- **Audiencia argentina.** La proporción más alta está en (4,4) (83,4 %, con el mayor alcance argentino, 209 584 por creador), en (0,0) (73,6 %, con alcance chico, 3 448) y en (2,2) (67,5 %). La más baja, en (2,4) (26,0 %), (4,2) (27,2 %) y (4,1) (33,6 %): son creadores con la mayor parte de su audiencia fuera de Argentina, y en (2,4) y (4,2) con precios de USD 2 853 y USD 4 443.
+- **Patrocinados.** La proporción de publicaciones patrocinadas es mayor en (4,0) (49,6 %), (2,0) (47,8 %) y (3,0) (47,6 %), y menor, entre las neuronas de la tabla, en (1,3) (5,8 %) y (0,4) (7,5 %): hay perfiles que ya están acostumbrados a la publicidad y otros que casi no la hacen.
+- **Temas, solo como descripción.** Los cuatro temas son entradas del mapa y por eso es esperable que ordenen los lugares; no es una confirmación independiente. Los 5 creadores de (0,0) tienen perros como tema dominante, (2,4) y (3,4) maquillaje, (3,0), (4,0) y (4,1) arte, y (1,1), (2,2), (4,2) y (4,3) fútbol. Esos lugares se leen como zonas donde el mapa junta creadores con el mismo tema dominante; no como regiones del mapa según la regla, que no los separó.
+
+### 6.4 ¿Coinciden las regiones con PC1 y PC2 (biplot)?
+
+Se usa la lectura de la sección 6 de `deliverables/01-datos-pca.md`: PC1 (53,2 % de la varianza) es el eje de escala y formato, con tamaño, alcance y precio (`followers`, `average_reach`, `price_usd`) del lado negativo y epígrafes largos, contenido tutorial y respuesta (guardados, comentarios) del lado positivo; PC2 (8,5 %) se apoya en la audiencia argentina (`argentina_audience_pct`, `estimated_argentina_reach`, `topic_dogs_pct`). Los estadísticos son los declarados en la sección 2, con 1000 permutaciones de un generador sembrado con 2026; los p son de una cola (cuántas permutaciones igualan o superan lo observado, sumando la observada) y 0,001 es el mínimo posible con 1000 permutaciones. Las figuras son `analysis/results/som/profiles/pc_planes.svg` (media de PC1 y de PC2 de los creadores de cada neurona) y, para compararla, `analysis/results/pca/audited/biplot.svg`.
+
+- R² de PC1 sobre la grilla: 0,961 (p = 0,001)
+- R² de PC2 sobre la grilla: 0,055 (p = 0,267)
+- Mantel grilla vs plano PC1-PC2: rho = 0,599 (p = 0,001)
+- Mantel grilla vs distancia en las 26 variables (referencia): rho = 0,635
+
+Por aristas, la distancia entre prototipos de neuronas ocupadas vecinas se correlaciona con la diferencia de PC1 entre sus medias con rho de Spearman 0,481 y con la de PC2 con 0,271 (29 aristas; las otras 11 tocan una neurona vacía y se excluyen). La regla no declaró un nulo de permutaciones para este estadístico, por eso no lleva p: se informa como descriptivo, y con 29 aristas es un valor poco preciso.
+
+**Respuesta.** Sí para PC1, no para PC2. El mapa sigue a PC1 de forma casi exacta: la posición (fila, columna) de la mejor neurona explica el 96,1 % de la variación de PC1 entre los 50 creadores, y ninguna de las 1000 permutaciones lo alcanza (p = 0,001). Lo ve `pc_planes.svg`: PC1 baja en diagonal desde la esquina superior izquierda (5,74 en (0,0)) hasta la inferior derecha (-6,04 en (4,4)), que es el mismo eje de tamaño y precio de 6.3 (21 612 seguidores en (0,0) contra 559 301 en (4,4)). Con PC2 no hay coincidencia lineal: R² de 0,055 y p = 0,267, es decir que una variación así de chica es habitual si se reparten al azar las posiciones. Esto describe una dependencia lineal en (fila, columna); en `pc_planes.svg` PC2 es alta en dos esquinas opuestas, (0,0) (2,02) y (4,4) (2,28), cosa que una recta sobre la grilla no puede representar. Es una lectura de la figura, no un estadístico declarado. En conjunto, el orden entre distancias de grilla y distancias en el plano PC1-PC2 coincide moderadamente (rho 0,599, p = 0,001), casi tanto como con las distancias en las 26 variables (0,635), y el patrón por aristas es moderado para PC1 y débil para PC2. Como las regiones de la regla son una sola, la comparación es entre el layout del mapa y los ejes, no entre regiones y ejes.
+
+**Dónde mapa y plano discrepan** (`disagreements.csv`). Cerca en el plano y lejos en la grilla: @artealpaso (neurona (4,0)) y @patitascontentas ((0,4)), a 0,59 en el plano y a 5,66 en la grilla (esquinas opuestas); @artequeinspira (4,0) y @brochasymates (0,4), a 1,60 en el plano; @artealpaso y @cosmeticaconsciente (0,4), a 1,71. @artealpaso y @patitascontentas se parecen en PC1 y PC2 y no en lo que esos dos ejes no ven: uno es de arte (60,2 % arte) con 229 624 seguidores y el otro de perros (68,6 % perros) con 72 459. Lejos en el plano y vecinos en la grilla: @mateconideas ((3,4)) y @bellezasimple ((2,4)), a 4,47 en el plano (PC2 de 3,07 contra -0,73: 83,2 % de audiencia argentina contra 23,8 %) aunque los dos tienen maquillaje como tema dominante; @patitasenred ((3,1)) y @creatividadaldia ((3,0)), a 3,86 (PC1 de -1,45 contra 2,03); @patitasenred y @canchaaldia ((2,1)), a 3,77. Un mapa no lineal puede separar lo que PC1 y PC2 mezclan porque usa las 26 variables y el plano retiene el 61,7 % de la varianza (sección 6 de la Fase 1): el 38,3 % restante, donde la Fase 1 ubicó a los temas (PC3 y PC4), puede alejar dos creadores que el plano muestra juntos, y a la inversa una vecindad de la grilla no garantiza cercanía en el plano porque dos neuronas vecinas pueden tener prototipos a hasta 3,67 de distancia en z (sección 5).
+
+### 6.5 ¿Qué indica una distancia alta entre neuronas vecinas en la matriz U?
+
+Dos neuronas vecinas en la grilla con una distancia alta entre sus prototipos tienen perfiles lejanos en las 26 variables en z: la distancia alta es un límite entre perfiles distintos, y una zona de valores bajos es una zona homogénea, donde los prototipos vecinos se parecen (es la lectura de la matriz U de las slides del curso). La matriz U no dice cuál es la diferencia; para eso se miran las variables que más cambian a lo largo de la arista (`high_u_edges.csv`, las 3 aristas más altas entre neuronas ocupadas y sus 3 variables de mayor |delta z|; el delta va de la neurona de menor número a la de mayor).
+
+- **(1,4) a (2,4), distancia 3,67 (la más alta del mapa entre neuronas ocupadas).** `price_usd` sube 1,22 en z (USD 2 116), `followers` 1,21 (251 127 seguidores) y `average_reach` 1,19 (97 110). Es un salto de escala y precio entre un creador aislado, el de (1,4), y los 2 de (2,4).
+- **(2,3) a (2,4), distancia 2,99.** `price_usd` sube 1,04 en z (USD 1 804), `average_reach` 1,00 (81 579) y `followers` 0,98 (204 239): otra vez tamaño y precio.
+- **(2,1) a (2,2), distancia 2,98.** Cambia el formato: `content_entertainment_pct` sube 1,17 en z (34,4 puntos porcentuales), `content_review_pct` baja 1,09 (10,4 puntos) y `average_caption_words` baja 0,88 (43,2 palabras).
+
+Dos de las tres aristas más altas separan por tamaño y precio, que es el eje de PC1 (6.4), y la tercera por el tipo de contenido. Las tres tienen en una punta una neurona con un solo creador ((1,4), (2,3) y (2,1)), así que cada salto puede ser el de un caso suelto. Y una precaución general: una pared al lado de una neurona vacía es interpolación, no un límite entre grupos de creadores. Cuatro de las seis aristas más largas del mapa tocan una neurona vacía ((1,2)-(1,3) con 3,63, (2,3)-(3,3) con 3,59, (3,2)-(3,3) con 3,47 y (1,2)-(2,2) con 3,20) y por eso no figuran en `high_u_edges.csv` ni sostienen una frontera. Solo un salto entre neuronas ocupadas, como los tres de arriba, la apoya, y aun así con cautela por el tamaño de las neuronas.
+
+## 7. Cómo reproducir
+
+Desde `TP4/`, en un clone nuevo:
+
+```
+make venv         # crea .venv e instala analysis/requirements.txt (versiones fijadas); sin uv: python3.12 -m venv .venv,
+                  # .venv/bin/pip install -r analysis/requirements.txt y touch .venv/.installed
+make prepare      # escribe datos/prepared/: matriz auditada de 26 variables y de 31 columnas con sus .meta.json
+make som-stage1   # 140 corridas, QE-LOO y estabilidad; escribe analysis/results/som/series_som_stage1/ con selection.json
+                  # (se niega a correr si la regla de la sección 2 no está commiteada y sin cambios)
+make som-stage2   # robustez del schedule sobre la k elegida; escribe analysis/results/som/series_som_stage2/
+make som-figures  # mapa de hits y matriz U, planos de componentes, curvas de la etapa 1 y traza; escribe analysis/results/som/figures/
+make som-profiles # regiones, perfiles, contraste con PC1/PC2, aristas altas y discrepancias, más regions y pc_planes;
+                  # escribe analysis/results/som/profiles/
+make test         # tests de C y de Python (incluye los del SOM)
+```
+
+`analysis/results/` no se versiona: cada número y cada figura de este fragmento se regenera con estos comandos, y cada corrida es reproducible byte a byte para sus seeds (los CSV, los JSON y los SVG de `som-figures` y `som-profiles` salen idénticos en reejecuciones).

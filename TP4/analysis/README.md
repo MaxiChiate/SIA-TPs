@@ -78,6 +78,30 @@ la última línea de stdout sigue siendo `summary -> <ruta>` y el comando termin
 | `series_smoke_oja` | El stub de Oja sobre los datos auditados (`datos/prepared/creadores_zscore.csv`, 50 x 26; `make prepare` lo genera, no se versiona), 3 seeds | ¿Funciona el lazo config, binario, `summary.csv`? |
 | `series_smoke_kohonen` | El SOM de Kohonen entrenado (vecindad `step`, 260 épocas) sobre los mismos datos, `grid_k` en 2, 3 y 4, 3 seeds (9 corridas). `summary.csv` trae ahora `qe`, `te` y `empty_fraction`, más `occupied_neurons`, `mean_hits_occupied`, `max_hits` y `singleton_neurons` de `metrics.json` | ¿La clave que varía (`grid_k`) y las medidas del mapa quedan como columnas de `summary.csv`? |
 | `series_smoke_hopfield` | El stub de Hopfield sobre las letras de `neuron/tests/fixtures/patterns_small.csv`, dos variantes de `noise_levels` (`low`: 0.0 y 0.1; `high`: 0.3 y 0.5), 2 seeds (4 corridas) | ¿Funciona una variante que cambia una lista? (`noise_levels` va codificada como JSON en la columna) |
+| `series_som_stage1` | La etapa 1 de la regla de elección de grilla del SOM (sección 2 de `deliverables/02-kohonen.md`): 14 variantes (k de 2 a 8, vecindad escalón y gaussiana) x 10 seeds = 140 corridas, sobre los mismos datos auditados | ¿Qué grilla elige la regla fijada de antemano? (`make som-stage1`) |
+| `series_som_stage2` | La etapa 2: robustez del schedule (R0, η0 y épocas, 10 variantes) x 10 seeds sobre la k que eligió la etapa 1; la genera `som_stage.py write-stage2` | ¿La k elegida sigue pasando los filtros al mover el schedule? (`make som-stage2`) |
 
 Desde la raíz de TP4 también se corre con `make sweep SERIES=analysis/series_smoke_kohonen.json` (por defecto,
 `series_smoke_oja.json`); `make sweep` genera antes `datos/prepared/` si falta.
+
+## SOM (Fase 2)
+
+El mapa de Kohonen se estudia en dos etapas con la regla de elección de grilla commiteada antes de ver resultados
+(sección 2 de `deliverables/02-kohonen.md`). Las salidas van a `analysis/results/som/` (no se versiona). Desde la
+raíz de TP4:
+
+| Archivo | Qué hace |
+|---|---|
+| `som.py` | Lee una corrida del binario y calcula lo común: QE, TE, rangos con empates (Spearman), estabilidad entre seeds, adyacencia de la grilla y matriz U |
+| `som_loo.py` | QE de leave-one-out de cada variante (reentrena sin un creador y mide el QE de ese creador) |
+| `som_select.py` | La regla de elección de grilla como código; su sha256 queda en `selection.json` |
+| `som_stage.py` | Maneja las dos etapas y se niega a correr si la regla no está commiteada o cambió |
+| `som_figures.py` | Figuras de la grilla elegida: mapa de hits con matriz U, planos de componentes, curvas de la etapa 1 y traza |
+| `som_profiles.py` | Regiones de la regla, perfiles en unidades originales, contraste con PC1/PC2 con 1000 permutaciones, lectura de las aristas altas de la matriz U y discrepancias mapa-plano |
+
+| Target | Escribe |
+|---|---|
+| `make som-stage1` | `analysis/results/som/series_som_stage1/` con `selection.json` (la grilla elegida) |
+| `make som-stage2` | `analysis/results/som/series_som_stage2/` (robustez del schedule) |
+| `make som-figures` | `analysis/results/som/figures/` |
+| `make som-profiles` | `analysis/results/som/profiles/` |
