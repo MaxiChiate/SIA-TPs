@@ -76,7 +76,7 @@ la última línea de stdout sigue siendo `summary -> <ruta>` y el comando termin
 | Serie | Qué corre | Pregunta |
 |---|---|---|
 | `series_smoke_oja` | El stub de Oja sobre los datos auditados (`datos/prepared/creadores_zscore.csv`, 50 x 26; `make prepare` lo genera, no se versiona), 3 seeds | ¿Funciona el lazo config, binario, `summary.csv`? |
-| `series_smoke_kohonen` | El stub de Kohonen sobre los mismos datos, `grid_k` en 2, 3 y 4, 3 seeds (9 corridas) | ¿La clave que varía (`grid_k`) queda como columna de `summary.csv`? |
+| `series_smoke_kohonen` | El SOM de Kohonen entrenado (vecindad `step`, 260 épocas) sobre los mismos datos, `grid_k` en 2, 3 y 4, 3 seeds (9 corridas). `summary.csv` trae ahora `qe`, `te` y `empty_fraction`, más `occupied_neurons`, `mean_hits_occupied`, `max_hits` y `singleton_neurons` de `metrics.json` | ¿La clave que varía (`grid_k`) y las medidas del mapa quedan como columnas de `summary.csv`? |
 | `series_smoke_hopfield` | El stub de Hopfield sobre las letras de `neuron/tests/fixtures/patterns_small.csv`, dos variantes de `noise_levels` (`low`: 0.0 y 0.1; `high`: 0.3 y 0.5), 2 seeds (4 corridas) | ¿Funciona una variante que cambia una lista? (`noise_levels` va codificada como JSON en la columna) |
 
 Desde la raíz de TP4 también se corre con `make sweep SERIES=analysis/series_smoke_kohonen.json` (por defecto,
