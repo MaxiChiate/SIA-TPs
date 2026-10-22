@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Oja y decisiones de campaña
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-10-22T13:30:37.688Z"
-last_activity: 2026-10-21
-last_activity_desc: Phase 02 complete, transitioned to Phase 3
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-10-22T13:39:58.130Z"
+last_activity: 2026-10-22
+last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 20
-  completed_plans: 14
+  completed_plans: 15
   percent: 33
 ---
 
@@ -22,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-21)
 
 **Core value:** Interpretar correctamente los resultados de los métodos no supervisados para tomar decisiones de campaña fundamentadas en evidencia
-**Current focus:** Phase 3 — Oja y decisiones de campaña
+**Current focus:** Phase 03 — Oja y decisiones de campaña
 
 ## Current Position
 
-Phase: 03 (Oja y decisiones de campaña) — READY TO EXECUTE
-Plan: Not started
+Phase: 03 (Oja y decisiones de campaña) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-10-21 — Phase 02 complete, transitioned to Phase 3
+Last activity: 2026-10-22 — Phase 03 execution started
 
 Progress: [███░░░░░░░] 33%
 
@@ -62,6 +62,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 02 P04 | 4 min | 3 tasks | 5 files |
 | Phase 02 P05 | 25 min | 2 tasks | 5 files |
 | Phase 02 P06 | 6 min | 3 tasks | 5 files |
+| Phase 03 P01 | 10 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-05: stability SD in stage-1 curves computed from stability.csv (ddof 1, 45 pairs); empty neurons hatched in z planes as well as raw planes; section 5 reads the figure run only, regions and PCA contrast left to 02-06
 - [Phase 02]: 02-06: the committed region rule yields one region (R1, 50 creators) on the k = 5 map; reported as is, percentile untouched
 - [Phase 02]: 02-06: map layout follows PC1 (R2 0,961, p = 0,001) but not PC2 (R2 0,055, p = 0,267); Mantel grid vs plane rho 0,599
+- [Phase 03]: 03-01: Oja example config eta0 0.001 / eta_final 0.0001 / epochs 500 needed no change; pivot average_caption_words for seeds 1-3, eta0 x max|x|^2 = 0.0573
+- [Phase 03]: 03-01: Oja orientation (largest-|w| positive, lowest index on tie) lives in C as exported oja_orient; no commits made in this plan per user preference
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T23:58:18.009Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-oja-y-decisiones-de-campa-a/03-CONTEXT.md
+Last session: 2026-10-22T13:39:58.064Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None
