@@ -75,7 +75,8 @@ la última línea de stdout sigue siendo `summary -> <ruta>` y el comando termin
 
 | Serie | Qué corre | Pregunta |
 |---|---|---|
-| `series_smoke_oja` | El stub de Oja sobre los datos auditados (`datos/prepared/creadores_zscore.csv`, 50 x 26; `make prepare` lo genera, no se versiona), 3 seeds | ¿Funciona el lazo config, binario, `summary.csv`? |
+| `series_smoke_oja` | La regla de Oja (ya no es un stub) sobre los datos auditados (`datos/prepared/creadores_zscore.csv`, 50 x 26; `make prepare` lo genera, no se versiona), 3 seeds | ¿Funciona el lazo config, binario, `summary.csv`? |
+| `series_oja` | La regla de Oja con el config de ejemplo (`neuron/config.json.oja.example`: η0 = 0,001, ηf = 0,0001, 500 épocas) y 10 seeds; la seed 1 produce las tablas y las figuras de la Fase 3 | ¿Converge `w` al primer componente de la PCA y con qué dispersión entre seeds? (`make oja`) |
 | `series_smoke_kohonen` | El SOM de Kohonen entrenado (vecindad `step`, 260 épocas) sobre los mismos datos, `grid_k` en 2, 3 y 4, 3 seeds (9 corridas). `summary.csv` trae ahora `qe`, `te` y `empty_fraction`, más `occupied_neurons`, `mean_hits_occupied`, `max_hits` y `singleton_neurons` de `metrics.json` | ¿La clave que varía (`grid_k`) y las medidas del mapa quedan como columnas de `summary.csv`? |
 | `series_smoke_hopfield` | El stub de Hopfield sobre las letras de `neuron/tests/fixtures/patterns_small.csv`, dos variantes de `noise_levels` (`low`: 0.0 y 0.1; `high`: 0.3 y 0.5), 2 seeds (4 corridas) | ¿Funciona una variante que cambia una lista? (`noise_levels` va codificada como JSON en la columna) |
 | `series_som_stage1` | La etapa 1 de la regla de elección de grilla del SOM (sección 2 de `deliverables/02-kohonen.md`): 14 variantes (k de 2 a 8, vecindad escalón y gaussiana) x 10 seeds = 140 corridas, sobre los mismos datos auditados | ¿Qué grilla elige la regla fijada de antemano? (`make som-stage1`) |
@@ -105,3 +106,13 @@ raíz de TP4:
 | `make som-stage2` | `analysis/results/som/series_som_stage2/` (robustez del schedule) |
 | `make som-figures` | `analysis/results/som/figures/` |
 | `make som-profiles` | `analysis/results/som/profiles/` |
+
+## Oja y campañas (Fase 3)
+
+La regla de Oja corre en C (`series_oja`); Python compara su vector con PC1, arma las listas por campaña con la regla commiteada en la sección 4 de `deliverables/03-oja-campanas.md` y corre la demo de mantenimiento. Las salidas van a `analysis/results/` (no se versiona). Desde la raíz de TP4:
+
+| Target | Escribe |
+|---|---|
+| `make oja` | `analysis/results/oja/` (`weights.csv`, `index.csv`, comparación con PC1, convergencia y evidencia del máximo) |
+| `make campaigns` | `analysis/results/campaigns/` (listas por campaña, líneas base por followers, métricas y dos figuras); se niega a correr si la regla o `analysis/campaigns_select.py` cambiaron desde su commit |
+| `make maintenance` | `analysis/results/maintenance/` (demo con un creador sintético `SYN001`: mapeo con `scripts/map_creator.py`, neurona ganadora, índice de Oja y chequeo de deriva) |

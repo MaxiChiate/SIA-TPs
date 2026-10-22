@@ -291,3 +291,45 @@ Lo que muestran las tres lecturas:
 - **Mapa SOM.** La Fase 2 dio una sola región (R1 = 50), así que las neuronas se leen como posiciones sobre un continuo y no como segmentos (D-14). Según la lectura de `deliverables/02-kohonen.md` (6.3), la zona inferior derecha del mapa reúne creadores grandes y caros y la superior izquierda creadores chicos y baratos, y la línea base global cae en (3, 4) y (4, 4), en la primera. La lista de profundidad de fútbol cae en (1, 1), (2, 0) y (2, 1), y las dos primeras están entre las neuronas de creadores chicos y baratos; la de perros pone dos creadores en (0, 0), donde 6.3 ubica creadores chicos y baratos de perros, y a @crearenreels en (4, 4). Las listas de alcance y descubrimiento de fútbol quedan sobre todo en las filas 2 a 4, la de maquillaje en las filas 0 a 2 y la de arte aparece en esquinas opuestas, de (0, 2) a (4, 4). La orientación del mapa es arbitraria; la figura es `analysis/results/campaigns/shortlists_som.svg`.
 - **Índice de Oja.** Solo la lista de perros tiene creadores en el top 5 del índice (2 de 5, rangos 2 y 3); las otras cinco listas propias tienen 0 de 5, y la línea base global ocupa los puestos 44 a 48 (el índice con el signo de D-02 ordena a los grandes al final, sección 3). Es lo que se quería mostrar (D-15): elegir por el índice no daría ninguna de estas listas, y coincide con el "No" de la sección 3.
 - **PC1 y PC2.** La línea base global y las listas de alcance y descubrimiento de fútbol caen en el lado negativo de PC1 (medias de -5,69, -4,00 y -3,12), el lado de los creadores grandes de la figura, y la lista de profundidad de fútbol (3,25), la de perros (2,19) y la de maquillaje (1,14) en el positivo; la de arte queda cerca del origen (-0,36). En PC2, la lista de perros y la línea base global tienen medias altas (2,27 las dos) y las demás quedan entre -1,24 y 0,37. Son lecturas de posición en un plano que explica 53,2 % y 8,5 % de la varianza, no una razón para estar en la lista; la figura es `analysis/results/campaigns/shortlists_biplot.svg`.
+
+## 6. Mantenimiento del sistema
+
+Cuatro preguntas del enunciado (qué pasa con una campaña nueva, con creadores nuevos, con variables nuevas y en la actualización mensual) tienen una respuesta concreta cada una; la última se acompaña de una demo chica con un creador sintético.
+
+**Campaña nueva.** No se re-entrena nada. Una campaña nueva es una regla nueva sobre el mismo filtro de tema más un criterio de ranking: se escribe y se commitea antes de calcular su lista, como la sección 4, y se aplica sobre los mismos datos. El SOM, el vector `w` de Oja y la PCA quedan como están; solo se agrega un criterio y, si el tema es uno de los cuatro, un filtro que ya existe.
+
+**Creadores nuevos.** Se estandarizan con el scaler guardado (`datos/prepared/creadores_zscore.meta.json`, con `scripts/map_creator.py`, que no vuelve a leer los datos de entrenamiento), se les asigna la neurona ganadora (BMU) en el mapa guardado y su índice de Oja es `x · w` con el `w` guardado y el signo de D-02. Se re-entrena solo cuando la distancia del creador nuevo a su BMU supera la distribución de las distancias de entrenamiento, es decir, cuando es mayor que la mayor distancia al BMU entre los 50 creadores de entrenamiento: ahí el mapa no representa bien al recién llegado. Mientras no la supere, el mapa y el índice se siguen usando tal cual.
+
+**Variables nuevas.** Cambia la dimensión de la entrada, así que no hay nada que reutilizar del modelo: se rehace la auditoría de la Fase 1 (relaciones exactas y redundancias), se vuelve a estandarizar y se vuelve a entrenar el SOM y Oja desde cero, porque el libro de códigos y `w` tienen una componente por variable; también se rehace la PCA de referencia, de la que depende el signo y la comparación de la sección 2.
+
+**Actualización mensual.** Se fija la seed y se versionan, por mes, el scaler y el libro de códigos junto con el `w` de Oja. Al re-entrenar la orientación del mapa puede cambiar, así que las neuronas y las regiones se rotulan por su contenido (el perfil en unidades originales) y no por su posición, y el `w` de Oja se orienta siempre con la convención de signo de D-02 para que el índice conserve su significado (un índice alto sigue siendo un creador chico). Antes de re-entrenar, el chequeo del mes es el de arriba: la distancia al BMU de los creadores del mes sobre el mapa anterior, contra la distribución de entrenamiento; solo si la supera se re-entrena.
+
+**Demo con un creador sintético.** Para mostrar el mecanismo se arma un creador sintético (`SYN001`, `@sintetico_demo`) con las medianas de las 31 columnas de `datos/creadores.csv`, con las cinco relaciones exactas restauradas; no es un creador real, vive solo en `analysis/results/maintenance/` y nunca entra a `datos/creadores.csv` ni a ninguna lista. `make maintenance` lo mapea con `scripts/map_creator.py` y el scaler guardado, lo ubica en el mapa de la Fase 2 (k = 5, `k5-step`, seed de las figuras), calcula su índice de Oja con el `w` guardado y compara su distancia al BMU con la de los 50 creadores de entrenamiento. Estas son las líneas de `report_demo.md`:
+
+- El creador sintético (SYN001, @sintetico_demo) se arma con las medianas de las 31 columnas de datos/creadores.csv; no es un creador real y no está en ninguna lista.
+- Su neurona ganadora en el mapa k5-step (seed 4) es (fila 3, col 1) a distancia 1,329 de su vector.
+- Distancias de entrenamiento al BMU: QE media 2,724, máximo 3,651, percentil 95 3,545; el 0,0 % de esas distancias es menor o igual que la del creador sintético.
+- Veredicto de deriva: no hace falta re-entrenar (la distancia del creador sintético no supera el máximo de entrenamiento).
+- El creador sintético tiene índice de Oja 0,249 con el w guardado y ocuparía el lugar 24 entre los 50 creadores (1 = índice más alto, 51 = más bajo que los 50).
+
+El veredicto significa que, con la regla D-18, este creador, que tiene valores típicos por construcción (las medianas), no obliga a re-entrenar: su distancia al BMU no supera la mayor de entrenamiento. Es una demostración del mecanismo y no una prueba de que los creadores reales de un mes nuevo vayan a pasar el chequeo; un creador con valores lejos de los 50 sí lo dispararía.
+
+## 7. Cómo reproducir
+
+Desde `TP4/`, en un clone nuevo:
+
+```
+make venv         # crea .venv e instala analysis/requirements.txt (versiones fijadas); sin uv: python3.12 -m venv .venv,
+                  # .venv/bin/pip install -r analysis/requirements.txt y touch .venv/.installed
+make prepare      # escribe datos/prepared/: matriz auditada de 26 variables y de 31 columnas con sus .meta.json
+make pca          # PCA de la matriz de correlación; escribe analysis/results/pca/ (la lee Oja)
+make som-stage1   # 140 corridas del SOM; escribe analysis/results/som/series_som_stage1/ con selection.json
+                  # (se niega a correr si la regla de la Fase 2 no está commiteada y sin cambios)
+make oja          # Oja en C con 10 seeds, comparación con PC1, convergencia y evidencia del máximo; escribe analysis/results/oja/
+make campaigns    # listas por campaña, líneas base por followers, métricas y dos figuras; escribe analysis/results/campaigns/
+                  # (se niega a correr si la regla de la sección 4 y analysis/campaigns_select.py no están commiteadas y sin cambios)
+make maintenance  # demo del creador sintético y chequeo de deriva; escribe analysis/results/maintenance/
+make test         # tests de C y de Python (incluye los de Oja, las campañas y la demo)
+```
+
+`analysis/results/` no se versiona: cada número y cada figura de este fragmento se regenera con estos comandos, byte a byte para las mismas seeds (salvo `runs.json` y los nombres de las carpetas de cada sweep, que llevan la fecha).
