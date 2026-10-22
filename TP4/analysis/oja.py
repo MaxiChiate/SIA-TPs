@@ -34,7 +34,7 @@ import plots_style  # noqa: E402
 import som  # noqa: E402
 import sweep  # noqa: E402
 from creadores import load_creadores  # noqa: E402
-from pca import _pearson, dominant_topics  # noqa: E402
+from pca import TOPICS, _pearson, dominant_topics  # noqa: E402
 
 SERIES = TP_DIR / "analysis" / "series_oja.json"
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "oja"
@@ -483,6 +483,87 @@ def convergence_bullets(figure: OjaRun, figure_rows: list[dict], disp: dict, mar
 
 
 # ----------------------------------------------------------------------------------------------
+# Evidence of the maximum under both signs (OJA-03, D-06)
+# ----------------------------------------------------------------------------------------------
+
+EVIDENCE_TOP = 10
+EVIDENCE_TARGETS = ("followers", *(name for name, _ in TOPICS))
+SIGNS = (1, -1)  # +1 is the D-02 convention, -1 the opposite one
+SIGN_LABELS = {1: "de D-02", -1: "opuesto"}
+EVIDENCE_WEIGHT_COLUMNS = ["variable", "w"]
+EVIDENCE_CORR_COLUMNS = ["target", "sign", "pearson", "spearman"]
+EVIDENCE_TOP_COLUMNS = ["sign", "topic", "overlap_top10_by_share", "dominant_in_index_top10"]
+
+
+def evidence(w, features, index, data, ids) -> dict:
+    """The evidence behind "is the creator with the highest index the right choice for any campaign?" under both
+    signs (D-06). `index` is in the order of `ids`; the raw followers and topic shares come from `data` (the
+    Creadores of datos/creadores.csv) matched by creator id. Ties in a top-k keep the row order."""
+    w, index = np.asarray(w, dtype=np.float64), np.asarray(index, dtype=np.float64)
+    position = {cid: i for i, cid in enumerate(data.ids)}
+    missing = [cid for cid in ids if cid not in position]
+    if missing:
+        raise ValueError(f"creators not found in the raw data: {missing[:3]}")
+    rows = [position[cid] for cid in ids]
+    raw = {name: data.values[rows, data.columns.index(name)] for name in EVIDENCE_TARGETS}
+    shares = np.column_stack([raw[name] for name, _ in TOPICS])
+    dominant = [TOPICS[int(np.argmax(shares[i]))][1] for i in range(len(ids))]
+
+    order = np.argsort(-np.abs(w), kind="stable")
+    weights = [{"variable": features[int(i)], "w": float(w[int(i)])} for i in order]
+
+    correlations, top10, maximum = [], [], {}
+    for target in EVIDENCE_TARGETS:
+        for sign in SIGNS:
+            signed = sign * index
+            correlations.append({"target": target, "sign": sign, "pearson": _pearson(signed, raw[target]),
+                                 "spearman": som.spearman_ties(signed, raw[target])})
+    for sign in SIGNS:
+        signed = sign * index
+        top_index = top_k(signed, EVIDENCE_TOP)
+        for name, label in TOPICS:
+            top_share = top_k(raw[name], EVIDENCE_TOP)
+            top10.append({"sign": sign, "topic": label, "overlap_top10_by_share": overlap(top_index, top_share),
+                          "dominant_in_index_top10": sum(1 for i in top_index if dominant[int(i)] == label)})
+        best = int(top_k(signed, 1)[0])
+        maximum[f"{sign:+d}"] = {
+            "creator_id": ids[best], "name": data.names[rows[best]], "dominant_topic": dominant[best],
+            "followers": int(raw["followers"][best]), "index": float(signed[best]),
+        }
+    return {"weights": weights, "correlations": correlations, "top10": top10, "maximum": maximum}
+
+
+def evidence_lines(ev: dict) -> list[str]:
+    """Report lines of report_evidence.md: three tables and two bullets, comma decimals, nothing else."""
+    lines = ["| Variable | w (convención D-02) |", "|---|---|"]
+    lines += [f"| {row['variable']} | {_signed(row['w'], 4)} |" for row in ev["weights"]]
+    corr = {(row["target"], row["sign"]): row for row in ev["correlations"]}
+    lines += ["| Variable cruda | Pearson (D-02) | Spearman (D-02) | Pearson (signo opuesto) | "
+              "Spearman (signo opuesto) |",
+              "|---|---|---|---|---|"]
+    for target in EVIDENCE_TARGETS:
+        cells = [_signed(corr[(target, sign)][kind], 3) for sign in SIGNS for kind in ("pearson", "spearman")]
+        lines.append(f"| {target} | {cells[0]} | {cells[1]} | {cells[2]} | {cells[3]} |")
+    top = {(row["sign"], row["topic"]): row for row in ev["top10"]}
+    lines += ["| Tema | Top 10 por porcentaje en común con el top 10 del índice (D-02) | "
+              "Top 10 por porcentaje en común con el top 10 del índice (signo opuesto) | "
+              "Creadores del top 10 del índice con ese tema dominante (D-02) | "
+              "Creadores del top 10 del índice con ese tema dominante (signo opuesto) |",
+              "|---|---|---|---|---|"]
+    for _, label in TOPICS:
+        lines.append(f"| {label} | {top[(1, label)]['overlap_top10_by_share']} de {EVIDENCE_TOP} | "
+                     f"{top[(-1, label)]['overlap_top10_by_share']} de {EVIDENCE_TOP} | "
+                     f"{top[(1, label)]['dominant_in_index_top10']} de {EVIDENCE_TOP} | "
+                     f"{top[(-1, label)]['dominant_in_index_top10']} de {EVIDENCE_TOP} |")
+    for sign in SIGNS:
+        best = ev["maximum"][f"{sign:+d}"]
+        lines.append(f"- Máximo con el signo {SIGN_LABELS[sign]}: {best['creator_id']} ({best['name']}), "
+                     f"tema dominante {best['dominant_topic']}, {best['followers']} followers, "
+                     f"índice {_signed(best['index'], 2)}.")
+    return lines
+
+
+# ----------------------------------------------------------------------------------------------
 # main
 # ----------------------------------------------------------------------------------------------
 
@@ -543,6 +624,21 @@ def main(argv: list[str] | None = None) -> int:
     _write_lines(out / "report_convergence.md", convergence_bullets(figure, figure_rows, disp, margin))
     plot_convergence(conv, {"eta0": float(figure.metrics["eta0"]), "eta_final": float(figure.metrics["eta_final"]),
                             "epochs": int(figure.metrics["epochs"])}, out / "convergence")
+
+    data = load_creadores()
+    if list(data.ids) != list(pca_ref.creator_ids):
+        raise SystemExit("the creator order of datos/creadores.csv differs from analysis/results/pca/ (T-03-07)")
+    ev = evidence(figure.w, figure.features, figure.index, data, pca_ref.creator_ids)
+    _write_table(out / "evidence_weights.csv", EVIDENCE_WEIGHT_COLUMNS,
+                 [[row["variable"], _fmt(row["w"])] for row in ev["weights"]])
+    _write_table(out / "evidence_correlations.csv", EVIDENCE_CORR_COLUMNS,
+                 [[row["target"], f"{row['sign']:+d}", _fmt(row["pearson"]), _fmt(row["spearman"])]
+                  for row in ev["correlations"]])
+    _write_table(out / "evidence_top10.csv", EVIDENCE_TOP_COLUMNS,
+                 [[f"{row['sign']:+d}", row["topic"], row["overlap_top10_by_share"], row["dominant_in_index_top10"]]
+                  for row in ev["top10"]])
+    _write_json(out / "evidence.json", {"figure_seed": FIGURE_SEED, "maximum": ev["maximum"]})
+    _write_lines(out / "report_evidence.md", evidence_lines(ev))
     print(f"oja -> {out}")
     return 0
 
