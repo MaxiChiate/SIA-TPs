@@ -113,3 +113,22 @@ def test_read_oja_run_rejects_bad_header(tmp_path):
     path.write_text(path.read_text().replace("epoch,eta,w_norm,delta_w", "epoch,eta,delta_w", 1))
     with pytest.raises(ValueError, match="trace.csv"):
         oja.read_oja_run(run_dir)
+
+
+def test_convergence_abs_cos_normalizes():
+    v = np.array([0.6, 0.0, 0.8])
+    noisy = v + np.array([0.0, 0.1, 0.0])
+    trace = np.array([
+        [0, 0.001, 1.5, 0.0, *(2.0 * v)],
+        [1, 0.0009, 2.5, 0.25, *(-3.0 * v)],
+        [2, 0.0008, 1.0, 0.125, *noisy],
+    ])
+    rows = oja.convergence_rows(4, trace, v)
+
+    assert [row["epoch"] for row in rows] == [0, 1, 2] and all(row["seed"] == 4 for row in rows)
+    assert rows[0]["abs_cos"] == pytest.approx(1.0, abs=1e-12)
+    assert rows[1]["abs_cos"] == pytest.approx(1.0, abs=1e-12)
+    assert rows[2]["abs_cos"] == pytest.approx(float(noisy @ v / np.linalg.norm(noisy)), abs=1e-12)
+    assert [row["w_norm"] for row in rows] == [1.5, 2.5, 1.0]
+    assert [row["delta_w"] for row in rows] == [0.0, 0.25, 0.125]
+    assert [row["eta"] for row in rows] == [0.001, 0.0009, 0.0008]
