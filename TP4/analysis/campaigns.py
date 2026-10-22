@@ -98,6 +98,14 @@ def list_metrics(members, data, campaign, objective) -> dict:
     }
 
 
+def objective_means(members, data, objective):
+    raise NotImplementedError  # RED stub of plan 03-05, Task 2
+
+
+def index_top_overlap(members, oja_index, k=campaigns_select.K):
+    raise NotImplementedError  # RED stub of plan 03-05, Task 2
+
+
 # ----------------------------------------------------------------------------------------------
 # Inputs
 # ----------------------------------------------------------------------------------------------

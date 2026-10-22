@@ -88,3 +88,29 @@ def test_main_refuses_without_rule(monkeypatch, tmp_path):
     with pytest.raises(SystemExit):
         campaigns.main(["--out", str(out)])
     assert not out.exists()
+
+
+def test_index_top_overlap():
+    oja_index = np.array([5.0, 4.0, 3.0, 2.0, 1.0, 0.0])
+    # the top 2 of the index are creators 0 and 1: only creator 0 of the list is among them
+    assert campaigns.index_top_overlap([0, 2, 5], oja_index, k=2) == 1
+    assert campaigns.index_top_overlap([], oja_index, k=2) == 0
+    # an exact tie at the boundary goes to the earlier row
+    tied = np.array([1.0, 3.0, 3.0, 0.0])
+    assert campaigns.index_top_overlap([1], tied, k=1) == 1
+    assert campaigns.index_top_overlap([2], tied, k=1) == 0
+
+
+def test_objective_means():
+    objective = "descubrimiento"
+    variables = cs.OBJECTIVE_COLUMNS[objective]
+    assert len(variables) > 1
+    data = build(3, **topic_columns(["fútbol"] * 3), non_follower_reach_pct=[40.0, 20.0, 99.0],
+                 trend_posts_pct=[10.0, 30.0, 77.0])
+    means = campaigns.objective_means([0, 1], data, objective)
+    assert list(means) == list(variables)
+    assert means["non_follower_reach_pct"] == pytest.approx(30.0, abs=1e-12)
+    assert means["trend_posts_pct"] == pytest.approx(20.0, abs=1e-12)
+    empty = campaigns.objective_means([], data, objective)
+    assert list(empty) == list(variables)
+    assert all(math.isnan(v) for v in empty.values())
