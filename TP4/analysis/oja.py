@@ -30,7 +30,7 @@ TP_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(TP_DIR / "scripts"))
 sys.path.insert(0, str(TP_DIR / "analysis"))
 
-import plots_style  # noqa: E402,F401
+import plots_style  # noqa: E402
 import som  # noqa: E402
 import sweep  # noqa: E402
 from creadores import load_creadores  # noqa: E402
@@ -223,6 +223,115 @@ def seeds_table(runs: dict, v1) -> list[dict]:
 
 
 # ----------------------------------------------------------------------------------------------
+# Dispersion across seeds, convergence per epoch and the pivot margin (D-01, D-02, D-03)
+# ----------------------------------------------------------------------------------------------
+
+
+def dispersion(runs: dict, v1) -> dict:
+    """How much the 10 seeds disagree (D-03): alignment with PC1, orientation, pivots, pairwise alignment of
+    the weight vectors and the per-creator spread of the index across seeds."""
+    seeds = sorted(runs)
+    if len(seeds) < 2:
+        raise ValueError("dispersion needs at least two seeds")
+    weights = np.array([runs[seed].w for seed in seeds])
+    unit = weights / np.linalg.norm(weights, axis=1, keepdims=True)
+    pairs = (unit @ unit.T)[np.triu_indices(len(seeds), 1)]
+    aligned = np.array([abs_cos(runs[seed].w, v1) for seed in seeds])
+    same_side = np.array([float(runs[seed].w @ np.asarray(v1, dtype=np.float64)) > 0 for seed in seeds])
+    spread = np.array([runs[seed].index for seed in seeds])
+    spread = spread.max(axis=0) - spread.min(axis=0)
+    worst = int(np.argmin(aligned))
+    return {
+        "n_seeds": len(seeds),
+        "n_abs_cos_above": int(np.sum(aligned > COS_MIN)),
+        "n_same_orientation": int(np.sum(same_side)),
+        "pivots": sorted({str(runs[seed].metrics["pivot"]) for seed in seeds}),
+        "min_pairwise_abs_cos": float(np.min(np.abs(pairs))),
+        "mean_pairwise_abs_cos": float(np.mean(np.abs(pairs))),
+        "min_pairwise_cos": float(np.min(pairs)),
+        "max_index_range": float(np.max(spread)),
+        "mean_index_range": float(np.mean(spread)),
+        "worst_one_minus_abs_cos": float(1.0 - aligned[worst]),
+        "worst_seed": int(seeds[worst]),
+    }
+
+
+def convergence_rows(seed: int, trace, v1) -> list[dict]:
+    """Per epoch: eta, w_norm and delta_w as C wrote them, and abs(cos(w_e, v1)) computed here (D-01) on the
+    trace weights normalized to length 1 (the trace holds w before renormalizing)."""
+    trace = np.asarray(trace, dtype=np.float64)
+    v1 = np.asarray(v1, dtype=np.float64)
+    weights = trace[:, len(TRACE_FIXED):]
+    norms = np.linalg.norm(weights, axis=1)
+    if np.any(norms == 0.0):
+        raise ValueError(f"seed {seed}: the trace has a zero weight vector")
+    cosines = np.abs((weights / norms[:, None]) @ (v1 / np.linalg.norm(v1)))
+    return [{"seed": int(seed), "epoch": int(trace[i, 0]), "eta": float(trace[i, 1]),
+             "w_norm": float(trace[i, 2]), "delta_w": float(trace[i, 3]), "abs_cos": float(cosines[i])}
+            for i in range(trace.shape[0])]
+
+
+def pivot_margin(v1, features: list[str]) -> dict:
+    """The two largest |coefficients| of PC1: the D-02 sign convention rests on the gap between them, and on
+    these data it is small (average_caption_words +0.2521 against average_impressions -0.2493)."""
+    v1 = np.asarray(v1, dtype=np.float64)
+    order = np.argsort(-np.abs(v1), kind="stable")
+    first, second = int(order[0]), int(order[1])
+    return {
+        "first": features[first], "first_coef": float(v1[first]),
+        "second": features[second], "second_coef": float(v1[second]),
+        "margin": float(abs(v1[first]) - abs(v1[second])),
+    }
+
+
+CONVERGENCE_COLUMNS = ["seed", "epoch", "eta", "w_norm", "delta_w", "abs_cos"]
+FLOOR = 1e-16  # 1 - abs(cos) is drawn on a log axis; a perfect alignment is floored here
+
+
+def plot_convergence(rows: list[dict], params: dict, out_stem) -> None:
+    """Three panels on the epoch axis: 1 - abs(cos(w_e, v1)), abs(w) before renormalizing and ||delta w||. The
+    10 seeds are thin lines in one neutral colour (the palette has 8 slots), the figure seed is the first slot."""
+    plt = plots_style.apply_style()
+    by_seed: dict[int, list[dict]] = {}
+    for row in rows:
+        by_seed.setdefault(row["seed"], []).append(row)
+    highlight = plots_style.palette_for(["seed"])["seed"]
+
+    fig, axes = plt.subplots(3, 1, figsize=(9, 9.5), sharex=True)
+    panels = (
+        (axes[0], lambda r: max(1.0 - r["abs_cos"], FLOOR), "1 − |cos(w_e, v1)|", True, 0),
+        (axes[1], lambda r: r["w_norm"], "|w| antes de renormalizar", False, 0),
+        (axes[2], lambda r: r["delta_w"], "‖Δw‖ de la época", True, 1),
+    )
+    for ax, value, label, log, first_epoch in panels:
+        for seed in sorted(by_seed):
+            if seed == FIGURE_SEED:
+                continue
+            series = [r for r in by_seed[seed] if r["epoch"] >= first_epoch]
+            ax.plot([r["epoch"] for r in series], [value(r) for r in series], color=plots_style.TEXT_SECONDARY,
+                    linewidth=0.7, alpha=0.8)
+        if FIGURE_SEED in by_seed:
+            series = [r for r in by_seed[FIGURE_SEED] if r["epoch"] >= first_epoch]
+            ax.plot([r["epoch"] for r in series], [value(r) for r in series], color=highlight, linewidth=1.8,
+                    zorder=3)
+        if log:
+            ax.set_yscale("log")
+        ax.set_ylabel(label)
+    axes[1].axhline(1.0, color=plots_style.GRID, linewidth=1, zorder=0)
+    axes[2].set_xlabel("época")
+    handles = [plt.Line2D([], [], color=highlight, linewidth=1.8),
+               plt.Line2D([], [], color=plots_style.TEXT_SECONDARY, linewidth=0.7)]
+    axes[0].legend(handles, [f"seed {FIGURE_SEED}", f"las otras {len(by_seed) - 1} seeds"], frameon=False,
+                   fontsize=9, loc="upper right")
+    axes[0].set_title(
+        f"Convergencia de la neurona de Oja a PC1 ({len(by_seed)} seeds): η0 = {_compact(params['eta0'])}, "
+        f"ηf = {_compact(params['eta_final'])}, {params['epochs']} épocas",
+        fontsize=11, loc="left")
+    fig.tight_layout()
+    plots_style.save_figure(fig, out_stem)
+
+
+# ----------------------------------------------------------------------------------------------
 # The series
 # ----------------------------------------------------------------------------------------------
 
@@ -275,6 +384,10 @@ def _decimal(value: float, digits: int) -> str:
     return f"{value:.{digits}f}".replace(".", ",")
 
 
+def _signed(value: float, digits: int) -> str:
+    return f"{value:+.{digits}f}".replace(".", ",")
+
+
 def _scientific(value: float) -> str:
     return f"{value:.1e}".replace(".", ",")
 
@@ -320,6 +433,53 @@ def comparison_table(comp: dict) -> list[str]:
 
 def _write_lines(path: Path, lines: list[str]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _compact(value: float) -> str:
+    return f"{value:g}".replace(".", ",")
+
+
+def pc1_bullets(disp: dict) -> list[str]:
+    """The four seed bullets that follow the comparison table (D-03)."""
+    n = disp["n_seeds"]
+    pivots = disp["pivots"]
+    pivot = f"pivote de todas: {pivots[0]}" if len(pivots) == 1 else f"pivotes distintos: {', '.join(pivots)}"
+    return [
+        f"- Seeds con abs(cos(w, v1)) > {_compact(COS_MIN)}: {disp['n_abs_cos_above']} de {n}.",
+        f"- Seeds con la orientación de PCA (w · v1 > 0): {disp['n_same_orientation']} de {n}; {pivot}.",
+        f"- abs(cos) entre pares de seeds: mínimo {_decimal(disp['min_pairwise_abs_cos'], 7)}, "
+        f"media {_decimal(disp['mean_pairwise_abs_cos'], 7)}.",
+        f"- Rango del índice por creador entre seeds: máximo {_scientific(disp['max_index_range'])}, "
+        f"media {_scientific(disp['mean_index_range'])}.",
+    ]
+
+
+def first_epoch_below(rows: list[dict], threshold: float) -> int | None:
+    for row in rows:
+        if 1.0 - row["abs_cos"] < threshold:
+            return row["epoch"]
+    return None
+
+
+def convergence_bullets(figure: OjaRun, figure_rows: list[dict], disp: dict, margin: dict) -> list[str]:
+    """Bullets of report_convergence.md: the training parameters, where seed 1 ended and the pivot margin."""
+    m = figure.metrics
+    epochs, n = int(m["epochs"]), int(m["n_samples"])
+    reached = first_epoch_below(figure_rows, 1e-3)
+    reached_text = f"época {reached}" if reached is not None else "ninguna época"
+    return [
+        f"- Parámetros: η0 = {_compact(float(m['eta0']))}, ηf = {_compact(float(m['eta_final']))}, "
+        f"{epochs} épocas ({epochs * n} actualizaciones: {epochs} × {n} creadores).",
+        f"- Cota de estabilidad: η0 · máx ‖x‖² = {_decimal(float(m['eta0_max_x2']), 4)} (debe ser menor que 1).",
+        f"- Seed {FIGURE_SEED} al final del entrenamiento: |w| = {_decimal(float(m['w_norm_final']), 5)} antes de "
+        f"renormalizar y ‖Δw‖ = {_scientific(float(m['delta_w_final']))} en la última época.",
+        f"- Peor seed ({disp['worst_seed']}): 1 − |cos(w, v1)| = {_scientific(disp['worst_one_minus_abs_cos'])}.",
+        f"- Seed {FIGURE_SEED}: primera época con 1 − |cos(w_e, v1)| < 1e-3: {reached_text}.",
+        f"- Margen del pivote: los dos mayores coeficientes de PC1 son {margin['first']} "
+        f"({_signed(margin['first_coef'], 4)}) y {margin['second']} ({_signed(margin['second_coef'], 4)}), "
+        f"con un margen de {_decimal(margin['margin'], 5)} en valor absoluto: es el límite de la convención "
+        "de signo, que con otros datos podría elegir la otra variable e invertir w y el índice.",
+    ]
 
 
 # ----------------------------------------------------------------------------------------------
@@ -370,7 +530,19 @@ def main(argv: list[str] | None = None) -> int:
     _write_table(out / "index.csv", INDEX_COLUMNS, index_table(figure, pca_ref))
     _write_table(out / "weights.csv", ["variable", "w", "v1"],
                  [[name, _fmt(figure.w[i]), _fmt(pca_ref.v1[i])] for i, name in enumerate(figure.features)])
-    _write_lines(out / "report_pc1.md", comparison_table(comp))
+
+    disp = dispersion(runs, pca_ref.v1)
+    margin = pivot_margin(pca_ref.v1, pca_ref.features)
+    _write_json(out / "dispersion.json", {**disp, "pivot_margin": margin})
+    conv = [row for seed in sorted(runs) for row in convergence_rows(seed, runs[seed].trace, pca_ref.v1)]
+    _write_table(out / "convergence.csv", CONVERGENCE_COLUMNS,
+                 [[row["seed"], row["epoch"], _fmt(row["eta"]), _fmt(row["w_norm"]), _fmt(row["delta_w"]),
+                   _fmt(row["abs_cos"])] for row in conv])
+    _write_lines(out / "report_pc1.md", comparison_table(comp) + pc1_bullets(disp))
+    figure_rows = [row for row in conv if row["seed"] == FIGURE_SEED]
+    _write_lines(out / "report_convergence.md", convergence_bullets(figure, figure_rows, disp, margin))
+    plot_convergence(conv, {"eta0": float(figure.metrics["eta0"]), "eta_final": float(figure.metrics["eta_final"]),
+                            "epochs": int(figure.metrics["epochs"])}, out / "convergence")
     print(f"oja -> {out}")
     return 0
 
