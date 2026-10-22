@@ -132,3 +132,39 @@ def test_convergence_abs_cos_normalizes():
     assert [row["w_norm"] for row in rows] == [1.5, 2.5, 1.0]
     assert [row["delta_w"] for row in rows] == [0.0, 0.25, 0.125]
     assert [row["eta"] for row in rows] == [0.001, 0.0009, 0.0008]
+
+
+def test_evidence_both_signs():
+    """D-06 on a synthetic table whose index is topic_dogs_pct: the correlation and the overlaps flip with the sign."""
+    n = 12
+    rng = np.random.default_rng(3)
+    dogs = np.arange(1.0, n + 1.0) * 5.0  # distinct, increasing
+    rest = rng.uniform(0.0, 1.0, size=(n, 3))
+    columns = ["followers", "topic_football_pct", "topic_makeup_pct", "topic_dogs_pct", "topic_art_pct"]
+    values = np.column_stack([rng.uniform(1e3, 1e5, size=n), rest[:, 0], rest[:, 1], dogs, rest[:, 2]])
+    ids = [f"C{i:02d}" for i in range(n)]
+    data = creadores.Creadores(ids=ids, names=[f"@c{i}" for i in range(n)], columns=columns, values=values)
+    features = ["a", "b", "c"]
+    w = np.array([0.1, -0.8, 0.3])
+    index = dogs.copy()
+
+    ev = oja.evidence(w, features, index, data, ids)
+
+    assert [row["variable"] for row in ev["weights"]] == ["b", "c", "a"]
+    assert [row["w"] for row in ev["weights"]] == [-0.8, 0.3, 0.1]
+
+    corr = {(row["target"], row["sign"]): row for row in ev["correlations"]}
+    assert len(corr) == 10
+    assert corr[("topic_dogs_pct", 1)]["pearson"] == pytest.approx(1.0, abs=1e-12)
+    assert corr[("topic_dogs_pct", -1)]["pearson"] == pytest.approx(-1.0, abs=1e-12)
+    assert corr[("topic_dogs_pct", 1)]["spearman"] == pytest.approx(1.0, abs=1e-12)
+    assert corr[("topic_dogs_pct", -1)]["spearman"] == pytest.approx(-1.0, abs=1e-12)
+
+    top = {(row["sign"], row["topic"]): row for row in ev["top10"]}
+    assert len(top) == 8
+    assert top[(1, "perros")]["overlap_top10_by_share"] == 10
+    assert top[(-1, "perros")]["overlap_top10_by_share"] == 8
+    assert top[(1, "perros")]["dominant_in_index_top10"] == 10  # dogs is the dominant topic of the 10 largest
+
+    assert ev["maximum"]["+1"]["creator_id"] == ids[int(np.argmax(index))]
+    assert ev["maximum"]["-1"]["creator_id"] == ids[int(np.argmin(index))]
