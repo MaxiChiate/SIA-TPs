@@ -36,8 +36,14 @@ double kohonen_radius(double radius0, double radius_final, double fraction);
 // gaussian exp(-d2 / (2 radius^2))
 double kohonen_neighbor_weight(int d2, double radius, int gaussian);
 
-// Phase 1 stub: projects the input onto a random unit vector. Phase 3 replaces the body with Oja's rule.
+// Oja's rule for one neuron: uniform start scaled to length 1, shuffled epochs, exponentially decaying eta, final
+// renormalization to length 1 and the D-02 orientation (largest-|value| coefficient positive). Writes weights.csv,
+// index.csv, trace.csv and metrics.json.
 int run_oja(const Config * config, Rng * rng, const Results * results);
+
+// Oja helpers, exported for tests/test_main.c
+// Negates w when its largest-|value| coefficient is negative (lowest index on ties); returns 1 if it negated
+int oja_orient(double w[], int n);
 
 // Phase 1 stub: seeded pixel flips per noise level and the overlap with the stored pattern.
 // Phases 4 and 5 replace the body with the Hopfield network.

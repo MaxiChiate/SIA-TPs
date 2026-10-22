@@ -31,8 +31,12 @@ static const KeySpec KOHONEN_KEYS[] = {
   { NULL, KEY_INT, 0, NULL },
 };
 
-// The stub reads nothing else; Phase 3 appends the rows of the real Oja rule here
+// eta0, eta_final: learning rate at the first and the last step, decaying exponentially (D-01). epochs: passes over
+// the shuffled samples, fixed, no tolerance stop (D-01). The ranges are checked in models/oja.c.
 static const KeySpec OJA_KEYS[] = {
+  { "eta0", KEY_NUMBER, 1, NULL },
+  { "eta_final", KEY_NUMBER, 1, NULL },
+  { "epochs", KEY_INT, 1, NULL },
   { NULL, KEY_INT, 0, NULL },
 };
 
