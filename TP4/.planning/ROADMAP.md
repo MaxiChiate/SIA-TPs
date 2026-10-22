@@ -101,7 +101,7 @@ Plans:
   4. Para cada campaña (fútbol, perros, maquillaje, arte) hay una recomendación justificada con Kohonen, Oja y PCA, comparada contra elegir solo por `followers` con el mismo k (overlap@k, proporción por tema, costo por alcance argentino) y sin afirmaciones de ROI.
   5. Hay respuestas concretas de mantenimiento para una campaña nueva, creadores o variables nuevas y la actualización mensual, apoyadas en el scaler guardado y en las decisiones de re-entrenamiento.
 
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans executed
 
 Plans:
 **Wave 1**
@@ -118,7 +118,7 @@ Plans:
 - [x] 03-05-PLAN.md — `make campaigns`: listas por la regla commiteada, dos líneas base por followers, métricas de D-17, lectura con SOM/Oja/PCA y figuras; sección 5
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 03-06-PLAN.md — Mantenimiento: demo con un creador sintético (scaler, BMU, índice, drift); secciones 6 y 7 y README
+- [x] 03-06-PLAN.md — Mantenimiento: demo con un creador sintético (scaler, BMU, índice, drift); secciones 6 y 7 y README
 
 ### Phase 4: Hopfield núcleo y letras
 
@@ -170,7 +170,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 |-------|----------------|--------|-----------|
 | 1. Fundación, auditoría de datos y PCA | 8/8 | Complete    | 2026-10-20 |
 | 2. Kohonen SOM | 6/6 | Complete    | 2026-10-21 |
-| 3. Oja y decisiones de campaña | 5/6 | In Progress | - |
+| 3. Oja y decisiones de campaña | 6/6 | In Progress | - |
 | 4. Hopfield núcleo y letras | 0/TBD | Not started | - |
 | 5. Hopfield con QR | 0/TBD | Not started | - |
 | 6. Slides e informe | 0/TBD | Not started | - |

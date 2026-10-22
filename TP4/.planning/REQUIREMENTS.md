@@ -38,7 +38,7 @@
 
 - [x] **CAMP-01**: Recomendación por campaña (fútbol, perros, maquillaje, arte) justificada con los resultados de Kohonen, Oja y PCA
 - [x] **CAMP-02**: Comparación contra la estrategia solo por `followers` con el mismo k (overlap@k, proporción por tema, costo por alcance argentino), sin afirmaciones de ROI
-- [ ] **CAMP-03**: Respuestas concretas de mantenimiento: nueva campaña, creadores o variables nuevas, actualización mensual
+- [x] **CAMP-03**: Respuestas concretas de mantenimiento: nueva campaña, creadores o variables nuevas, actualización mensual
 
 ### Hopfield
 
@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OJA-03 | Phase 3 | Complete |
 | CAMP-01 | Phase 3 | Complete |
 | CAMP-02 | Phase 3 | Complete |
-| CAMP-03 | Phase 3 | Pending |
+| CAMP-03 | Phase 3 | Complete |
 | HOP-01 | Phase 4 | Pending |
 | HOP-02 | Phase 4 | Pending |
 | HOP-03 | Phase 4 | Pending |
