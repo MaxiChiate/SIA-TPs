@@ -1,5 +1,53 @@
 # Fase 3 — Regla de Oja y decisiones de campaña
 
+## 1. Regla de Oja: algoritmo, parámetros y convergencia
+
+**Datos.** La neurona entrena sobre las 26 variables auditadas de la Fase 1 con z-score (`datos/prepared/creadores_zscore.csv`, 50 creadores). Como cada columna tiene media 0 (lo comprueba `test_input_is_centered`, con medias de valor absoluto menores que 1e-12), la regla converge al primer componente principal de la matriz de covarianza; con datos sin centrar convergería a otra dirección, dominada por las medias.
+
+**Algoritmo.** Para cada creador `x` se calcula `y = w · x` y se actualiza `w ← w + η y (x − y w)` (regla de Oja, slides del curso p. 16). `w` arranca con cada componente uniforme en [0, 1) (con la semilla de la corrida) y escalado a longitud 1. Cada época recorre los 50 creadores una vez, en un orden barajado distinto cada vez. La tasa η decae exponencialmente de η0 a ηf a lo largo de todas las actualizaciones, y el número de épocas es fijo: no hay parada por tolerancia. Al terminar se renormaliza `w` a longitud 1 y se le aplica la convención de signo D-02. El índice de cada creador es `x · w`.
+
+**Parámetros.** `neuron/config.json.oja.example`: η0 = 0,001 (el valor del curso, slides p. 15), ηf = 0,0001 y 500 épocas. η0 es chico a propósito: la regla es estable cuando η0 · máx ‖x‖² es mucho menor que 1, y acá vale 0,0573, de modo que ni los creadores más alejados del centro llevan a `w` a divergir (Pitfall 8 de la investigación, y el binario se niega a correr con un producto de 1 o más). Se corren 10 seeds (1 a 10); la seed 1 es la de las figuras y la de las tablas.
+
+**Signo (D-02).** `w` está definido salvo por el signo: `-w` es igual de buena como solución. La convención de D-02 la fija en C, para que la corrida sea reproducible: el coeficiente de mayor valor absoluto (el pivote) queda positivo, la misma regla con la que la Fase 1 orienta los componentes (sección 5 de `deliverables/01-datos-pca.md`). En las 10 seeds, `seeds.csv` marca `sign_flipped = 1`: el vector entrenado salió del lado opuesto al pivote positivo y C lo dio vuelta. No se verificó la causa; una lectura plausible es que el arranque, con todas las componentes positivas, queda más cerca del lado de las variables de tamaño, que en PC1 son negativas. Python nunca reorienta una corrida: la compara tal como la escribió C.
+
+**Convergencia.** Estas son las líneas del informe de convergencia (`report_convergence.md`), con la seed 1 salvo donde se indica:
+
+- Parámetros: η0 = 0,001, ηf = 0,0001, 500 épocas (25000 actualizaciones: 500 × 50 creadores).
+- Cota de estabilidad: η0 · máx ‖x‖² = 0,0573 (debe ser menor que 1).
+- Seed 1 al final del entrenamiento: |w| = 1,00032 antes de renormalizar y ‖Δw‖ = 1,4e-04 en la última época.
+- Peor seed (6): 1 − |cos(w, v1)| = 2,5e-07.
+- Seed 1: primera época con 1 − |cos(w_e, v1)| < 1e-3: época 8.
+- Margen del pivote: los dos mayores coeficientes de PC1 son average_caption_words (+0,2521) y average_impressions (-0,2493), con un margen de 0,00275 en valor absoluto: es el límite de la convención de signo, que con otros datos podría elegir la otra variable e invertir w y el índice.
+
+**Qué muestra la figura.** `analysis/results/oja/convergence.svg` tiene tres paneles sobre el eje de épocas, con la seed 1 en color y las otras 9 en gris. Arriba, 1 − |cos(w_e, v1)| en escala logarítmica, donde `w_e` es el vector sin normalizar al final de la época `e` y `v1` el primer autovector de la PCA: baja de 0,8 en la época 0 a menos de 1e-3 en la época 8 (seed 1), queda en el orden de 1e-4 hasta la época 20 aproximadamente y después sigue bajando, con ruido, a medida que η decrece, hasta 1,7e-7 en la época 500. En el medio, |w| antes de renormalizar: sube hasta 1,004 en las primeras épocas y vuelve hacia 1 hasta 1,0003, y las 10 seeds casi coinciden. Abajo, ‖Δw‖ de cada época, que cae de unos 0,3 a 1,4e-4. Como no hay parada por tolerancia, el entrenamiento no "termina" en un punto: el vector sigue moviéndose a escala de ‖Δw‖ ≈ 1e-4, y la alineación con PC1 que se mide en la sección 2 es la del vector final.
+
+**Qué implica el margen del pivote.** Los coeficientes de la viñeta son los de PC1 (`v1`), no los de `w`, que difieren en la cuarta decimal (sección 3). Los dos más grandes de PC1 difieren en 0,00275 en valor absoluto: con un `w` menos convergido la convención podría tomar `average_impressions` como pivote y dar vuelta todo el índice. Por eso se corren y se verifican las 10 seeds (todas con el mismo pivote, `average_caption_words`, sección 2), y no una sola.
+
+## 2. Índice de Oja frente a la proyección sobre PC1
+
+El índice de Oja de un creador es la proyección de su vector z sobre `w`; el score de PC1 es la proyección sobre `v1`, el primer autovector de la PCA de `make pca`. Si `w` coincide con `v1`, los dos números coinciden creador por creador. La tabla compara las dos cantidades en la seed 1, y las cuatro líneas siguientes resumen las 10 seeds:
+
+| Medida (seed 1) | Valor |
+|---|---|
+| abs(cos(w, v1)) | 1,000000 |
+| cos(w, v1) con la convención de signo | 1,000000 |
+| Pearson índice vs score de PC1 | 1,0000 |
+| Spearman índice vs score de PC1 | 1,0000 |
+| overlap@5 | 5 de 5 |
+| overlap@10 | 10 de 10 |
+| mayor abs(índice − score PC1) | 2,0e-03 |
+
+- Seeds con abs(cos(w, v1)) > 0,99: 10 de 10.
+- Seeds con la orientación de PCA (w · v1 > 0): 10 de 10; pivote de todas: average_caption_words.
+- abs(cos) entre pares de seeds: mínimo 0,9999993, media 0,9999998.
+- Rango del índice por creador entre seeds: máximo 3,1e-03, media 1,5e-03.
+
+**Cómo leerlo.** abs(cos) mide el ángulo entre las dos direcciones sin mirar el signo; el `cos` con signo, positivo, dice que las dos tienen además la misma orientación. Las dos columnas valen 1,000000 porque la tabla redondea a 6 decimales: el valor es 0,9999998 (la peor seed, la 6, queda a 2,5e-07 de 1, sección 1). El Pearson y el Spearman entre el índice y el score de PC1 miden si los dos ordenan a los creadores igual, y valen 1,0000 con 4 decimales; que el overlap@5 y el overlap@10 sean completos (5 de 5 y 10 de 10) dice que los mismos 5 y los mismos 10 creadores encabezan las dos listas. La mayor diferencia entre el índice y el score de un mismo creador es 2,0e-03, contra scores que van de unos -6 a unos +7. En conjunto: Oja aprendió PC1, y el índice y el score ordenan a los creadores del mismo modo, salvo por el error de convergencia; el índice no agrega información que PC1 no tenga.
+
+**Entre seeds.** Las 10 seeds terminan con abs(cos) mayor que 0,99 respecto de PC1, la orientación de PCA y el mismo pivote, y entre sí con abs(cos) de al menos 0,9999993. El índice de un creador cambia entre seeds en 3,1e-03 como máximo, un orden parecido a la diferencia con PC1 (2,0e-03), de modo que elegir otra seed no cambia la lectura del índice.
+
+**Figura.** `analysis/results/oja/oja_vs_pc1.svg` grafica el score de PC1 (eje x) contra el índice de Oja de la seed 1 (eje y), un punto por creador, con la recta identidad y los estadísticos de la tabla. Los 50 puntos caen sobre la recta, y el color, que marca el tema dominante, no los separa: el índice es una proyección de las 26 variables y no sabe a qué tema pertenece el creador, que es lo que se retoma en la sección 3.
+
 ## 3. ¿Qué representa el índice? ¿Sería correcto elegir el máximo para cualquier campaña?
 
 **No.** El índice de Oja es la proyección de cada creador sobre PC1 (sección 2): un eje de escala y formato que retiene el 53,2 % de la varianza de las 26 variables y que casi no mira los temas: la Fase 1 ubicó fútbol y maquillaje en PC3 y PC4 y perros en PC2, no en PC1 (secciones 6 de `deliverables/01-datos-pca.md` y 6.4 de `deliverables/02-kohonen.md`). El creador con el valor más alto es el que está más lejos en un extremo de ese eje, y cuál extremo es "el máximo" lo decide una convención de signo; ni una ni otra cosa dice nada sobre el tema o el objetivo de una campaña.
