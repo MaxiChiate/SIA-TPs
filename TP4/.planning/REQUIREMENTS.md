@@ -30,9 +30,9 @@
 
 ### Oja
 
-- [ ] **OJA-01**: Oja en C sobre datos centrados, con η chico y decreciente, pesos renormalizados y convención de signo fija
-- [ ] **OJA-02**: Comparación del índice contra la proyección sobre PC1 con |cos| y correlación de rangos
-- [ ] **OJA-03**: Interpretación del índice con evidencia (correlación con followers y temas) de por qué elegir el máximo para cualquier campaña es incorrecto
+- [x] **OJA-01**: Oja en C sobre datos centrados, con η chico y decreciente, pesos renormalizados y convención de signo fija
+- [x] **OJA-02**: Comparación del índice contra la proyección sobre PC1 con |cos| y correlación de rangos
+- [x] **OJA-03**: Interpretación del índice con evidencia (correlación con followers y temas) de por qué elegir el máximo para cualquier campaña es incorrecto
 
 ### Decisiones de campaña
 
@@ -97,9 +97,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SOM-03 | Phase 2 | Complete |
 | SOM-04 | Phase 2 | Complete |
 | SOM-05 | Phase 2 | Complete |
-| OJA-01 | Phase 3 | Pending |
-| OJA-02 | Phase 3 | Pending |
-| OJA-03 | Phase 3 | Pending |
+| OJA-01 | Phase 3 | Complete |
+| OJA-02 | Phase 3 | Complete |
+| OJA-03 | Phase 3 | Complete |
 | CAMP-01 | Phase 3 | Pending |
 | CAMP-02 | Phase 3 | Pending |
 | CAMP-03 | Phase 3 | Pending |
