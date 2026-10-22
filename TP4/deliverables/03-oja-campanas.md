@@ -131,3 +131,163 @@ Esta sección fija la regla; los resultados se agregan después y no figuran ac�
 - **Resultados comerciales.** Los datos no contienen ventas, adopciones ni conversiones, por lo que no se afirma que ninguna de las dos estrategias recupere la inversión (D-17). El informe lista también las ventajas de la estrategia por followers: es simple, estable, no requiere un modelo que mantener y está correlacionada con el alcance.
 - **Control.** `analysis/campaigns.py` llama primero a `rule_identity` y se niega a correr salvo que este archivo y `analysis/campaigns_select.py` se hayan agregado en un mismo commit, el código no haya cambiado desde entonces y el texto entre estos marcadores tenga el mismo sha256 que en ese commit; registra el commit y los dos sha256.
 <!-- regla:fin -->
+
+## 5. Recomendación por campaña y comparación con elegir solo por followers
+
+Las listas de esta sección salen de la regla de la sección 4 aplicada tal como se commiteó, con `analysis/campaigns.py` (`make campaigns`). El programa llama primero a `rule_identity` y se niega a correr, sin escribir nada, si el texto entre los marcadores o `analysis/campaigns_select.py` cambiaron desde el commit de la regla; la identidad que usó quedó en `analysis/results/campaigns/selection_identity.json` y es la que repite la primera línea de `report_campaigns.md`:
+
+- Commit de la regla: a6212e89cdc6 (sha256 del texto entre marcadores: 90113af5bf39)
+
+Cada lista se informa como salió: después de ver los resultados no se tocó ningún filtro, criterio, ponderación ni desempate. Las listas, las tablas y las medias de abajo son las líneas de `analysis/results/campaigns/report_campaigns.md` y `analysis/results/campaigns/report_reading.md`, pegadas sin cambios; la prosa que las rodea las lee. En cada tabla, `overlap@5` cuenta los creadores que la lista comparte con la línea base, la proporción es la parte de la lista cuyo tema dominante es el de la campaña, y el costo por mil es el costo total sobre el alcance argentino total por mil (un cociente de sumas, no un promedio de costos por creador). Son 50 creadores y un solo corte de datos: las diferencias entre listas se describen, no se prueban estadísticamente.
+
+### 5.1 Fútbol: alcance masivo, descubrimiento o profundidad educativa
+
+El filtro de fútbol deja a 15 de los 50 creadores, así que las tres listas propias y las dos líneas base tienen 5 creadores. Las tres listas propias usan el mismo filtro y cambian solo el criterio; las dos líneas base por followers son las mismas para los tres objetivos.
+
+- fútbol / alcance — propia: @golconmate, @tribunacreativa, @futbolcononda, @lookdecancha, @futbolsinvueltas
+- fútbol / alcance — followers global: @mateconideas, @golconmate, @brillourbano, @maquillajereal, @crearenreels
+- fútbol / alcance — followers en el tema: @golconmate, @futbolsinvueltas, @tribunacreativa, @vidaperruna, @tacticavisual
+- fútbol / descubrimiento — propia: @tribunacreativa, @lookdecancha, @makeupconsejos, @futbolcononda, @vidaperruna
+- fútbol / descubrimiento — followers global: @mateconideas, @golconmate, @brillourbano, @maquillajereal, @crearenreels
+- fútbol / descubrimiento — followers en el tema: @golconmate, @futbolsinvueltas, @tribunacreativa, @vidaperruna, @tacticavisual
+- fútbol / profundidad — propia: @futbolentrepases, @pasiondepotrero, @reelconideas, @pasionalbirroja, @canchaaldia
+- fútbol / profundidad — followers global: @mateconideas, @golconmate, @brillourbano, @maquillajereal, @crearenreels
+- fútbol / profundidad — followers en el tema: @golconmate, @futbolsinvueltas, @tribunacreativa, @vidaperruna, @tacticavisual
+
+Los tres objetivos eligen casi a gente distinta: alcance y descubrimiento comparten 3 creadores (@tribunacreativa, @lookdecancha y @futbolcononda), profundidad no comparte ninguno con las otras dos y en total son 12 creadores distintos.
+
+| Campaña / objetivo | Lista | n | overlap@5 con followers global | overlap@5 con followers en el tema | Proporción con el tema como dominante | Media del share del tema (%) | Alcance argentino total | Costo total (USD) | USD por mil argentinos | Criterio (media de la lista) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| fútbol / alcance | propia | 5 | 1 | 3 | 100,0 % | 69,9 | 545192 | 14714 | 26,99 | 109038,400 |
+| fútbol / alcance | followers global | 5 | 5 | 1 | 20,0 % | 26,9 | 881361 | 22657 | 25,71 | 176272,200 |
+| fútbol / alcance | followers en el tema | 5 | 1 | 5 | 100,0 % | 71,5 | 471762 | 19348 | 41,01 | 94352,400 |
+| fútbol / descubrimiento | propia | 5 | 0 | 2 | 100,0 % | 66,5 | 349509 | 14803 | 42,35 | 79,658 |
+| fútbol / descubrimiento | followers global | 5 | 5 | 1 | 20,0 % | 26,9 | 881361 | 22657 | 25,71 | 66,820 |
+| fútbol / descubrimiento | followers en el tema | 5 | 1 | 5 | 100,0 % | 71,5 | 471762 | 19348 | 41,01 | 72,422 |
+| fútbol / profundidad | propia | 5 | 0 | 0 | 100,0 % | 51,2 | 28873 | 1367 | 47,35 | 0,883 |
+| fútbol / profundidad | followers global | 5 | 5 | 1 | 20,0 % | 26,9 | 881361 | 22657 | 25,71 | -1,108 |
+| fútbol / profundidad | followers en el tema | 5 | 1 | 5 | 100,0 % | 71,5 | 471762 | 19348 | 41,01 | -1,063 |
+
+Las medias de las variables crudas que usa cada criterio, en las unidades originales:
+
+- fútbol / alcance — propia, medias del criterio: estimated_argentina_reach 109038,400
+- fútbol / alcance — followers global, medias del criterio: estimated_argentina_reach 176272,200
+- fútbol / alcance — followers en el tema, medias del criterio: estimated_argentina_reach 94352,400
+- fútbol / descubrimiento — propia, medias del criterio: non_follower_reach_pct 79,658; trend_posts_pct 53,400
+- fútbol / descubrimiento — followers global, medias del criterio: non_follower_reach_pct 66,820; trend_posts_pct 54,070
+- fútbol / descubrimiento — followers en el tema, medias del criterio: non_follower_reach_pct 72,422; trend_posts_pct 54,836
+- fútbol / profundidad — propia, medias del criterio: content_tutorial_pct 40,764; saves_per_1000 19,306; average_watch_time_seconds 31,120
+- fútbol / profundidad — followers global, medias del criterio: content_tutorial_pct 13,482; saves_per_1000 6,510; average_watch_time_seconds 13,856
+- fútbol / profundidad — followers en el tema, medias del criterio: content_tutorial_pct 8,080; saves_per_1000 8,656; average_watch_time_seconds 14,158
+
+**Alcance masivo.** La lista propia suma 545192 argentinos alcanzados por USD 14714 (USD 26,99 por mil) y es, por construcción, la de los cinco creadores de fútbol con más alcance argentino. Contra la línea base dentro del tema comparte 3 de 5 y le gana en alcance (545192 frente a 471762) y en costo por mil (USD 26,99 frente a USD 41,01). Contra la línea base global comparte 1 de 5 (@golconmate): esa lista alcanza más (881361) y cuesta menos por mil (USD 25,71), pero solo 1 de sus 5 creadores tiene fútbol como tema dominante (20,0 %); los otros 4 son de otros temas.
+
+**Descubrimiento.** La lista propia tiene una media de 79,658 de alcance de no seguidores (`non_follower_reach_pct`), contra 66,820 de la línea base global y 72,422 de la línea base dentro del tema; alcanza 349509 argentinos por USD 14803 (USD 42,35 por mil), más caro por mil que las dos líneas base. La señal de apoyo `trend_posts_pct` no es más alta en la lista propia (53,400 frente a 54,070 y 54,836): la regla solo la usa como segunda clave de un empate exacto, así que no era de esperar. Dos de los cinco creadores de esta lista, @makeupconsejos y @vidaperruna, tienen fútbol como tema dominante por sus porcentajes crudos (59,1 % y 69,5 % en `datos/creadores.csv`) aunque el nombre del perfil sugiera otro tema. La regla usa el porcentaje y no el nombre, y la lista se informa como salió; conviene que una persona mire el contenido de esos dos perfiles antes de contactarlos.
+
+**Profundidad educativa.** La lista propia tiene una media de 40,764 de contenido tutorial (`content_tutorial_pct`), 19,306 guardados por mil y 31,120 segundos de visualización media, contra 13,482, 6,510 y 13,856 de la línea base global, y 8,080, 8,656 y 14,158 de la línea base dentro del tema; no comparte ningún creador con ninguna de las dos. El costo es alcance: son creadores chicos (entre 15556 y 60817 followers) que suman 28873 argentinos alcanzados por USD 1367, con USD 47,35 por mil, el costo por mil más alto de las tres listas de fútbol.
+
+**Recomendación.** Para una marca de ropa de entrenamiento de fútbol se recomienda empezar por la lista de profundidad educativa, dejar la de descubrimiento como segunda opción y considerar la de alcance masivo la menos conveniente de las tres. Es un juicio y no un resultado de la regla, que no elige el objetivo, y se apoya en tres cosas de las tablas. Primero, es el objetivo en el que elegir por criterio y elegir por followers dan listas más distintas: la lista de profundidad no comparte ningún creador con ninguna línea base y su contenido tutorial medio es 40,764 contra 8,080 de los más seguidos del tema, mientras que la lista de alcance comparte 3 de 5 con esa línea base y agrega poco sobre elegir por followers dentro del tema. Segundo, bajo el supuesto (1) de abajo, la ropa de entrenamiento es un producto que se elige viéndolo en uso, y los tutoriales, los guardados y el tiempo de visualización son el tipo de contenido donde eso ocurre. Tercero, es la lista más barata en total (USD 1367 contra USD 14714 y USD 14803). Su límite es el volumen: 28873 argentinos alcanzados en total, que no alcanzan si lo que se necesita es llegar a mucha gente.
+
+**Supuestos.** (1) La marca vende ropa de entrenamiento y no ropa deportiva de consumo masivo: una compra que se piensa, en un público que entrena y para el que ver la prenda en uso importa. (2) El público que interesa es el argentino y la marca todavía no lo tiene saturado; si fuera una marca nueva que necesita darse a conocer, el objetivo a elegir pasa a ser descubrimiento. (3) El enunciado no da presupuesto, por eso el precio informa y no filtra (D-12); con un presupuesto grande y la prioridad en el volumen, el objetivo sería alcance masivo. (4) Las variables son indicadores indirectos: `content_tutorial_pct`, `saves_per_1000` y `average_watch_time_seconds` miden cuánto contenido didáctico publica el creador y cuánto lo guarda y lo mira su audiencia, no cuánto compra esa audiencia; `non_follower_reach_pct` mide qué parte del alcance viene de gente que no sigue al creador, no si esa gente es público de la marca. (5) Si cambia cualquiera de estos supuestos puede cambiar el objetivo recomendado; la regla no lo decide por nadie.
+
+### 5.2 Perros (refugios)
+
+Supuesto del cliente (D-11): refugios de animales, con poco presupuesto y alcance local; el criterio es el costo por mil argentinos alcanzados, de menor a mayor. El filtro de perros deja 13 creadores.
+
+- perros / costo_por_mil — propia: @crearenreels, @huellasyconsejos, @consejoscaninos, @huellasargentinas, @guiadehuellas
+- perros / costo_por_mil — followers global: @mateconideas, @golconmate, @brillourbano, @maquillajereal, @crearenreels
+- perros / costo_por_mil — followers en el tema: @crearenreels, @patitasenred, @patitascontentas, @estiloydetalle, @huellasargentinas
+
+| Campaña / objetivo | Lista | n | overlap@5 con followers global | overlap@5 con followers en el tema | Proporción con el tema como dominante | Media del share del tema (%) | Alcance argentino total | Costo total (USD) | USD por mil argentinos | Criterio (media de la lista) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| perros / costo_por_mil | propia | 5 | 1 | 2 | 100,0 % | 71,0 | 264906 | 4752 | 17,94 | 25,511 |
+| perros / costo_por_mil | followers global | 5 | 5 | 1 | 20,0 % | 21,3 | 881361 | 22657 | 25,71 | 34,191 |
+| perros / costo_por_mil | followers en el tema | 5 | 1 | 5 | 100,0 % | 68,1 | 339675 | 7812 | 23,00 | 39,281 |
+
+- perros / costo_por_mil — propia, medias del criterio: price_usd 950,340; estimated_argentina_reach 52981,200
+- perros / costo_por_mil — followers global, medias del criterio: price_usd 4531,424; estimated_argentina_reach 176272,200
+- perros / costo_por_mil — followers en el tema, medias del criterio: price_usd 1562,314; estimated_argentina_reach 67935,000
+
+La lista propia suma USD 4752 para 264906 argentinos alcanzados (USD 17,94 por mil). Es la única de las seis listas propias que sale más barata por mil que la línea base global (USD 25,71), y también más barata que la línea base dentro del tema (USD 23,00, con USD 7812 para 339675 argentinos). Comparte 2 de 5 con la línea base dentro del tema (@crearenreels y @huellasargentinas) y 1 de 5 con la global (@crearenreels), y los cinco tienen perros como tema dominante (100,0 %, contra 20,0 % de la global). La lista es desigual: @crearenreels, primero con USD 16,31 por mil, tiene 551553 followers y aporta USD 3814 de los USD 4752 y 233828 de los 264906 argentinos; los otros cuatro suman USD 938 y 31078 argentinos, y son perfiles de entre 9604 y 64874 followers.
+
+**Recomendación.** Con refugios de poco presupuesto, la lista propia de perros, y dentro de ella los cuatro creadores chicos como núcleo: @crearenreels es una decisión aparte, porque absorbe cerca del 80 % del costo de la lista aunque dé el menor costo por mil. El enunciado no dice cuánto dispone cada refugio, y los datos tienen alcance argentino pero no por ciudad, así que lo "local" queda como supuesto y no como algo medido.
+
+### 5.3 Maquillaje (marca de belleza)
+
+Supuesto del cliente (D-11): una marca de belleza que busca profundidad (guardados, tutoriales, tiempo de visualización). El filtro de maquillaje deja 11 creadores.
+
+- maquillaje / profundidad — propia: @reelargentino, @brochasymates, @cosmeticaconsciente, @brochasycolor, @tallerurbano
+- maquillaje / profundidad — followers global: @mateconideas, @golconmate, @brillourbano, @maquillajereal, @crearenreels
+- maquillaje / profundidad — followers en el tema: @mateconideas, @brillourbano, @maquillajereal, @brilloytendencia, @tallerurbano
+
+| Campaña / objetivo | Lista | n | overlap@5 con followers global | overlap@5 con followers en el tema | Proporción con el tema como dominante | Media del share del tema (%) | Alcance argentino total | Costo total (USD) | USD por mil argentinos | Criterio (media de la lista) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| maquillaje / profundidad | propia | 5 | 0 | 1 | 100,0 % | 61,6 | 108520 | 3696 | 34,06 | 0,379 |
+| maquillaje / profundidad | followers global | 5 | 5 | 3 | 60,0 % | 42,9 | 881361 | 22657 | 25,71 | -1,108 |
+| maquillaje / profundidad | followers en el tema | 5 | 3 | 5 | 100,0 % | 65,1 | 495545 | 18112 | 36,55 | -0,795 |
+
+- maquillaje / profundidad — propia, medias del criterio: content_tutorial_pct 38,224; saves_per_1000 14,270; average_watch_time_seconds 27,454
+- maquillaje / profundidad — followers global, medias del criterio: content_tutorial_pct 13,482; saves_per_1000 6,510; average_watch_time_seconds 13,856
+- maquillaje / profundidad — followers en el tema, medias del criterio: content_tutorial_pct 8,036; saves_per_1000 8,350; average_watch_time_seconds 20,838
+
+La lista propia tiene medias de 38,224 de contenido tutorial, 14,270 guardados por mil y 27,454 segundos de visualización, contra 13,482, 6,510 y 13,856 de la línea base global y 8,036, 8,350 y 20,838 de la línea base dentro del tema. No comparte ningún creador con la global y comparte 1 de 5 con la de dentro del tema (@tallerurbano). Aquí la línea base global ya cae sobre todo en el tema (60,0 % de maquillaje), así que la diferencia que aporta el filtro es menor que en fútbol o en arte. El costo de la profundidad es alcance: la lista propia llega a 108520 argentinos por USD 3696 (USD 34,06 por mil) y los más seguidos del tema llegan a 495545 por USD 18112 (USD 36,55 por mil); la propia cuesta algo más de una quinta parte y alcanza algo más de una quinta parte, con un costo por mil parecido.
+
+**Recomendación.** Para una marca de belleza que busca que la audiencia guarde, mire y aprenda del contenido, la lista propia de maquillaje. Si la marca necesitara sobre todo volumen, los más seguidos del tema son una alternativa legítima: el costo por mil es parecido y el alcance es algo más de cuatro veces y media mayor, a cambio de contenido menos didáctico (8,036 de tutorial medio contra 38,224).
+
+### 5.4 Arte (materiales de arte)
+
+Supuesto del cliente (D-11): materiales de arte, un nicho que busca engagement por mil y profundidad; el puntaje es mitad engagement y mitad profundidad (sección 4). El filtro de arte deja 11 creadores.
+
+- arte / engagement_profundidad — propia: @galeriacotidiana, @trazosyreels, @entrelienzos, @colorenmovimiento, @creatividadaldia
+- arte / engagement_profundidad — followers global: @mateconideas, @golconmate, @brillourbano, @maquillajereal, @crearenreels
+- arte / engagement_profundidad — followers en el tema: @galeriacotidiana, @pincelcotidiano, @artequeinspira, @entrelienzos, @artealpaso
+
+| Campaña / objetivo | Lista | n | overlap@5 con followers global | overlap@5 con followers en el tema | Proporción con el tema como dominante | Media del share del tema (%) | Alcance argentino total | Costo total (USD) | USD por mil argentinos | Criterio (media de la lista) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| arte / engagement_profundidad | propia | 5 | 0 | 2 | 100,0 % | 60,9 | 237482 | 8761 | 36,89 | 0,420 |
+| arte / engagement_profundidad | followers global | 5 | 5 | 0 | 0,0 % | 8,8 | 881361 | 22657 | 25,71 | -0,667 |
+| arte / engagement_profundidad | followers en el tema | 5 | 0 | 5 | 100,0 % | 63,2 | 323086 | 12565 | 38,89 | 0,082 |
+
+- arte / engagement_profundidad — propia, medias del criterio: total_engagement_per_1000 75,286; content_tutorial_pct 25,084; saves_per_1000 12,870; average_watch_time_seconds 25,230
+- arte / engagement_profundidad — followers global, medias del criterio: total_engagement_per_1000 66,430; content_tutorial_pct 13,482; saves_per_1000 6,510; average_watch_time_seconds 13,856
+- arte / engagement_profundidad — followers en el tema, medias del criterio: total_engagement_per_1000 73,458; content_tutorial_pct 20,268; saves_per_1000 9,686; average_watch_time_seconds 21,214
+
+La lista propia tiene 75,286 de engagement por mil, contra 73,458 de la línea base dentro del tema y 66,430 de la global, y 25,084, 12,870 y 25,230 en tutorial, guardados y visualización, contra 20,268, 9,686 y 21,214 de la de dentro del tema. Comparte 0 de 5 con la global y 2 de 5 con la de dentro del tema (@galeriacotidiana y @entrelienzos). Gran parte de la diferencia contra la global viene del filtro de tema (la global tiene 0 de 5 con arte como tema dominante y 8,8 de porcentaje medio de arte); contra la de dentro del tema el criterio compuesto agrega poco en engagement y algo más en profundidad. Cuesta USD 8761 por 237482 argentinos (USD 36,89 por mil), contra USD 12565 por 323086 (USD 38,89 por mil). Como el precio no filtra (D-12), la lista incluye a @entrelienzos y a @creatividadaldia, que salen a USD 109,35 y USD 127,75 por mil argentinos (cálculo por creador en `analysis/results/campaigns/shortlists.csv`).
+
+**Recomendación.** Para materiales de arte, la lista propia de arte, con la reserva de que su ventaja sobre los más seguidos del arte es chica en engagement. Quien quiera acotar el gasto puede mirar el costo por mil de cada creador en `shortlists.csv` antes de contratar a los dos más caros por mil; esa decisión no la toma la regla.
+
+### 5.5 Comparación con la estrategia solo por followers
+
+Las dos líneas base usan k = 5 igual que las listas propias (D-16): la global es la estrategia ingenua del enunciado, los 5 creadores con más followers de los 50, y la de dentro del tema reparte el mismo criterio de followers pero solo entre los creadores del tema de la campaña, de modo que aísla el efecto del criterio de ranking del efecto del filtro de tema.
+
+- **overlap@5.** Con la línea base global, las listas propias comparten a lo sumo 1 creador de 5: 1 en fútbol/alcance y en perros, y 0 en las otras cuatro. Con la línea base dentro del tema comparten entre 0 y 3: 3 en fútbol/alcance, 2 en fútbol/descubrimiento, 0 en fútbol/profundidad, 2 en perros, 1 en maquillaje y 2 en arte. El criterio propio cambia la lista, pero en los objetivos de volumen (alcance) se parece bastante a ordenar por followers dentro del tema.
+- **Proporción con el tema de la campaña.** Las seis listas propias tienen 100,0 % de creadores con el tema dominante de la campaña. La línea base global tiene 20,0 % en fútbol y en perros, 60,0 % en maquillaje y 0,0 % en arte: son los mismos cinco creadores para las cuatro campañas, y por eso casi no tocan el tema. La línea base dentro del tema tiene 100,0 % por construcción, así que contra ella el tema no distingue.
+- **Costo por mil argentinos.** La línea base global es la más barata por mil en cinco de las seis comparaciones (USD 25,71); solo en perros la lista propia la supera (USD 17,94). Contra la línea base dentro del tema, la lista propia es más barata en cuatro (alcance, perros, maquillaje y arte) y más cara en dos (descubrimiento, USD 42,35 contra 41,01, y profundidad, USD 47,35 contra 41,01).
+- **Métrica objetivo.** En cada objetivo la lista propia supera a las dos líneas base en la media de su criterio (en perros, con el valor más bajo, porque el costo por mil se ordena de menor a mayor), salvo alcance masivo contra la línea base global, que alcanza más porque sus cinco creadores son los más grandes de los 50 (media de alcance argentino de 176272 contra 109038).
+
+**Ventajas de elegir solo por followers.** Es simple (ordenar una columna), se supone estable de un mes al otro porque el número de seguidores cambia despacio (los datos son de un solo corte y esto no se puede comprobar con ellos), no hay un modelo que mantener ni una regla que recalibrar, y está correlacionado con el alcance: la línea base global tiene el mayor alcance argentino total de la tabla (881361) y, frente a las listas propias, el menor costo por mil en cinco de las seis. La evidencia de la sección 3 muestra cuánto ya recoge `followers`: el índice de Oja, que es la proyección sobre PC1, la dirección de mayor varianza de las 26 variables (sección 2), se ordena casi como el tamaño (Spearman de -0,921 con `followers` con el signo de D-02).
+
+**Desventajas.** La línea base global es la misma para las cuatro campañas e ignora el tema (20,0 %, 20,0 %, 60,0 % y 0,0 % de la lista con el tema de la campaña), e ignora el objetivo: en profundidad su contenido tutorial medio es 13,482 contra 40,764 de la lista propia de fútbol, en descubrimiento su alcance de no seguidores medio es 66,820 contra 79,658, y concentra el presupuesto en los creadores más grandes (USD 22657 por los cinco contra USD 1367 a USD 14803 de las listas propias de fútbol). Dentro del tema, elegir por followers es una línea base razonable si lo que se busca es volumen (en alcance, y en maquillaje por el alcance que consigue), pero queda lejos en profundidad (8,080 de tutorial medio en fútbol contra 40,764) y no mira el costo por mil.
+
+Sin datos de resultado (ventas, adopciones o conversiones) no se puede afirmar nada sobre el retorno de la inversión de ninguna de las dos estrategias. Lo que esta sección compara son las variables que sí están en los datos (tema, alcance argentino, costo por mil, engagement, profundidad y alcance de no seguidores) y que cada lista cumple de manera distinta; que esas diferencias tengan efecto en el negocio de un cliente es algo que estos datos no pueden decir.
+
+### 5.6 Lectura con Kohonen, Oja y PCA
+
+Kohonen, Oja y PCA no eligieron a nadie: describen dónde cae cada lista, y la selección es la de la sección 4. En ninguna de las 18 listas hubo un empate exacto en el criterio ni en `followers`, así que ni siquiera el desempate por índice de Oja (D-13) decidió quién entra. Cada bullet de abajo es una lista propia (seis) o la línea base global de una campaña (cuatro; es la misma lista de cinco creadores en las cuatro).
+
+- fútbol / alcance: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 47, 43, 27, 37, 50; PC1 media -4,00; PC2 media 0,37; neuronas (fila, col): (4, 4), (4, 3), (2, 2), (3, 2), (4, 3)
+- fútbol / descubrimiento: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 43, 37, 42, 27, 41; PC1 media -3,12; PC2 media -0,73; neuronas (fila, col): (4, 3), (3, 2), (4, 2), (2, 2), (4, 2)
+- fútbol / profundidad: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 11, 8, 16, 7, 20; PC1 media 3,25; PC2 media -1,24; neuronas (fila, col): (1, 1), (1, 1), (2, 0), (1, 1), (2, 1)
+- perros / costo_por_mil: 2 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 48, 3, 2, 23, 9; PC1 media 2,19; PC2 media 2,27; neuronas (fila, col): (4, 4), (0, 0), (0, 0), (1, 3), (0, 1)
+- maquillaje / profundidad: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 6, 25, 24, 12, 35; PC1 media 1,14; PC2 media -0,10; neuronas (fila, col): (1, 0), (0, 4), (0, 4), (2, 0), (1, 3)
+- arte / engagement_profundidad: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 49, 15, 31, 21, 19; PC1 media -0,36; PC2 media -0,68; neuronas (fila, col): (4, 4), (0, 2), (4, 1), (0, 4), (3, 0)
+- fútbol, línea base followers global: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 46, 47, 45, 44, 48; PC1 media -5,69; PC2 media 2,27; neuronas (fila, col): (3, 4), (4, 4), (3, 4), (3, 4), (4, 4)
+- perros, línea base followers global: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 46, 47, 45, 44, 48; PC1 media -5,69; PC2 media 2,27; neuronas (fila, col): (3, 4), (4, 4), (3, 4), (3, 4), (4, 4)
+- maquillaje, línea base followers global: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 46, 47, 45, 44, 48; PC1 media -5,69; PC2 media 2,27; neuronas (fila, col): (3, 4), (4, 4), (3, 4), (3, 4), (4, 4)
+- arte, línea base followers global: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 46, 47, 45, 44, 48; PC1 media -5,69; PC2 media 2,27; neuronas (fila, col): (3, 4), (4, 4), (3, 4), (3, 4), (4, 4)
+
+Lo que muestran las tres lecturas:
+
+- **Mapa SOM.** La Fase 2 dio una sola región (R1 = 50), así que las neuronas se leen como posiciones sobre un continuo y no como segmentos (D-14). Según la lectura de `deliverables/02-kohonen.md` (6.3), la zona inferior derecha del mapa reúne creadores grandes y caros y la superior izquierda creadores chicos y baratos, y la línea base global cae en (3, 4) y (4, 4), en la primera. La lista de profundidad de fútbol cae en (1, 1), (2, 0) y (2, 1), y las dos primeras están entre las neuronas de creadores chicos y baratos; la de perros pone dos creadores en (0, 0), donde 6.3 ubica creadores chicos y baratos de perros, y a @crearenreels en (4, 4). Las listas de alcance y descubrimiento de fútbol quedan sobre todo en las filas 2 a 4, la de maquillaje en las filas 0 a 2 y la de arte aparece en esquinas opuestas, de (0, 2) a (4, 4). La orientación del mapa es arbitraria; la figura es `analysis/results/campaigns/shortlists_som.svg`.
+- **Índice de Oja.** Solo la lista de perros tiene creadores en el top 5 del índice (2 de 5, rangos 2 y 3); las otras cinco listas propias tienen 0 de 5, y la línea base global ocupa los puestos 44 a 48 (el índice con el signo de D-02 ordena a los grandes al final, sección 3). Es lo que se quería mostrar (D-15): elegir por el índice no daría ninguna de estas listas, y coincide con el "No" de la sección 3.
+- **PC1 y PC2.** La línea base global y las listas de alcance y descubrimiento de fútbol caen en el lado negativo de PC1 (medias de -5,69, -4,00 y -3,12), el lado de los creadores grandes de la figura, y la lista de profundidad de fútbol (3,25), la de perros (2,19) y la de maquillaje (1,14) en el positivo; la de arte queda cerca del origen (-0,36). En PC2, la lista de perros y la línea base global tienen medias altas (2,27 las dos) y las demás quedan entre -1,24 y 0,37. Son lecturas de posición en un plano que explica 53,2 % y 8,5 % de la varianza, no una razón para estar en la lista; la figura es `analysis/results/campaigns/shortlists_biplot.svg`.
