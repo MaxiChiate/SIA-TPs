@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns sweep test clean
+.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -76,3 +76,9 @@ oja: pca
 # selection.json del SOM (make som-stage1).
 campaigns: oja som-stage1
 	$(PY) analysis/campaigns.py
+
+# Demo de mantenimiento con un creador sintético (SYN001, @sintetico_demo): lo mapea con scripts/map_creator.py y el
+# scaler guardado, lo ubica en el mapa SOM y en el índice de Oja y corre el chequeo de deriva; escribe
+# analysis/results/maintenance/ (no se versiona). Necesita make oja y make som-stage1.
+maintenance: oja som-stage1
+	$(PY) analysis/maintenance_demo.py
