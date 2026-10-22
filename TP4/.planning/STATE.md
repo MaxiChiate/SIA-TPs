@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Oja y decisiones de campaña
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-10-22T13:39:58.130Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-10-22T14:23:17.532Z"
 last_activity: 2026-10-22
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 20
-  completed_plans: 15
+  completed_plans: 16
   percent: 33
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-21)
 ## Current Position
 
 Phase: 03 (Oja y decisiones de campaña) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-10-22 — Phase 03 execution started
 
@@ -63,6 +63,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 02 P05 | 25 min | 2 tasks | 5 files |
 | Phase 02 P06 | 6 min | 3 tasks | 5 files |
 | Phase 03 P01 | 10 min | 2 tasks | 8 files |
+| Phase 03 P02 | 25 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-06: map layout follows PC1 (R2 0,961, p = 0,001) but not PC2 (R2 0,055, p = 0,267); Mantel grid vs plane rho 0,599
 - [Phase 03]: 03-01: Oja example config eta0 0.001 / eta_final 0.0001 / epochs 500 needed no change; pivot average_caption_words for seeds 1-3, eta0 x max|x|^2 = 0.0573
 - [Phase 03]: 03-01: Oja orientation (largest-|w| positive, lowest index on tie) lives in C as exported oja_orient; no commits made in this plan per user preference
+- [Phase 03]: 03-02: campaign rule terms 1-10 approved as written; rule committed once in a6212e8 with campaigns_select.py and tests (D-07)
+- [Phase 03]: 03-02: rule_identity guards the pre-registration: rule text and campaigns_select.py added in one commit, code unchanged since, marker digest equal to that commit's
 
 ### Pending Todos
 
@@ -111,6 +114,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T13:39:58.064Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-10-22T14:23:17.466Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None

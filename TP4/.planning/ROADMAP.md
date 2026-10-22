@@ -101,12 +101,12 @@ Plans:
   4. Para cada campaña (fútbol, perros, maquillaje, arte) hay una recomendación justificada con Kohonen, Oja y PCA, comparada contra elegir solo por `followers` con el mismo k (overlap@k, proporción por tema, costo por alcance argentino) y sin afirmaciones de ROI.
   5. Hay respuestas concretas de mantenimiento para una campaña nueva, creadores o variables nuevas y la actualización mensual, apoyadas en el scaler guardado y en las decisiones de re-entrenamiento.
 
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 Plans:
 **Wave 1**
 - [x] 03-01-PLAN.md — Oja real en C (tracer): η decreciente, épocas fijas, renormalización y signo de la PCA en C, trace.csv por época, claves estrictas y tests de C bajo sanitizers
-- [ ] 03-02-PLAN.md — Regla de campañas: checkpoint de decisión (términos y puntajes compuestos), regla como código con guardia y texto entre marcadores; el usuario hace el commit de la regla antes de calcular ninguna lista
+- [x] 03-02-PLAN.md — Regla de campañas: checkpoint de decisión (términos y puntajes compuestos), regla como código con guardia y texto entre marcadores; el usuario hace el commit de la regla antes de calcular ninguna lista
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 03-03-PLAN.md — `make oja`: 10 seeds, abs(cos) y Spearman contra PC1, dispersión entre seeds, convergencia por época con su figura y margen del pivote
@@ -170,7 +170,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 |-------|----------------|--------|-----------|
 | 1. Fundación, auditoría de datos y PCA | 8/8 | Complete    | 2026-10-20 |
 | 2. Kohonen SOM | 6/6 | Complete    | 2026-10-21 |
-| 3. Oja y decisiones de campaña | 1/6 | In Progress | - |
+| 3. Oja y decisiones de campaña | 2/6 | In Progress | - |
 | 4. Hopfield núcleo y letras | 0/TBD | Not started | - |
 | 5. Hopfield con QR | 0/TBD | Not started | - |
 | 6. Slides e informe | 0/TBD | Not started | - |
