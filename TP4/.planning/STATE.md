@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 03
 current_phase_name: Oja y decisiones de campaña
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-10-22T14:39:37.685Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-10-22T14:51:59.849Z"
 last_activity: 2026-10-22
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 19
   percent: 33
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-21)
 ## Current Position
 
 Phase: 03 (Oja y decisiones de campaña) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-10-22 — Phase 03 execution started
 
@@ -66,6 +66,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 03 P02 | 25 min | 3 tasks | 3 files |
 | Phase 03 P03 | 8 min | 2 tasks | 4 files |
 | Phase 03 P04 | 8 min | 2 tasks | 3 files |
+| Phase 03 P05 | 9 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Recent decisions affecting current work:
 - [Phase 03]: Oja vs PC1: Python never re-orients a run; all 10 seeds carry the PCA orientation (pivot average_caption_words, abs(cos) >= 0.9999993) — D-02 convention applied in C, only checked in Python; the pivot margin of 0.00275 is the documented limit
 - [Phase 03]: 03-04: section 3 answers No to choosing the Oja maximum; the maximum is INF031 (perros, 17062 followers) with the D-02 sign and INF045 (fútbol, 493194 followers) with the opposite sign, and the index correlates -0,879 (Pearson) with followers
 - [Phase 03]: 03-04: sign_flipped = 1 in all 10 seeds (C reverses the trained vector to apply D-02); cause not verified, stated as such in section 1
+- [Phase 03]: 03-05: football recommendation is profundidad educativa first, descubrimiento second, alcance masivo last, a judgment resting on five stated assumptions, with no outcome claims
+- [Phase 03]: 03-05: lists reported as they came out; @makeupconsejos and @vidaperruna sit in the football discovery list by raw topic share and are flagged for a human look, rule untouched
+- [Phase 03]: 03-05: make campaigns records rule_commit a6212e89, rule_sha256 and select_sha256 in selection_identity.json; no exact tie occurred so the Oja index never decided a list
 
 ### Pending Todos
 
@@ -119,6 +123,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T14:39:37.614Z
-Stopped at: Completed 03-04-PLAN.md
+Last session: 2026-10-22T14:51:59.778Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None
