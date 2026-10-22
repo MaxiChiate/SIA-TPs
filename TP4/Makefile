@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja sweep test clean
+.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns sweep test clean
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -69,3 +69,10 @@ som-profiles: prepare
 # maximo; escribe analysis/results/oja/ (no se versiona). Lee analysis/results/pca/, por eso depende de pca.
 oja: pca
 	$(PY) analysis/oja.py
+
+# Listas por campaña con la regla commiteada (sección 4 de deliverables/03-oja-campanas.md), dos líneas base por
+# followers y las métricas de D-17; escribe analysis/results/campaigns/ (no se versiona). Se niega a correr si la
+# regla o analysis/campaigns_select.py cambiaron desde el commit de la regla. Necesita el índice de Oja (make oja) y
+# selection.json del SOM (make som-stage1).
+campaigns: oja som-stage1
+	$(PY) analysis/campaigns.py
