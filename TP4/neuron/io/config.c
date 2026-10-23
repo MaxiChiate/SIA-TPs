@@ -36,9 +36,24 @@ static const KeySpec OJA_KEYS[] = {
   { NULL, KEY_INT, 0, NULL },
 };
 
-// noise_levels: fractions of pixels to flip, each in [0, 1]. Phases 4 and 5 append the rows of the real network
+// task: what the run does; "recall" runs noisy queries of the stored patterns. rule: the learning rule; "hebb". update:
+// "async" = one neuron at a time in a fresh random order per sweep, the reference; "sync" = every neuron at once, the
+// course's comparison. max_sweeps: cap on sweeps or sync steps. trials: queries per stored pattern and noise level.
+// noise_levels: fractions of pixels flipped, each in [0, 1]. subset: recall, the rows of the input that are stored,
+// distinct row indices. trace_trials: recall, trials per pattern and level whose per-step trace and states are
+// written. p: capacity, patterns stored per subset. n_subsets: capacity, 0 = every p-subset of the input in
+// lexicographic order, otherwise that many distinct random subsets. The ranges are checked in models/hopfield.c.
 static const KeySpec HOPFIELD_KEYS[] = {
+  { "task", KEY_STRING, 1, NULL },
+  { "rule", KEY_STRING, 1, NULL },
+  { "update", KEY_STRING, 1, NULL },
+  { "max_sweeps", KEY_INT, 1, NULL },
+  { "trials", KEY_INT, 1, NULL },
   { "noise_levels", KEY_NUMBER_ARRAY, 1, NULL },
+  { "subset", KEY_NUMBER_ARRAY, 0, NULL },
+  { "trace_trials", KEY_INT, 0, NULL },
+  { "p", KEY_INT, 0, NULL },
+  { "n_subsets", KEY_INT, 0, NULL },
   { NULL, KEY_INT, 0, NULL },
 };
 

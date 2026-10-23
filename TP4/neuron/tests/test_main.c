@@ -7,6 +7,7 @@
 #include "../io/config.h"
 #include "../io/matrix.h"
 #include "../io/results.h"
+#include "../models/hopfield_core.h"
 #include "../models/models.h"
 #include "../rng.h"
 #include <dirent.h>
@@ -25,6 +26,7 @@
 
 #define ZSCORE_FIXTURE "tests/fixtures/zscore_small.csv"
 #define PATTERNS_FIXTURE "tests/fixtures/patterns_small.csv"
+#define PATTERNS_MIX "tests/fixtures/patterns_mix.csv"
 
 static int checks = 0;
 static int failures = 0;
@@ -206,8 +208,9 @@ static void test_config_strict_validation(void) {
   check(loads("{\"model\": \"kohonen\", \"seed\": 1, \"input\": \"" ZSCORE_FIXTURE "\", "
               "\"grid_k\": 3, \"neighborhood\": \"step\", \"radius0\": 1.5, \"radius_final\": 1, "
               "\"eta0\": 0.5, \"eta_final\": 0.01, \"epochs\": 5}"));
-  check(loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"" PATTERNS_FIXTURE "\", "
-              "\"noise_levels\": [0.0, 0.5]}"));
+  check(loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"" PATTERNS_MIX "\", "
+              "\"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"async\", \"max_sweeps\": 100, "
+              "\"trials\": 2, \"noise_levels\": [0.0, 0.5], \"subset\": [0, 1, 2, 3], \"trace_trials\": 1}"));
 
   check(!loads("{\"model\": \"oja\", \"seed\": 1, \"input\": \"x.csv\", \"bogus\": 1}"));
   check(!loads("{\"model\": \"oja\", \"seed\": 1, \"seed\": 2, \"input\": \"x.csv\"}"));
@@ -220,6 +223,17 @@ static void test_config_strict_validation(void) {
   check(!loads("{\"model\": \"som\", \"seed\": 1, \"input\": \"x.csv\"}"));
   check(!loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"x.csv\", \"noise_levels\": [\"a\"]}"));
   check(!loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"x.csv\", \"noise_levels\": []}"));
+  // The valid Hopfield case with no task, with a fractional trials and with a key of another model
+  check(!loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"" PATTERNS_MIX "\", "
+               "\"rule\": \"hebb\", \"update\": \"async\", \"max_sweeps\": 100, "
+               "\"trials\": 2, \"noise_levels\": [0.0, 0.5], \"subset\": [0, 1, 2, 3], \"trace_trials\": 1}"));
+  check(!loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"" PATTERNS_MIX "\", "
+               "\"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"async\", \"max_sweeps\": 100, "
+               "\"trials\": 2.5, \"noise_levels\": [0.0, 0.5], \"subset\": [0, 1, 2, 3], \"trace_trials\": 1}"));
+  check(!loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"" PATTERNS_MIX "\", "
+               "\"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"async\", \"max_sweeps\": 100, "
+               "\"trials\": 2, \"noise_levels\": [0.0, 0.5], \"subset\": [0, 1, 2, 3], \"trace_trials\": 1, "
+               "\"grid_k\": 3}"));
   check(!loads("{\"model\": \"oja\", \"seed\": "));
   check(!loads("[1, 2]"));
 
@@ -311,12 +325,13 @@ static void test_same_seed_same_bytes(void) {
                        "\"grid_k\": 3, \"neighborhood\": \"step\", \"radius0\": 1.5, \"radius_final\": 1, "
                        "\"eta0\": 0.5, \"eta_final\": 0.01, \"epochs\": 5}",
                        "prototypes.csv");
-  // The stub flips a number of pixels fixed by the level, so its CSVs hold no trace of the seed: only the
-  // identical-bytes check applies. The Hopfield phases add a file that does depend on it.
+  // The noisy queries and the async orders come from the seed, so trials.csv changes with it
   same_seed_same_bytes("hopfield",
-                       "{\"model\": \"hopfield\", \"seed\": 5, \"input\": \"" PATTERNS_FIXTURE "\", "
-                       "\"noise_levels\": [0.0, 0.5]}",
-                       NULL);
+                       "{\"model\": \"hopfield\", \"seed\": 5, \"input\": \"" PATTERNS_MIX "\", "
+                       "\"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"async\", \"max_sweeps\": 100, "
+                       "\"trials\": 3, \"noise_levels\": [0.0, 0.24], \"subset\": [0, 1, 2, 3], "
+                       "\"trace_trials\": 1}",
+                       "trials.csv");
 
   Rng first = rng_new(7);
   Rng second = rng_new(7);
@@ -509,6 +524,502 @@ static void test_kohonen_training(void) {
 }
 
 
+// ---- Test 5: Hopfield network ----------------------------------------------------------------------------
+
+// Number under key in dir/metrics.json; 0 if the file or the key is missing
+static int metrics_number(const char * dir, const char * key, double * out) {
+  static char bytes[FILE_MAX_TEST];
+  char path[PATH_MAX_TEST];
+  snprintf(path, sizeof(path), "%s/metrics.json", dir);
+  long length = read_all(path, bytes);
+  if (length < 0) return 0;
+  bytes[length] = '\0';
+  cJSON * json = cJSON_Parse(bytes);
+  if (json == NULL) return 0;
+  const cJSON * item = cJSON_GetObjectItemCaseSensitive(json, key);
+  int found = cJSON_IsNumber(item);
+  if (found) *out = item->valuedouble;
+  cJSON_Delete(json);
+  return found;
+}
+
+
+// The config fragment of a Hopfield run on the synthetic fixture; every argument is a string literal
+#define HOP_FRAGMENT(task, rule, update, sweeps, trials, noise, extra) \
+  "\"input\": \"" PATTERNS_MIX "\", \"task\": \"" task "\", \"rule\": \"" rule "\", \"update\": \"" update "\", " \
+  "\"max_sweeps\": " sweeps ", \"trials\": " trials ", \"noise_levels\": " noise extra
+#define HOP_SUBSET ", \"subset\": [0, 1, 2, 3], \"trace_trials\": 1"
+
+// 1 if the Hopfield model accepts the config, 0 if the run refuses it, -1 if the types are wrong
+static int hopfield_run_accepts(const char * fragment) {
+  char text[2048];
+  snprintf(text, sizeof(text), "{\"model\": \"hopfield\", \"seed\": 1, %s}", fragment);
+  char path[PATH_MAX_TEST];
+  write_tmp("hop_bad.json", text, path);
+  Config config;
+  if (!load_quiet(path, &config)) return -1;
+  char dir[PATH_MAX_TEST];
+  int saved = silence();
+  int ok = run_into(&config, config.seed, "hop_rejected", dir);
+  unsilence(saved);
+  config_free(&config);
+  return ok;
+}
+
+
+static void test_hopfield_run(void) {
+  char path[PATH_MAX_TEST];
+  write_tmp("hop_run.json",
+            "{\"model\": \"hopfield\", \"seed\": 3, " HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0, 0.24]",
+                                                                      HOP_SUBSET) "}",
+            path);
+  Config config;
+  check(load_quiet(path, &config));
+  char dir[PATH_MAX_TEST];
+  check(run_into(&config, config.seed, "hop_run", dir));
+  config_free(&config);
+
+  char file[PATH_MAX_TEST + 32];
+  snprintf(file, sizeof(file), "%s/trials.csv", dir);
+  check(count_data_lines(file) == 32);
+  for (int a = 0; a < 4; a++) {
+    for (int t = 0; t < 4; t++) {
+      int row = a * 8 + t; // noise 0 comes first for every pattern
+      double v;
+      check(csv_value(file, row, 3, &v) && v == 0);
+      check(csv_value(file, row, 6, &v) && v == 1);  // converged
+      check(csv_value(file, row, 7, &v) && v == 1);  // sweeps
+      check(csv_value(file, row, 9, &v) && v == 0);  // flips
+      check(csv_value(file, row, 11, &v) && v == 0); // class stored
+      check(csv_value(file, row, 12, &v) && v == a); // match_a
+      check(csv_value(file, row, 18, &v) && v == 1); // correct
+      double e_start = 1;
+      double e_final = 2;
+      check(csv_value(file, row, 19, &e_start) && csv_value(file, row, 20, &e_final) && e_start == e_final);
+    }
+  }
+
+  // Planning-time numpy values for rows 0-3 of the fixture
+  static const double MARGIN[4] = { 10, 2, 12, 16 };
+  static const double ENERGY[4] = { -304, -332, -288, -268 };
+  snprintf(file, sizeof(file), "%s/stored.csv", dir);
+  check(count_data_lines(file) == 4);
+  for (int a = 0; a < 4; a++) {
+    double v;
+    check(csv_value(file, a, 2, &v) && v == 1);
+    check(csv_value(file, a, 3, &v) && v == MARGIN[a]);
+    check(csv_value(file, a, 5, &v) && v == ENERGY[a]);
+  }
+
+  snprintf(file, sizeof(file), "%s/overlaps.csv", dir);
+  double overlap = 0;
+  check(csv_value(file, 1, 1, &overlap));
+  check_close(overlap, 0.36, 1e-15);
+
+  snprintf(file, sizeof(file), "%s/states.csv", dir);
+  check(count_data_lines(file) == 16);
+
+  snprintf(file, sizeof(file), "%s/trace.csv", dir);
+  double v;
+  check(csv_value(file, 0, 0, &v) && v == 0);
+  check(csv_value(file, 0, 1, &v) && v == 0);
+  check(csv_value(file, 0, 2, &v) && v == 0);
+  check(csv_value(file, 0, 3, &v) && v == -1);
+  check(csv_value(file, 0, 4, &v) && v == 0);
+  check(csv_value(file, 0, 5, &v) && v == -304);
+  check(csv_value(file, 25, 0, &v) && v == 0);  // step 0 and one quiet sweep of 25 visits
+  check(csv_value(file, 26, 0, &v) && v != 0);
+
+  double metric = -1;
+  check(metrics_number(dir, "energy_increases", &metric) && metric == 0);
+  check(metrics_number(dir, "stored_fixed", &metric) && metric == 4);
+  check(metrics_number(dir, "recall_rate", &metric) && metric >= 0.5);
+
+  // The same config with the synchronous update
+  write_tmp("hop_sync.json",
+            "{\"model\": \"hopfield\", \"seed\": 3, " HOP_FRAGMENT("recall", "hebb", "sync", "100", "4", "[0.0, 0.24]",
+                                                                      HOP_SUBSET) "}",
+            path);
+  check(load_quiet(path, &config));
+  check(run_into(&config, config.seed, "hop_sync", dir));
+  config_free(&config);
+  snprintf(file, sizeof(file), "%s/trials.csv", dir);
+  check(count_data_lines(file) == 32);
+  for (int a = 0; a < 4; a++) {
+    for (int t = 0; t < 4; t++) {
+      int row = a * 8 + t;
+      double sweeps = 0;
+      double correct = 0;
+      check(csv_value(file, row, 7, &sweeps) && sweeps == 1);
+      check(csv_value(file, row, 18, &correct) && correct == 1);
+    }
+  }
+  same_seed_same_bytes("hopfield_sync",
+                       "{\"model\": \"hopfield\", \"seed\": 5, " HOP_FRAGMENT("recall", "hebb", "sync", "100", "3",
+                                                                                 "[0.0, 0.24]", HOP_SUBSET) "}",
+                       "trials.csv");
+
+  // Refusals
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]", HOP_SUBSET)) == 1);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+                                          ", \"subset\": [0, 6], \"trace_trials\": 1")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+                                          ", \"subset\": [1, 1], \"trace_trials\": 1")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+                                          ", \"subset\": [0.5], \"trace_trials\": 1")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+                                          ", \"trace_trials\": 1")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+                                          ", \"subset\": [0, 1, 2, 3]")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+                                          ", \"subset\": [0, 1, 2, 3], \"trace_trials\": 5")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+                                          ", \"subset\": [0, 1, 2, 3], \"trace_trials\": -1")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "0", "4", "[0.0]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "10001", "4", "[0.0]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "0", "[0.0]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "hex", "100", "4", "[0.0]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "pinv", "async", "100", "4", "[0.0]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("bogus", "hebb", "async", "100", "4", "[0.0]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0, 1.5]", HOP_SUBSET)) == 0);
+  char zeros[PATH_MAX_TEST];
+  write_tmp("hop_zeros.csv", "a,b\n1,0\n-1,1\n", zeros);
+  char fragment[1024];
+  snprintf(fragment, sizeof(fragment),
+           "\"input\": \"%s\", \"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"async\", "
+           "\"max_sweeps\": 100, \"trials\": 4, \"noise_levels\": [0.0], \"subset\": [0, 1], \"trace_trials\": 1",
+           zeros);
+  check(hopfield_run_accepts(fragment) == 0);
+}
+
+
+// Config text of a capacity run on the synthetic fixture
+#define CAP_CONFIG(seed, p, n_subsets, trials) \
+  "{\"model\": \"hopfield\", \"seed\": " seed ", " \
+  HOP_FRAGMENT("capacity", "hebb", "async", "100", trials, "[0.12]", ", \"p\": " p ", \"n_subsets\": " n_subsets) "}"
+
+// Runs the config text and leaves the run directory in dir
+static void capacity_run(const char * name, const char * text, char dir[]) {
+  char path[PATH_MAX_TEST];
+  write_tmp("hop_cap.json", text, path);
+  Config config;
+  check(load_quiet(path, &config));
+  check(run_into(&config, config.seed, name, dir));
+  config_free(&config);
+}
+
+
+static void test_hopfield_capacity(void) {
+  // Planning-time numpy values for the 15 subsets of 4 rows of the fixture
+  static const double N_STABLE[15] = { 4, 2, 4, 3, 4, 2, 4, 4, 3, 4, 4, 4, 4, 4, 4 };
+  static const double MIN_MARGIN[15] = { 2, -2, 4, -2, 6, -6, 4, 10, -2, 2, 6, 10, 6, 10, 10 };
+  char dir[PATH_MAX_TEST];
+  char file[PATH_MAX_TEST + 32];
+  double v;
+
+  capacity_run("hop_cap4", CAP_CONFIG("2", "4", "0", "2"), dir);
+  snprintf(file, sizeof(file), "%s/capacity.csv", dir);
+  check(count_data_lines(file) == 15);
+  for (int r = 0; r < 15; r++) {
+    check(csv_value(file, r, 0, &v) && v == r);
+    check(csv_value(file, r, 7, &v) && v == N_STABLE[r]);
+    check(csv_value(file, r, 8, &v));
+    check_close(v, N_STABLE[r] / 4, 1e-15);
+    check(csv_value(file, r, 9, &v) && v == MIN_MARGIN[r]);
+    check(csv_value(file, r, 10, &v) && v >= 0 && v <= 1);
+  }
+  static const double FIRST[4] = { 0, 1, 2, 3 };
+  static const double LAST[4] = { 2, 3, 4, 5 };
+  for (int c = 0; c < 4; c++) {
+    check(csv_value(file, 0, 1 + c, &v) && v == FIRST[c]);
+    check(csv_value(file, 14, 1 + c, &v) && v == LAST[c]);
+  }
+  check(csv_value(file, 0, 5, &v));
+  check_close(v, 0.36, 1e-15);
+  check(csv_value(file, 1, 5, &v));
+  check_close(v, 0.52, 1e-15);
+  check(csv_value(file, 0, 6, &v));
+  check_close(v, 22.0 / 150, 1e-15);
+
+  double metric = -1;
+  check(metrics_number(dir, "n_subsets", &metric) && metric == 15);
+  check(metrics_number(dir, "n_patterns", &metric) && metric == 4);
+  check(metrics_number(dir, "n_rows", &metric) && metric == 6);
+  check(metrics_number(dir, "mean_stable_fraction", &metric));
+  check_close(metric, 0.9, 1e-12);
+  check(metrics_number(dir, "all_stable_fraction", &metric));
+  check_close(metric, 11.0 / 15, 1e-12);
+
+  // The exhaustive list doesn't depend on the seed
+  char other[PATH_MAX_TEST];
+  char other_file[PATH_MAX_TEST + 32];
+  capacity_run("hop_cap4_seed9", CAP_CONFIG("9", "4", "0", "2"), other);
+  snprintf(other_file, sizeof(other_file), "%s/capacity.csv", other);
+  for (int r = 0; r < 15; r++) {
+    for (int c = 0; c < 5; c++) {
+      double a = 0;
+      double b = 1;
+      check(csv_value(file, r, c, &a) && csv_value(other_file, r, c, &b) && a == b);
+    }
+  }
+  same_seed_same_bytes("hopfield_capacity", CAP_CONFIG("2", "4", "0", "2"), "capacity.csv");
+
+  // p = 3: every subset is stable, row 2 is (0, 1, 4) with a tie at margin 0
+  capacity_run("hop_cap3", CAP_CONFIG("2", "3", "0", "2"), dir);
+  snprintf(file, sizeof(file), "%s/capacity.csv", dir);
+  check(count_data_lines(file) == 20);
+  for (int r = 0; r < 20; r++) check(csv_value(file, r, 6, &v) && v == 3);
+  check(csv_value(file, 2, 1, &v) && v == 0);
+  check(csv_value(file, 2, 2, &v) && v == 1);
+  check(csv_value(file, 2, 3, &v) && v == 4);
+  check(csv_value(file, 2, 8, &v) && v == 0);
+
+  // p = 1: margin N - 1 and no pair
+  capacity_run("hop_cap1", CAP_CONFIG("2", "1", "0", "2"), dir);
+  snprintf(file, sizeof(file), "%s/capacity.csv", dir);
+  check(count_data_lines(file) == 6);
+  for (int r = 0; r < 6; r++) {
+    check(csv_value(file, r, 2, &v) && v == 0);
+    check(csv_value(file, r, 6, &v) && v == 24);
+  }
+
+  // Sampled subsets: distinct, ascending, depend on the seed
+  capacity_run("hop_cap_sampled", CAP_CONFIG("4", "3", "10", "2"), dir);
+  snprintf(file, sizeof(file), "%s/capacity.csv", dir);
+  check(count_data_lines(file) == 10);
+  for (int r = 0; r < 10; r++) {
+    double a[3];
+    for (int c = 0; c < 3; c++) check(csv_value(file, r, 1 + c, &a[c]));
+    check(a[0] < a[1] && a[1] < a[2] && a[2] <= 5);
+    check(csv_value(file, r, 6, &v) && v == 3);
+    for (int q = 0; q < r; q++) {
+      int same = 1;
+      for (int c = 0; c < 3; c++) {
+        double b;
+        check(csv_value(file, q, 1 + c, &b));
+        if (b != a[c]) same = 0;
+      }
+      check(!same);
+    }
+  }
+  same_seed_same_bytes("hopfield_capacity_sampled", CAP_CONFIG("4", "3", "10", "2"), "capacity.csv");
+
+  // Refusals
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+                                          ", \"p\": 3, \"n_subsets\": 19")) == 1);
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+                                          ", \"p\": 3, \"n_subsets\": 20")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+                                          ", \"p\": 0, \"n_subsets\": 0")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+                                          ", \"p\": 7, \"n_subsets\": 0")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+                                          ", \"p\": 3, \"n_subsets\": -1")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+                                          ", \"p\": 3, \"n_subsets\": 10001")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12, 0.2]",
+                                          ", \"p\": 3, \"n_subsets\": 0")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+                                          ", \"p\": 3, \"n_subsets\": 0, \"subset\": [0, 1]")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+                                          ", \"p\": 3, \"n_subsets\": 0, \"trace_trials\": 0")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+                                          ", \"n_subsets\": 0")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]", ", \"p\": 3")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+                                          HOP_SUBSET ", \"p\": 2")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+                                          HOP_SUBSET ", \"n_subsets\": 0")) == 0);
+}
+
+
+// State sign(sa xi_a + sb xi_b + sc xi_c) into out
+static void mixture_of(const double patterns[], int n, int a, int b, int c, double out[]) {
+  for (int j = 0; j < n; j++) {
+    double sum = patterns[a * n + j] + patterns[b * n + j] + patterns[c * n + j];
+    out[j] = sum > 0 ? 1 : -1;
+  }
+}
+
+
+static void test_hopfield_core(void) {
+  // (a) the course example (slides 26-32)
+  static const double COURSE[8] = { 1, 1, -1, -1, -1, -1, 1, 1 };
+  double w4[16];
+  hopfield_hebb(COURSE, 2, 4, w4);
+  check(w4[0 * 4 + 1] == 2 && w4[0 * 4 + 2] == -2 && w4[0 * 4 + 3] == -2);
+  check(w4[1 * 4 + 2] == -2 && w4[1 * 4 + 3] == -2 && w4[2 * 4 + 3] == 2);
+  int symmetric = 1;
+  for (int i = 0; i < 4; i++) {
+    check(w4[i * 4 + i] == 0);
+    for (int j = 0; j < 4; j++) symmetric = symmetric && w4[i * 4 + j] == w4[j * 4 + i];
+  }
+  check(symmetric);
+  double zeta[4] = { 1, -1, -1, -1 };
+  double h4[4];
+  hopfield_fields(w4, 4, zeta, h4);
+  check(h4[0] == 2 && h4[1] == 6 && h4[2] == -2 && h4[3] == -2);
+  double next4[4];
+  check(hopfield_sync_step(w4, 4, zeta, next4) == 1);
+  check(next4[0] == 1 && next4[1] == 1 && next4[2] == -1 && next4[3] == -1);
+  int match[3];
+  int sign[3];
+  check(hopfield_classify(COURSE, 2, 4, next4, match, sign) == HOPFIELD_STORED);
+  check(match[0] == 0 && sign[0] == 1 && match[1] == -1 && sign[1] == 0);
+  check(hopfield_energy(w4, 4, COURSE) == -12);
+  check(hopfield_energy(w4, 4, zeta) == 0);
+
+  // (b) Hebb on rows 0-3 of the fixture
+  Matrix fixture;
+  check(matrix_load(PATTERNS_MIX, &fixture));
+  const double * rows = fixture.data;
+  double w[25 * 25];
+  hopfield_hebb(rows, 4, 25, w);
+  int integral = 1;
+  int sym = 1;
+  double max_abs = 0;
+  for (int i = 0; i < 25; i++) {
+    check(w[i * 25 + i] == 0);
+    for (int j = 0; j < 25; j++) {
+      integral = integral && w[i * 25 + j] == floor(w[i * 25 + j]);
+      sym = sym && w[i * 25 + j] == w[j * 25 + i];
+      if (fabs(w[i * 25 + j]) > max_abs) max_abs = fabs(w[i * 25 + j]);
+    }
+  }
+  check(integral && sym);
+  check(max_abs == 4);
+  check(w[0 * 25 + 1] == 0);
+
+  // (c) a zero field keeps the state
+  double wt[9] = { 0, 1, -1, 1, 0, 0, -1, 0, 0 };
+  double tie[3] = { -1, 1, 1 };
+  double tie_next[3];
+  hopfield_sync_step(wt, 3, tie, tie_next);
+  check(tie_next[0] == -1);
+  {
+    double s[3] = { -1, 1, 1 };
+    double h[3];
+    int order[3] = { 0, 1, 2 };
+    Rng rng = rng_new(1);
+    HopfieldTrace trace = { NULL, 0, 0, 1000, 0 };
+    HopfieldOutcome out;
+    check(hopfield_async_run(wt, 3, s, h, order, &rng, 10, &trace, &out));
+    int found = 0;
+    for (long long r = 0; r < trace.rows && !found; r++) {
+      const double * line = trace.data + r * HOPFIELD_TRACE_WIDTH;
+      if (line[3] == 0) {
+        found = 1;
+        check(line[4] == 0); // the first visit of neuron 0 changes nothing
+      }
+    }
+    check(found);
+    check(out.converged);
+    hopfield_trace_free(&trace);
+  }
+
+  // (d) incremental energy against the energy from scratch, monotone in async
+  {
+    Rng rng = rng_new(11);
+    HopfieldTrace trace = { NULL, 0, 0, 100000, 0 };
+    int all_converged = 1;
+    int all_monotone = 1;
+    int all_replayed = 1;
+    int all_fixed = 1;
+    for (int run = 0; run < 200; run++) {
+      double s[25];
+      double start[25];
+      double h[25];
+      int order[25];
+      for (int j = 0; j < 25; j++) {
+        s[j] = rng_uniform(&rng) < 0.5 ? -1 : 1;
+        start[j] = s[j];
+        order[j] = j;
+      }
+      trace.rows = 0;
+      HopfieldOutcome out;
+      check(hopfield_async_run(w, 25, s, h, order, &rng, 100, &trace, &out));
+      all_converged = all_converged && out.converged && out.cycle == 0 && out.energy_increases == 0;
+
+      double replay[25];
+      memcpy(replay, start, sizeof(replay));
+      for (long long r = 0; r < trace.rows; r++) {
+        const double * line = trace.data + r * HOPFIELD_TRACE_WIDTH;
+        if (r > 0) {
+          const double * before = line - HOPFIELD_TRACE_WIDTH;
+          if (line[5] > before[5] + 1e-9) all_monotone = 0;
+          if (line[4] == 1 && !(line[5] <= before[5] - 1)) all_monotone = 0;
+          if (line[4] == 1) replay[(int) line[3]] = -replay[(int) line[3]];
+        }
+        if (fabs(hopfield_energy(w, 25, replay) - line[5]) > 1e-9) all_replayed = 0;
+      }
+      hopfield_fields(w, 25, s, h);
+      for (int i = 0; i < 25; i++) all_fixed = all_fixed && (h[i] == 0 || (h[i] > 0) == (s[i] > 0));
+    }
+    check(all_converged);
+    check(all_monotone);
+    check(all_replayed);
+    check(all_fixed);
+    hopfield_trace_free(&trace);
+  }
+
+  // (e) the synchronous two-cycle against the asynchronous convergence
+  {
+    double w2[4] = { 0, -1, -1, 0 };
+    double s[2] = { 1, 1 };
+    double scratch[4];
+    HopfieldOutcome out;
+    check(hopfield_sync_run(w2, 2, s, scratch, 100, NULL, &out));
+    check(out.cycle == 2 && out.converged == 0 && out.sweeps == 2);
+    check(s[0] == 1 && s[1] == 1);
+
+    double a[2] = { 1, 1 };
+    double h[2];
+    int order[2] = { 0, 1 };
+    Rng rng = rng_new(2);
+    check(hopfield_async_run(w2, 2, a, h, order, &rng, 100, NULL, &out));
+    check(out.converged == 1 && out.cycle == 0);
+    check(a[0] == -a[1]);
+  }
+
+  // (f) the classifier
+  {
+    double state[25];
+    memcpy(state, rows + 2 * 25, sizeof(state));
+    check(hopfield_classify(rows, 4, 25, state, match, sign) == HOPFIELD_STORED);
+    check(match[0] == 2 && sign[0] == 1);
+
+    for (int j = 0; j < 25; j++) state[j] = -rows[25 + j];
+    check(hopfield_classify(rows, 4, 25, state, match, sign) == HOPFIELD_INVERSE);
+    check(match[0] == 1 && sign[0] == -1);
+
+    mixture_of(rows, 25, 0, 2, 3, state);
+    check(hopfield_classify(rows, 4, 25, state, match, sign) == HOPFIELD_MIXTURE);
+    check(match[0] == 0 && match[1] == 2 && match[2] == 3);
+    check(sign[0] == 1 && sign[1] == 1 && sign[2] == 1);
+    check(hopfield_classify(rows, 2, 25, state, match, sign) == HOPFIELD_OTHER);
+
+    memcpy(state, rows, sizeof(state));
+    for (int j = 0; j < 3; j++) state[j] = -state[j];
+    check(hopfield_classify(rows, 4, 25, state, match, sign) == HOPFIELD_OTHER);
+    check(match[0] == -1);
+  }
+
+  // (g) the stability margin and a synchronous run from a stored pattern
+  {
+    int wrong = -1;
+    check(hopfield_min_margin(w, 25, rows + 25, &wrong) == 2);
+    check(wrong == 0);
+    double s[25];
+    double scratch[50];
+    memcpy(s, rows, sizeof(s));
+    HopfieldOutcome out;
+    check(hopfield_sync_run(w, 25, s, scratch, 100, NULL, &out));
+    check(out.converged && out.sweeps == 1 && out.flips == 0);
+  }
+  matrix_free(&fixture);
+}
+
+
 int main(void) {
 
   tmp_start();
@@ -521,6 +1032,9 @@ int main(void) {
     { "same seed, same bytes", test_same_seed_same_bytes },
     { "dispatch by model", test_dispatch_by_model },
     { "kohonen training", test_kohonen_training },
+    { "hopfield run", test_hopfield_run },
+    { "hopfield core", test_hopfield_core },
+    { "hopfield capacity", test_hopfield_capacity },
   };
   int n_tests = (int) (sizeof(tests) / sizeof(tests[0]));
 

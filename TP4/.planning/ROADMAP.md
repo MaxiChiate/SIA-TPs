@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Fundación, auditoría de datos y PCA** - Pipeline C/Python reproducible, `creadores.csv` auditado y estandarizado, PCA con decisión escrita (completed 2026-10-20)
 - [x] **Phase 2: Kohonen SOM** - Mapa de los 50 creadores con grilla elegida por regla multicriterio fijada de antemano y perfiles por región (completed 2026-10-21)
 - [ ] **Phase 3: Oja y decisiones de campaña** - Índice de Oja contra PC1, recomendaciones por campaña, comparación contra solo `followers` y mantenimiento
-- [ ] **Phase 4: Hopfield núcleo y letras** - Núcleo validado con 4 letras 5×5: energía, ortogonalidad, capacidad y un estado espurio identificado
+- [x] **Phase 4: Hopfield núcleo y letras** - Núcleo validado con 4 letras 5×5: energía, ortogonalidad, capacidad y un estado espurio identificado (completed 2026-10-23)
 - [ ] **Phase 5: Hopfield con QR** - Cinco QR de 37×37 con Hebb (falla reportada), pseudo-inversa, línea base de Hamming y limitaciones
 - [ ] **Phase 6: Slides e informe** - Slides e informe en Artifact con mapa pregunta→respuesta, y documentación para reproducir todo
 
@@ -132,25 +132,25 @@ Plans:
   3. El análisis de ortogonalidad (matriz de solapamientos) y de capacidad se hace sobre varios subconjuntos de letras, no solo sobre un conjunto.
   4. Un patrón muy ruidoso converge a un estado espurio que queda identificado y clasificado (inverso, mezcla u otro).
 
-**Plans:** 7 plans
+**Plans:** 8/7 plans complete
 
 Plans:
 **Wave 1**
-- [ ] 04-01-PLAN.md — Hopfield real en C (tracer): W entera de Hebb, asíncrono (referencia) y síncrono con detección de ciclo 2, energía por paso, clasificación del estado final, claves estrictas, fixture sintético y tests de C bajo sanitizers (la documentación pasa a 04-04)
-- [ ] 04-02-PLAN.md — Conversor del abecedario 5×5 a ±1 (D-01) con los chequeos de D-02 y la J del enunciado testeada, `make letters`; probado sobre un alfabeto sintético, sin letras reales (el borrador de la investigación queda descartado, D-04b) y sin correr la red
+- [x] 04-01-PLAN.md — Hopfield real en C (tracer): W entera de Hebb, asíncrono (referencia) y síncrono con detección de ciclo 2, energía por paso, clasificación del estado final, claves estrictas, fixture sintético y tests de C bajo sanitizers (la documentación pasa a 04-04)
+- [x] 04-02-PLAN.md — Conversor del abecedario 5×5 a ±1 (D-01) con los chequeos de D-02 y la J del enunciado testeada, `make letters`; probado sobre un alfabeto sintético, sin letras reales (el borrador de la investigación queda descartado, D-04b) y sin correr la red
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 04-03-PLAN.md — Regla de las letras: abecedario nuevo dibujado sin correr la red (D-04b), selección entera con desempates fijados por principio, capacidad p = 1..8 con regla de extensión escrita, guardia como código y texto entre marcadores; el usuario aprueba letra por letra y hace el commit de la regla antes de correr la red sobre las letras
-- [ ] 04-04-PLAN.md — Tarea `capacity` en C (subconjuntos exhaustivos o sorteados), recomputación independiente en numpy de todas las salidas, probadas sobre el fixture, y documentación de Hopfield (README de neuron, models.h, serie de humo)
+- [x] 04-03-PLAN.md — Regla de las letras: abecedario nuevo dibujado sin correr la red (D-04b), selección entera con desempates fijados por principio, capacidad p = 1..8 con regla de extensión escrita, guardia como código y texto entre marcadores; el usuario aprueba letra por letra y hace el commit de la regla antes de correr la red sobre las letras
+- [x] 04-04-PLAN.md — Tarea `capacity` en C (subconjuntos exhaustivos o sorteados), recomputación independiente en numpy de todas las salidas, probadas sobre el fixture, y documentación de Hopfield (README de neuron, models.h, serie de humo)
 
 **Wave 3** *(blocked on Wave 2 completion and the user's rule commit)*
-- [ ] 04-05-PLAN.md — `make hopfield-letters` con guardia: selección, recuperación de los dos sets en asíncrono y síncrono, ortogonalidad, capacidad p = 4 exhaustiva y por p (1..8 más la extensión de la regla), búsqueda preregistrada del estado espurio, todo verificado en numpy
+- [x] 04-05-PLAN.md — `make hopfield-letters` con guardia: selección, recuperación de los dos sets en asíncrono y síncrono, ortogonalidad, capacidad p = 4 exhaustiva y por p (1..8 más la extensión de la regla), búsqueda preregistrada del estado espurio, todo verificado en numpy
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 04-06-PLAN.md — `make hopfield-figures`: letras, solapamientos, histograma de max |solapamiento|, términos de cruce, recuperación vs ruido y energía; secciones 2, 4 y 5
+- [x] 04-06-PLAN.md — `make hopfield-figures`: letras, solapamientos, histograma de max |solapamiento|, términos de cruce, recuperación vs ruido y energía; secciones 2, 4 y 5
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 04-07-PLAN.md — Figuras de capacidad y del estado espurio, secciones 1, 6, 7 y 8, README de analysis y chequeo final completo
+- [x] 04-07-PLAN.md — Figuras de capacidad y del estado espurio, secciones 1, 6, 7 y 8, README de analysis y chequeo final completo
 
 ### Phase 5: Hopfield con QR
 
@@ -189,6 +189,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 | 1. Fundación, auditoría de datos y PCA | 8/8 | Complete    | 2026-10-20 |
 | 2. Kohonen SOM | 6/6 | Complete    | 2026-10-21 |
 | 3. Oja y decisiones de campaña | 0/TBD | Not started | - |
-| 4. Hopfield núcleo y letras | 0/TBD | Not started | - |
+| 4. Hopfield núcleo y letras | 8/7 | Complete    | 2026-10-23 |
 | 5. Hopfield con QR | 0/TBD | Not started | - |
 | 6. Slides e informe | 0/TBD | Not started | - |

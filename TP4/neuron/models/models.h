@@ -39,8 +39,11 @@ double kohonen_neighbor_weight(int d2, double radius, int gaussian);
 // Phase 1 stub: projects the input onto a random unit vector. Phase 3 replaces the body with Oja's rule.
 int run_oja(const Config * config, Rng * rng, const Results * results);
 
-// Phase 1 stub: seeded pixel flips per noise level and the overlap with the stored pattern.
-// Phases 4 and 5 replace the body with the Hopfield network.
+// Discrete Hopfield network: Hebb W with a zero diagonal, async (reference) or sync updates, energy per step, two-cycle
+// detection in sync, final state classified as stored / inverse / mixture / other. Task "recall" writes stored.csv,
+// overlaps.csv, trials.csv, trace.csv, states.csv and metrics.json; task "capacity" writes capacity.csv and
+// metrics.json.
+// The core API lives in hopfield_core.h.
 int run_hopfield(const Config * config, Rng * rng, const Results * results);
 
 #endif //__MODELS_H__

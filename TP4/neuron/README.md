@@ -2,8 +2,8 @@
 
 Núcleo en C del TP4: un solo binario, `build/neuron`, que corre el modelo que diga el config (`kohonen`, `oja` o
 `hopfield`). En la Fase 1 los tres eran stubs deterministas que ejercitan todo el lazo (config, entrada, `Rng`,
-escritura de resultados); la Fase 2 reemplazó el cuerpo de `kohonen` por el mapa autoorganizado real y las Fases 3 a 5
-reemplazan el de `oja` y el de `hopfield`.
+escritura de resultados); la Fase 2 reemplazó el cuerpo de `kohonen` por el mapa autoorganizado real, la Fase 4
+reemplazó el de `hopfield` por la red real y la Fase 3 hace lo propio con `oja`.
 
 ## Requisitos
 
@@ -21,10 +21,12 @@ make run CONFIG=config.json.kohonen.example   # compila si hace falta y corre
 ```
 
 Los configs de ejemplo (`config.json.kohonen.example`, `config.json.oja.example`, `config.json.hopfield.example`) se
-copian a `config.json` para usarlos como propios (`config.json` no se versiona). Los de kohonen y oja leen
+copian a `config.json` para usarlos como propios (`config.json` no se versiona); `config.json.hopfield_capacity.example`
+es el de la tarea `capacity`. Los de kohonen y oja leen
 `../datos/prepared/creadores_zscore.csv` (50 x 26, los z-scores de los creadores auditados), que genera
 `make prepare` (o un `make` solo) en `TP4/` y **no se versiona**: un clone nuevo no lo tiene hasta que se genera. El
-de hopfield lee `tests/fixtures/patterns_small.csv` (dos letras 5 x 5 en ±1).
+de hopfield (`config.json.hopfield.example` y `config.json.hopfield_capacity.example`) leen
+`tests/fixtures/patterns_mix.csv` (seis patrones sintéticos de 25 píxeles en ±1, sin relación con las letras).
 
 Otros targets: `make clean` borra `build/`.
 
@@ -32,7 +34,7 @@ Otros targets: `make clean` borra `build/`.
 
 ```sh
 make test       # tests de C y después pytest (../analysis/tests); también desde TP4/
-make test-c     # solo los 4 tests de C (leen solo tests/fixtures)
+make test-c     # solo los tests de C (incluidos `hopfield run`, `hopfield core` y `hopfield capacity`; leen solo tests/fixtures)
 make debug      # los tests de C con AddressSanitizer y UndefinedBehaviorSanitizer, en build/debug
 ```
 
@@ -70,7 +72,19 @@ Claves de cada modelo:
 | `kohonen` | `eta_final` | número, `0 < eta_final <= eta0` | Tasa de aprendizaje en el último paso; decae exponencialmente |
 | `kohonen` | `epochs` | entero entre 1 y 100000 | Pasadas sobre las muestras, cada una en orden barajado |
 | `oja` | (ninguna todavía) | | La Fase 3 agrega las de la regla de Oja |
-| `hopfield` | `noise_levels` | lista de 1 a 64 números en [0, 1] | Fracciones de píxeles que se invierten por patrón |
+| `hopfield` | `task` | `"recall"` o `"capacity"` | `recall`: guarda los patrones de `subset` y recupera versiones ruidosas; `capacity`: guarda `p` patrones por subconjunto y mide cuántos son puntos fijos y cuántos se recuperan |
+| `hopfield` | `rule` | `"hebb"` | Regla de aprendizaje: W = suma de xi xi^T con diagonal cero y sin 1/N |
+| `hopfield` | `update` | `"async"` o `"sync"` | `async` (referencia): una neurona por vez en orden aleatorio nuevo en cada barrido; `sync` (comparación): todas a la vez, con detección de ciclos de 2 |
+| `hopfield` | `max_sweeps` | entero entre 1 y 10000 | Tope de barridos (async) o pasos (sync) |
+| `hopfield` | `trials` | entero entre 1 y 100000 | Consultas ruidosas por patrón guardado y nivel de ruido |
+| `hopfield` | `noise_levels` | lista de 1 a 64 números en [0, 1] | Fracciones de píxeles que se invierten; se invierten exactamente `lround(nivel x N)` píxeles distintos; `capacity` toma un solo nivel |
+| `hopfield` | `subset` | lista de índices de fila distintos de la entrada | Solo `recall`: los patrones que se guardan |
+| `hopfield` | `trace_trials` | entero entre 0 y `trials` | Solo `recall`: ensayos por patrón y nivel cuyo trace paso a paso y cuyos estados se escriben |
+| `hopfield` | `p` | entero entre 1 y 64, como mucho las filas de la entrada | Solo `capacity`: patrones guardados por subconjunto |
+| `hopfield` | `n_subsets` | entero entre 0 y 10000 | Solo `capacity`: 0 = todos los subconjuntos de `p` filas en orden lexicográfico (hasta 200 000); si no, esa cantidad de subconjuntos distintos sorteados con la seed antes de los ensayos, menos que C(filas, p) |
+
+La tarea `recall` toma `subset` y `trace_trials` y rechaza `p` y `n_subsets`; la tarea `capacity` toma `p`, `n_subsets` y un
+solo nivel de ruido, y rechaza `subset` y `trace_trials`.
 
 ## Salida
 
@@ -85,15 +99,20 @@ Regla de reproducibilidad (D-04): la fecha vive solo en el nombre de la carpeta.
 duración o una ruta absoluta (la duración va a stderr). Dos corridas con el mismo config y la misma seed dan carpetas
 que `diff -r` declara idénticas.
 
-Archivos y métricas de cada modelo (oja y hopfield siguen siendo stubs):
+Archivos y métricas de cada modelo (oja sigue siendo un stub):
 
 | Modelo | CSV | `metrics.json` |
 |--------|-----|----------------|
 | `kohonen` | `prototypes.csv` (una fila por neurona: `neuron,row,col` y una columna por variable), `assignments.csv` (`sample,bmu,row,col,distance,bmu2`), `occupancy.csv` (`neuron,row,col,hits`, una fila por neurona), `trace.csv` (`epoch,eta,radius,qe,te`, la época 0 más una fila por época) | `model, seed, n_samples, n_features, grid_k, n_neurons, neighborhood, epochs, radius0, radius_final, eta0, eta_final, qe, te, occupied_neurons, empty_fraction, mean_hits_occupied, max_hits, singleton_neurons` |
 | `oja` | `weights.csv` (un vector unitario al azar, una columna por variable), `index.csv` (`sample,index`) | `model, seed, n_samples, n_features, w_norm, index_mean, index_std` |
-| `hopfield` | `queries.csv` (`pattern,noise,flipped,overlap`) | `model, seed, n_patterns, n_neurons, n_levels, mean_overlap` |
+| `hopfield` (`recall`) | `stored.csv` (`pattern,source_row,fixed,min_margin,wrong_pixels,energy`), `overlaps.csv` (`pattern,m_0..`), `trials.csv` (`trial,pattern,source_row,noise,flipped,overlap,converged,sweeps,updates,flips,cycle,class,match_a,match_b,match_c,sign_a,sign_b,sign_c,correct,e_start,e_final,hamming_final,m_0..`), `trace.csv` (`trial,step,sweep,neuron,changed,energy`; el paso 0 es la consulta, con neurona -1), `states.csv` (`trial,kind,s_0..`; `kind` 0 es la consulta y 1 el estado final) | `model, seed, task, update, rule, n_patterns, n_neurons, n_levels, trials, stored_fixed, max_abs_overlap, recall_rate, wrong_stored_rate, inverse_rate, mixture_rate, other_rate, cycle_rate, mean_sweeps, mean_flips, energy_increases` |
+| `hopfield` (`capacity`) | `capacity.csv` (`subset,idx_0..idx_{p-1},max_abs_overlap,mean_abs_overlap,n_stable,stable_fraction,min_margin,recall_rate,mean_sweeps`) | `model, seed, task, update, rule, n_patterns, n_neurons, n_rows, n_subsets, noise, trials, mean_stable_fraction, all_stable_fraction, mean_recall_rate` |
 
-Los nombres de archivo y de columna son el contrato con el análisis: cuando una fase reemplaza un stub, los conserva.
+Códigos de `class` en `trials.csv`: 0 almacenado, 1 inverso, 2 mezcla, 3 otro (`match_*` y `sign_*` dicen qué patrones y con qué signo).
+
+Los nombres de archivo y de columna son el contrato con el análisis: cuando una fase reemplaza un stub, los conserva. El
+`queries.csv` del stub de Hopfield no tenía lector, así que la Fase 4 lo reemplazó por `trials.csv`, donde `pattern`,
+`noise`, `flipped` y `overlap` conservan su significado.
 
 ## Series de corridas
 

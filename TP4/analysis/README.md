@@ -77,7 +77,7 @@ la última línea de stdout sigue siendo `summary -> <ruta>` y el comando termin
 |---|---|---|
 | `series_smoke_oja` | El stub de Oja sobre los datos auditados (`datos/prepared/creadores_zscore.csv`, 50 x 26; `make prepare` lo genera, no se versiona), 3 seeds | ¿Funciona el lazo config, binario, `summary.csv`? |
 | `series_smoke_kohonen` | El SOM de Kohonen entrenado (vecindad `step`, 260 épocas) sobre los mismos datos, `grid_k` en 2, 3 y 4, 3 seeds (9 corridas). `summary.csv` trae ahora `qe`, `te` y `empty_fraction`, más `occupied_neurons`, `mean_hits_occupied`, `max_hits` y `singleton_neurons` de `metrics.json` | ¿La clave que varía (`grid_k`) y las medidas del mapa quedan como columnas de `summary.csv`? |
-| `series_smoke_hopfield` | El stub de Hopfield sobre las letras de `neuron/tests/fixtures/patterns_small.csv`, dos variantes de `noise_levels` (`low`: 0.0 y 0.1; `high`: 0.3 y 0.5), 2 seeds (4 corridas) | ¿Funciona una variante que cambia una lista? (`noise_levels` va codificada como JSON en la columna) |
+| `series_smoke_hopfield` | La red de Hopfield real (Fase 4) sobre `neuron/tests/fixtures/patterns_mix.csv`, variantes `low` (0.0 y 0.12), `high` (0.32 y 0.48) y `sync` (`update` `sync`, 0.24 y 0.4), 2 seeds (6 corridas) | ¿Llega a `summary.csv` una variante que cambia una lista y un string? |
 | `series_som_stage1` | La etapa 1 de la regla de elección de grilla del SOM (sección 2 de `deliverables/02-kohonen.md`): 14 variantes (k de 2 a 8, vecindad escalón y gaussiana) x 10 seeds = 140 corridas, sobre los mismos datos auditados | ¿Qué grilla elige la regla fijada de antemano? (`make som-stage1`) |
 | `series_som_stage2` | La etapa 2: robustez del schedule (R0, η0 y épocas, 10 variantes) x 10 seeds sobre la k que eligió la etapa 1; la genera `som_stage.py write-stage2` | ¿La k elegida sigue pasando los filtros al mover el schedule? (`make som-stage2`) |
 
@@ -105,3 +105,25 @@ raíz de TP4:
 | `make som-stage2` | `analysis/results/som/series_som_stage2/` (robustez del schedule) |
 | `make som-figures` | `analysis/results/som/figures/` |
 | `make som-profiles` | `analysis/results/som/profiles/` |
+
+## Hopfield (Fase 4)
+
+La red de Hopfield se estudia sobre las 26 letras de 5 × 5 con la regla de elección de letras y el diseño de los experimentos commiteados antes de correr la red (sección 3 de `deliverables/04-hopfield-letras.md`). Las salidas van a `analysis/results/hopfield/` (no se versiona). Desde la raíz de TP4:
+
+| Archivo | Qué hace |
+|---|---|
+| `scripts/letters.py` y `scripts/prepare_letters.py` | Leen `datos/letters/alphabet_5x5.txt` (26 letras de 5 × 5, `*` = +1 y `.` = −1) y escriben `datos/prepared/alphabet_pm1.csv` con su `.meta.json` (`make letters`) |
+| `hopfield_select.py` | La regla de la sección 3 como código: los dos sets de letras, las constantes del diseño, la identidad de la regla (`rule_identity`) y la guardia `require_same_rule`; `python analysis/hopfield_select.py identity` termina con código 0 si la regla no cambió |
+| `hopfield.py` | Control con numpy de las salidas de C. Recalcula en todas las corridas los pesos, `stored.csv`, los solapamientos y las columnas de estabilidad de la capacidad (solapamientos, letras estables, fracción estable, margen mínimo), y repite paso a paso los ensayos trazados (el primero de cada letra y nivel de recuperación: 2080 de 62 400; y los 1200 de la búsqueda de espurios). De los demás ensayos de recuperación (clase, convergencia, barridos, píxeles invertidos, `correct`) y de la `recall_rate` y la `mean_sweeps` de la capacidad solo comprueba rangos y consistencia; esas columnas son las que escribió C |
+| `hopfield_letters.py` | Driver con guardia: arma en código las series de recuperación, capacidad (p = 4 y por p, con la extensión escrita en la regla) y estado espurio a partir de las constantes congeladas, corre el binario, pasa cada corrida por `hopfield.py` (con el alcance de la fila anterior), registra en `run.json` la identidad del código de la red (`code_identity`) y agrega los resultados |
+| `hopfield_figures.py` | Las nueve figuras: glifos, solapamientos, histograma del solapamiento máximo en valor absoluto, margen por píxel, recuperación frente al ruido, energía, capacidad con p = 4, capacidad por p y estado espurio |
+
+| Target | Escribe |
+|---|---|
+| `make letters` | `datos/prepared/alphabet_pm1.csv` y `alphabet_pm1.meta.json` |
+| `make hopfield-letters` | `analysis/results/hopfield/letters/`: `selection.json`, `orthogonality.json`, `recall.csv`, `recall_by_pattern.csv`, `capacity_p4.csv`, `capacity_by_p.csv`, `capacity.json`, `spurious.json`, `run.json` y `sweeps/` (las corridas de C) |
+| `make hopfield-figures` | `analysis/results/hopfield/figures/` (`letters`, `overlaps`, `max_overlap_hist`, `cross_terms`, `recall_noise`, `energy`, `capacity_p4`, `capacity_by_p`, `spurious`, cada una en `.svg` y `.png`); necesita los resultados de `make hopfield-letters` |
+
+La guardia: `make hopfield-letters` y `make hopfield-figures` comparan el sha256 del texto entre los marcadores de la sección 3 del entregable, del código de selección, del alfabeto y del conversor con los del commit de la regla, y se niegan a correr o a dibujar (el mensaje termina en `(D-04)`) si alguno cambió o si `alphabet_pm1.csv` no es el alfabeto commiteado; una corrida que falla o que no coincide con numpy no deja ninguna salida. La guardia no fija el código de la red (el núcleo en C, el driver y el control en numpy): `run.json` guarda en `code_identity` el commit, si hay cambios sin commitear (`dirty`), el sha256 de `neuron/models/hopfield.c`, `hopfield_core.c`, `hopfield_core.h`, `neuron/io/config.c`, `analysis/hopfield.py` y `analysis/hopfield_letters.py`, y el sha256 del binario; `make hopfield-figures` se niega a dibujar si alguno de esos archivos cambió desde la corrida (el mensaje manda a repetir `make hopfield-letters`). Con las mismas seeds, todos los CSV, JSON y SVG salen idénticos en una reejecución.
+
+Las series de la corrida de letras se generan en código a partir de las constantes congeladas de `hopfield_select.py` (no hay un archivo de series para editar), así que no aparecen en "Series existentes"; `series_smoke_hopfield` sigue siendo la serie chica sobre el fixture de `neuron/tests/fixtures/`.
