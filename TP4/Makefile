@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles sweep test clean letters hopfield-letters hopfield-figures
+.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -64,6 +64,24 @@ som-figures: prepare
 # make som-stage1 y se niega a correr si la regla cambio o no hay grilla elegida.
 som-profiles: prepare
 	$(PY) analysis/som_profiles.py
+
+# Oja en C con 10 seeds (analysis/series_oja.json), comparacion con PC1, dispersion, convergencia y evidencia del
+# maximo; escribe analysis/results/oja/ (no se versiona). Lee analysis/results/pca/, por eso depende de pca.
+oja: pca
+	$(PY) analysis/oja.py
+
+# Listas por campaña con la regla commiteada (sección 4 de deliverables/03-oja-campanas.md), dos líneas base por
+# followers y las métricas de D-17; escribe analysis/results/campaigns/ (no se versiona). Se niega a correr si la
+# regla o analysis/campaigns_select.py cambiaron desde el commit de la regla. Necesita el índice de Oja (make oja) y
+# selection.json del SOM (make som-stage1).
+campaigns: oja som-stage1
+	$(PY) analysis/campaigns.py
+
+# Demo de mantenimiento con un creador sintético (SYN001, @sintetico_demo): lo mapea con scripts/map_creator.py y el
+# scaler guardado, lo ubica en el mapa SOM y en el índice de Oja y corre el chequeo de deriva; escribe
+# analysis/results/maintenance/ (no se versiona). Necesita make oja y make som-stage1.
+maintenance: oja som-stage1
+	$(PY) analysis/maintenance_demo.py
 
 # Las 26 letras 5x5 de datos/letters/alphabet_5x5.txt, dibujadas y aprobadas en el checkpoint de la regla, a una
 # matriz ±1 en datos/prepared/ (alphabet_pm1.csv y su meta); no corre la red.

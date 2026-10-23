@@ -2,16 +2,16 @@
 gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: Oja y decisiones de campaña
-status: executing
-stopped_at: Phase 4 complete, ready to execute Phase 3
-last_updated: "2026-10-23T20:14:13.016Z"
+status: verifying
+stopped_at: Phase 4 complete; Phase 3 awaiting UAT (merged dev-tp4)
+last_updated: "2026-10-23T21:00:00.000Z"
 last_activity: 2026-10-23
-last_activity_desc: Phase 4 complete, transitioned to Phase 3
+last_activity_desc: Merged dev-tp4 (Phase 3) into dev-tp4-hopfield (Phase 4 complete)
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 27
-  completed_plans: 21
+  total_plans: 28
+  completed_plans: 28
   percent: 50
 ---
 
@@ -22,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-21)
 
 **Core value:** Interpretar correctamente los resultados de los métodos no supervisados para tomar decisiones de campaña fundamentadas en evidencia
-**Current focus:** Phase 4 — Hopfield núcleo y letras
+**Current focus:** Phase 03 — Oja y decisiones de campaña (verification); Phase 4 complete
 
 ## Current Position
 
-Phase: 3 — Oja y decisiones de campaña
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-10-23 — Phase 4 complete, transitioned to Phase 3
+Phase: 03 (Oja y decisiones de campaña) — awaiting UAT
+Plan: 6 of 6
+Status: Phase 3 ready for verification; Phase 4 complete
+Last activity: 2026-10-23 — Merged dev-tp4 into dev-tp4-hopfield
 
 Progress: [█████░░░░░] 50%
 
@@ -63,6 +63,12 @@ Progress: [█████░░░░░] 50%
 | Phase 02 P04 | 4 min | 3 tasks | 5 files |
 | Phase 02 P05 | 25 min | 2 tasks | 5 files |
 | Phase 02 P06 | 6 min | 3 tasks | 5 files |
+| Phase 03 P01 | 10 min | 2 tasks | 8 files |
+| Phase 03 P02 | 25 min | 3 tasks | 3 files |
+| Phase 03 P03 | 8 min | 2 tasks | 4 files |
+| Phase 03 P04 | 8 min | 2 tasks | 3 files |
+| Phase 03 P05 | 9 min | 3 tasks | 4 files |
+| Phase 03 P06 | 25 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -86,6 +92,18 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-05: stability SD in stage-1 curves computed from stability.csv (ddof 1, 45 pairs); empty neurons hatched in z planes as well as raw planes; section 5 reads the figure run only, regions and PCA contrast left to 02-06
 - [Phase 02]: 02-06: the committed region rule yields one region (R1, 50 creators) on the k = 5 map; reported as is, percentile untouched
 - [Phase 02]: 02-06: map layout follows PC1 (R2 0,961, p = 0,001) but not PC2 (R2 0,055, p = 0,267); Mantel grid vs plane rho 0,599
+- [Phase 03]: 03-01: Oja example config eta0 0.001 / eta_final 0.0001 / epochs 500 needed no change; pivot average_caption_words for seeds 1-3, eta0 x max|x|^2 = 0.0573
+- [Phase 03]: 03-01: Oja orientation (largest-|w| positive, lowest index on tie) lives in C as exported oja_orient; no commits made in this plan per user preference
+- [Phase 03]: 03-02: campaign rule terms 1-10 approved as written; rule committed once in a6212e8 with campaigns_select.py and tests (D-07)
+- [Phase 03]: 03-02: rule_identity guards the pre-registration: rule text and campaigns_select.py added in one commit, code unchanged since, marker digest equal to that commit's
+- [Phase 03]: Oja vs PC1: Python never re-orients a run; all 10 seeds carry the PCA orientation (pivot average_caption_words, abs(cos) >= 0.9999993) — D-02 convention applied in C, only checked in Python; the pivot margin of 0.00275 is the documented limit
+- [Phase 03]: 03-04: section 3 answers No to choosing the Oja maximum; the maximum is INF031 (perros, 17062 followers) with the D-02 sign and INF045 (fútbol, 493194 followers) with the opposite sign, and the index correlates -0,879 (Pearson) with followers
+- [Phase 03]: 03-04: sign_flipped = 1 in all 10 seeds (C reverses the trained vector to apply D-02); cause not verified, stated as such in section 1
+- [Phase 03]: 03-05: football recommendation is profundidad educativa first, descubrimiento second, alcance masivo last, a judgment resting on five stated assumptions, with no outcome claims
+- [Phase 03]: 03-05: lists reported as they came out; @makeupconsejos and @vidaperruna sit in the football discovery list by raw topic share and are flagged for a human look, rule untouched
+- [Phase 03]: 03-05: make campaigns records rule_commit a6212e89, rule_sha256 and select_sha256 in selection_identity.json; no exact tie occurred so the Oja index never decided a list
+- [Phase 03]: 03-06: the synthetic median creator (SYN001) lands at BMU (3, 1), distance 1,329 under the training maximum 3,651, so the drift check says no retraining; it demonstrates the mechanism only
+- [Phase 03]: 03-06: the synthetic index is ranked against the 50 training indices without joining them (place 24 of 1..51)
 
 ### Pending Todos
 
@@ -109,6 +127,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-23T13:47:11.715Z
-Stopped at: Phase 4 complete, ready to execute Phase 3
-Resume file: .planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md
+Last session: 2026-10-23T21:00:00.000Z
+Stopped at: Phase 4 complete; Phase 3 awaiting UAT
+Resume file: .planning/phases/03-oja-y-decisiones-de-campa-a/03-UAT.md

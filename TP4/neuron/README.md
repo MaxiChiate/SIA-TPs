@@ -2,8 +2,8 @@
 
 Núcleo en C del TP4: un solo binario, `build/neuron`, que corre el modelo que diga el config (`kohonen`, `oja` o
 `hopfield`). En la Fase 1 los tres eran stubs deterministas que ejercitan todo el lazo (config, entrada, `Rng`,
-escritura de resultados); la Fase 2 reemplazó el cuerpo de `kohonen` por el mapa autoorganizado real, la Fase 4
-reemplazó el de `hopfield` por la red real y la Fase 3 hace lo propio con `oja`.
+escritura de resultados); la Fase 2 reemplazó el cuerpo de `kohonen` por el mapa autoorganizado real, la Fase 3
+reemplazó el de `oja` por la regla de Oja y la Fase 4 reemplazó el de `hopfield` por la red real.
 
 ## Requisitos
 
@@ -34,18 +34,20 @@ Otros targets: `make clean` borra `build/`.
 
 ```sh
 make test       # tests de C y después pytest (../analysis/tests); también desde TP4/
-make test-c     # solo los tests de C (incluidos `hopfield run`, `hopfield core` y `hopfield capacity`; leen solo tests/fixtures)
+make test-c     # solo los tests de C (incluidos `oja training`, `hopfield run`, `hopfield core` y `hopfield capacity`; leen solo tests/fixtures)
 make debug      # los tests de C con AddressSanitizer y UndefinedBehaviorSanitizer, en build/debug
 ```
 
 `make test` regenera `datos/prepared/` si falta (lo leen los tests de Python). Los tests de C escriben solo dentro de
 `build/test_tmp/` y borran lo que crearon. `make debug` termina con error si hay un reporte de los sanitizers.
 
-Los cuatro tests de C: `config strict validation` (configs válidos e inválidos, objetos anidados, claves con puntos),
+Los cinco tests de C: `config strict validation` (configs válidos e inválidos, objetos anidados, claves con puntos),
 `same seed, same bytes` (los tres modelos, dos corridas con la misma seed dan los mismos bytes; el caso de kohonen tiene
 más neuronas que muestras), `dispatch by model` (la tabla de modelos y la de claves coinciden) y `kohonen training`
 (vecindad de paso con R = 1 sin diagonales, vecindad gaussiana, decaimiento, las 6 muestras de la fixture repartidas
-entre 9 neuronas, `trace.csv` de principio a fin y todos los valores de config que el modelo rechaza).
+entre 9 neuronas, `trace.csv` de principio a fin y todos los valores de config que el modelo rechaza) y
+`oja training` (el helper de orientación, la convergencia al autovector principal sobre la fixture, `trace.csv` de
+principio a fin y los valores que el modelo rechaza, incluida la cota de estabilidad `eta0 x max |x|^2 < 1`).
 
 ## Config
 
@@ -71,7 +73,9 @@ Claves de cada modelo:
 | `kohonen` | `eta0` | número, `0 < eta0 < 1` | Tasa de aprendizaje en el primer paso |
 | `kohonen` | `eta_final` | número, `0 < eta_final <= eta0` | Tasa de aprendizaje en el último paso; decae exponencialmente |
 | `kohonen` | `epochs` | entero entre 1 y 100000 | Pasadas sobre las muestras, cada una en orden barajado |
-| `oja` | (ninguna todavía) | | La Fase 3 agrega las de la regla de Oja |
+| `oja` | `eta0` | número, `0 < eta0 < 1` y `eta0 x max \|x\|^2 < 1` | Tasa de aprendizaje en el primer paso. La segunda condición es la cota de estabilidad (Pitfall 8): `max \|x\|^2` es el mayor cuadrado de la norma de una fila de la entrada, y el valor se escribe como `eta0_max_x2` |
+| `oja` | `eta_final` | número, `0 < eta_final <= eta0` | Tasa de aprendizaje en el último paso; `eta` decae exponencialmente entre las dos a lo largo de `epochs x n` pasos |
+| `oja` | `epochs` | entero entre 1 y 100000 | Pasadas sobre las muestras, cada una en orden barajado; fijo, sin parada por tolerancia |
 | `hopfield` | `task` | `"recall"` o `"capacity"` | `recall`: guarda los patrones de `subset` y recupera versiones ruidosas; `capacity`: guarda `p` patrones por subconjunto y mide cuántos son puntos fijos y cuántos se recuperan |
 | `hopfield` | `rule` | `"hebb"` | Regla de aprendizaje: W = suma de xi xi^T con diagonal cero y sin 1/N |
 | `hopfield` | `update` | `"async"` o `"sync"` | `async` (referencia): una neurona por vez en orden aleatorio nuevo en cada barrido; `sync` (comparación): todas a la vez, con detección de ciclos de 2 |
@@ -99,12 +103,12 @@ Regla de reproducibilidad (D-04): la fecha vive solo en el nombre de la carpeta.
 duración o una ruta absoluta (la duración va a stderr). Dos corridas con el mismo config y la misma seed dan carpetas
 que `diff -r` declara idénticas.
 
-Archivos y métricas de cada modelo (oja sigue siendo un stub):
+Archivos y métricas de cada modelo:
 
 | Modelo | CSV | `metrics.json` |
 |--------|-----|----------------|
 | `kohonen` | `prototypes.csv` (una fila por neurona: `neuron,row,col` y una columna por variable), `assignments.csv` (`sample,bmu,row,col,distance,bmu2`), `occupancy.csv` (`neuron,row,col,hits`, una fila por neurona), `trace.csv` (`epoch,eta,radius,qe,te`, la época 0 más una fila por época) | `model, seed, n_samples, n_features, grid_k, n_neurons, neighborhood, epochs, radius0, radius_final, eta0, eta_final, qe, te, occupied_neurons, empty_fraction, mean_hits_occupied, max_hits, singleton_neurons` |
-| `oja` | `weights.csv` (un vector unitario al azar, una columna por variable), `index.csv` (`sample,index`) | `model, seed, n_samples, n_features, w_norm, index_mean, index_std` |
+| `oja` | `weights.csv` (una fila: el vector `w` de la neurona, de largo 1 y orientado para que su coeficiente de mayor valor absoluto sea positivo, la convención del PCA de la Fase 1; una columna por variable), `index.csv` (`sample,index` con `index = x . w`), `trace.csv` (`epoch,eta,w_norm,delta_w` y una columna por variable: la época 0 más una fila por época, con `w` al final de cada época antes de renormalizar) | `model, seed, n_samples, n_features, epochs, eta0, eta_final, eta0_max_x2, w_norm_final, delta_w_final, w_norm, sign_flipped, pivot, pivot_weight, index_mean, index_std` |
 | `hopfield` (`recall`) | `stored.csv` (`pattern,source_row,fixed,min_margin,wrong_pixels,energy`), `overlaps.csv` (`pattern,m_0..`), `trials.csv` (`trial,pattern,source_row,noise,flipped,overlap,converged,sweeps,updates,flips,cycle,class,match_a,match_b,match_c,sign_a,sign_b,sign_c,correct,e_start,e_final,hamming_final,m_0..`), `trace.csv` (`trial,step,sweep,neuron,changed,energy`; el paso 0 es la consulta, con neurona -1), `states.csv` (`trial,kind,s_0..`; `kind` 0 es la consulta y 1 el estado final) | `model, seed, task, update, rule, n_patterns, n_neurons, n_levels, trials, stored_fixed, max_abs_overlap, recall_rate, wrong_stored_rate, inverse_rate, mixture_rate, other_rate, cycle_rate, mean_sweeps, mean_flips, energy_increases` |
 | `hopfield` (`capacity`) | `capacity.csv` (`subset,idx_0..idx_{p-1},max_abs_overlap,mean_abs_overlap,n_stable,stable_fraction,min_margin,recall_rate,mean_sweeps`) | `model, seed, task, update, rule, n_patterns, n_neurons, n_rows, n_subsets, noise, trials, mean_stable_fraction, all_stable_fraction, mean_recall_rate` |
 

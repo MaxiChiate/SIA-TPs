@@ -1,5 +1,8 @@
 {
   "model": "oja",
   "seed": 1,
-  "input": "../datos/prepared/creadores_zscore.csv"
+  "input": "../datos/prepared/creadores_zscore.csv",
+  "eta0": 0.001,
+  "eta_final": 0.0001,
+  "epochs": 500
 }

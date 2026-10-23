@@ -204,7 +204,8 @@ static int loads(const char * text) {
 
 
 static void test_config_strict_validation(void) {
-  check(loads("{\"model\": \"oja\", \"seed\": 1, \"input\": \"" ZSCORE_FIXTURE "\"}"));
+  check(loads("{\"model\": \"oja\", \"seed\": 1, \"input\": \"" ZSCORE_FIXTURE "\", "
+              "\"eta0\": 0.05, \"eta_final\": 0.001, \"epochs\": 50}"));
   check(loads("{\"model\": \"kohonen\", \"seed\": 1, \"input\": \"" ZSCORE_FIXTURE "\", "
               "\"grid_k\": 3, \"neighborhood\": \"step\", \"radius0\": 1.5, \"radius_final\": 1, "
               "\"eta0\": 0.5, \"eta_final\": 0.01, \"epochs\": 5}"));
@@ -219,6 +220,10 @@ static void test_config_strict_validation(void) {
   check(!loads("{\"model\": \"oja\", \"seed\": -1, \"input\": \"x.csv\"}"));
   check(!loads("{\"model\": \"kohonen\", \"seed\": 1, \"input\": \"x.csv\", \"grid_k\": 2.5}"));
   check(!loads("{\"model\": \"oja\", \"seed\": 1, \"input\": \"x.csv\", \"grid_k\": 3}"));
+  check(!loads("{\"model\": \"oja\", \"seed\": 1, \"input\": \"x.csv\", \"eta_final\": 0.001, \"epochs\": 50}"));
+  check(!loads("{\"model\": \"oja\", \"seed\": 1, \"input\": \"x.csv\", \"eta0\": 0.05, \"eta_final\": 0.001}"));
+  check(!loads("{\"model\": \"oja\", \"seed\": 1, \"input\": \"x.csv\", \"eta0\": 0.05, \"eta_final\": 0.001, "
+               "\"epochs\": 2.5}"));
   check(!loads("{\"model\": \"kohonen\", \"seed\": 1, \"input\": \"x.csv\"}"));
   check(!loads("{\"model\": \"som\", \"seed\": 1, \"input\": \"x.csv\"}"));
   check(!loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"x.csv\", \"noise_levels\": [\"a\"]}"));
@@ -317,8 +322,11 @@ static void same_seed_same_bytes(const char * name, const char * config_text, co
 
 
 static void test_same_seed_same_bytes(void) {
+  // Row 0 of trace.csv holds the seeded start vector, so seed + 1 always changes it
   same_seed_same_bytes("oja",
-                       "{\"model\": \"oja\", \"seed\": 5, \"input\": \"" ZSCORE_FIXTURE "\"}", "weights.csv");
+                       "{\"model\": \"oja\", \"seed\": 5, \"input\": \"" ZSCORE_FIXTURE "\", "
+                       "\"eta0\": 0.05, \"eta_final\": 0.001, \"epochs\": 50}",
+                       "trace.csv");
   // 9 neurons on 6 rows: the case also covers more neurons than samples
   same_seed_same_bytes("kohonen",
                        "{\"model\": \"kohonen\", \"seed\": 5, \"input\": \"" ZSCORE_FIXTURE "\", "
@@ -1020,6 +1028,112 @@ static void test_hopfield_core(void) {
 }
 
 
+// An Oja run on the 6-row fixture with the given values; 1 if the model accepts the config
+static int oja_run_accepts(double eta0, double eta_final, int epochs) {
+  char text[1024];
+  snprintf(text, sizeof(text),
+           "{\"model\": \"oja\", \"seed\": 1, \"input\": \"" ZSCORE_FIXTURE "\", \"eta0\": %.17g, "
+           "\"eta_final\": %.17g, \"epochs\": %d}",
+           eta0, eta_final, epochs);
+  char path[PATH_MAX_TEST];
+  write_tmp("bad.json", text, path);
+  Config config;
+  if (!load_quiet(path, &config)) return -1; // the types must be valid: only the values are wrong
+  char dir[PATH_MAX_TEST];
+  int saved = silence();
+  int ok = run_into(&config, config.seed, "rejected", dir);
+  unsilence(saved);
+  config_free(&config);
+  return ok;
+}
+
+
+// ---- Test 5: Oja training --------------------------------------------------------------------------------
+
+static void test_oja_training(void) {
+  // (a) the orientation helper: largest |value| positive, lowest index on a tie
+  double w1[] = { 0.1, -0.9, 0.3 };
+  check(oja_orient(w1, 3) == 1);
+  check_close(w1[0], -0.1, 0);
+  check_close(w1[1], 0.9, 0);
+  check_close(w1[2], -0.3, 0);
+  double w2[] = { 0.6, -0.2 };
+  check(oja_orient(w2, 2) == 0);
+  check_close(w2[0], 0.6, 0);
+  check_close(w2[1], -0.2, 0);
+  double w3[] = { -0.5, 0.5 };
+  check(oja_orient(w3, 2) == 1);
+  check_close(w3[0], 0.5, 0);
+  check_close(w3[1], -0.5, 0);
+
+  // (b) the oriented w converges to the top eigenvector of the fixture's second-moment matrix and the index is x . w
+  char path[PATH_MAX_TEST];
+  write_tmp("oja.json",
+            "{\"model\": \"oja\", \"seed\": 3, \"input\": \"" ZSCORE_FIXTURE "\", \"eta0\": 0.05, "
+            "\"eta_final\": 0.001, \"epochs\": 300}",
+            path);
+  Config config;
+  check(load_quiet(path, &config));
+  char dir[PATH_MAX_TEST];
+  check(run_into(&config, config.seed, "oja", dir));
+  config_free(&config);
+
+  // oriented top eigenvector of X^T X / 6 for tests/fixtures/zscore_small.csv (numpy, planning time)
+  const double expected[3] = { 0.71959073, 0.64749798, -0.25086957 };
+  char file[PATH_MAX_TEST];
+  snprintf(file, sizeof(file), "%s/weights.csv", dir);
+  check(count_data_lines(file) == 1);
+  double w[3];
+  double length = 0;
+  for (int j = 0; j < 3; j++) {
+    check(csv_value(file, 0, j, &w[j]));
+    check_close(w[j], expected[j], 5e-3);
+    length += w[j] * w[j];
+  }
+  check_close(length, 1, 1e-12);
+
+  Matrix fixture;
+  check(matrix_load(ZSCORE_FIXTURE, &fixture));
+  snprintf(file, sizeof(file), "%s/index.csv", dir);
+  check(count_data_lines(file) == 6);
+  for (int i = 0; i < 6 && fixture.n_rows == 6; i++) {
+    double dot = 0;
+    for (int j = 0; j < 3; j++) dot += fixture.data[i * 3 + j] * w[j];
+    double value = 0;
+    check(csv_value(file, i, 1, &value));
+    check_close(value, dot, 1e-12);
+  }
+  matrix_free(&fixture);
+
+  // (c) the trace runs from the start vector to the last epoch
+  snprintf(file, sizeof(file), "%s/trace.csv", dir);
+  check(count_data_lines(file) == 301);
+  double value;
+  check(csv_value(file, 0, 0, &value));
+  check_close(value, 0, 0);
+  check(csv_value(file, 0, 1, &value));
+  check_close(value, 0.05, 1e-12);
+  check(csv_value(file, 0, 2, &value));
+  check_close(value, 1, 1e-12);
+  check(csv_value(file, 0, 3, &value));
+  check_close(value, 0, 0);
+  check(csv_value(file, 300, 0, &value));
+  check_close(value, 300, 0);
+  check(csv_value(file, 300, 1, &value));
+  check_close(value, 0.001, 1e-12);
+
+  // (d) configs of the right types whose values the model refuses
+  check(oja_run_accepts(0.2, 0.001, 5) == 1); // the baseline of the cases below: 0.2 x 3.22 = 0.644 < 1
+  check(oja_run_accepts(1.0, 0.001, 5) == 0);
+  check(oja_run_accepts(0.0, 0.0, 5) == 0);
+  check(oja_run_accepts(0.05, 0.06, 5) == 0);
+  check(oja_run_accepts(0.05, 0.0, 5) == 0);
+  check(oja_run_accepts(0.05, 0.001, 0) == 0);
+  check(oja_run_accepts(0.05, 0.001, 100001) == 0);
+  check(oja_run_accepts(0.4, 0.001, 5) == 0); // 0.4 x 3.22 = 1.288, over the stability bound
+}
+
+
 int main(void) {
 
   tmp_start();
@@ -1035,6 +1149,7 @@ int main(void) {
     { "hopfield run", test_hopfield_run },
     { "hopfield core", test_hopfield_core },
     { "hopfield capacity", test_hopfield_capacity },
+    { "oja training", test_oja_training },
   };
   int n_tests = (int) (sizeof(tests) / sizeof(tests[0]));
 
