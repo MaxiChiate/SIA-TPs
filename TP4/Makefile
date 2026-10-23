@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean
+.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -82,3 +82,18 @@ campaigns: oja som-stage1
 # analysis/results/maintenance/ (no se versiona). Necesita make oja y make som-stage1.
 maintenance: oja som-stage1
 	$(PY) analysis/maintenance_demo.py
+
+# Las 26 letras 5x5 de datos/letters/alphabet_5x5.txt, dibujadas y aprobadas en el checkpoint de la regla, a una
+# matriz ±1 en datos/prepared/ (alphabet_pm1.csv y su meta); no corre la red.
+letters: venv
+	$(PY) scripts/prepare_letters.py
+
+# Corre los experimentos de Hopfield fijados en la sección 3 de deliverables/04-hopfield-letras.md; se niega a correr
+# si la regla, el alfabeto o el código de selección no están commiteados o cambiaron (D-04).
+hopfield-letters: letters
+	$(PY) analysis/hopfield_letters.py
+
+# Figuras de Hopfield sobre las letras (glifos, solapamientos, término de cruce, recuperación y energía); necesitan los
+# resultados de make hopfield-letters y se niegan a dibujar si la regla cambió.
+hopfield-figures: venv
+	$(PY) analysis/hopfield_figures.py

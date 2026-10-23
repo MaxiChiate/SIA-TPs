@@ -1,6 +1,13 @@
 {
   "model": "hopfield",
   "seed": 1,
-  "input": "tests/fixtures/patterns_small.csv",
-  "noise_levels": [0.0, 0.1, 0.2]
+  "input": "tests/fixtures/patterns_mix.csv",
+  "task": "recall",
+  "rule": "hebb",
+  "update": "async",
+  "max_sweeps": 100,
+  "trials": 10,
+  "noise_levels": [0.0, 0.12, 0.24],
+  "subset": [0, 1, 2, 3],
+  "trace_trials": 1
 }

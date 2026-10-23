@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 03
+current_phase: 3
 current_phase_name: Oja y decisiones de campaña
 status: verifying
-stopped_at: Completed 03-06-PLAN.md
-last_updated: "2026-10-22T14:57:20.837Z"
-last_activity: 2026-10-22
-last_activity_desc: Phase 03 execution started
+stopped_at: Phase 4 complete; Phase 3 awaiting UAT (merged dev-tp4)
+last_updated: "2026-10-23T21:00:00.000Z"
+last_activity: 2026-10-23
+last_activity_desc: Merged dev-tp4 (Phase 3) into dev-tp4-hopfield (Phase 4 complete)
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 20
-  completed_plans: 20
-  percent: 33
+  completed_phases: 3
+  total_plans: 28
+  completed_plans: 28
+  percent: 50
 ---
 
 # Project State
@@ -22,21 +22,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-21)
 
 **Core value:** Interpretar correctamente los resultados de los métodos no supervisados para tomar decisiones de campaña fundamentadas en evidencia
-**Current focus:** Phase 03 — Oja y decisiones de campaña
+**Current focus:** Phase 03 — Oja y decisiones de campaña (verification); Phase 4 complete
 
 ## Current Position
 
-Phase: 03 (Oja y decisiones de campaña) — EXECUTING
+Phase: 03 (Oja y decisiones de campaña) — awaiting UAT
 Plan: 6 of 6
-Status: Phase complete — ready for verification
-Last activity: 2026-10-22 — Phase 03 execution started
+Status: Phase 3 ready for verification; Phase 4 complete
+Last activity: 2026-10-23 — Merged dev-tp4 into dev-tp4-hopfield
 
-Progress: [███░░░░░░░] 33%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 22
 - Average duration: - min
 - Total execution time: 0.0 hours
 
@@ -46,6 +46,7 @@ Progress: [███░░░░░░░] 33%
 |-------|-------|-------|----------|
 | 01 | 8 | - | - |
 | 02 | 6 | - | - |
+| 4 | 8 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -126,6 +127,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T14:57:20.759Z
-Stopped at: Completed 03-06-PLAN.md
-Resume file: None
+Last session: 2026-10-23T21:00:00.000Z
+Stopped at: Phase 4 complete; Phase 3 awaiting UAT
+Resume file: .planning/phases/03-oja-y-decisiones-de-campa-a/03-UAT.md
