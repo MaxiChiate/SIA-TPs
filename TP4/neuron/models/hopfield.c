@@ -1,5 +1,8 @@
-// Discrete Hopfield network with +-1 neurons. W = sum over the stored patterns of xi xi^T with a zero diagonal and no
-// 1/N, so its entries are exact integers kept in doubles and h_i = 0 is an exact tie (the neuron keeps its state).
+// Discrete Hopfield network with +-1 neurons. rule "hebb": W = sum over the stored patterns of xi xi^T with a zero
+// diagonal and no 1/N, so its entries are exact integers kept in doubles. rule "pinv": W = X^T (X X^T)^-1 X, the
+// pseudo-inverse / projection rule (D-06), real-valued with a non-zero diagonal (D-07) - the remedy for Hebb's
+// failure on correlated patterns, built by hopfield_pinv and reported as an error if the Gram matrix X X^T is
+// singular. Either way h_i = 0 is an exact tie (the neuron keeps its state).
 // Task "recall" stores the rows of the input named by "subset", then corrupts every stored pattern by flipping exactly
 // k = lround(level * N) distinct pixels per trial and runs the dynamics: "async" (one neuron at a time in a fresh
 // random order per sweep, the reference) or "sync" (every neuron at once, the course's comparison, with two-cycle
@@ -41,6 +44,7 @@
 // The keys of the config, already checked
 typedef struct {
   int recall;       // task "recall"
+  int pinv;         // 0: rule "hebb", 1: rule "pinv"
   int sync;         // 0: update "async", 1: update "sync"
   int max_sweeps;
   int trials;
@@ -227,8 +231,12 @@ static int read_params(const Config * config, const Matrix * input, HopfieldPara
     return 0;
   }
   params->recall = !is_capacity;
-  if (strcmp(rule, "hebb") != 0) {
-    fprintf(stderr, "%s: rule must be \"hebb\"\n", config->path);
+  if (strcmp(rule, "hebb") == 0) {
+    params->pinv = 0;
+  } else if (strcmp(rule, "pinv") == 0) {
+    params->pinv = 1;
+  } else {
+    fprintf(stderr, "%s: rule must be \"hebb\" or \"pinv\"\n", config->path);
     return 0;
   }
   if (strcmp(update, "async") == 0) {
@@ -444,6 +452,7 @@ typedef struct {
   double * query;
   double * h;
   double * scratch;  // 2n
+  double * gram;     // 2*p*p, hopfield_pinv's Gram scratch (unused when rule is hebb)
   int * order;
   double * trials;
   double * states;
@@ -549,11 +558,13 @@ static int run_recall(const Config * config, const HopfieldParams * params, Rng 
   buf.query = malloc((size_t) n * sizeof(double));
   buf.h = malloc((size_t) n * sizeof(double));
   buf.scratch = malloc((size_t) 2 * n * sizeof(double));
+  buf.gram = malloc((size_t) 2 * p * p * sizeof(double));
   buf.order = malloc((size_t) n * sizeof(int));
   buf.trials = malloc(trial_rows * (TRIAL_FIXED + p) * sizeof(double));
   buf.states = malloc((state_rows > 0 ? state_rows : 1) * (2 + n) * sizeof(double));
   int ok = buf.patterns != NULL && buf.w != NULL && buf.s != NULL && buf.query != NULL && buf.h != NULL
-           && buf.scratch != NULL && buf.order != NULL && buf.trials != NULL && buf.states != NULL;
+           && buf.scratch != NULL && buf.gram != NULL && buf.order != NULL && buf.trials != NULL
+           && buf.states != NULL;
   if (!ok) fprintf(stderr, "hopfield: couldn't allocate the weights and the trial tables\n");
 
   HopfieldTrace trace = { NULL, 0, 0, TRACE_ROWS_MAX, 0 };
@@ -566,7 +577,15 @@ static int run_recall(const Config * config, const HopfieldParams * params, Rng 
     for (int a = 0; a < p; a++) {
       memcpy(buf.patterns + (size_t) a * n, input->data + (size_t) params->subset[a] * n, (size_t) n * sizeof(double));
     }
-    hopfield_hebb(buf.patterns, p, n, buf.w);
+    if (params->pinv) {
+      if (!hopfield_pinv(buf.patterns, p, n, buf.w, buf.gram)) {
+        fprintf(stderr, "%s: the Gram matrix of the stored patterns is singular; the pseudo-inverse rule needs "
+                        "linearly independent patterns\n", config->path);
+        ok = 0;
+      }
+    } else {
+      hopfield_hebb(buf.patterns, p, n, buf.w);
+    }
   }
   ok = ok && write_stored(results, params, buf.patterns, n, buf.w, &fixed_count);
   ok = ok && write_overlaps(results, p, n, buf.patterns, &max_abs_overlap);
@@ -582,7 +601,7 @@ static int run_recall(const Config * config, const HopfieldParams * params, Rng 
       { "seed", NULL, config->seed },
       { "task", "recall", 0 },
       { "update", params->sync ? "sync" : "async", 0 },
-      { "rule", "hebb", 0 },
+      { "rule", params->pinv ? "pinv" : "hebb", 0 },
       { "n_patterns", NULL, p },
       { "n_neurons", NULL, n },
       { "n_levels", NULL, params->n_levels },
@@ -609,6 +628,7 @@ static int run_recall(const Config * config, const HopfieldParams * params, Rng 
   free(buf.query);
   free(buf.h);
   free(buf.scratch);
+  free(buf.gram);
   free(buf.order);
   free(buf.trials);
   free(buf.states);
@@ -667,6 +687,7 @@ typedef struct {
   double * s;
   double * h;
   double * scratch;   // 2n
+  double * gram;      // 2*p*p, hopfield_pinv's Gram scratch (unused when rule is hebb)
   int * order;        // n, and n_rows while drawing
 } CapacityBuffers;
 
@@ -718,8 +739,10 @@ static void pair_overlaps(const double patterns[], int p, int n, double * max_ab
 }
 
 
-// Stores every subset in turn, measures its stability and runs the noisy recall trials at the one noise level
-static int run_subsets(const HopfieldParams * params, Rng * rng, const Matrix * input, CapacityBuffers * buf) {
+// Stores every subset in turn, measures its stability and runs the noisy recall trials at the one noise level.
+// Returns 0 (and stops) if a singular Gram is hit under rule "pinv".
+static int run_subsets(const Config * config, const HopfieldParams * params, Rng * rng, const Matrix * input,
+                       CapacityBuffers * buf) {
   int n = input->n_cols;
   int p = params->p;
   int width = 1 + p + CAPACITY_TAIL;
@@ -730,7 +753,15 @@ static int run_subsets(const HopfieldParams * params, Rng * rng, const Matrix * 
     for (int a = 0; a < p; a++) {
       memcpy(buf->patterns + (size_t) a * n, input->data + (size_t) rows[a] * n, (size_t) n * sizeof(double));
     }
-    hopfield_hebb(buf->patterns, p, n, buf->w);
+    if (params->pinv) {
+      if (!hopfield_pinv(buf->patterns, p, n, buf->w, buf->gram)) {
+        fprintf(stderr, "%s: the Gram matrix of the stored patterns is singular; the pseudo-inverse rule needs "
+                        "linearly independent patterns\n", config->path);
+        return 0;
+      }
+    } else {
+      hopfield_hebb(buf->patterns, p, n, buf->w);
+    }
 
     double * line = buf->table + (size_t) r * width;
     line[0] = (double) r;
@@ -792,9 +823,10 @@ static int run_capacity(const Config * config, const HopfieldParams * params, Rn
   buf.s = malloc((size_t) n * sizeof(double));
   buf.h = malloc((size_t) n * sizeof(double));
   buf.scratch = malloc((size_t) 2 * n * sizeof(double));
+  buf.gram = malloc((size_t) 2 * p * p * sizeof(double));
   buf.order = malloc((size_t) order_size * sizeof(int));
   int ok = buf.idx != NULL && buf.table != NULL && buf.patterns != NULL && buf.w != NULL && buf.s != NULL
-           && buf.h != NULL && buf.scratch != NULL && buf.order != NULL;
+           && buf.h != NULL && buf.scratch != NULL && buf.gram != NULL && buf.order != NULL;
   if (!ok) fprintf(stderr, "hopfield: couldn't allocate the capacity tables\n");
 
   if (ok && params->n_subsets > 0) {
@@ -807,7 +839,7 @@ static int run_capacity(const Config * config, const HopfieldParams * params, Rn
       next_combination(buf.idx + (size_t) r * p, p, input->n_rows);
     }
   }
-  ok = ok && run_subsets(params, rng, input, &buf);
+  ok = ok && run_subsets(config, params, rng, input, &buf);
   ok = ok && write_capacity(results, p, params->subsets, buf.table);
 
   if (ok) {
@@ -826,7 +858,7 @@ static int run_capacity(const Config * config, const HopfieldParams * params, Rn
       { "seed", NULL, config->seed },
       { "task", "capacity", 0 },
       { "update", params->sync ? "sync" : "async", 0 },
-      { "rule", "hebb", 0 },
+      { "rule", params->pinv ? "pinv" : "hebb", 0 },
       { "n_patterns", NULL, p },
       { "n_neurons", NULL, n },
       { "n_rows", NULL, input->n_rows },
@@ -847,6 +879,7 @@ static int run_capacity(const Config * config, const HopfieldParams * params, Rn
   free(buf.s);
   free(buf.h);
   free(buf.scratch);
+  free(buf.gram);
   free(buf.order);
   return ok;
 }

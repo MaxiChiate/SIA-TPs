@@ -7,6 +7,7 @@
 #include <string.h>
 
 #define ENERGY_TOLERANCE 1e-9
+#define PINV_SINGULAR_TOLERANCE 1e-9 // the largest available pivot magnitude below this is treated as singular
 
 
 int hopfield_trace_append(HopfieldTrace * trace, double step, double sweep, double neuron, double changed,
@@ -50,6 +51,77 @@ void hopfield_hebb(const double patterns[], int p, int n, double w[]) {
       w[(size_t) i * n + j] = sum;
     }
   }
+}
+
+
+// Builds the augmented [G | I] matrix (p rows x 2p columns) in scratch and inverts G in place by Gauss-Jordan
+// elimination with partial pivoting; returns 0 and leaves scratch half-done if a pivot's magnitude falls below
+// PINV_SINGULAR_TOLERANCE. On success the right half of every row holds G^-1.
+static int invert_gram(const double patterns[], int p, int n, double scratch[]) {
+  int width = 2 * p;
+  for (int a = 0; a < p; a++) {
+    for (int b = 0; b < p; b++) {
+      double sum = 0;
+      for (int j = 0; j < n; j++) sum += patterns[(size_t) a * n + j] * patterns[(size_t) b * n + j];
+      scratch[(size_t) a * width + b] = sum;
+    }
+    for (int b = 0; b < p; b++) scratch[(size_t) a * width + p + b] = a == b ? 1.0 : 0.0;
+  }
+
+  for (int col = 0; col < p; col++) {
+    int pivot_row = col;
+    double pivot_val = fabs(scratch[(size_t) col * width + col]);
+    for (int r = col + 1; r < p; r++) {
+      double val = fabs(scratch[(size_t) r * width + col]);
+      if (val > pivot_val) {
+        pivot_val = val;
+        pivot_row = r;
+      }
+    }
+    if (pivot_val < PINV_SINGULAR_TOLERANCE) return 0;
+    if (pivot_row != col) {
+      for (int c = 0; c < width; c++) {
+        double tmp = scratch[(size_t) col * width + c];
+        scratch[(size_t) col * width + c] = scratch[(size_t) pivot_row * width + c];
+        scratch[(size_t) pivot_row * width + c] = tmp;
+      }
+    }
+    double pivot = scratch[(size_t) col * width + col];
+    for (int c = 0; c < width; c++) scratch[(size_t) col * width + c] /= pivot;
+    for (int r = 0; r < p; r++) {
+      if (r == col) continue;
+      double factor = scratch[(size_t) r * width + col];
+      if (factor == 0) continue;
+      for (int c = 0; c < width; c++) scratch[(size_t) r * width + c] -= factor * scratch[(size_t) col * width + c];
+    }
+  }
+  return 1;
+}
+
+
+int hopfield_pinv(const double patterns[], int p, int n, double w[], double scratch[]) {
+  if (!invert_gram(patterns, p, n, scratch)) return 0;
+  int width = 2 * p;
+
+  // temp (p x n) = Ginv X; w = X^T temp, so neither factor needs the full p x p x n x n product
+  double * temp = malloc((size_t) p * n * sizeof(double));
+  if (temp == NULL) return 0;
+  for (int a = 0; a < p; a++) {
+    for (int j = 0; j < n; j++) {
+      double sum = 0;
+      for (int b = 0; b < p; b++) sum += scratch[(size_t) a * width + p + b] * patterns[(size_t) b * n + j];
+      temp[(size_t) a * n + j] = sum;
+    }
+  }
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      double sum = 0;
+      for (int a = 0; a < p; a++) sum += patterns[(size_t) a * n + i] * temp[(size_t) a * n + j];
+      w[(size_t) i * n + j] = sum; // diagonal (i == j) left intact (D-07)
+    }
+  }
+  free(temp);
+  return 1;
 }
 
 
@@ -99,7 +171,8 @@ int hopfield_async_run(const double w[], int n, double s[], double h[], int orde
       int changed = next != s[i];
       double previous = energy;
       if (changed) {
-        energy += 2 * s[i] * h[i]; // strictly negative: the flip follows the sign of h_i
+        // reduces to the strictly-negative Hebb formula when w_ii == 0; see hopfield_core.h for the derivation
+        energy += 2 * s[i] * h[i] - 2 * w[(size_t) i * n + i];
         double delta = next - s[i];
         for (int j = 0; j < n; j++) h[j] += w[(size_t) j * n + i] * delta;
         s[i] = next;
@@ -237,7 +310,7 @@ double hopfield_min_margin(const double w[], int n, const double pattern[], int 
     for (int j = 0; j < n; j++) h += w[(size_t) i * n + j] * pattern[j];
     double m = pattern[i] * h;
     if (i == 0 || m < margin) margin = m;
-    if (m < 0) (*wrong)++;
+    if (m < -ENERGY_TOLERANCE) (*wrong)++;
   }
   return margin;
 }

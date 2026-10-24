@@ -40,7 +40,8 @@ static const KeySpec OJA_KEYS[] = {
   { NULL, KEY_INT, 0, NULL },
 };
 
-// task: what the run does; "recall" runs noisy queries of the stored patterns. rule: the learning rule; "hebb". update:
+// task: what the run does; "recall" runs noisy queries of the stored patterns. rule: the learning rule; "hebb" or
+// "pinv" (the pseudo-inverse / projection rule, D-06). update:
 // "async" = one neuron at a time in a fresh random order per sweep, the reference; "sync" = every neuron at once, the
 // course's comparison. max_sweeps: cap on sweeps or sync steps. trials: queries per stored pattern and noise level.
 // noise_levels: fractions of pixels flipped, each in [0, 1]. subset: recall, the rows of the input that are stored,

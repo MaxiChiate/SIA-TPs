@@ -687,7 +687,8 @@ static void test_hopfield_run(void) {
   check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "10001", "4", "[0.0]", HOP_SUBSET)) == 0);
   check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "0", "[0.0]", HOP_SUBSET)) == 0);
   check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "hex", "100", "4", "[0.0]", HOP_SUBSET)) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "pinv", "async", "100", "4", "[0.0]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "pinv", "async", "100", "4", "[0.0]", HOP_SUBSET)) == 1);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "bogus", "async", "100", "4", "[0.0]", HOP_SUBSET)) == 0);
   check(hopfield_run_accepts(HOP_FRAGMENT("bogus", "hebb", "async", "100", "4", "[0.0]", HOP_SUBSET)) == 0);
   check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0, 1.5]", HOP_SUBSET)) == 0);
   char zeros[PATH_MAX_TEST];
@@ -698,6 +699,69 @@ static void test_hopfield_run(void) {
            "\"max_sweeps\": 100, \"trials\": 4, \"noise_levels\": [0.0], \"subset\": [0, 1], \"trace_trials\": 1",
            zeros);
   check(hopfield_run_accepts(fragment) == 0);
+
+  // rule "pinv" over a correlated fixture whose Gram is invertible: a full run, not just the config check, makes
+  // every stored pattern an exact fixed point (stored.csv fixed == 1 for all), where the same fixture leaves at
+  // least one non-fixed under hebb
+  write_tmp("hop_pinv.json",
+            "{\"model\": \"hopfield\", \"seed\": 3, " HOP_FRAGMENT("recall", "pinv", "async", "100", "4", "[0.0]",
+                                                                      HOP_SUBSET) "}",
+            path);
+  check(load_quiet(path, &config));
+  check(run_into(&config, config.seed, "hop_pinv", dir));
+  config_free(&config);
+  snprintf(file, sizeof(file), "%s/stored.csv", dir);
+  check(count_data_lines(file) == 4);
+  for (int a = 0; a < 4; a++) {
+    double fixed_v = -1;
+    check(csv_value(file, a, 2, &fixed_v) && fixed_v == 1);
+  }
+  check(metrics_number(dir, "stored_fixed", &metric) && metric == 4);
+
+  char rule_fragment[1024];
+  write_tmp("hop_rule_fixture.csv",
+            "p0,p1,p2,p3,p4,p5,p6,p7\n"
+            "1,1,-1,1,1,-1,-1,-1\n"
+            "-1,1,1,-1,1,1,-1,1\n"
+            "-1,1,1,-1,-1,1,-1,1\n",
+            path);
+  snprintf(rule_fragment, sizeof(rule_fragment),
+           "\"input\": \"%s\", \"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"async\", "
+           "\"max_sweeps\": 100, \"trials\": 4, \"noise_levels\": [0.0], \"subset\": [0, 1, 2], \"trace_trials\": 1",
+           path);
+  {
+    char text[2048];
+    snprintf(text, sizeof(text), "{\"model\": \"hopfield\", \"seed\": 3, %s}", rule_fragment);
+    char rule_path[PATH_MAX_TEST];
+    write_tmp("hop_hebb_corr.json", text, rule_path);
+    check(load_quiet(rule_path, &config));
+    check(run_into(&config, config.seed, "hop_hebb_corr", dir));
+    config_free(&config);
+    snprintf(file, sizeof(file), "%s/stored.csv", dir);
+    int all_fixed = 1;
+    for (int a = 0; a < 3; a++) {
+      double fixed_v = -1;
+      check(csv_value(file, a, 2, &fixed_v));
+      if (fixed_v != 1) all_fixed = 0;
+    }
+    check(!all_fixed); // hebb leaves at least one of this correlated triple unstable
+  }
+
+  // the same correlated fixture, but with rule "pinv" and a duplicated row (rows 0 and 2 identical): the Gram is
+  // singular, so the model reports it and writes nothing
+  char dup_csv[PATH_MAX_TEST];
+  write_tmp("hop_dup.csv",
+            "p0,p1,p2,p3,p4,p5,p6,p7\n"
+            "1,1,-1,1,1,-1,-1,-1\n"
+            "1,1,-1,1,1,-1,-1,-1\n"
+            "-1,1,1,-1,1,1,-1,1\n",
+            dup_csv);
+  char dup_fragment[1024];
+  snprintf(dup_fragment, sizeof(dup_fragment),
+           "\"input\": \"%s\", \"task\": \"recall\", \"rule\": \"pinv\", \"update\": \"async\", "
+           "\"max_sweeps\": 100, \"trials\": 4, \"noise_levels\": [0.0], \"subset\": [0, 1, 2], \"trace_trials\": 1",
+           dup_csv);
+  check(hopfield_run_accepts(dup_fragment) == 0);
 }
 
 
@@ -1023,6 +1087,90 @@ static void test_hopfield_core(void) {
     HopfieldOutcome out;
     check(hopfield_sync_run(w, 25, s, scratch, 100, NULL, &out));
     check(out.converged && out.sweeps == 1 && out.flips == 0);
+  }
+
+  // (h) the pseudo-inverse rule (D-06/D-07) on a small CORRELATED pm-one fixture (not the QR): hebb leaves some
+  // patterns unstable, pinv makes every one an exact fixed point with the diagonal left non-zero; async dynamics
+  // under pinv never raise the energy and the incremental formula matches the from-scratch energy at every step;
+  // a singular Gram (two identical rows) is reported, not inverted
+  {
+    static const double CORR[24] = {
+      1,  1, -1,  1,  1, -1, -1, -1,
+      -1,  1,  1, -1,  1,  1, -1,  1,
+      -1,  1,  1, -1, -1,  1, -1,  1,
+    };
+    double wh[64];
+    hopfield_hebb(CORR, 3, 8, wh);
+    int hebb_any_wrong = 0;
+    for (int a = 0; a < 3; a++) {
+      int wrong;
+      hopfield_min_margin(wh, 8, CORR + a * 8, &wrong);
+      if (wrong > 0) hebb_any_wrong = 1;
+    }
+    check(hebb_any_wrong);
+
+    double wp[64];
+    double gram[18]; // 2 * 3 * 3
+    check(hopfield_pinv(CORR, 3, 8, wp, gram) == 1);
+    int pinv_all_fixed = 1;
+    for (int a = 0; a < 3; a++) {
+      int wrong;
+      hopfield_min_margin(wp, 8, CORR + a * 8, &wrong);
+      if (wrong != 0) pinv_all_fixed = 0;
+    }
+    check(pinv_all_fixed);
+    int diag_nonzero = 0;
+    for (int i = 0; i < 8; i++) {
+      if (wp[i * 8 + i] != 0) diag_nonzero = 1;
+    }
+    check(diag_nonzero);
+
+    Rng rng = rng_new(13);
+    HopfieldTrace trace = { NULL, 0, 0, 100000, 0 };
+    int all_converged = 1;
+    int all_monotone = 1;
+    int all_replayed = 1;
+    for (int run = 0; run < 100; run++) {
+      double s[8];
+      int a = run % 3;
+      memcpy(s, CORR + a * 8, sizeof(s));
+      int flip = (int) (rng_uniform(&rng) * 8);
+      if (flip >= 8) flip = 7;
+      s[flip] = -s[flip];
+      double start[8];
+      memcpy(start, s, sizeof(start));
+      double h[8];
+      int order[8];
+      for (int j = 0; j < 8; j++) order[j] = j;
+      trace.rows = 0;
+      HopfieldOutcome out;
+      check(hopfield_async_run(wp, 8, s, h, order, &rng, 100, &trace, &out));
+      all_converged = all_converged && out.converged && out.energy_increases == 0;
+
+      double replay[8];
+      memcpy(replay, start, sizeof(replay));
+      for (long long r = 0; r < trace.rows; r++) {
+        const double * line = trace.data + r * HOPFIELD_TRACE_WIDTH;
+        if (r > 0) {
+          const double * before = line - HOPFIELD_TRACE_WIDTH;
+          if (line[5] > before[5] + 1e-9) all_monotone = 0;
+          if (line[4] == 1) replay[(int) line[3]] = -replay[(int) line[3]];
+        }
+        if (fabs(hopfield_energy(wp, 8, replay) - line[5]) > 1e-9) all_replayed = 0;
+      }
+    }
+    check(all_converged);
+    check(all_monotone);
+    check(all_replayed);
+    hopfield_trace_free(&trace);
+
+    // two identical stored rows (0 and 2 of CORR, with row 1 kept distinct): the Gram is singular
+    double dup[24];
+    memcpy(dup, CORR, 8 * sizeof(double));
+    memcpy(dup + 8, CORR, 8 * sizeof(double));
+    memcpy(dup + 16, CORR + 8, 8 * sizeof(double));
+    double wdup[64];
+    check(hopfield_pinv(dup, 3, 8, wdup, gram) == 0);
   }
   matrix_free(&fixture);
 }
