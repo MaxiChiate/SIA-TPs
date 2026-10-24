@@ -2,11 +2,11 @@
 gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Hopfield con QR
-status: verifying
-stopped_at: Phase 5 context gathered
-last_updated: "2026-10-24T19:39:04.959Z"
-last_activity: 2026-10-23
-last_activity_desc: Merged dev-tp4 (Phase 3) into dev-tp4-hopfield (Phase 4 complete)
+status: executing
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-10-24T20:29:10.253Z"
+last_activity: 2026-10-24
+last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 6
   completed_phases: 3
@@ -22,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-21)
 
 **Core value:** Interpretar correctamente los resultados de los métodos no supervisados para tomar decisiones de campaña fundamentadas en evidencia
-**Current focus:** Phase 03 — Oja y decisiones de campaña (verification); Phase 4 complete
+**Current focus:** Phase 05 — Hopfield con QR
 
 ## Current Position
 
-Phase: 05 (Hopfield con QR) — READY TO EXECUTE
-Plan: 6 of 6
-Status: Phase 3 ready for verification; Phase 4 complete
-Last activity: 2026-10-23 — Merged dev-tp4 into dev-tp4-hopfield
+Phase: 05 (Hopfield con QR) — EXECUTING
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-10-24 — Phase 05 execution started
 
 Progress: [█████░░░░░] 50%
 
@@ -69,6 +69,7 @@ Progress: [█████░░░░░] 50%
 | Phase 03 P04 | 8 min | 2 tasks | 3 files |
 | Phase 03 P05 | 9 min | 3 tasks | 4 files |
 | Phase 03 P06 | 25 min | 2 tasks | 5 files |
+| Phase 05 P01 | 46 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ Recent decisions affecting current work:
 - [Phase 03]: 03-05: make campaigns records rule_commit a6212e89, rule_sha256 and select_sha256 in selection_identity.json; no exact tie occurred so the Oja index never decided a list
 - [Phase 03]: 03-06: the synthetic median creator (SYN001) lands at BMU (3, 1), distance 1,329 under the training maximum 3,651, so the drift check says no retraining; it demonstrates the mechanism only
 - [Phase 03]: 03-06: the synthetic index is ranked against the 50 training indices without joining them (place 24 of 1..51)
+- [Phase 05]: 05-01: hopfield_pinv (C) assembles W = X^T Ginv X via its own malloc'd p x n temp buffer (O(p^2 n + p n^2)) rather than a second caller scratch array; Gram inversion by Gauss-Jordan with partial pivoting, singular below a fixed pivot tolerance
+- [Phase 05]: 05-01: analysis/hopfield.py computes fields/energy/is_fixed/margins in float64 throughout (no int64/float64 dtype branch) since N<=2048 magnitudes stay inside float64's exact-integer range for both hebb and pinv
+- [Phase 05]: 05-01: pinv config example shipped as a new sibling file neuron/config.json.hopfield_pinv.example (not loaded by any code), following the existing hopfield_capacity.example convention
 
 ### Pending Todos
 
@@ -116,6 +120,7 @@ None yet.
 - [Phase 4]: Hopfield síncrono (curso) vs asíncrono (energía monótona): implementar ambos, asíncrono como referencia
 - [Phase 5]: Sin verificar la pseudo-inversa bajo ruido alto ni la existencia de un decodificador de QR (HOP-09 está en v2)
 - [Phase 6]: Sin verificar el formato de Slides en Artifacts ni si plotly JS corre dentro de Artifacts
+- [Phase 5] 05-01: pre-existing CRLF in datos/letters/alphabet_5x5.txt (Phase 4 data file) fails 6 unrelated pytest tests (test_hopfield_select.py, test_letters.py) under this environment's core.autocrlf=input; logged in .planning/phases/05-hopfield-con-qr/deferred-items.md, not fixed (out of 05-01 scope)
 
 ## Deferred Items
 
@@ -127,6 +132,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-24T14:27:32.164Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-hopfield-con-qr/05-CONTEXT.md
+Last session: 2026-10-24T20:29:03.873Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None
