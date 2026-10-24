@@ -163,6 +163,49 @@ def test_is_fixed_tie():
     assert not hopfield.is_fixed(W, np.array([1, -1, 1]))
 
 
+# ---------- pseudo-inverse (D-06/D-07) ----------
+
+# A small CORRELATED pm-one fixture (not the QR): hebb leaves pattern 0 (wrong=2) and pattern 1 (wrong=1) unstable,
+# pattern 2 fixed; pinv (Gram det = 160, invertible) makes all three exact fixed points (planning-time numpy).
+CORR_PINV = np.array([
+    [1, 1, -1, 1, 1, -1, -1, -1],
+    [-1, 1, 1, -1, 1, 1, -1, 1],
+    [-1, 1, 1, -1, -1, 1, -1, 1],
+])
+
+
+def test_pinv_fixes_correlated_fixture_hebb_cannot():
+    P = CORR_PINV
+    Wh = hopfield.hebb(P)
+    hebb_wrong = [hopfield.margins(Wh, P)[1][a] for a in range(3)]
+    assert any(w > 0 for w in hebb_wrong)  # hebb leaves at least one pattern non-fixed
+
+    Wp = hopfield.pinv(P)
+    assert Wp.dtype == np.float64
+    assert np.any(np.diag(Wp) != 0)  # the diagonal is left intact (D-07)
+    for a in range(3):
+        assert hopfield.is_fixed(Wp, P[a])  # every stored pattern is an exact fixed point under pinv
+
+
+def test_energy_not_truncated_for_fractional_w():
+    P = CORR_PINV
+    Wp = hopfield.pinv(P)
+    s = P[0]
+    exact = float(-0.5 * (s.astype(np.float64) @ Wp @ s.astype(np.float64)))
+    truncated = float(-0.5 * (s.astype(np.int64) @ Wp.astype(np.int64) @ s.astype(np.int64)))
+    got = hopfield.energy(Wp, s)
+    assert abs(got - exact) < 1e-9
+    assert abs(got - truncated) > 1e-6  # the old int64 cast would have silently truncated Wp's fractional entries
+
+
+def test_check_recall_pinv_run(tmp_path, patterns):
+    run_dir = run_recall(tmp_path, rule="pinv")
+    summary = hopfield.check_recall(run_dir, patterns)
+    assert summary == {"trials": 48, "traced": 48}
+    header, table = hopfield.read_table(run_dir / "stored.csv")
+    assert table[:, header.index("fixed")].tolist() == [1, 1, 1, 1]
+
+
 # ---------- recall ----------
 
 @pytest.mark.parametrize("update", ["async", "sync"])

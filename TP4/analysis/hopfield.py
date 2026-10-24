@@ -23,9 +23,17 @@ The recall rates that recall.csv and the recall figures aggregate therefore rest
 but the traced trials. The check never replays the random number generator: what the C code drew (which pixels were
 flipped, the order of the async visits) is read back from the saved queries and traces and replayed as data.
 
-Notation: P is the p x N matrix of stored patterns (+-1), W = P^T P with a zero diagonal (integers), h = W s the
-fields, E = -1/2 s^T W s. A pattern xi^a is a fixed point when no xi_i h_i(xi) is negative (a zero field keeps the
-state). With d_ab = xi^a . xi^b, the margin of a pattern splits as
+Notation: P is the p x N matrix of stored patterns (+-1). Two rules build W: `hebb` gives W = P^T P with a zero
+diagonal, exact integers; `pinv` gives W = P^T (P P^T)^-1 P (D-06), the pseudo-inverse / projection rule, real-valued
+with a non-zero diagonal (D-07) - numpy.linalg.inv is an independent check here, not a Hopfield implementation, so
+PROJECT.md's ban on packages that implement Hopfield does not cover it. Either way h = W s are the fields and
+E = -1/2 s^T W s. Everything below (`fields`, `energy`, `is_fixed`, `margins`) works in float64 throughout rather
+than casting W to int64: for Hebb's exact-integer entries this loses nothing (the magnitudes stay far inside
+float64's exact-integer range), and it is what makes a real-valued pinv W safe to compare without truncating it to
+zero. A pattern xi^a is a fixed point when no xi_i h_i(xi) falls below -ENERGY_TOLERANCE (a zero, or near-zero,
+field keeps the state; the tolerance absorbs the rounding of a true pinv fixed point landing a hair below 0).
+
+For Hebb only, with d_ab = xi^a . xi^b, the margin of a pattern splits as
 
     xi^a_i h_i(xi^a) = (N - p) + c_ai,   c_ai = sum over b != a of xi^a_i xi^b_i d_ab    (see `cross_terms`)
 
@@ -96,34 +104,53 @@ def read_config(run_dir) -> dict:
 # ---------- the network ----------
 
 def hebb(P) -> np.ndarray:
-    """W = P^T P with the diagonal zeroed, exact int64."""
-    P = np.asarray(P, dtype=np.int64)
+    """W = P^T P with the diagonal zeroed; float64 (like the C core), but every entry is an exact integer."""
+    P = np.asarray(P, dtype=np.float64)
     W = P.T @ P
     np.fill_diagonal(W, 0)
     return W
 
 
+def pinv(P) -> np.ndarray:
+    """W = P^T (P P^T)^-1 P, the pseudo-inverse / projection rule (D-06); float64, diagonal left intact (D-07) -
+    the projection property that makes every row of P an exact fixed point (within ENERGY_TOLERANCE)."""
+    P = np.asarray(P, dtype=np.float64)
+    G = P @ P.T
+    return P.T @ np.linalg.inv(G) @ P
+
+
+def weights(rule: str, P) -> np.ndarray:
+    """hebb(P) or pinv(P), selected by the rule read from the run (D-06)."""
+    if rule == "hebb":
+        return hebb(P)
+    if rule == "pinv":
+        return pinv(P)
+    raise HopfieldCheckError(f"rule {rule!r}: expected \"hebb\" or \"pinv\"")
+
+
 def fields(W, s) -> np.ndarray:
-    return np.asarray(W, dtype=np.int64) @ np.asarray(s, dtype=np.int64)
+    return np.asarray(W, dtype=np.float64) @ np.asarray(s, dtype=np.float64)
 
 
 def energy(W, s) -> float:
-    """-1/2 s^T W s (exact for integer W: s^T W s is an even integer)."""
-    s = np.asarray(s, dtype=np.int64)
-    return float(-0.5 * (s @ np.asarray(W, dtype=np.int64) @ s))
+    """-1/2 s^T W s, float64 throughout (exact for Hebb's integer-valued W: the magnitudes stay far inside
+    float64's exact-integer range, so nothing is lost by not casting to int64)."""
+    s = np.asarray(s, dtype=np.float64)
+    return float(-0.5 * (s @ np.asarray(W, dtype=np.float64) @ s))
 
 
-def is_fixed(W, s) -> bool:
-    """True when no s_i h_i is negative: a zero field keeps the state, so a tie never breaks a fixed point."""
-    s = np.asarray(s, dtype=np.int64)
-    return bool(np.all(s * fields(W, s) >= 0))
+def is_fixed(W, s, tol: float = ENERGY_TOLERANCE) -> bool:
+    """True when no s_i h_i falls below -tol: a zero (or near-zero) field keeps the state, so a tie never breaks a
+    fixed point, and a true pinv fixed point landing a hair below 0 from rounding still counts."""
+    s = np.asarray(s, dtype=np.float64)
+    return bool(np.all(s * fields(W, s) >= -tol))
 
 
-def margins(W, P) -> tuple[np.ndarray, np.ndarray]:
-    """(min over i of xi_i h_i, count of i with xi_i h_i < 0) for every row of P."""
-    P = np.asarray(P, dtype=np.int64)
-    aligned = P * (P @ np.asarray(W, dtype=np.int64))  # W is symmetric: (P W)[a, i] = h_i(xi^a)
-    return aligned.min(axis=1), (aligned < 0).sum(axis=1)
+def margins(W, P, tol: float = ENERGY_TOLERANCE) -> tuple[np.ndarray, np.ndarray]:
+    """(min over i of xi_i h_i, count of i with xi_i h_i < -tol) for every row of P."""
+    P = np.asarray(P, dtype=np.float64)
+    aligned = P * (P @ np.asarray(W, dtype=np.float64))  # W is symmetric: (P W)[a, i] = h_i(xi^a)
+    return aligned.min(axis=1), (aligned < -tol).sum(axis=1)
 
 
 def cross_terms(P) -> np.ndarray:
@@ -170,9 +197,12 @@ def _fail(file: str, row, column: str, c_value, numpy_value):
     raise HopfieldCheckError(f"{file} row {row}, column {column}: C {c_value!r}, numpy {numpy_value!r}")
 
 
-def _expect(file: str, row, column: str, got, want, tol: float = 0.0):
-    if abs(float(got) - float(want)) > tol:
-        _fail(file, row, column, float(got), float(want))
+def _expect(file: str, row, column: str, got, want, tol: float = 0.0, rel: float = 0.0):
+    """Fails unless |got - want| <= tol + rel * |want|: rel adds a small relative tolerance on top of the
+    absolute tol, used for field and overlap comparisons that would otherwise need a magnitude-dependent tol."""
+    got_f, want_f = float(got), float(want)
+    if abs(got_f - want_f) > tol + rel * abs(want_f):
+        _fail(file, row, column, got_f, want_f)
 
 
 def _col(header: list[str], name: str, file: str) -> int:
@@ -285,7 +315,7 @@ def _check_stored(run_dir: Path, P: np.ndarray, W: np.ndarray, subset: list[int]
         _expect(file, a, "pattern", table[a, column["pattern"]], a)
         _expect(file, a, "source_row", table[a, column["source_row"]], subset[a])
         _expect(file, a, "fixed", table[a, column["fixed"]], int(wrong[a] == 0))
-        _expect(file, a, "min_margin", table[a, column["min_margin"]], int(margin[a]))
+        _expect(file, a, "min_margin", table[a, column["min_margin"]], margin[a], ENERGY_TOLERANCE)
         _expect(file, a, "wrong_pixels", table[a, column["wrong_pixels"]], int(wrong[a]))
         _expect(file, a, "energy", table[a, column["energy"]], energy(W, P[a]), ENERGY_TOLERANCE)
 
@@ -295,14 +325,17 @@ def _check_stored(run_dir: Path, P: np.ndarray, W: np.ndarray, subset: list[int]
     for a in range(p):
         _expect(file, a, "pattern", table[a, 0], a)
         for b in range(p):
-            _expect(file, a, f"m_{b}", table[a, 1 + b], overlaps[a, b], 1e-12)
+            _expect(file, a, f"m_{b}", table[a, 1 + b], overlaps[a, b], tol=1e-12, rel=1e-9)
     return int((wrong == 0).sum())
 
 
 def _replay_async(W, query, trace_rows, n, max_sweeps, file, first_row):
     """Replays the saved visits from the query: the field, the new state and the energy of every row are recomputed.
     Returns (final state, flips, sweeps, converged, rises)."""
-    s = query.copy()
+    W = np.asarray(W, dtype=np.float64)
+    diag = np.diag(W)  # 0 for hebb; the self term subtracted below so the incremental energy matches a non-zero
+    # diagonal under pinv (mirrors hopfield_async_run's corrected formula in hopfield_core.c)
+    s = query.astype(np.float64)
     e = energy(W, s)
     rises = 0
     flips = 0
@@ -326,12 +359,12 @@ def _replay_async(W, query, trace_rows, n, max_sweeps, file, first_row):
         if not 0 <= neuron < n or neuron in seen:
             _fail(file, r, "neuron", neuron, "a neuron not visited yet in this sweep")
         seen.add(neuron)
-        h = int(W[neuron] @ s)
-        new = s[neuron] if h == 0 else (1 if h > 0 else -1)
+        h = float(W[neuron] @ s)
+        new = s[neuron] if h == 0 else (1.0 if h > 0 else -1.0)
         did_change = int(new != s[neuron])
         _expect(file, r, "changed", changed, did_change)
         if did_change:
-            e = e + 2 * s[neuron] * h
+            e = e + 2 * s[neuron] * h - 2 * diag[neuron]
             s[neuron] = new
             flips += 1
             last_sweep_flips += 1
@@ -397,9 +430,10 @@ def check_recall(run_dir, patterns) -> dict:
     trace_trials = int(config["trace_trials"])
     max_sweeps = int(config["max_sweeps"])
     sync = config["update"] == "sync"
+    rule = config["rule"]
     P = patterns[subset]
     p, n = P.shape
-    W = hebb(P)
+    W = weights(rule, P)
 
     stored_fixed = _check_stored(run_dir, P, W, subset)
 
