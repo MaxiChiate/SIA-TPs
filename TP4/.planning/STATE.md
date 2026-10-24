@@ -3,14 +3,14 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: Oja y decisiones de campaña
 status: verifying
-stopped_at: Phase 4 complete; Phase 3 awaiting UAT (merged dev-tp4)
-last_updated: "2026-10-23T21:00:00.000Z"
+stopped_at: Phase 5 context gathered
+last_updated: "2026-10-24T14:27:46.718Z"
 last_activity: 2026-10-23
 last_activity_desc: Merged dev-tp4 (Phase 3) into dev-tp4-hopfield (Phase 4 complete)
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 28
+  total_plans: 27
   completed_plans: 28
   percent: 50
 ---
@@ -127,6 +127,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-23T21:00:00.000Z
-Stopped at: Phase 4 complete; Phase 3 awaiting UAT
-Resume file: .planning/phases/03-oja-y-decisiones-de-campa-a/03-UAT.md
+Last session: 2026-10-24T14:27:32.164Z
+Stopped at: Phase 5 context gathered
+Resume file: .planning/phases/05-hopfield-con-qr/05-CONTEXT.md
