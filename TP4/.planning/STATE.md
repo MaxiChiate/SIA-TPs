@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Hopfield con QR
 status: executing
-stopped_at: Completed 05-06-PLAN.md
-last_updated: "2026-10-24T20:35:10.499Z"
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-10-24T20:49:51.993Z"
 last_activity: 2026-10-24
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 33
-  completed_plans: 29
+  completed_plans: 30
   percent: 50
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-21)
 ## Current Position
 
 Phase: 05 (Hopfield con QR) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-10-24 — Phase 05 execution started
 
@@ -71,6 +71,7 @@ Progress: [█████░░░░░] 50%
 | Phase 03 P06 | 25 min | 2 tasks | 5 files |
 | Phase 05 P01 | 46 min | 2 tasks | 8 files |
 | Phase 05 P06 | 12 min | 1 tasks | 3 files |
+| Phase 05 P02 | 25 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,8 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-01: analysis/hopfield.py computes fields/energy/is_fixed/margins in float64 throughout (no int64/float64 dtype branch) since N<=2048 magnitudes stay inside float64's exact-integer range for both hebb and pinv
 - [Phase 05]: 05-01: pinv config example shipped as a new sibling file neuron/config.json.hopfield_pinv.example (not loaded by any code), following the existing hopfield_capacity.example convention
 - [Phase 05]: 05-06: SOURCES fixed explicit tuple of the five real QR filenames under datos/hopfield resolved in this order (what Plan 02 guard hashes and Plans 03-05 index by subset [0,1,2,3,4]); polarity dark(0)=+1/light(255)=-1 documented in meta, display-only (Hebb's W invariant to global flip)
+- [Phase 05]: 05-02: D-01/D-02/D-03/D-05 frozen exactly as proposed (literal hypothesis, 11-level 0-0.5 noise grid, 30 trials, seeds 1-10, exact-match success with continuous |m| also reported, Hebb fails <100%/pinv works ==100% at noise 0); user approved verbatim at the Task 1 checkpoint, no edits
+- [Phase 05]: 05-02: deliverable RULE_FILE excluded from rule_guard's porcelain-clean set, checked by marker digest only, so Plans 03-05 write result sections outside the markers without a new commit while any edit to the frozen protocol text itself refuses
 
 ### Pending Todos
 
@@ -134,6 +137,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-24T20:35:02.921Z
-Stopped at: Completed 05-06-PLAN.md
+Last session: 2026-10-24T20:49:45.333Z
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
