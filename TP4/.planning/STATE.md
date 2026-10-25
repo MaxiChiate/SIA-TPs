@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 06
 current_phase_name: Slides e informe
 status: executing
-stopped_at: Phase 6 context gathered
-last_updated: "2026-10-25T21:05:39.096Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-10-25T21:56:43.330Z"
 last_activity: 2026-10-25
-last_activity_desc: Phase 05 complete, transitioned to Phase 3
+last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 45
-  completed_plans: 33
+  completed_plans: 34
   percent: 67
 ---
 
@@ -22,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-25)
 
 **Core value:** Interpretar correctamente los resultados de los métodos no supervisados para tomar decisiones de campaña fundamentadas en evidencia
-**Current focus:** Phase 3 — Oja y decisiones de campaña
+**Current focus:** Phase 06 — Slides e informe
 
 ## Current Position
 
-Phase: 06 (Slides e informe) — READY TO EXECUTE
-Plan: 6
+Phase: 06 (Slides e informe) — EXECUTING
+Plan: 2 of 12
 Status: Ready to execute
-Last activity: 2026-10-25 — Phase 05 complete, transitioned to Phase 3
+Last activity: 2026-10-25 — Phase 06 execution started
 
 Progress: [███████░░░] 67%
 
@@ -76,6 +76,7 @@ Progress: [███████░░░] 67%
 | Phase 05 P03 | 70min | 3 tasks | 4 files |
 | Phase 05 P04 | 80min | 3 tasks | 3 files |
 | Phase 05 P05 | 25min | 3 tasks | 5 files |
+| Phase 06 P01 | 20 min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,8 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-05: a 1-2 px shift of a stored QR moves 51-54% of its 1369 pixels (more than any i.i.d. noise level tested) and pinv's recovered state lands even FARTHER from the source (75-88%) than the shifted query itself - the by-hand async runner was sanity-checked first to keep an unshifted stored QR fixed (0 flips)
 - [Phase 05]: 05-05: the Hamming 1-NN lookup equals or exceeds pinv's exact-recovery rate at the two highest noise levels (81.5% vs 69.4% at 0.45; 16.7% vs 0% at 0.50) - reported honestly as the lookup actually winning, not just tracking closely, sharpening the D-11c equivalence-with-lookup limitation
 - [Phase 05]: 05-05: Phase 5 complete - HOP-04 through HOP-07 all marked complete; deliverables/05-hopfield-qr.md has no remaining placeholder sections and the frozen protocol (section 3) is unchanged from the Plan 02 commit
+- [Phase 06]: 06-01: Markdown pinned to 3.11 (not 3.11.2) after human legitimacy approval; make venv has a python3.12 -m venv + pip fallback when uv is absent
+- [Phase 06]: 06-01: make results uses file sentinels with order-only prerequisites calling drivers directly; full missing-step run took 653 s (10 min 53 s) on this machine
 
 ### Pending Todos
 
@@ -148,6 +151,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T15:35:56.436Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-slides-e-informe/06-CONTEXT.md
+Last session: 2026-10-25T21:56:43.190Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None
