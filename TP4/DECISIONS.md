@@ -14,6 +14,11 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 - [Fase 1 — Datos, auditoría de variables y PCA](#fase-1--datos-auditoría-de-variables-y-pca)
 - [Fase 2 — Kohonen (SOM)](#fase-2--kohonen-som)
 - [Fase 3 — Oja y decisiones de campaña](#fase-3--oja-y-decisiones-de-campaña)
+- [Fase 4 — Hopfield: núcleo y letras](#fase-4--hopfield-núcleo-y-letras)
+- [Fase 5 — Hopfield: QR](#fase-5--hopfield-qr)
+- [Fase 6 — Slides e informe](#fase-6--slides-e-informe)
+- [Pitfalls citados en los fragmentos](#pitfalls-citados-en-los-fragmentos)
+- [Requisitos citados en los fragmentos](#requisitos-citados-en-los-fragmentos)
 
 ## Decisiones del proyecto
 
@@ -447,3 +452,357 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 **Dónde:** [03-CONTEXT.md](.planning/phases/03-oja-y-decisiones-de-campa-a/03-CONTEXT.md) · [fragmento 03 §6](deliverables/03-oja-campanas.md)
 
+## Fase 4 — Hopfield: núcleo y letras
+
+### F4 D-01 — Abecedario propio de 26 letras de 5×5 en un archivo versionado
+
+**Qué:** se dibuja un abecedario completo de 26 letras (A-Z) de 5×5 en un archivo de texto legible (por ejemplo `datos/letters/alphabet_5x5.txt`; una letra por bloque, filas con `*` = +1 y `.` = −1, en orden row-major). Un script de Python lo convierte a una matriz ±1 (una fila por letra, 25 columnas) que lee el binario de C. La J del enunciado (`docs/Archivo SIATP 42026.pdf`, §2.2) se transcribe tal cual y un pytest verifica que la codificación coincide con la del enunciado (Pitfall 14).
+
+**Por qué:** los solapamientos, la regla de selección de F4 D-03, el barrido de capacidad y las figuras dependen de estos bitmaps; una vez commiteada la regla, cambiar un bitmap obliga a rehacerla (costosa de revertir).
+
+**Dónde:** [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) · [fragmento 04 §2 y §3](deliverables/04-hopfield-letras.md)
+
+### F4 D-02 — El conversor valida el alfabeto
+
+**Qué:** el conversor valida que haya 26 letras, que cada una tenga exactamente 5 filas de 5 caracteres en `{*, .}` y que no haya dos letras idénticas. Falla con un error claro si algo no se cumple.
+
+**Por qué:** que un bitmap mal tipeado no llegue a la red sin avisar.
+
+**Dónde:** [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) · [fragmento 04 §2 y §3](deliverables/04-hopfield-letras.md)
+
+### F4 D-03 — Dos sets de 4 letras lado a lado: separado y correlacionado
+
+**Qué:** se muestran el set separado (el subconjunto de 4 del alfabeto con menor max |solapamiento| fuera de la diagonal, con solapamiento = ξ^a·ξ^b / N) y el set correlacionado (el de mayor max |solapamiento|), que se espera que falle y sirve para explicar el término de cruce. Las dos reglas, con desempate escrito, se evalúan sobre los C(26, 4) = 14 950 subconjuntos y dependen solo de los bitmaps, no de la red. El set separado es el set principal de la demo de recuperación y del estado espurio. Con N impar no existe ortogonalidad exacta (Pitfall 14b): se habla de "|solapamiento| chico".
+
+**Por qué:** mostrar con evidencia la diferencia entre letras casi ortogonales y letras correlacionadas, sin elegir las letras para que la demo salga bien.
+
+**Dónde:** [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) · [fragmento 04 §2 y §3](deliverables/04-hopfield-letras.md)
+
+### F4 D-04 — La regla de las letras se fija y se commitea antes de correr Hopfield
+
+**Qué:** el texto de la regla va en el fragmento de la fase entre marcadores `<!-- regla:inicio -->` y `<!-- regla:fin -->`, y la guardia sha256 más el commit (reusando `rule_digest` y `rule_guard` de `analysis/som_select.py`) impiden que el script de letras corra si la regla cambió o no está commiteada. Antes del commit hay un checkpoint de decisión en el que el usuario aprueba el texto. El digest incluye el archivo del alfabeto, para que tampoco se puedan retocar los bitmaps después de ver resultados.
+
+**Por qué:** es el mismo patrón de rigor de F2 (D-10 y D-14) y F3 (D-07); de una sola vía: una vez vistos los resultados, cambiar la regla o los bitmaps invalida la afirmación "elegido de antemano".
+
+**Dónde:** [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) · [fragmento 04 §2 y §3](deliverables/04-hopfield-letras.md)
+
+### F4 D-04b — El abecedario borrador se descarta y los desempates se fijan por principio
+
+**Qué:** agregada en la planificación (2026-10-23). La investigación dibujó un abecedario borrador y corrió la red sobre él, así que ese borrador queda descartado como abecedario pre-registrado. En el checkpoint de la regla se dibuja un abecedario nuevo, sin ejecutar ningún código de red sobre él, y el usuario lo aprueba glifo por glifo. Los desempates se fijan por principio, no por resultado: el set separado minimiza max |d| y desempata por menor suma de |d|; el set correlacionado maximiza max |d| y desempata por mayor suma de |d| (simétrico). Todo se compara con productos punto enteros. Ningún número de la red sobre el abecedario nuevo se calcula ni se muestra antes del commit de la regla.
+
+**Por qué:** el borrador ya había visto a la red, lo que rompería la afirmación de pre-registro; es de una sola vía por la misma razón que F4 D-04.
+
+**Dónde:** [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) · [fragmento 04 §2 y §3](deliverables/04-hopfield-letras.md)
+
+### F4 D-05 — Capacidad: exhaustiva para p = 4, muestreada para p = 1 a 8
+
+**Qué:** los 14 950 subconjuntos de 4 letras se almacenan (Hebb, W entera) y para cada uno se mide la fracción de patrones que son puntos fijos estables (y, a un nivel de ruido fijo, la tasa de recuperación), graficada contra el max |solapamiento|. Para p = 1 a 8 (confirmado por el usuario en la planificación; si la estabilidad no cae a cerca de 0 en p = 8, se extiende con una regla escrita en la regla de F4 D-04, no a mano) se toma una muestra al azar con seed de subconjuntos por p y se grafica la fracción estable contra p, marcando 0,138N ≈ 3,45 solo como orden de magnitud (Pitfall 26), nunca como umbral.
+
+**Por qué:** a N = 25 el comportamiento depende de qué letras se eligen, así que la capacidad se mide y no se deduce de 0,138N.
+
+**Dónde:** [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) · [fragmento 04 §3 y §6](deliverables/04-hopfield-letras.md)
+
+### F4 D-06 — Matriz de solapamientos y término de cruce de los dos sets
+
+**Qué:** la matriz de solapamientos de 4×4 y el término de cruce de cada patrón se reportan para los dos sets de F4 D-03, y además un histograma de max |solapamiento| sobre los 14 950 sets de 4 ubica a ambos dentro de la distribución.
+
+**Por qué:** explicar la diferencia de comportamiento entre los dos sets a través del término de cruce y mostrar qué tan extremos son dentro de todos los posibles.
+
+**Dónde:** [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) · [fragmento 04 §3 y §4](deliverables/04-hopfield-letras.md)
+## Fase 5 — Hopfield: QR
+
+### F5 D-01 — Se pre-registra el protocolo del experimento, con guardia sha256
+
+**Qué:** a diferencia de la Fase 4, acá los 5 QR son fijos y dados: no hay selección. Lo que se pre-registra y se commitea con guardia sha256 antes de correr la red es el protocolo del experimento, entre marcadores `<!-- regla:inicio -->` y `<!-- regla:fin -->` en `deliverables/05-hopfield-qr.md`: criterio de éxito, niveles de ruido, número de ensayos, seeds, métricas reportadas y la hipótesis literal ("Hebb no estabiliza los 5 QR correlacionados; la pseudo-inversa es el remedio"). La guardia incluye el hash de los 5 PNG (reusando `rule_digest` y `rule_guard` de `analysis/som_select.py`).
+
+**Por qué:** que ni el protocolo ni las imágenes se puedan retocar después de ver resultados; de una sola vía: cambiarlos invalida la afirmación "fijado de antemano".
+
+**Dónde:** [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) · [fragmento 05 §3 y §7](deliverables/05-hopfield-qr.md)
+
+### F5 D-02 — Umbrales de veredicto numéricos explícitos
+
+**Qué:** el protocolo incluye umbrales numéricos de qué cuenta como "Hebb falló" y "pinv funciona" (por ejemplo, "Hebb falla si la recuperación exacta a ruido 0 es menor que 100 %"), fijados antes de correr.
+
+**Por qué:** que el veredicto no se ajuste después de ver la curva; de una sola vía por la misma razón que F5 D-01.
+
+**Dónde:** [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) · [fragmento 05 §1, §3, §4, §5 y §6](deliverables/05-hopfield-qr.md)
+
+### F5 D-03 — Éxito = match exacto de los 1369 píxeles, más la curva continua de |m|
+
+**Qué:** el criterio de éxito es el match exacto de los 1369 píxeles (|m| = 1 con el objetivo) como veredicto binario, y además se reporta la curva continua del solapamiento final |m| promedio por nivel de ruido. Este criterio entra en el protocolo de F5 D-01.
+
+**Por qué:** ver qué tan cerca queda Hebb aunque nunca acierte exacto.
+
+**Dónde:** [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) · [fragmento 05 §3](deliverables/05-hopfield-qr.md)
+
+### F5 D-04 — El ruido es solo flips i.i.d. de píxeles
+
+**Qué:** la corrupción es solo flips i.i.d. de píxeles (una familia de ruido), como pide HOP-05. El daño estructurado (oclusión de bloque, rayón, manchas) no se corre como experimento; se puede nombrar como limitación o idea diferida, pero no genera figuras.
+
+**Por qué:** cumplir HOP-05 al pie de la letra sin ampliar el alcance. Es reversible.
+
+**Dónde:** [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) · [fragmento 05 §3 y §6](deliverables/05-hopfield-qr.md)
+
+### F5 D-05 — 11 niveles de ruido, 30 ensayos por nivel, 10 seeds
+
+**Qué:** 11 niveles de 0 a 0,5 en pasos de 0,05 (el nivel 0 es la estabilidad a ruido cero de HOP-05), 30 ensayos por nivel y 10 seeds, consistente con F2 D-08, F3 y F4. Las tres reglas (Hebb, pinv, Hamming) se evalúan en esta misma grilla.
+
+**Por qué:** supera cómodo el piso de HOP-05 (al menos 8 niveles por 30 ensayos) y hace comparables las tres reglas.
+
+**Dónde:** [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) · [fragmento 05 §3](deliverables/05-hopfield-qr.md)
+
+### F5 D-06 — Pseudo-inversa implementada en C, despachada por `rule = "pinv"`
+
+**Qué:** la regla de pseudo-inversa `W = Xᵀ(X Xᵀ)⁻¹ X` se implementa en C, despachada por la clave `rule = "pinv"` que la Fase 4 ya dejó prevista en `HOPFIELD_KEYS`. Requiere invertir la matriz de Gram de 5×5 (X Xᵀ). La dinámica, la energía y la clasificación del estado final reusan sin cambios el código del núcleo.
+
+**Por qué:** mover la construcción de W a Python más tarde partiría el cómputo del modelo entre dos lenguajes (costosa de revertir).
+
+**Dónde:** [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) · [fragmento 05 §1](deliverables/05-hopfield-qr.md)
+
+### F5 D-07 — En la pinv la diagonal de W no se anula
+
+**Qué:** se deja la diagonal de W no nula (pseudo-inversa pura, regla de proyección), a diferencia de Hebb.
+
+**Por qué:** es la propiedad que garantiza que los 5 QR sean puntos fijos exactos, que es justo el remedio que se quiere mostrar frente al fallo de Hebb.
+
+**Dónde:** [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) · [fragmento 05 §1 y §3](deliverables/05-hopfield-qr.md)
+
+### F5 D-08 — Línea base de Hamming: vecino más cercano sin dinámica
+
+**Qué:** un clasificador 1-NN sin dinámica: toma la consulta ruidosa y devuelve el QR almacenado de menor distancia de Hamming. Se grafica su tasa de acierto superpuesta con Hebb y pinv en la misma grilla de F5 D-05, más una tabla de recuperación exacta por nivel.
+
+**Por qué:** demuestra que un lookup trivial ya resuelve el problema, insumo de la limitación de F5 D-11.
+
+**Dónde:** [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) · [fragmento 05 §3, §5 y §6](deliverables/05-hopfield-qr.md)
+
+### F5 D-09 — Para Hebb y pinv, energía final e iteraciones por nivel de ruido
+
+**Qué:** además de la tasa de acierto, se reportan la energía final y las iteraciones (barridos) por nivel de ruido, para Hebb y pinv.
+
+**Por qué:** contrastar el costo dinámico de la red contra el lookup instantáneo de Hamming.
+
+**Dónde:** [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) · [fragmento 05 §3 y §5](deliverables/05-hopfield-qr.md)
+
+### F5 D-10 — No se corre un decodificador de QR
+
+**Qué:** no se corre un decodificador (pyzbar u OpenCV) sobre las imágenes recuperadas. La limitación de la corrección de errores propia del QR (Reed-Solomon L/M/Q/H, aproximadamente 7/15/25/30 %) y de que un recuperado pixel-exacto podría igual no decodificar se argumenta en texto, declarando explícitamente que la decodificación no se verificó.
+
+**Por qué:** evita una dependencia nueva y un spike; alineado con el blocker de STATE ("decodificador de QR sin verificar, HOP-09 en v2"). Es reversible: agregar el decodificador después es aditivo.
+
+**Dónde:** [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) · [fragmento 05 §3 y §6](deliverables/05-hopfield-qr.md)
+
+### F5 D-11 — Limitaciones del caso de uso demostradas empíricamente (sub-ítems D-11a a D-11d)
+
+**Qué:** se demuestran con figura o número, además del texto: **D-11a**, correlación entre QR (matriz de solapamientos 5×5, fracción de píxeles idénticos en los 5 y distancia mínima de Hamming entre pares, causa raíz del fallo de Hebb); **D-11b**, sensibilidad a corrimientos (mover un QR 1 o 2 píxeles y mostrar que la recuperación pixel-wise se rompe, en un tríptico antes, desplazado y recuperado); **D-11c**, equivalencia con lookup (cubierta por la curva de Hamming de F5 D-08). El cuarto punto, **D-11d**, la corrección de errores propia del QR, queda solo en texto (F5 D-10); el `CONTEXT.md` lo menciona al cerrar la decisión sin ponerle letra, y acá se lo nombra así para completar la lista. El fragmento cita `D-11a`; el glosario enlaza un ID con letra que no tiene entrada propia a esta entrada madre.
+
+**Por qué:** que las limitaciones se apoyen en números medidos sobre los datos reales y no solo en argumentos.
+
+**Dónde:** [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) · [fragmento 05 §2, §3, §5 y §6](deliverables/05-hopfield-qr.md)
+## Fase 6 — Slides e informe
+
+### F6 D-01 — Presentación de unos 20 minutos, 20-25 slides
+
+**Qué:** unos 20 minutos y 20 a 25 slides. Reparto aproximado: Ejercicio 1 (EDA y PCA, Kohonen, Oja, campañas) unas 12 a 14 slides; Ejercicio 2 (letras, QR) unas 7 a 9. Una idea por slide.
+
+**Por qué:** es lo que entra en la exposición oral con una idea por slide.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+
+### F6 D-02 — Orden por método, con título-conclusión
+
+**Qué:** el orden es por método (PCA, SOM, Oja, campañas, letras, QR) y cada slide tiene un título-conclusión: el título dice la conclusión, no el tema («El mapa sigue a PC1 pero no a PC2», no «Matriz U»). La pregunta del enunciado que responde la slide puede ir en chico, pero no ordena el guion.
+
+**Por qué:** el guion sigue el hilo de los métodos y cada slide se entiende leyendo solo el título.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+
+### F6 D-03 — El rigor metodológico: una slide de método y menciones cortas
+
+**Qué:** el rigor entra como una slide de método al principio (reglas fijadas y commiteadas antes de ver resultados con guardia sha256, 10 seeds, nulos por permutación) y después menciones cortas en cada resultado (por ejemplo «regla fijada de antemano»). El detalle de cada regla queda en el informe.
+
+**Por qué:** mostrar el rigor sin cargar cada slide con la metodología.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+
+### F6 D-04 — Los resultados poco favorables van de frente
+
+**Qué:** los resultados poco favorables tienen slide propia con título-conclusión y una línea del porqué: una sola región en el SOM (R1 = 50) con la regla fijada, etapa 2 «no robusta», Hebb con 0 % de recuperación exacta en los QR (solapamiento medio 0,67) y el lookup de Hamming 1-NN que iguala o supera a la pseudo-inversa con ruido alto.
+
+**Por qué:** es coherente con la Key Decision de PROJECT.md (ver KD-4) de reportar el resultado de la regla tal cual.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+
+### F6 D-05 — Campañas en unas 4 slides
+
+**Qué:** fútbol aparte (alcance masivo, descubrimiento, profundidad educativa y la recomendación); una tabla resumen para perros, maquillaje y arte (criterio, top-5, costo por mil argentinos); una slide de comparación contra solo `followers`; y una de mantenimiento.
+
+**Por qué:** fútbol es el único cliente con tres objetivos en competencia; los otros tres caben en una tabla.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+
+### F6 D-06 — Notas del orador en cada slide
+
+**Qué:** cada slide lleva notas del orador: 2 a 4 frases de qué decir y los números clave para responder preguntas. El cuerpo visible queda limpio. Si el formato Slides no soporta notas, el planner propone el equivalente más cercano y lo informa.
+
+**Por qué:** el cuerpo limpio facilita la lectura y las notas respaldan al orador. La sonda del formato Slides ([06-ARTIFACT-FORMAT.md](.planning/phases/06-slides-e-informe/06-ARTIFACT-FORMAT.md)) encontró que el tipo soporta notas, en un `<aside>` por slide, pero que no son privadas del orador: las puede leer cualquiera que abra el deck.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md) · [06-ARTIFACT-FORMAT.md](.planning/phases/06-slides-e-informe/06-ARTIFACT-FORMAT.md)
+
+### F6 D-07 — Apertura con portada y slide de método; cada ejercicio cierra con sus conclusiones
+
+**Qué:** la apertura es la portada (TP4 SIA, Grupo 9) y la slide de método (F6 D-03). Cada ejercicio cierra con su propia slide de conclusiones: el Ejercicio 1 dice qué aporta cada método a la decisión de campaña y el Ejercicio 2 dice qué limitaciones tiene Hopfield para los QR. No hay agenda ni cierre general.
+
+**Por qué:** cada ejercicio queda como una unidad que se entiende por sí sola.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+
+### F6 D-08 — Figuras de slides: variante «slide» del mismo código matplotlib
+
+**Qué:** las figuras de las slides son una variante «slide» del mismo código matplotlib que dibuja las del informe: la misma función de datos con otro estilo (letra más grande, menos anotaciones, proporción 16:9). Los datos se calculan una vez y se dibujan dos. No se pintan gráficos a mano en HTML como en TP3.
+
+**Por qué:** una sola fuente de verdad para los números de slides e informe. Es costosa de revertir: si después se cambia el renderer de las slides, hay que rehacer cada figura de slide.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md) · [06-ARTIFACT-FORMAT.md](.planning/phases/06-slides-e-informe/06-ARTIFACT-FORMAT.md)
+
+### F6 D-09 — El informe es todo estático
+
+**Qué:** se usan los SVG de matplotlib existentes, inline. El informe no lleva plotly, JS de gráficos ni CDN para las figuras.
+
+**Por qué:** una página autocontenida y estable al publicarse como Artifact.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+
+### F6 D-10 — Cada figura va sobre un panel claro
+
+**Qué:** cada figura va siempre sobre un panel claro (tarjeta con el fondo `SURFACE` de `analysis/plots_style.py` y borde), también en modo oscuro. La página alrededor sí cambia de tema. Hay una sola versión de cada figura y no se generan variantes oscuras.
+
+**Por qué:** los QR, las letras y la matriz U se leen igual en los dos temas.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+
+### F6 D-11 — Armado por script y `make`; los números se leen de los JSON y CSV
+
+**Qué:** un target (por ejemplo `make deliverables`, o `make slides` más `make informe`) regenera los resultados que faltan, dibuja las figuras de informe y de slide y escribe el HTML del informe y los archivos de datos de las slides, listos para publicar. Los números del texto se leen de los JSON y CSV de `analysis/results/` y no se tipean a mano. La publicación de los Artifacts es manual (un paso aparte que se documenta).
+
+**Por qué:** que el texto no diverja de los resultados. Es costosa de revertir: el texto de slides e informe pasa a depender de las claves de los JSON de cada fase.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+
+### F6 D-12 — Informe híbrido: parte generada más los fragmentos como detalle técnico
+
+**Qué:** una parte inicial generada (resumen «Qué encontramos», tabla pregunta a sección de DELIV-02, bloque «Cómo trabajamos») con los números leídos de los JSON vía un loader de facts, seguida de los cinco fragmentos `deliverables/0X-*.md` convertidos a HTML como «Detalle técnico (Fase N)». Un test de drift fija unos 25 números clave de los fragmentos contra los JSON. Los fragmentos no se editan (están bajo guardia sha256); todo cambio de texto se hace al renderizar.
+
+**Por qué:** que el informe no diverja de los fragmentos ni de los números. Es costosa de revertir: pasar a síntesis pura obligaría a reescribir y revisar a mano todo el texto.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+
+### F6 D-13 — La jerga interna se enlaza al renderizar a un glosario generado desde este archivo
+
+**Qué:** la jerga de los fragmentos (`D-NN`, `Pitfall N`, IDs de requisito como `HOP-04`) se enlaza al renderizar a un anexo de glosario generado desde `DECISIONS.md`. Los fragmentos quedan intactos.
+
+**Por qué:** que quien lee el informe pueda seguir cada sigla sin tocar los fragmentos. Por eso la gramática de los títulos de este archivo es un contrato.
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+
+### F6 D-14 — Las slides se entregan solo como Artifact
+
+**Qué:** las slides se entregan solo como Artifact. No se exporta ni versiona un PDF de slides en `docs/`.
+
+**Por qué:** decisión de entrega registrada en la planificación de la fase (2026-10-25). Después, al sondear el formato, el usuario respondió que al docente se le entrega el PDF exportado del deck (ver [06-ARTIFACT-FORMAT.md](.planning/phases/06-slides-e-informe/06-ARTIFACT-FORMAT.md), `share_mode`); ese PDF exportado es el entregable, y el documento de formato indica dónde se agrega (bajo `deliverables/`, no en `docs/`).
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md) · [06-ARTIFACT-FORMAT.md](.planning/phases/06-slides-e-informe/06-ARTIFACT-FORMAT.md)
+
+### F6 D-15 — El informe llega al docente como link compartido del Artifact
+
+**Qué:** el informe llega al docente como link compartido del Artifact (HTML). No hace falta exportar PDF o Word del informe; el tipo Docs no se usa. Compartir el link es un paso manual del checkpoint de publicación.
+
+**Por qué:** decisión de entrega registrada en la planificación de la fase (2026-10-25).
+
+**Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+## Pitfalls citados en los fragmentos
+
+Los títulos completos y el análisis de cada trampa están en `.planning/research/PITFALLS.md`. Acá figuran solo los que citan los fragmentos.
+
+### Pitfall 1 — Hopfield con Hebb sobre los 5 QR no funciona y la regla de capacidad lo esconde
+
+**Qué:** con la regla de Hebb estándar, los 5 QR no son ni siquiera puntos fijos de la red: una consulta sin ruido ya cambia. La regla 0,138N ("5/1369, muy por debajo del límite") se deriva para patrones aleatorios independientes y no dice nada de patrones correlacionados.
+
+**Por qué:** el proyecto hizo de la estabilidad a ruido cero el primer test de cada corrida, reportó el fallo de Hebb como hallazgo (no como error), midió la causa raíz (solapamientos de 0,58 a 0,86; 69,8 % de píxeles idénticos en los 5 QR) y mostró la pseudo-inversa como segundo experimento claramente rotulado.
+
+**Dónde:** [fragmento 05 §3, §5](deliverables/05-hopfield-qr.md) · [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) (F5 D-01, D-02, D-06, D-07)
+
+### Pitfall 8 — Oja sin centrar, con tasa inestable y sin normalizar los pesos finales
+
+**Qué:** tres fallas medidas: correr Oja sobre datos sin centrar converge a la dirección de la media y no a PC1; una tasa de aprendizaje grande diverge; y el signo y la norma de w son arbitrarios (w y −w son igualmente estables), así que "el índice más alto" no tiene sentido sin una orientación declarada.
+
+**Por qué:** el proyecto usa la misma matriz z-scored que la PCA, η chico y decreciente con épocas barajadas, renormaliza w a norma 1, valida contra `eigh` (|cos(w, v1)| > 0,99) y fija la convención de signo de antemano.
+
+**Dónde:** [fragmento 03 §1](deliverables/03-oja-campanas.md) · [03-CONTEXT.md](.planning/phases/03-oja-y-decisiones-de-campa-a/03-CONTEXT.md) (F3 D-01, D-02, D-05)
+
+### Pitfall 14 — Letras 5×5: conclusiones erróneas sobre capacidad y ortogonalidad
+
+**Qué:** usar 0,138N = 3,45 como umbral duro con N = 25, buscar ortogonalidad exacta (imposible con N impar, el producto punto es siempre impar) o elegir las letras que hacen lucir la demo sin decirlo.
+
+**Por qué:** el proyecto muestra la matriz de solapamientos y el término de cruce, hace un experimento de capacidad exhaustivo para p = 4 y muestreado para p = 1 a 8, y compara lado a lado un set separado y uno correlacionado elegidos por una regla fijada antes de correr la red.
+
+**Dónde:** [fragmento 04 §3](deliverables/04-hopfield-letras.md) · [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) (F4 D-01, D-03, D-04, D-05)
+
+### Pitfall 15 — La respuesta sobre las limitaciones del caso de uso omite las reales
+
+**Qué:** decir solo "la capacidad es limitada" o "es lento". Las limitaciones defendibles son la correlación entre patrones, la sensibilidad a corrimientos y a imágenes no alineadas, que una tabla de búsqueda por Hamming resuelve lo mismo, la corrección de errores propia del QR (Reed-Solomon), los atractores espurios e inversos y el almacenamiento cuadrático.
+
+**Por qué:** el proyecto agrega la línea base de Hamming 1-NN a la curva de ruido, demuestra con números la correlación y la sensibilidad a corrimientos, y declara que la decodificación de los QR recuperados no se verificó.
+
+**Dónde:** [fragmento 05 §6](deliverables/05-hopfield-qr.md) · [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) (F5 D-08, D-10, D-11)
+
+### Pitfall 22 — Binarización y codificación de los PNG de los QR
+
+**Qué:** umbral equivocado, polaridad equivocada al mostrar, o resampleo de imágenes que ya son 37×37 con valores 0 y 255.
+
+**Por qué:** `scripts/qr.py` verifica la forma 37×37 y que los valores sean 0/255 puros (rechaza grises en lugar de umbralizarlos y no remuestrea), fija la polaridad oscuro = +1 y claro = −1, y un test comprueba que la codificación es exacta píxel a píxel.
+
+**Dónde:** [fragmento 05 §2](deliverables/05-hopfield-qr.md) · [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) (preparación de los PNG, criterio del planner)
+
+### Pitfall 26 — Concluir de 0,138N como si fuera exacto
+
+**Qué:** 0,138N es la carga crítica de la teoría de réplicas para patrones aleatorios y no correlacionados con aprendizaje hebbiano; el límite práctico para recuperación perfecta es menor y la pseudo-inversa sube el techo teórico a N para patrones linealmente independientes. Todos son enunciados asintóticos.
+
+**Por qué:** el proyecto cita 0,138N solo como orden de magnitud y siempre junto con el experimento empírico.
+
+**Dónde:** [fragmento 04 §3](deliverables/04-hopfield-letras.md) · [fragmento 05 §6](deliverables/05-hopfield-qr.md) · [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) (F4 D-05)
+
+## Requisitos citados en los fragmentos
+
+El texto de cada requisito sale de `.planning/REQUIREMENTS.md`.
+
+### DATA-01 — El loader verifica n=50 filas y 33 columnas, y falla si no coinciden
+
+Responde la [sección 1 del fragmento 01](deliverables/01-datos-pca.md) (decisión relacionada: F1 D-07).
+
+### DATA-03 — Z-score en Python con scaler guardado (`.meta.json`) para mapear creadores nuevos
+
+Responde la [sección 4 del fragmento 01](deliverables/01-datos-pca.md) (decisión relacionada: F1 D-11).
+
+### DATA-05 — Corrida de sensibilidad con las 31 columnas, etiquetada, comparada contra el conjunto auditado
+
+Responde las [secciones 4 y 7 del fragmento 01](deliverables/01-datos-pca.md) (decisión relacionada: F1 D-08).
+
+### HOP-03 — Un patrón muy ruidoso que converge a un estado espurio identificado y clasificado (inverso, mezcla u otro)
+
+Responde la [sección 7 del fragmento 04](deliverables/04-hopfield-letras.md); la sección 3 lo cita al fijar el diseño de los experimentos.
+
+### HOP-04 — Preparación de los 5 QR de 37×37 a ±1 con aserción de que son 0/255 puros, y matriz de solapamientos
+
+Responde la [sección 2 del fragmento 05](deliverables/05-hopfield-qr.md) (decisión relacionada: F5 D-11).
+
+### HOP-05 — QR con regla de Hebb: test de estabilidad a ruido cero y al menos 8 niveles de ruido con 30 o más ensayos cada uno, con energía e iteraciones por paso; el fallo se reporta como hallazgo
+
+Responde las [secciones 3 y 4 del fragmento 05](deliverables/05-hopfield-qr.md) (decisiones relacionadas: F5 D-02, D-03, D-05, D-09).
+
+### HOP-06 — Regla de pseudo-inversa para los QR, comparada contra Hebb y contra la línea base de Hamming al patrón más cercano
+
+Responde la [sección 5 del fragmento 05](deliverables/05-hopfield-qr.md) (decisiones relacionadas: F5 D-06, D-07, D-08).
+
+### HOP-07 — Limitaciones del caso de uso explicadas (correlación entre QR, sensibilidad a corrimientos, corrección de errores propia del QR, tabla de búsqueda equivalente)
+
+Responde la [sección 6 del fragmento 05](deliverables/05-hopfield-qr.md) (decisiones relacionadas: F5 D-10, D-11).
