@@ -211,7 +211,7 @@ Plans:
 - [ ] 06-07-PLAN.md — Variantes de slide de letras y QR de Hopfield
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 06-08-PLAN.md — Manifest completo (25 preguntas, 31 figuras), checkpoint humano bloqueante que compara las 25 preguntas palabra por palabra con el PDF del enunciado (no autónomo), facts de las cinco fases y pines de drift (D-12); corre después de 06-06 y 06-07 porque lee los resultados que ellos reescriben
+- [ ] 06-08-PLAN.md — Manifest completo (25 preguntas, 31 figuras), checkpoint humano bloqueante que compara las 25 preguntas palabra por palabra con el PDF del enunciado y confirma que cada sección enlazada responde su pregunta (no autónomo), facts de las cinco fases y pines de drift (D-12); corre después de 06-06 y 06-07 porque lee los resultados que ellos reescriben
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 06-09-PLAN.md — Informe completo: cinco fragmentos, figuras, resumen de hallazgos, glosario y enlaces de jerga (D-13), guion opcional
