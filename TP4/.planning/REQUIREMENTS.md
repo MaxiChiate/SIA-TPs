@@ -48,7 +48,7 @@
 - [x] **HOP-04**: Preparación de los 5 QR de 37×37 a ±1 con aserción de que son 0/255 puros, y matriz de solapamientos
 - [x] **HOP-05**: QR con regla de Hebb: test de estabilidad a ruido cero y al menos 8 niveles de ruido con 30 o más ensayos cada uno, con energía e iteraciones por paso; el fallo se reporta como hallazgo
 - [x] **HOP-06**: Regla de pseudo-inversa para los QR, comparada contra Hebb y contra la línea base de Hamming al patrón más cercano
-- [ ] **HOP-07**: Limitaciones del caso de uso explicadas (correlación entre QR, sensibilidad a corrimientos, corrección de errores propia del QR, tabla de búsqueda equivalente)
+- [x] **HOP-07**: Limitaciones del caso de uso explicadas (correlación entre QR, sensibilidad a corrimientos, corrección de errores propia del QR, tabla de búsqueda equivalente)
 
 ### Entregables
 
@@ -109,7 +109,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HOP-04 | Phase 5 | Complete |
 | HOP-05 | Phase 5 | Complete |
 | HOP-06 | Phase 5 | Complete |
-| HOP-07 | Phase 5 | Pending |
+| HOP-07 | Phase 5 | Complete |
 | DELIV-01 | Phase 6 | Pending |
 | DELIV-02 | Phase 6 | Pending |
 | DELIV-03 | Phase 6 | Pending |

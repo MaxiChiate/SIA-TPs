@@ -2,16 +2,16 @@
 gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Hopfield con QR
-status: executing
-stopped_at: Completed 05-04-PLAN.md
-last_updated: "2026-10-25T02:26:35.156Z"
+status: verifying
+stopped_at: Completed 05-05-PLAN.md
+last_updated: "2026-10-25T02:53:09.577Z"
 last_activity: 2026-10-24
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 33
-  completed_plans: 32
+  completed_plans: 33
   percent: 50
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-21)
 
 Phase: 05 (Hopfield con QR) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-24 — Phase 05 execution started
 
 Progress: [█████░░░░░] 50%
@@ -74,6 +74,7 @@ Progress: [█████░░░░░] 50%
 | Phase 05 P02 | 25 min | 2 tasks | 2 files |
 | Phase 05 P03 | 70min | 3 tasks | 4 files |
 | Phase 05 P04 | 80min | 3 tasks | 3 files |
+| Phase 05 P05 | 25min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,10 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-03: Hebb's measured async noise-0 exact recovery is 0% over the five real QR (verdict.json hebb_fails=true, derived from the frozen D-02 rule, matching PITFALLS.md Pitfall 1 independently); max|overlap|=0.86, 69.8% pixels identical in all five, min pairwise Hamming=96 (HOP-04)
 - [Phase 05]: 05-04: pinv_works=true measured from the frozen D-02 rule - all five real QR are exact fixed points under pinv at noise 0 (recall.csv/verdict.json), holding 100% exact recovery through noise 0.30 and 97.3% at 0.40, matching PITFALLS.md's prior independent measurement
 - [Phase 05]: 05-04: Hamming 1-NN baseline (numpy-only, matched noise grid/k/trials/seeds, independent RNG from neuron/rng.c) tracks pinv closely through noise 0.40 (98.5% vs 97.3%) then diverges faster at 0.45-0.50 - quantitative evidence a trivial lookup nearly matches pinv except at the highest noise, feeding HOP-07's limitations section
+- [Phase 05]: 05-05: the Hebb majority attractor differs from every one of the five QR by 71-225 pixels (of 1369), matching mean_final_overlap=0.791 exactly when averaged - confirms it is the single common attractor Hebb's dynamics collapses to regardless of noise or which QR was queried
+- [Phase 05]: 05-05: a 1-2 px shift of a stored QR moves 51-54% of its 1369 pixels (more than any i.i.d. noise level tested) and pinv's recovered state lands even FARTHER from the source (75-88%) than the shifted query itself - the by-hand async runner was sanity-checked first to keep an unshifted stored QR fixed (0 flips)
+- [Phase 05]: 05-05: the Hamming 1-NN lookup equals or exceeds pinv's exact-recovery rate at the two highest noise levels (81.5% vs 69.4% at 0.45; 16.7% vs 0% at 0.50) - reported honestly as the lookup actually winning, not just tracking closely, sharpening the D-11c equivalence-with-lookup limitation
+- [Phase 05]: 05-05: Phase 5 complete - HOP-04 through HOP-07 all marked complete; deliverables/05-hopfield-qr.md has no remaining placeholder sections and the frozen protocol (section 3) is unchanged from the Plan 02 commit
 
 ### Pending Todos
 
@@ -143,6 +148,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T02:26:28.562Z
-Stopped at: Completed 05-04-PLAN.md
+Last session: 2026-10-25T02:53:02.113Z
+Stopped at: Completed 05-05-PLAN.md
 Resume file: None
