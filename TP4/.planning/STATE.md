@@ -19,10 +19,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-21)
+See: .planning/PROJECT.md (updated 2026-10-25)
 
 **Core value:** Interpretar correctamente los resultados de los métodos no supervisados para tomar decisiones de campaña fundamentadas en evidencia
-**Current focus:** Phase 05 — Hopfield con QR
+**Current focus:** Phase 3 — Oja y decisiones de campaña
 
 ## Current Position
 
@@ -137,7 +137,6 @@ None yet.
 - [Phase 4]: Hopfield síncrono (curso) vs asíncrono (energía monótona): implementar ambos, asíncrono como referencia
 - [Phase 5]: Sin verificar la pseudo-inversa bajo ruido alto ni la existencia de un decodificador de QR (HOP-09 está en v2)
 - [Phase 6]: Sin verificar el formato de Slides en Artifacts ni si plotly JS corre dentro de Artifacts
-- [Phase 5] 05-01: pre-existing CRLF in datos/letters/alphabet_5x5.txt (Phase 4 data file) fails 6 unrelated pytest tests (test_hopfield_select.py, test_letters.py) under this environment's core.autocrlf=input; logged in .planning/phases/05-hopfield-con-qr/deferred-items.md, not fixed (out of 05-01 scope)
 
 ## Deferred Items
 
