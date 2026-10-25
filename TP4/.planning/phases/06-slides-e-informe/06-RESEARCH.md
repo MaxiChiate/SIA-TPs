@@ -468,18 +468,26 @@ def save_figure(fig, path_without_suffix):  # slide -> <dir>/slide/<stem>.svg an
 | A10 | `TP4/CLAUDE.md` is the right location although `config.json` points to `./.claude/CLAUDE.md` | Constraints | GSD tooling may create or read a different file |
 | A11 | Python-Markdown 3.11 has no install-time scripts or unexpected behavior beyond what its PyPI page shows | Package audit | Supply-chain risk; gated by human-verify |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+Every question below has a resolution: five by a user decision or a plan task, and Q1 by a plan that answers it from a real probe at execution time (its answer cannot be known before the probe runs, so the planning-level resolution is the gate, not the answer).
 
 1. **What does the Slides Artifact type accept, and does it support speaker notes?**
    - Known: TP3 filled it with HTML snippets per slide; STATE.md lists it as an open blocker.
    - Unclear: input contract, canvas, notes, image embedding, export.
    - Recommendation: Wave 0 probe by the top-level session (checklist above); gate slide-builder work on `06-ARTIFACT-FORMAT.md`.
+   - **RESOLVED (planning; answer pending the 06-02 probe):** 06-02 has the top-level session publish and read back a 2-slide smoke deck and record content_unit, canvas, figure_area, image_embed, notes_supported, notes_field, export formats, redeploy behaviour, default visibility and share_mode in `06-ARTIFACT-FORMAT.md`. 06-05 (slide figure size) and 06-10 (slide file layout, notes field) read those keys and depend on 06-02; if notes are not supported, the D-06 fallback is `notes.md` plus the informe annex "Guion de la presentación" (06-09 `--notes`).
 2. **Should the report be pure synthesis or hybrid?**
    - Recommendation: hybrid (Pattern 1). Confirm with the user because D-11 is marked costly to reverse.
+   - **RESOLVED by D-12:** hybrid report (generated front section with numbers from facts, then the five fragments rendered as "Detalle técnico (Fase N)", with a drift test pinning fragment numbers to the JSON). Implemented by 06-04 (tracer), 06-08 (facts and drift pins) and 06-09 (full informe).
 3. **Is a PDF `docs/Slides_TP4_G9.pdf` expected like TP1-TP3?** Ask the user; if yes, add an export step to the publish checkpoint.
+   - **RESOLVED by D-14:** slides are delivered only as an Artifact; no slides PDF or .pptx is exported or versioned in `docs/`. 06-11's test_repro_docs fails if one is added; 06-12 publishes without an export step.
 4. **Does the teacher need the report as PDF/Word, or must it be viewable by people outside the account?** Artifacts are private by default; sharing must be set at publish time. If PDF/Word is required, reconsider the Docs type.
+   - **RESOLVED by D-15:** the informe reaches the teacher as a shared link of the HTML Artifact; no PDF/Word export and no Docs type. How the link is shared is the share_mode the user records in 06-02; 06-12 Task 3 shares both Artifacts by link and keeps them out of any public listing.
 5. **Where does `CLAUDE.md` live and should GSD's `claude_md_path` be updated?** Recommend `TP4/CLAUDE.md` and updating the config key.
+   - **RESOLVED by 06-11 Task 2:** `CLAUDE.md` is written at the TP4 root and `.planning/config.json` `claude_md_path` is set to `./CLAUDE.md` (research assumption A10).
 6. **How should the front matter treat internal jargon (`D-NN`, `Pitfall N`, `HOP-04`) that appears 131+ times in fragments?** Options in Pattern 1; needs a user call.
+   - **RESOLVED by D-13:** jargon is linked at render time to a glossary annex generated from `DECISIONS.md`; the fragments stay untouched. 06-03 writes `DECISIONS.md` with the heading grammar the parser reads; 06-09 implements `parse_glossary` and `link_jargon`.
 
 ## Who does what (Artifact tool availability)
 
