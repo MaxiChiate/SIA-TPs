@@ -210,7 +210,7 @@ def stamp(repo_dir: Path = TP_DIR) -> str:
     return f"commit {head}" + (" (con cambios sin commitear)" if dirty else "")
 
 
-def _wrap_fact(key: str, value: str) -> str:
+def fact_span(key: str, value: str) -> str:
     return f'<span class="fact" data-fact="{html.escape(key, quote=True)}">{html.escape(value)}</span>'
 
 
@@ -260,8 +260,8 @@ def build(
     results_dir, deliverables_dir, out_path = Path(results_dir), Path(deliverables_dir), Path(out_path)
     fact_values = facts.load_facts(results_dir)
 
-    summary = facts.fill(SUMMARY_BULLET, fact_values, wrap=_wrap_fact)
-    method = facts.fill(METHOD_PARAGRAPH, fact_values, wrap=_wrap_fact)
+    summary = facts.fill(SUMMARY_BULLET, fact_values, wrap=fact_span)
+    method = facts.fill(METHOD_PARAGRAPH, fact_values, wrap=fact_span)
 
     exercise_one = []
     for number, relative, exercise, _title in fragments:
