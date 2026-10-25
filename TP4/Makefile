@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr
+.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr hopfield-qr-figures
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -107,3 +107,8 @@ qr: venv
 # correr si el protocolo, scripts/qr.py o los 5 PNG no están commiteados o cambiaron (D-01).
 hopfield-qr: qr
 	$(PY) analysis/hopfield_qr.py
+
+# Figuras de Hopfield sobre los 5 QR (glifos, solapamientos, curva de recuperación de Hebb y energía por paso);
+# necesitan los resultados de make hopfield-qr y se niegan a dibujar si el protocolo o el código cambiaron.
+hopfield-qr-figures: venv
+	$(PY) analysis/hopfield_qr_figures.py
