@@ -13,24 +13,32 @@ frozen constants, so no series file, flag or edit can change the design after th
 run of the neuron binary goes through analysis/hopfield.check_recall before anything is
 aggregated; a failed run or a disagreement stops the driver and removes the output.
 
-This plan builds ONLY the Hebb recall series (rule="hebb"), over both updates (async reference,
-sync labelled comparison) and the ten frozen seeds, on the eleven-level 0..0.5 noise grid. Plan 04
-adds the pseudo-inverse series on top of the same frozen grid; the energy-trace capture below is
-written generically over "rule" so it needs no change when that series is added.
+This plan (04) adds the pinv recall series (rule="pinv", same frozen grid and both updates) and a
+numpy-only Hamming 1-NN baseline (rule="hamming", no dynamics) on top of Plan 03's Hebb series
+(rule="hebb"). recall_series/run_series/aggregate_recall and energy_trace_rows are reused with
+rule="pinv" exactly as Plan 03 left them (rule-generic signatures, no duplicated logic); the Hamming
+baseline is new (hamming_rows/hamming_classify) since it never touches the C core. verdict.json's
+pinv_* fields (left null by Plan 03) are filled here from the measured pinv recall, and
+recovery_table.csv (D-08's per-level exact-recovery table for all three rules) is new.
 
 Writes under analysis/results/hopfield/qr/ (not versioned):
   - overlaps.json, qr_facts.json: input facts over the patterns alone (HOP-04, D-11a), independent
     of any network run.
-  - recall.csv: pooled over the five QR and the ten seeds, per (update, noise) cell: recall_rate,
-    the class-rate breakdown, mean_sweeps, mean_flips, the continuous mean |final overlap| with the
-    pattern that was perturbed (D-03) and the mean final energy (D-09).
+  - recall.csv: pooled over the five QR and the ten seeds, per (rule, update, noise) cell:
+    recall_rate, the class-rate breakdown, mean_sweeps, mean_flips, the continuous mean |final
+    overlap| with the pattern that was perturbed (D-03) and the mean final energy (D-09). hebb and
+    pinv rows cover both updates; the Hamming baseline writes a single no-dynamics row per level
+    (update="none") with its dynamics columns left NaN (D-08, D-09).
   - energy_trace.csv: the per-step energy of the traced trial (trace_trials=1) of the async
     reference update, one row per (rule, source, noise, step) - HOP-05's "energia por paso", not
-    only the per-level final energy.
+    only the per-level final energy. hebb and pinv both appear; Hamming has no dynamics to trace.
+  - recovery_table.csv: one row per noise level with columns level, hebb, pinv, hamming - the
+    per-level exact-recovery rate of each rule (D-08's "tabla de recuperacion exacta por nivel"),
+    read back from recall.csv (hebb/pinv from their async row, hamming from its single row).
   - protocol.json: echo of the frozen design constants (no network quantity).
-  - verdict.json: the D-02 threshold applied to the MEASURED Hebb async noise-0 recovery rate -
-    never the predicted outcome, whatever the data shows (PROJECT.md: report the result as it comes
-    out). The pinv fields are left null; Plan 04 fills them.
+  - verdict.json: the D-02 thresholds applied to the MEASURED Hebb and pinv async noise-0 recovery
+    rates - never the predicted outcome, whatever the data shows (PROJECT.md: report the result as
+    it comes out).
   - run.json: the rule identity, code_identity (git HEAD, dirty flag, sha256 of the network code and
     of the binary - not pinned by the pre-registration, but hopfield_qr_figures.py refuses to draw
     if these changed since the run, mirroring Phase 4's WR-02), the sweeps map and the per-series
@@ -45,6 +53,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -69,6 +78,10 @@ RECALL_COLUMNS = ["rule", "update", "noise", "flipped", "n_trials", "recall_rate
                   "wrong_stored_rate", "inverse_rate", "mixture_rate", "other_rate", "cycle_rate", "mean_sweeps",
                   "mean_flips", "mean_final_overlap", "mean_final_energy"]
 ENERGY_TRACE_COLUMNS = ["rule", "update", "source", "noise", "step", "energy"]
+RECOVERY_TABLE_COLUMNS = ["level", "hebb", "pinv", "hamming"]
+# recall.csv's "update" value for the Hamming baseline: it has no dynamics, so there is no async/sync split,
+# just one no-dynamics row per noise level (D-08, D-09).
+HAMMING_UPDATE = "none"
 # The network code is not covered by the pre-registration guard (D-01 guards the protocol, scripts/qr.py and the
 # five PNGs, not the Hopfield core). Its identity is recorded in run.json (mirrors Phase 4's WR-02) and
 # hopfield_qr_figures.py refuses to draw if one of these files changed since the run. Paths relative to TP4 root.
@@ -216,9 +229,9 @@ def _input_path(design: Design) -> str:
     return os.path.relpath(Path(design.patterns_path).resolve(), sweep.NEURON_DIR)
 
 
-def _recall_base(design: Design) -> dict:
+def _recall_base(design: Design, rule: str = "hebb") -> dict:
     return {
-        "model": "hopfield", "seed": 1, "input": _input_path(design), "task": "recall", "rule": "hebb",
+        "model": "hopfield", "seed": 1, "input": _input_path(design), "task": "recall", "rule": rule,
         "update": "async", "max_sweeps": design.max_sweeps, "trials": design.trials,
         "noise_levels": list(design.noise_levels), "subset": list(design.subset),
         "trace_trials": design.trace_trials,
@@ -230,11 +243,12 @@ def _make_series(name: str, out: Path, base: dict, variants: list[sweep.Variant]
                         varied=None, variants=variants, seeds=list(seeds), workers=os.cpu_count() or 1)
 
 
-def recall_series(design: Design, out: Path, updates=None) -> sweep.Series:
-    """One variant per update, labelled by the update itself ("async"/"sync")."""
+def recall_series(design: Design, out: Path, rule: str = "hebb", updates=None) -> sweep.Series:
+    """One variant per update, labelled by the update itself ("async"/"sync"). `rule` selects "hebb" (Plan 03) or
+    "pinv" (Plan 04); the series name (and so its sweep directory) is "recall_{rule}" so the two never collide."""
     updates = design.updates if updates is None else updates
     variants = [sweep.Variant(update, {"update": update}) for update in updates]
-    return _make_series("recall_hebb", out, _recall_base(design), variants, design.seeds)
+    return _make_series(f"recall_{rule}", out, _recall_base(design, rule), variants, design.seeds)
 
 
 def run_series(series: sweep.Series, out: Path, patterns, workers=None) -> list[Ran]:
@@ -270,9 +284,12 @@ def run_series(series: sweep.Series, out: Path, patterns, workers=None) -> list[
 
 # ---------- aggregation (HOP-05, D-03, D-09) ----------
 
-def aggregate_recall(design: Design, ran: list[Ran], out: Path, rule: str = "hebb", updates=None) -> dict:
-    """recall.csv: pooled over the five QR and the seeds, from the trials.csv of every run. mean_final_overlap is
-    the mean of the ABSOLUTE final overlap |m| with the pattern that was perturbed (D-03), not a signed mean."""
+def aggregate_recall(design: Design, ran: list[Ran], rule: str = "hebb", updates=None) -> list[dict]:
+    """The recall.csv rows for one rule ("hebb" or "pinv"), pooled over the five QR and the seeds, from the
+    trials.csv of every run. mean_final_overlap is the mean of the ABSOLUTE final overlap |m| with the pattern
+    that was perturbed (D-03), not a signed mean. Returns the rows; run() collects hebb's, pinv's and the Hamming
+    baseline's rows together before writing the single recall.csv (so a later series never clobbers an earlier
+    one's rows by overwriting the file)."""
     updates = design.updates if updates is None else updates
     p = len(design.subset)
     cells: dict = {}
@@ -312,8 +329,99 @@ def aggregate_recall(design: Design, ran: list[Ran], out: Path, rule: str = "heb
                 "mean_final_overlap": float(np.abs(own_overlap).mean()),
                 "mean_final_energy": float(data[:, column["e_final"]].mean()),
             })
-    _write_csv(out / "recall.csv", RECALL_COLUMNS, summary)
-    return {"recall_rows": len(summary)}
+    return summary
+
+
+def stored_fixed_for(ran: list[Ran], update: str = "async") -> int | None:
+    """stored_fixed read from the metrics.json of a run matching `update` (the same value for every run of a
+    rule, since it depends only on the patterns and W, never on noise or seed); None if no such run exists."""
+    for item in ran:
+        if item.task.label == update:
+            return int(hopfield.read_metrics(item.dir)["stored_fixed"])
+    return None
+
+
+# ---------- Hamming 1-NN baseline: numpy-only, no dynamics (D-08) ----------
+
+def _lround(x: float) -> int:
+    """C lround semantics (half away from zero) for x >= 0, mirroring neuron/models/hopfield.c's noise flip
+    count: the Hamming baseline never calls the C core, so its k must be recomputed independently to land on the
+    SAME noise distribution per level (matched k, D-08)."""
+    return int(math.floor(x + 0.5))
+
+
+def hamming_classify(P, query) -> int:
+    """Index into P of the pattern nearest `query` in Hamming distance; np.argmin already returns the first
+    (lowest-index) minimum on an exact tie (HAMMING_TIE_BREAK, D-08)."""
+    P = np.asarray(P, dtype=np.int64)
+    query = np.asarray(query, dtype=np.int64)
+    distances = (P != query).sum(axis=1)
+    return int(np.argmin(distances))
+
+
+def hamming_rows(design: Design, patterns) -> list[dict]:
+    """recall.csv rows for rule="hamming" (D-08): a numpy-only 1-NN classifier with no dynamics, on the SAME noise
+    DISTRIBUTION as the hebb/pinv series over the same 11 levels, design.trials trials per level and the same
+    frozen seed labels - matched k = lround(level * N) distinct pixels - but drawn with numpy's own RNG,
+    INDEPENDENTLY of neuron/rng.c: this compares the three rules on the same distribution, not on bit-identical
+    individual queries (05-04-PLAN.md key_links). For every (level, seed) cell and every one of the five stored
+    QR, draws `design.trials` noisy queries (numpy RNG seeded deterministically from (seed, level), so the run is
+    reproducible) and classifies each with hamming_classify. There is exactly one row per level (no update split,
+    HAMMING_UPDATE = "none"): recall_rate and mean_final_overlap (the mean |overlap| of the CHOSEN stored pattern
+    with the true target) are real; the dynamics-only columns (the class rates, cycle_rate, mean_sweeps,
+    mean_flips, mean_final_energy) are NaN since there is no dynamics to report (D-09)."""
+    P = np.asarray(patterns, dtype=np.int64)[list(design.subset)]
+    p, n = P.shape
+    nan = float("nan")
+    rows = []
+    for level in design.noise_levels:
+        k = _lround(level * n)
+        per_seed_rate = []
+        correct: list[bool] = []
+        overlaps: list[float] = []
+        for seed in design.seeds:
+            rng = np.random.default_rng((int(seed), int(round(level * 1000))))
+            seed_correct = []
+            for a in range(p):
+                for _trial in range(design.trials):
+                    query = P[a].copy()
+                    if k > 0:
+                        flip = rng.choice(n, size=k, replace=False)
+                        query[flip] *= -1
+                    chosen = hamming_classify(P, query)
+                    hit = chosen == a
+                    seed_correct.append(hit)
+                    correct.append(hit)
+                    overlaps.append(abs(float(P[chosen] @ P[a])) / n)
+            per_seed_rate.append(float(np.mean(seed_correct)))
+        rows.append({
+            "rule": "hamming", "update": HAMMING_UPDATE, "noise": float(level), "flipped": k,
+            "n_trials": len(correct), "recall_rate": float(np.mean(correct)),
+            "recall_sd_seeds": float(np.std(per_seed_rate)),
+            "wrong_stored_rate": nan, "inverse_rate": nan, "mixture_rate": nan, "other_rate": nan,
+            "cycle_rate": nan, "mean_sweeps": nan, "mean_flips": nan,
+            "mean_final_overlap": float(np.mean(overlaps)), "mean_final_energy": nan,
+        })
+    return rows
+
+
+# ---------- per-level exact-recovery table (D-08) ----------
+
+def recovery_table_rows(rows: list[dict], design: Design) -> list[dict]:
+    """One row per noise level with columns level, hebb, pinv, hamming: the exact-recovery rate (recall_rate) of
+    each rule at that level, read back from the already-aggregated recall.csv rows - hebb and pinv from their
+    async reference-update row, hamming from its single no-dynamics row (D-08's rendered per-level table)."""
+    by_key = {(r["rule"], r["update"], round(float(r["noise"]), 10)): float(r["recall_rate"]) for r in rows}
+    table = []
+    for level in design.noise_levels:
+        key_level = round(float(level), 10)
+        table.append({
+            "level": float(level),
+            "hebb": by_key[("hebb", "async", key_level)],
+            "pinv": by_key[("pinv", "async", key_level)],
+            "hamming": by_key[("hamming", HAMMING_UPDATE, key_level)],
+        })
+    return table
 
 
 def energy_trace_rows(ran: list[Ran], rule: str, seed: int = ENERGY_TRACE_SEED) -> list[dict]:
@@ -363,25 +471,38 @@ def protocol_json(design: Design) -> dict:
     }
 
 
-def verdict_json(out: Path) -> dict:
+def verdict_json(out: Path, pinv_ran: list[Ran] | None = None) -> dict:
     """hebb_fails: the frozen D-02 threshold (exact recovery at noise 0 async < 100%) APPLIED to the measured
-    recall.csv value - never hard-coded to the predicted outcome. The pinv fields are left null; Plan 04 fills
-    them once the pinv series runs."""
+    recall.csv value. pinv_works: the frozen D-02 threshold (exact recovery at noise 0 async == 100%) APPLIED to
+    the measured pinv recall.csv value - never hard-coded to the predicted outcome (PROJECT.md: the research
+    predicts the five QR become exact fixed points, but the recorded verdict is whatever recall.csv shows).
+    pinv_stored_fixed_noise0_async (optional, from pinv_ran's metrics.json) is the number of the five stored QR
+    that are themselves fixed points under pinv's W, independent of any noise."""
     rows = _dict_rows(out / "recall.csv")
-    ref = [r for r in rows if r["rule"] == "hebb" and r["update"] == "async" and abs(float(r["noise"])) < 1e-9]
-    if not ref:
+    hebb_ref = [r for r in rows if r["rule"] == "hebb" and r["update"] == "async" and abs(float(r["noise"])) < 1e-9]
+    if not hebb_ref:
         raise SystemExit("recall.csv: no hebb async noise-0 row to derive the verdict from (D-02)")
-    measured = float(ref[0]["recall_rate"])
-    threshold = hopfield_qr_select.HEBB_FAIL_RECALL_AT_ZERO
-    hebb_fails = measured < threshold
+    hebb_measured = float(hebb_ref[0]["recall_rate"])
+    hebb_threshold = hopfield_qr_select.HEBB_FAIL_RECALL_AT_ZERO
+    hebb_fails = hebb_measured < hebb_threshold
+
+    pinv_ref = [r for r in rows if r["rule"] == "pinv" and r["update"] == "async" and abs(float(r["noise"])) < 1e-9]
+    if not pinv_ref:
+        raise SystemExit("recall.csv: no pinv async noise-0 row to derive the verdict from (D-02)")
+    pinv_measured = float(pinv_ref[0]["recall_rate"])
+    pinv_threshold = hopfield_qr_select.PINV_WORK_RECALL_AT_ZERO
+    pinv_works = abs(pinv_measured - pinv_threshold) < 1e-9
+
     return {
-        "hebb_exact_recovery_noise0_async": measured,
+        "hebb_exact_recovery_noise0_async": hebb_measured,
         "hebb_fails": hebb_fails,
-        "hebb_rule": f"Hebb fails if exact recovery at noise 0 (async) < {threshold * 100:.0f}% (D-02); "
-                     f"measured {measured * 100:.2f}%",
-        "pinv_exact_recovery_noise0_async": None,
-        "pinv_works": None,
-        "pinv_rule": None,
+        "hebb_rule": f"Hebb fails if exact recovery at noise 0 (async) < {hebb_threshold * 100:.0f}% (D-02); "
+                     f"measured {hebb_measured * 100:.2f}%",
+        "pinv_exact_recovery_noise0_async": pinv_measured,
+        "pinv_stored_fixed_noise0_async": stored_fixed_for(pinv_ran, "async") if pinv_ran else None,
+        "pinv_works": pinv_works,
+        "pinv_rule": f"pinv works if exact recovery at noise 0 (async) == {pinv_threshold * 100:.0f}% (D-02); "
+                     f"measured {pinv_measured * 100:.2f}%",
     }
 
 
@@ -479,19 +600,34 @@ def run(results_dir=sweep.RESULTS_DIR, design=None, repo_dir=TP_DIR, check_rule=
         _write_json(out / "overlaps.json", overlaps_json(patterns))
         _write_json(out / "qr_facts.json", qr_facts_json(patterns))
 
-        recall = recall_series(design, out)
-        recall_ran = run_series(recall, out, patterns, workers)
-        aggregate_recall(design, recall_ran, out)
-        _write_csv(out / "energy_trace.csv", ENERGY_TRACE_COLUMNS, energy_trace_rows(recall_ran, "hebb"))
+        hebb_series = recall_series(design, out, rule="hebb")
+        hebb_ran = run_series(hebb_series, out, patterns, workers)
+        hebb_rows = aggregate_recall(design, hebb_ran, rule="hebb")
+
+        pinv_series = recall_series(design, out, rule="pinv")
+        pinv_ran = run_series(pinv_series, out, patterns, workers)
+        pinv_rows = aggregate_recall(design, pinv_ran, rule="pinv")
+
+        hamming_rows_ = hamming_rows(design, patterns)
+
+        all_rows = hebb_rows + pinv_rows + hamming_rows_
+        _write_csv(out / "recall.csv", RECALL_COLUMNS, all_rows)
+        _write_csv(out / "recovery_table.csv", RECOVERY_TABLE_COLUMNS, recovery_table_rows(all_rows, design))
+
+        energy_rows = energy_trace_rows(hebb_ran, "hebb") + energy_trace_rows(pinv_ran, "pinv")
+        _write_csv(out / "energy_trace.csv", ENERGY_TRACE_COLUMNS, energy_rows)
 
         _write_json(out / "protocol.json", protocol_json(design))
-        _write_json(out / "verdict.json", verdict_json(out))
+        _write_json(out / "verdict.json", verdict_json(out, pinv_ran=pinv_ran))
 
         _write_json(out / "run.json", {
             **identity, "code_identity": code_identity(repo_dir), "design": _design_json(design),
-            "sweeps": {"recall_hebb": _relative(out / "sweeps" / "recall_hebb", results_dir)},
-            "runs": {"recall_hebb": len(recall_ran)},
-            "cross_checked_trials": sum(item.checked["trials"] for item in recall_ran),
+            "sweeps": {
+                "recall_hebb": _relative(out / "sweeps" / "recall_hebb", results_dir),
+                "recall_pinv": _relative(out / "sweeps" / "recall_pinv", results_dir),
+            },
+            "runs": {"recall_hebb": len(hebb_ran), "recall_pinv": len(pinv_ran), "recall_hamming": len(hamming_rows_)},
+            "cross_checked_trials": sum(item.checked["trials"] for item in hebb_ran + pinv_ran),
         })
     except BaseException:
         shutil.rmtree(out, ignore_errors=True)
