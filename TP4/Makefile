@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr
+.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -102,3 +102,8 @@ hopfield-figures: venv
 # con sha256 por PNG); no corre la red. Preparación de deliverables/05-hopfield-qr.md (HOP-04).
 qr: venv
 	$(PY) scripts/prepare_qr.py
+
+# Corre la regla de Hebb sobre los 5 QR fijada en la sección 3 de deliverables/05-hopfield-qr.md; se niega a
+# correr si el protocolo, scripts/qr.py o los 5 PNG no están commiteados o cambiaron (D-01).
+hopfield-qr: qr
+	$(PY) analysis/hopfield_qr.py
