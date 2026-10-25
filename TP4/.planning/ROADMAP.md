@@ -194,7 +194,32 @@ Plans:
   2. El informe está publicado como Artifact y su tabla mapea cada pregunta literal del enunciado a la sección donde se responde.
   3. `CLAUDE.md`, `DECISIONS.md` y el README indican cómo reproducir cada resultado (comando, config y seed), y esos pasos regeneran las figuras y tablas que muestran slides e informe.
 
-**Plans**: TBD
+**Plans:** 12 plans
+
+Plans:
+**Wave 1**
+- [ ] 06-01-PLAN.md — Checkpoint de legitimidad de Markdown==3.11, `make venv` sin uv y `make results` con archivos centinela (corre la cadena completa una vez)
+- [ ] 06-02-PLAN.md — Sondeo del tipo Slides de Artifact por la sesión principal (deck de prueba) -> 06-ARTIFACT-FORMAT.md
+- [ ] 06-03-PLAN.md — DECISIONS.md: todas las D-xx de las Fases 1-6, Key Decisions, pitfalls y requisitos citados (fuente del glosario, D-13)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 06-04-PLAN.md — Tracer: facts -> manifest -> fragmento 02 con anclas -> figuras en tarjeta -> tabla de preguntas -> informe.html con `make informe`
+- [ ] 06-05-PLAN.md — Variante «slide» en plots_style (D-08) y figuras de slide del SOM, informe byte-idéntico
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 06-06-PLAN.md — Variantes de slide de PCA, Oja y campañas
+- [ ] 06-07-PLAN.md — Variantes de slide de letras y QR de Hopfield
+- [ ] 06-08-PLAN.md — Facts de las cinco fases, pines de drift (D-12) y manifest completo (25 preguntas, 31 figuras)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 06-09-PLAN.md — Informe completo: cinco fragmentos, figuras, resumen de hallazgos, glosario y enlaces de jerga (D-13), guion opcional
+- [ ] 06-10-PLAN.md — Constructor de slides: 24 slides con títulos-conclusión, notas del orador y figuras de slide, en el formato sondeado
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 06-11-PLAN.md — `make deliverables` reproducible, README.md, CLAUDE.md y test de documentos de reproducción
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 06-12-PLAN.md — Decisión sobre la verificación de la Fase 3, build final, chequeo de preguntas contra el PDF y publicación de los dos Artifacts
 
 ## Progress
 
@@ -208,4 +233,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 | 3. Oja y decisiones de campaña | 6/6 | In Progress | - |
 | 4. Hopfield núcleo y letras | 7/7 | Complete    | 2026-10-23 |
 | 5. Hopfield con QR | 6/6 | Complete    | 2026-10-25 |
-| 6. Slides e informe | 0/TBD | Not started | - |
+| 6. Slides e informe | 0/12 | Planned | - |

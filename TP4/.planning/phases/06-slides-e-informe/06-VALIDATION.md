@@ -42,22 +42,41 @@ Tests must not require the unversioned results: use small synthetic result folde
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 6-TBD | TBD | TBD | DELIV-01 | — | N/A | unit | `.venv/bin/python -m pytest analysis/tests/test_slides.py -q` | ❌ W0 | ⬜ pending |
-| 6-TBD | TBD | TBD | DELIV-02 | — | every `<img>` is a data URI decoding to SVG; no `/Users/` paths | unit | `.venv/bin/python -m pytest analysis/tests/test_informe.py -q` | ❌ W0 | ⬜ pending |
-| 6-TBD | TBD | TBD | DELIV-02 | — | N/A | unit | `.venv/bin/python -m pytest analysis/tests/test_facts.py -q` | ❌ W0 | ⬜ pending |
-| 6-TBD | TBD | TBD | DELIV-03 | — | N/A | unit | `.venv/bin/python -m pytest analysis/tests/test_repro_docs.py -q` | ❌ W0 | ⬜ pending |
+| 06-01-T2 | 06-01 | 1 | DELIV-02, DELIV-03 | T-06-SC | Markdown==3.11 installed only after the blocking-human legitimacy checkpoint (06-01-T1) | env | `.venv/bin/python -c 'import importlib.metadata as m; assert m.version("Markdown") == "3.11"'` | n/a | ⬜ pending |
+| 06-01-T3 | 06-01 | 1 | DELIV-03 | T-06-01 | sentinel recipes call the guarded drivers, never edit rules | integration | sentinel loop (SENTINELS_OK) + `make -n results` lists no Python step (RESULTS_IDEMPOTENT) | n/a | ⬜ pending |
+| 06-02-T2 | 06-02 | 1 | DELIV-01 | T-06-04 | smoke deck kept private | doc check | FORMAT_DOC_OK (frontmatter keys of 06-ARTIFACT-FORMAT.md) | ❌ W1 (written by 06-02-T1) | ⬜ pending |
+| 06-03-T2 | 06-03 | 1 | DELIV-03 | — | N/A | doc check | DECISIONS_COVER_OK (D-ID sets equal CONTEXT.md, pitfalls and REQ IDs covered) | ❌ W1 | ⬜ pending |
+| 06-04-T1 | 06-04 | 2 | DELIV-02 | T-06-08, T-06-09, T-06-10, T-06-11 | facts escaped; figures only as img data URIs; no home paths or emails; size ceiling | e2e (tracer) | `make informe` + TRACER_OK | ❌ W2 | ⬜ pending |
+| 06-04-T2 | 06-04 | 2 | DELIV-02 | T-06-08 | escape of a "<b>" value; no script element; no skeleton tags | unit | `.venv/bin/python -m pytest analysis/tests/test_facts.py analysis/tests/test_informe.py -q` | ❌ W2 | ⬜ pending |
+| 06-05-T1 | 06-05 | 2 | DELIV-01 | T-06-12 | report SVG bytes unchanged | unit + integration | `.venv/bin/python -m pytest analysis/tests/test_plots_style.py -q` + `shasum -a 256 -c analysis/results/variant_baseline/som.sha256` | ❌ W2 | ⬜ pending |
+| 06-05-T2 | 06-05 | 2 | DELIV-01 | T-06-12 | guarded SOM files untouched | integration | SLIDE_SOM_OK + GUARDED_UNTOUCHED | n/a | ⬜ pending |
+| 06-06-T1 | 06-06 | 3 | DELIV-01 | T-06-14 | — | unit + integration | `.venv/bin/python -m pytest analysis/tests/test_variants_ej1.py -q` + EJ1_SLIDES_PCA_OJA | ❌ W3 | ⬜ pending |
+| 06-06-T2 | 06-06 | 3 | DELIV-01 | T-06-14, T-06-15 | campaign rule untouched; no SOM stage-1 rerun | integration | EJ1_REPORT_BYTES_UNCHANGED + CAMPAIGN_RULE_UNTOUCHED | n/a | ⬜ pending |
+| 06-07-T1 | 06-07 | 3 | DELIV-01 | T-06-16 | — | unit + integration | `.venv/bin/python -m pytest analysis/tests/test_hopfield_figures.py -q` + LETTER_SLIDES_OK | ✅ (extended) | ⬜ pending |
+| 06-07-T2 | 06-07 | 3 | DELIV-01 | T-06-16 | Hopfield code identity untouched | unit + integration | `.venv/bin/python -m pytest analysis/tests/test_hopfield_qr_figures.py -q` + EJ2_REPORT_BYTES_UNCHANGED + HOPFIELD_CODE_UNTOUCHED | ❌ W3 | ⬜ pending |
+| 06-08-T1 | 06-08 | 3 | DELIV-02 | T-06-17 | fragment numbers pinned to JSON | unit + CLI | `.venv/bin/python -m pytest analysis/tests/test_facts.py -q` + `.venv/bin/python analysis/facts.py check` (DRIFT_OK) | ✅ (extended) | ⬜ pending |
+| 06-08-T2 | 06-08 | 3 | DELIV-02, DELIV-03 | T-06-18 | question texts flagged until the PDF check | unit | `.venv/bin/python -m pytest analysis/tests/test_deliverables_manifest.py -q` | ❌ W3 | ⬜ pending |
+| 06-09-T1 | 06-09 | 4 | DELIV-02 | T-06-22, T-06-23 | drift gate in build; no typed numbers in the summary; size ceiling | unit + e2e | `.venv/bin/python -m pytest analysis/tests/test_informe.py -q` + INFORME_FULL_OK | ✅ (extended) | ⬜ pending |
+| 06-09-T2 | 06-09 | 4 | DELIV-02 | T-06-20 | glossary titles escaped; links never rewrite attributes | unit + e2e | JARGON_LINKED + SOURCES_UNTOUCHED | ✅ (extended) | ⬜ pending |
+| 06-10-T1 | 06-10 | 4 | DELIV-01 | T-06-24, T-06-25, T-06-26 | slide text escaped; no home paths | unit + e2e | `.venv/bin/python -m pytest analysis/tests/test_slides.py -q` + DECK_OK | ❌ W4 | ⬜ pending |
+| 06-10-T2 | 06-10 | 4 | DELIV-01 | T-06-26 | — | integration | SLIDES_REPRODUCIBLE (two builds, `diff -r`) | n/a | ⬜ pending |
+| 06-11-T1 | 06-11 | 5 | DELIV-03 | — | N/A | integration | DELIVERABLES_REPRODUCIBLE (`make deliverables` twice, hashes equal) + NO_SLOW_RERUN | n/a | ⬜ pending |
+| 06-11-T3 | 06-11 | 5 | DELIV-03 | T-06-28, T-06-29 | no home paths or emails in docs; no slides PDF in docs/ | unit | `.venv/bin/python -m pytest analysis/tests/test_repro_docs.py -q` + `make test` | ❌ W5 | ⬜ pending |
+| 06-12-T2 | 06-12 | 6 | DELIV-01, DELIV-02, DELIV-03 | T-06-31 | final build after the Phase 3 decision (06-12-T1) | integration | FINAL_BUILD_OK + MAKE_TEST_OK | n/a | ⬜ pending |
+| 06-12-T3 | 06-12 | 6 | DELIV-01, DELIV-02 | T-06-30, T-06-32 | link sharing per share_mode; quotes checked against the PDF | manual (top-level session) | URLs present in README.md and CLAUDE.md; `make test` | n/a | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
-*Task IDs are filled in once plans exist.*
+*"❌ Wn" in File Exists means the test or document is created by that wave's plan.*
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `analysis/tests/test_facts.py`, `test_deliverables_manifest.py`, `test_informe.py`, `test_slides.py`, `test_repro_docs.py`
-- [ ] `analysis/facts.py`, `analysis/deliverables_manifest.py` (so tests have something to import)
-- [ ] `Markdown==3.11` in `analysis/requirements.txt` after the human-verify checkpoint; installed via the pip fallback
-- [ ] `06-ARTIFACT-FORMAT.md` from the Slides probe
+- [ ] `analysis/tests/test_facts.py`, `test_informe.py` (06-04), `test_plots_style.py` (06-05), `test_variants_ej1.py` (06-06), `test_hopfield_qr_figures.py` (06-07), `test_deliverables_manifest.py` (06-08), `test_slides.py` (06-10), `test_repro_docs.py` (06-11)
+- [ ] `analysis/facts.py`, `analysis/deliverables_manifest.py` (06-04 tracer, so tests have something to import)
+- [ ] `Markdown==3.11` in `analysis/requirements.txt` after the human-verify checkpoint; installed via the pip fallback (06-01)
+- [ ] `06-ARTIFACT-FORMAT.md` from the Slides probe (06-02)
+- [ ] Populated `analysis/results/` from `make results` (06-01), so later waves verify on real results
 
 ---
 
