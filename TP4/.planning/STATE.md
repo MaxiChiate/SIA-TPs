@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 06
 current_phase_name: Slides e informe
 status: executing
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-10-25T23:33:09.713Z"
+stopped_at: Completed 06-04-PLAN.md
+last_updated: "2026-10-25T23:53:49.798Z"
 last_activity: 2026-10-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 45
-  completed_plans: 36
+  completed_plans: 37
   percent: 67
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-25)
 ## Current Position
 
 Phase: 06 (Slides e informe) — EXECUTING
-Plan: 4 of 12
+Plan: 5 of 12
 Status: Ready to execute
 Last activity: 2026-10-25 — Phase 06 execution started
 
@@ -79,6 +79,7 @@ Progress: [███████░░░] 67%
 | Phase 06 P01 | 20 min | 3 tasks | 2 files |
 | Phase 06 P02 | 5 min | 2 tasks | 1 files |
 | Phase 06 P03 | 55 min | 2 tasks | 1 files |
+| Phase 06 P04 | 17 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,7 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-02: share_mode = exported presentation PDF is submitted; the Slides artifact stays private — User answer during the probe
 - [Phase 06]: 06-02: Slides canvas fixed 1920x1080; notes via <aside> are visible to deck readers, so keep D-06 fallback (notes.md + informe annex) — Observed in the smoke deck
 - [Phase 06]: DECISIONS.md: F4 D-04b has its own entry; F5 D-11 names sub-items D-11a..D-11d inside the parent entry
+- [Phase 06]: 06-04: informe top heading drops its own 'Fase n —' when prefixed 'Detalle técnico (Fase n)'; numbers in generated text only via facts.fill data-fact spans; figures only as SVG data URIs on a SURFACE card
 
 ### Pending Todos
 
@@ -157,6 +159,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T23:33:09.588Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-10-25T23:53:49.674Z
+Stopped at: Completed 06-04-PLAN.md
 Resume file: None
