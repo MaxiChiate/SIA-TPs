@@ -209,7 +209,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 06-06-PLAN.md — Variantes de slide de PCA, Oja y campañas
 - [ ] 06-07-PLAN.md — Variantes de slide de letras y QR de Hopfield
-- [ ] 06-08-PLAN.md — Facts de las cinco fases, pines de drift (D-12) y manifest completo (25 preguntas, 31 figuras)
+- [ ] 06-08-PLAN.md — Manifest completo (25 preguntas, 31 figuras), checkpoint humano bloqueante que compara las 25 preguntas palabra por palabra con el PDF del enunciado (no autónomo), facts de las cinco fases y pines de drift (D-12)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 06-09-PLAN.md — Informe completo: cinco fragmentos, figuras, resumen de hallazgos, glosario y enlaces de jerga (D-13), guion opcional
@@ -219,7 +219,7 @@ Plans:
 - [ ] 06-11-PLAN.md — `make deliverables` reproducible, README.md, CLAUDE.md y test de documentos de reproducción
 
 **Wave 6** *(blocked on Wave 5 completion)*
-- [ ] 06-12-PLAN.md — Decisión sobre la verificación de la Fase 3, build final, chequeo de preguntas contra el PDF y publicación de los dos Artifacts
+- [ ] 06-12-PLAN.md — Decisión sobre la verificación de la Fase 3, build final (con guardia de preguntas ya chequeadas en 06-08) y publicación de los dos Artifacts
 
 ## Progress
 

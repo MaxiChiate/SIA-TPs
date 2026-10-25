@@ -54,16 +54,17 @@ Tests must not require the unversioned results: use small synthetic result folde
 | 06-06-T2 | 06-06 | 3 | DELIV-01 | T-06-14, T-06-15 | campaign rule untouched; no SOM stage-1 rerun | integration | EJ1_REPORT_BYTES_UNCHANGED + CAMPAIGN_RULE_UNTOUCHED | n/a | ⬜ pending |
 | 06-07-T1 | 06-07 | 3 | DELIV-01 | T-06-16 | — | unit + integration | `.venv/bin/python -m pytest analysis/tests/test_hopfield_figures.py -q` + LETTER_SLIDES_OK | ✅ (extended) | ⬜ pending |
 | 06-07-T2 | 06-07 | 3 | DELIV-01 | T-06-16 | Hopfield code identity untouched | unit + integration | `.venv/bin/python -m pytest analysis/tests/test_hopfield_qr_figures.py -q` + EJ2_REPORT_BYTES_UNCHANGED + HOPFIELD_CODE_UNTOUCHED | ❌ W3 | ⬜ pending |
-| 06-08-T1 | 06-08 | 3 | DELIV-02 | T-06-17 | fragment numbers pinned to JSON | unit + CLI | `.venv/bin/python -m pytest analysis/tests/test_facts.py -q` + `.venv/bin/python analysis/facts.py check` (DRIFT_OK) | ✅ (extended) | ⬜ pending |
-| 06-08-T2 | 06-08 | 3 | DELIV-02, DELIV-03 | T-06-18 | question texts flagged until the PDF check | unit | `.venv/bin/python -m pytest analysis/tests/test_deliverables_manifest.py -q` | ❌ W3 | ⬜ pending |
-| 06-09-T1 | 06-09 | 4 | DELIV-02 | T-06-22, T-06-23 | drift gate in build; no typed numbers in the summary; size ceiling | unit + e2e | `.venv/bin/python -m pytest analysis/tests/test_informe.py -q` + INFORME_FULL_OK | ✅ (extended) | ⬜ pending |
+| 06-08-T1 | 06-08 | 3 | DELIV-02, DELIV-03 | T-06-18 | question texts flagged False until the PDF checkpoint (06-08-T2); review sheet printed for it | unit + CLI | `.venv/bin/python -m pytest analysis/tests/test_deliverables_manifest.py -q` + MANIFEST_FULL_OK + REVIEW_SHEET_OK (`.venv/bin/python analysis/deliverables_manifest.py questions`) | ❌ W3 | ⬜ pending |
+| 06-08-T2 | 06-08 | 3 | DELIV-02 | T-06-18 | blocking-human word-by-word comparison of the 25 texts with docs/Archivo SIATP 42026.pdf, before 06-09 builds the informe | manual (blocking-human checkpoint) | resume signal "approved" or `Q<id>: <texto>` lines, recorded in the checkpoint log | n/a | ⬜ pending |
+| 06-08-T3 | 06-08 | 3 | DELIV-02, DELIV-03 | T-06-17, T-06-18 | reported texts applied verbatim and flag set True; fragment numbers pinned to JSON | unit + CLI | `.venv/bin/python -m pytest analysis/tests/test_facts.py analysis/tests/test_deliverables_manifest.py -q` + QUESTIONS_CHECKED_OK + `.venv/bin/python analysis/facts.py check` (DRIFT_OK) + FACTS_FULL_OK | ✅ (extended) | ⬜ pending |
+| 06-09-T1 | 06-09 | 4 | DELIV-02 | T-06-22, T-06-23, T-06-33 | build refuses unchecked question texts (QUESTIONS_CHECKED_AGAINST_PDF not True); drift gate in build; no typed numbers in the summary; size ceiling | unit + e2e | `.venv/bin/python -m pytest analysis/tests/test_informe.py -q` + INFORME_FULL_OK | ✅ (extended) | ⬜ pending |
 | 06-09-T2 | 06-09 | 4 | DELIV-02 | T-06-20 | glossary titles escaped; links never rewrite attributes | unit + e2e | JARGON_LINKED + SOURCES_UNTOUCHED | ✅ (extended) | ⬜ pending |
 | 06-10-T1 | 06-10 | 4 | DELIV-01 | T-06-24, T-06-25, T-06-26 | slide text escaped; no home paths | unit + e2e | `.venv/bin/python -m pytest analysis/tests/test_slides.py -q` + DECK_OK | ❌ W4 | ⬜ pending |
 | 06-10-T2 | 06-10 | 4 | DELIV-01 | T-06-26 | — | integration | SLIDES_REPRODUCIBLE (two builds, `diff -r`) | n/a | ⬜ pending |
 | 06-11-T1 | 06-11 | 5 | DELIV-03 | — | N/A | integration | DELIVERABLES_REPRODUCIBLE (`make deliverables` twice, hashes equal) + NO_SLOW_RERUN | n/a | ⬜ pending |
 | 06-11-T3 | 06-11 | 5 | DELIV-03 | T-06-28, T-06-29 | no home paths or emails in docs; no slides PDF in docs/ | unit | `.venv/bin/python -m pytest analysis/tests/test_repro_docs.py -q` + `make test` | ❌ W5 | ⬜ pending |
-| 06-12-T2 | 06-12 | 6 | DELIV-01, DELIV-02, DELIV-03 | T-06-31 | final build after the Phase 3 decision (06-12-T1) | integration | FINAL_BUILD_OK + MAKE_TEST_OK | n/a | ⬜ pending |
-| 06-12-T3 | 06-12 | 6 | DELIV-01, DELIV-02 | T-06-30, T-06-32 | link sharing per share_mode; quotes checked against the PDF | manual (top-level session) | URLs present in README.md and CLAUDE.md; `make test` | n/a | ⬜ pending |
+| 06-12-T2 | 06-12 | 6 | DELIV-01, DELIV-02, DELIV-03 | T-06-31, T-06-32 | final build after the Phase 3 decision (06-12-T1), guarded by QUESTIONS_CHECKED_AGAINST_PDF (set in 06-08) | integration | QUESTIONS_CHECKED_OK + FINAL_BUILD_OK + MAKE_TEST_OK | n/a | ⬜ pending |
+| 06-12-T3 | 06-12 | 6 | DELIV-01, DELIV-02 | T-06-30 | link sharing per share_mode | manual (top-level session) | URLs present in README.md and CLAUDE.md; `make test` | n/a | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 *"❌ Wn" in File Exists means the test or document is created by that wave's plan.*
@@ -86,7 +87,7 @@ Tests must not require the unversioned results: use small synthetic result folde
 |----------|-------------|------------|-------------------|
 | Published Slides Artifact opens and has one section per exercise | DELIV-01 | Publishing needs the top-level session's Artifact tool | Open the slides URL recorded in README; step through every slide |
 | Published informe Artifact opens; question table links resolve | DELIV-02 | Same as above | Open the informe URL; click each question link |
-| Literal enunciado quotes match the PDF | DELIV-02 | Accents were reconstructed from TeX escapes | Compare each quote in the table against `docs/` enunciado PDF |
+| Literal enunciado quotes match the PDF | DELIV-02 | Accents were reconstructed from TeX escapes (research A6) | At the 06-08 Task 2 blocking-human checkpoint, before 06-09 builds the informe: compare each of the 25 lines printed by `.venv/bin/python analysis/deliverables_manifest.py questions` with `docs/Archivo SIATP 42026.pdf`, word by word and accent by accent; 06-08 Task 3 applies the corrections and sets `QUESTIONS_CHECKED_AGAINST_PDF = True` |
 | `make deliverables` is byte-reproducible on real results | DELIV-03 | Needs the full, slow results chain | Run `make deliverables` twice and compare `sha256sum` of outputs |
 
 ---
