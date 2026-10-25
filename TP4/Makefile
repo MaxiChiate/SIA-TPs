@@ -26,11 +26,17 @@ test: prepare
 clean:
 	$(MAKE) -C neuron clean
 
+# Crea .venv e instala analysis/requirements.txt. Con uv usa uv; sin uv cae a python3.12 -m venv mas pip.
 venv: .venv/.installed
 
 .venv/.installed: analysis/requirements.txt
-	test -x .venv/bin/python || $(UV) venv --python 3.12 .venv
-	$(UV) pip install --python .venv/bin/python -r analysis/requirements.txt
+	if command -v $(UV) >/dev/null 2>&1; then \
+		test -x .venv/bin/python || $(UV) venv --python 3.12 .venv; \
+		$(UV) pip install --python .venv/bin/python -r analysis/requirements.txt; \
+	else \
+		test -x .venv/bin/python || python3.12 -m venv .venv; \
+		.venv/bin/python -m pip install -r analysis/requirements.txt; \
+	fi
 	touch $@
 
 # datos/prepared/ se genera (no se versiona): todo target que lo lea depende de prepare.
