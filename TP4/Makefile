@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr hopfield-qr-limits hopfield-qr-figures results
+.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr hopfield-qr-limits hopfield-qr-figures results informe
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -226,3 +226,8 @@ $(RES)/hopfield/qr_limits/majority.json: | $(PREP)/qr_pm1.csv
 # Figuras de Hopfield sobre los 5 QR; leen hopfield-qr y hopfield-qr-limits.
 $(RES)/hopfield/qr/figures/majority.svg: | $(RES)/hopfield/qr/verdict.json $(RES)/hopfield/qr_limits/majority.json
 	$(PY) analysis/hopfield_qr_figures.py
+
+# Arma el informe HTML (resumen, tabla de preguntas del enunciado y el detalle de cada fase) en
+# analysis/results/informe/informe.html (no se versiona). Necesita los resultados de make results.
+informe: venv
+	$(PY) analysis/informe.py
