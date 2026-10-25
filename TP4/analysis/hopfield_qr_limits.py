@@ -33,10 +33,13 @@ script's own figures and the deliverable cite.
   - majority.json: the pixel-wise majority attractor, its overlap and Hamming distance to each of
     the five QR.
   - shift.json: for a 1 px and a 2 px shift of one fixed QR (SHIFT_SOURCE, chosen by index before
-    looking at any result), the measured query_hamming and recovered_hamming to the source, plus
-    the by-hand runner's sweep/flip count; also the sanity check that the SAME runner keeps an
-    unshifted stored QR fixed under pinv's W (agreeing with the C core's stored.csv fixed == 1),
-    so the forward run is trustworthy before trusting its shift-demo output.
+    looking at any result), the measured query_hamming and recovered_hamming to the source, the
+    by-hand runner's sweep/flip count, and the full query/recovered pixel vectors (plus the
+    source's own pixel vector) so analysis/hopfield_qr_figures.py can draw the before/shifted/
+    recovered triptych by reading this file alone, never re-running the dynamics itself; also the
+    sanity check that the SAME runner keeps an unshifted stored QR fixed under pinv's W (agreeing
+    with the C core's stored.csv fixed == 1), so the forward run is trustworthy before trusting
+    its shift-demo output.
   - run.json: code_identity over LIMITS_CODE_FILES (git HEAD, dirty flag, per-file sha256) - no
     neuron binary is hashed here, since this script never calls the C core.
 
@@ -221,12 +224,18 @@ def shift_json(P, source: int = SHIFT_SOURCE, pixels=SHIFT_PIXELS, seed: int = S
             "recovered_hamming": recovered_hamming,
             "sweeps": sweeps,
             "flips": flips,
+            # Full pixel vectors (not just the Hamming numbers above), so hopfield_qr_figures.py can draw
+            # the before/shifted/recovered triptych by reading this file alone, never re-running the
+            # dynamics itself (figures only plot; hopfield_qr_limits.py is the only place that runs them).
+            "query": shifted.tolist(),
+            "recovered": recovered.tolist(),
         })
     return {
         "source": source,
         "n_pixels": n,
         "edge_convention": EDGE_CONVENTION,
         "seed": seed,
+        "source_pattern": P[source].tolist(),
         "sanity_unshifted_fixed": sanity,
         "shifts": shifts,
     }

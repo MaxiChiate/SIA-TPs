@@ -257,3 +257,29 @@ def test_shift_pattern_zero_pads_with_light_and_preserves_the_rest():
     assert np.array_equal(shifted[0, :], np.full(side, -1))  # vacated top row: light = -1
     assert np.array_equal(shifted[:, 0], np.full(side, -1))  # vacated left column: light = -1
     assert np.array_equal(shifted[1:, 1:], base[: side - 1, : side - 1])  # the rest carries over unchanged
+
+
+# ---------- Task 2 (Plan 05): shift.json carries the full pixel vectors the figures need (D-11b) ----------
+
+# N = 9 (3x3), p = 3, linearly independent (so pinv's Gram inverts): the three patterns differ only in
+# their last two pixels, mirroring CORRELATED's "mostly identical" shape at a size small enough to reshape.
+SHIFT_FIXTURE = np.array(
+    [
+        [1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, -1],
+        [1, 1, 1, 1, 1, 1, 1, -1, 1],
+    ],
+    dtype=np.int64,
+)
+
+
+def test_shift_json_includes_the_full_pixel_vectors_for_the_figures():
+    report = hopfield_qr_limits.shift_json(SHIFT_FIXTURE, source=0, pixels=(1,), seed=1)
+    n = SHIFT_FIXTURE.shape[1]
+    assert len(report["source_pattern"]) == n
+    assert report["source_pattern"] == SHIFT_FIXTURE[0].tolist()
+    entry = report["shifts"][0]
+    assert len(entry["query"]) == n
+    assert len(entry["recovered"]) == n
+    assert entry["query_hamming"] == int((np.array(entry["query"]) != SHIFT_FIXTURE[0]).sum())
+    assert entry["recovered_hamming"] == int((np.array(entry["recovered"]) != SHIFT_FIXTURE[0]).sum())

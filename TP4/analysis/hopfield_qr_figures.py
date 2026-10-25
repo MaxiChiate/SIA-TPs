@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-"""Figures of the Hopfield-on-QR comparison (HOP-04, HOP-05, HOP-06): glyphs, overlaps, the three-rule
-recovery/overlap/cost comparison (hebb, pinv, hamming) and the per-step energy trace for the two
-dynamical rules (hebb, pinv).
+"""Figures of the Hopfield-on-QR comparison (HOP-04, HOP-05, HOP-06, HOP-07): glyphs, overlaps, the
+three-rule recovery/overlap/cost comparison (hebb, pinv, hamming), the per-step energy trace for the
+two dynamical rules (hebb, pinv), and the two limitation figures of Plan 05 (the shift triptych and
+the Hebb majority attractor).
 
-    .venv/bin/python analysis/hopfield_qr_figures.py [--results DIR] [--out DIR]
+    .venv/bin/python analysis/hopfield_qr_figures.py [--results DIR] [--out DIR] [--limits-results DIR]
 
 Reads the files `make hopfield-qr` wrote (overlaps.json, qr_facts.json, recall.csv, energy_trace.csv, run.json)
 and refuses to draw (SystemExit) if `hopfield_qr_select.require_same_rule` rejects run.json - the protocol text,
 the guard code, scripts/qr.py or one of the five PNGs changed since the run - or if the network code (the C core,
 the driver, the config reader and the numpy control) differs from the sha256 run.json recorded as code_identity:
 that identity is not pinned by the pre-registration guard, but the figures must come from the code that produced
-the results (mirrors Phase 4's WR-02). Every figure goes through plots_style.save_figure, so a rerun gives
-byte-identical SVG files. numpy and matplotlib (through plots_style) only.
+the results (mirrors Phase 4's WR-02). The two limitation figures additionally read what
+`make hopfield-qr-limits` wrote (majority.json, shift.json, run.json under qr_limits/, a directory sibling to
+the qr/ this module otherwise reads) and refuse the same way if LIMITS_CODE_FILES's sha256 (hopfield_qr_limits.py,
+hopfield.py) differs from what that run.json recorded. Every figure goes through plots_style.save_figure, so a
+rerun gives byte-identical SVG files. numpy and matplotlib (through plots_style) only.
 """
 
 from __future__ import annotations
@@ -30,12 +34,17 @@ sys.path.insert(0, str(TP_DIR / "analysis"))
 
 import hopfield  # noqa: E402
 import hopfield_qr  # noqa: E402
+import hopfield_qr_limits  # noqa: E402
 import hopfield_qr_select  # noqa: E402
 import plots_style  # noqa: E402
 import qr  # noqa: E402
 
 DEFAULT_RESULTS = TP_DIR / "analysis" / "results" / "hopfield" / "qr"
 DEFAULT_OUT = DEFAULT_RESULTS / "figures"
+# qr_limits/ is a SIBLING of qr/ (both under analysis/results/hopfield/), never the recall driver's own
+# output directory - mirrors hopfield_qr_limits.RESULTS_SUBDIR's layout (D-01: make hopfield-qr never
+# rmtrees qr_limits/).
+DEFAULT_LIMITS_RESULTS = DEFAULT_RESULTS.parent / "qr_limits"
 UPDATES = ("async", "sync")
 UPDATE_LABELS = {"async": "asincrono (referencia)", "sync": "sincrono"}
 # The three rules compared on the recovery figure, and the two with dynamics (the per-step energy panel and the
@@ -46,7 +55,7 @@ RULE_LABELS = {"hebb": "Hebb", "pinv": "pseudo-inversa", "hamming": "Hamming 1-N
 # Representative noise levels for the per-step energy panel, fixed by index before looking at any curve: the
 # start, the middle and the top of the frozen 0..0.5 grid (D-05), not chosen for how their curves turned out.
 ENERGY_LEVELS = (0.0, 0.25, 0.5)
-FIGURE_STEMS = ("qr", "overlaps", "recovery", "energy_trace")
+FIGURE_STEMS = ("qr", "overlaps", "recovery", "energy_trace", "shift", "majority")
 NEUTRAL_BAR = "#b9b8b3"
 GLYPH_ON = "#1f1f1f"
 GLYPH_OFF = "#ecebe6"
@@ -303,6 +312,85 @@ def plot_energy_trace(rows: list[dict], out_stem) -> None:
     plots_style.save_figure(fig, out_stem)
 
 
+# ---------- shift triptych: source / shifted / recovered under pinv (HOP-07, D-11b) ----------
+
+def plot_shift(shift: dict, out_stem) -> None:
+    """One row per shift magnitude in shift.json: the source QR glyph, the shifted query glyph and the
+    recovered-state glyph (display polarity dark = +1), each annotated with the MEASURED Hamming distance
+    to the source - never a forced or predicted number, read straight from shift.json (D-11b)."""
+    from matplotlib.colors import ListedColormap
+
+    plt = plots_style.apply_style()
+    n = int(shift["n_pixels"])
+    side = int(round(n ** 0.5))
+    source_img = np.asarray(shift["source_pattern"], dtype=np.int64).reshape(side, side)
+    shifts = sorted(shift["shifts"], key=lambda e: int(e["shift"]))
+    labels = _qr_labels()
+    source_label = labels[int(shift["source"])]
+    cmap = ListedColormap([GLYPH_OFF, GLYPH_ON])
+    fig, axes = plt.subplots(len(shifts), 3, figsize=(8.4, 3.6 * len(shifts) + 0.8), squeeze=False)
+    for row, entry in enumerate(shifts):
+        query_img = np.asarray(entry["query"], dtype=np.int64).reshape(side, side)
+        recovered_img = np.asarray(entry["recovered"], dtype=np.int64).reshape(side, side)
+        panels = (
+            (source_img, f"{source_label} (original)"),
+            (query_img, f"desplazado {entry['shift']} px\n(Hamming = {entry['query_hamming']})"),
+            (recovered_img, f"recuperado bajo pinv\n(Hamming = {entry['recovered_hamming']})"),
+        )
+        for col, (img, title) in enumerate(panels):
+            ax = axes[row, col]
+            ax.imshow(img, cmap=cmap, vmin=-1, vmax=1, interpolation="nearest")
+            ax.set_title(title, fontsize=9)
+            _clean_glyph_axes(ax)
+    fig.suptitle("Sensibilidad a corrimientos: antes / desplazado / recuperado bajo pinv (HOP-07, D-11b)",
+                fontsize=12, x=0.01, ha="left")
+    # subplots_adjust (not tight_layout, D-11b figure legibility fix): row titles need generous hspace or
+    # they collide with the glyph of the row above (found and fixed before this task's commit).
+    fig.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.14, hspace=0.75, wspace=0.08)
+    _caption(fig, f"Corrimiento con relleno en cero ({shift['edge_convention']}); la red evoluciona desde la "
+                  "consulta desplazada bajo la W de pseudo-inversa con una corrida asincrona propia (no la traza "
+                  "de hopfield.py). La distancia de Hamming medida a la fuente es un hallazgo, nunca forzada: "
+                  "este corrimiento de pocos pixeles ya mueve una fraccion grande de los 1369 pixeles.")
+    plots_style.save_figure(fig, out_stem)
+
+
+# ---------- the Hebb majority attractor (HOP-07, D-11a, Pitfall 1) ----------
+
+def plot_majority(majority: dict, out_stem) -> None:
+    """The pixel-wise majority attractor glyph (display polarity dark = +1) plus a bar of its Hamming
+    distance to each of the five stored QR - never zero, the root cause of Hebb's failure on these
+    correlated patterns (D-11a)."""
+    from matplotlib.colors import ListedColormap
+
+    plt = plots_style.apply_style()
+    n = int(majority["n_pixels"])
+    side = int(round(n ** 0.5))
+    maj_img = np.asarray(majority["majority"], dtype=np.int64).reshape(side, side)
+    labels = _qr_labels()
+    hamming = [int(h) for h in majority["hamming_to_targets"]]
+    colors = plots_style.palette_for(labels)
+    cmap = ListedColormap([GLYPH_OFF, GLYPH_ON])
+    fig, (glyph_ax, bar_ax) = plt.subplots(1, 2, figsize=(9.6, 3.6), gridspec_kw={"width_ratios": [1, 1.6]})
+    glyph_ax.imshow(maj_img, cmap=cmap, vmin=-1, vmax=1, interpolation="nearest")
+    glyph_ax.set_title("Atractor mayoria de Hebb", fontsize=10)
+    _clean_glyph_axes(glyph_ax)
+    bar_ax.bar(labels, hamming, color=[colors[label] for label in labels])
+    top = max(hamming) if hamming else 0
+    bar_ax.set_ylim(0, top * 1.18 if top else 1)
+    for index, value in enumerate(hamming):
+        bar_ax.text(index, value + top * 0.03, str(value), ha="center", va="bottom", fontsize=8)
+    bar_ax.set_ylabel(f"distancia de Hamming al atractor (de {n})", fontsize=9)
+    bar_ax.set_title("Distancia a cada QR almacenado", fontsize=10, loc="left")
+    fig.suptitle("El atractor comun de Hebb no coincide con ningun QR almacenado (HOP-07, D-11a)", fontsize=12,
+                x=0.01, ha="left")
+    fig.subplots_adjust(left=0.03, right=0.98, top=0.82, bottom=0.26, wspace=0.28)
+    _caption(fig, f"Mayoria pixel a pixel de los 5 QR (signo de la suma por pixel); distancia minima "
+                  f"{min(hamming) if hamming else 0}, maxima {max(hamming) if hamming else 0} de {n} pixeles - "
+                  "nunca cero. Es el estado al que la dinamica de Hebb tiende a colapsar en vez de recuperar la "
+                  "consulta, la causa raiz medida del fallo visto en el panel de recuperacion (HOP-04, D-11a).")
+    plots_style.save_figure(fig, out_stem)
+
+
 # ---------- driver ----------
 
 def require_same_code(run: dict, repo_dir=TP_DIR) -> None:
@@ -314,8 +402,17 @@ def require_same_code(run: dict, repo_dir=TP_DIR) -> None:
                          "sha256 recorded in run.json (code_identity); re-run make hopfield-qr")
 
 
+def require_same_limits_code(limits_run: dict, repo_dir=TP_DIR) -> None:
+    """Refuse unless the limitation generators' own code (LIMITS_CODE_FILES) is the one qr_limits/run.json
+    recorded. A run.json without code_identity counts as every file changed."""
+    changed = hopfield_qr_limits.changed_code_files(limits_run.get("code_identity"), repo_dir)
+    if changed:
+        raise SystemExit(f"the limitation results come from different code: {', '.join(changed)} differ from "
+                         "the sha256 recorded in qr_limits/run.json (code_identity); re-run make hopfield-qr-limits")
+
+
 def draw(results_dir, out_dir, patterns_path=None, check_rule: bool = True, check_code: bool = True,
-         repo_dir=TP_DIR) -> list[Path]:
+         repo_dir=TP_DIR, limits_results_dir=None) -> list[Path]:
     results_dir = Path(results_dir)
     out_dir = Path(out_dir)
     run_path = results_dir / "run.json"
@@ -327,18 +424,35 @@ def draw(results_dir, out_dir, patterns_path=None, check_rule: bool = True, chec
     if check_code:
         require_same_code(run, repo_dir)
 
+    # qr_limits/run.json carries only code_identity (no rule identity of its own, D-01): the SAME protocol
+    # was already checked above against the recall driver's run.json, so only the limitation generators'
+    # own code (LIMITS_CODE_FILES) needs its own refusal here.
+    if limits_results_dir is None:
+        limits_results_dir = results_dir.parent / "qr_limits"
+    limits_results_dir = Path(limits_results_dir)
+    limits_run_path = limits_results_dir / "run.json"
+    if not limits_run_path.exists():
+        raise SystemExit(f"{limits_run_path}: not found, run make hopfield-qr-limits first")
+    limits_run = _read_json(limits_run_path)
+    if check_code:
+        require_same_limits_code(limits_run, repo_dir)
+
     overlaps = _read_json(results_dir / "overlaps.json")
     if patterns_path is None:
         patterns_path = TP_DIR / run["design"]["patterns_path"]
     patterns = hopfield.load_patterns(patterns_path)
     recall_rows = _read_rows(results_dir / "recall.csv")
     energy_rows = _read_rows(results_dir / "energy_trace.csv")
+    majority = _read_json(limits_results_dir / "majority.json")
+    shift = _read_json(limits_results_dir / "shift.json")
 
     out_dir.mkdir(parents=True, exist_ok=True)
     plot_qr(patterns, out_dir / "qr")
     plot_overlaps(overlaps, out_dir / "overlaps")
     plot_recovery(recall_rows, out_dir / "recovery")
     plot_energy_trace(energy_rows, out_dir / "energy_trace")
+    plot_shift(shift, out_dir / "shift")
+    plot_majority(majority, out_dir / "majority")
     return [out_dir / f"{stem}.{suffix}" for stem in FIGURE_STEMS for suffix in ("svg", "png")]
 
 
@@ -353,10 +467,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--results", type=Path, default=DEFAULT_RESULTS, help="directory of make hopfield-qr")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="directory of the figures")
+    parser.add_argument("--limits-results", type=Path, default=DEFAULT_LIMITS_RESULTS,
+                        help="directory of make hopfield-qr-limits")
     args = parser.parse_args(argv)
     if not (args.results / "run.json").exists():
         raise SystemExit(f"{args.results / 'run.json'}: not found, run make hopfield-qr first")
-    for path in draw(args.results, args.out):
+    for path in draw(args.results, args.out, limits_results_dir=args.limits_results):
         print(_display(path))
     return 0
 
