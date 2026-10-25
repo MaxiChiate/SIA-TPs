@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 05
 current_phase_name: Hopfield con QR
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-10-24T20:49:51.993Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-10-25T01:08:55.427Z"
 last_activity: 2026-10-24
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 33
-  completed_plans: 30
+  completed_plans: 31
   percent: 50
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-21)
 ## Current Position
 
 Phase: 05 (Hopfield con QR) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-10-24 — Phase 05 execution started
 
@@ -72,6 +72,7 @@ Progress: [█████░░░░░] 50%
 | Phase 05 P01 | 46 min | 2 tasks | 8 files |
 | Phase 05 P06 | 12 min | 1 tasks | 3 files |
 | Phase 05 P02 | 25 min | 2 tasks | 2 files |
+| Phase 05 P03 | 70min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,8 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-06: SOURCES fixed explicit tuple of the five real QR filenames under datos/hopfield resolved in this order (what Plan 02 guard hashes and Plans 03-05 index by subset [0,1,2,3,4]); polarity dark(0)=+1/light(255)=-1 documented in meta, display-only (Hebb's W invariant to global flip)
 - [Phase 05]: 05-02: D-01/D-02/D-03/D-05 frozen exactly as proposed (literal hypothesis, 11-level 0-0.5 noise grid, 30 trials, seeds 1-10, exact-match success with continuous |m| also reported, Hebb fails <100%/pinv works ==100% at noise 0); user approved verbatim at the Task 1 checkpoint, no edits
 - [Phase 05]: 05-02: deliverable RULE_FILE excluded from rule_guard's porcelain-clean set, checked by marker digest only, so Plans 03-05 write result sections outside the markers without a new commit while any edit to the frozen protocol text itself refuses
+- [Phase 05]: 05-03: energy_trace.csv has no seed column; the driver captures ONE fixed seed (hopfield_qr_select.SEEDS[0]) per (source, noise) cell, not all 10 - mixing seeds under the same key interleaves independent async sequences and can look non-monotonic even though each run's own energy never rises (caught by the plan's own verify script before commit)
+- [Phase 05]: 05-03: Hebb's measured async noise-0 exact recovery is 0% over the five real QR (verdict.json hebb_fails=true, derived from the frozen D-02 rule, matching PITFALLS.md Pitfall 1 independently); max|overlap|=0.86, 69.8% pixels identical in all five, min pairwise Hamming=96 (HOP-04)
 
 ### Pending Todos
 
@@ -137,6 +140,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-24T20:49:45.333Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-10-25T01:08:48.613Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None

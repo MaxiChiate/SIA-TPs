@@ -164,7 +164,7 @@ Plans:
   3. La regla de pseudo-inversa se compara contra Hebb y contra la línea base de Hamming al patrón almacenado más cercano, en los mismos niveles de ruido.
   4. Las limitaciones del caso de uso están explicadas con evidencia: correlación entre QR, sensibilidad a corrimientos, corrección de errores propia del QR y equivalencia con una tabla de búsqueda.
 
-**Plans:** 3/6 plans executed
+**Plans:** 4/6 plans executed
 
 Plans:
 **Wave 1**
@@ -175,7 +175,7 @@ Plans:
 - [x] 05-02-PLAN.md — Pre-registro del protocolo: checkpoint de decisión (umbrales de veredicto, one-way), protocolo entre marcadores y guardia sha256 sobre el texto, el conversor y los 5 PNG, commiteados antes de correr la red (D-01/D-02)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 05-03-PLAN.md — Driver con guardia (tracer): recuperación de Hebb sobre los 5 QR, estabilidad a ruido cero, curva de 11 niveles con energía e iteraciones, matriz de solapamientos; fallo reportado como hallazgo; figuras base
+- [x] 05-03-PLAN.md — Driver con guardia (tracer): recuperación de Hebb sobre los 5 QR, estabilidad a ruido cero, curva de 11 niveles con energía e iteraciones, matriz de solapamientos; fallo reportado como hallazgo; figuras base
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 05-04-PLAN.md — Pseudo-inversa y línea base de Hamming 1-NN sobre la misma grilla; comparación de las tres reglas; figuras de recuperación, |m| continuo y energía/iteraciones
@@ -207,5 +207,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 | 2. Kohonen SOM | 6/6 | Complete    | 2026-10-21 |
 | 3. Oja y decisiones de campaña | 6/6 | In Progress | - |
 | 4. Hopfield núcleo y letras | 7/7 | Complete    | 2026-10-23 |
-| 5. Hopfield con QR | 3/6 | In Progress | - |
+| 5. Hopfield con QR | 4/6 | In Progress | - |
 | 6. Slides e informe | 0/TBD | Not started | - |

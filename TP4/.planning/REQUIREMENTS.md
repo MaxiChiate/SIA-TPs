@@ -45,8 +45,8 @@
 - [x] **HOP-01**: Hopfield en C con W entera, actualización síncrona y asíncrona, energía por paso, detección de ciclos y clasificación del estado final
 - [x] **HOP-02**: 4 letras de 5×5 almacenadas y recuperadas, con análisis de ortogonalidad y capacidad sobre varios subconjuntos de letras
 - [x] **HOP-03**: Un patrón muy ruidoso que converge a un estado espurio identificado y clasificado (inverso, mezcla u otro)
-- [ ] **HOP-04**: Preparación de los 5 QR de 37×37 a ±1 con aserción de que son 0/255 puros, y matriz de solapamientos
-- [ ] **HOP-05**: QR con regla de Hebb: test de estabilidad a ruido cero y al menos 8 niveles de ruido con 30 o más ensayos cada uno, con energía e iteraciones por paso; el fallo se reporta como hallazgo
+- [x] **HOP-04**: Preparación de los 5 QR de 37×37 a ±1 con aserción de que son 0/255 puros, y matriz de solapamientos
+- [x] **HOP-05**: QR con regla de Hebb: test de estabilidad a ruido cero y al menos 8 niveles de ruido con 30 o más ensayos cada uno, con energía e iteraciones por paso; el fallo se reporta como hallazgo
 - [x] **HOP-06**: Regla de pseudo-inversa para los QR, comparada contra Hebb y contra la línea base de Hamming al patrón más cercano
 - [ ] **HOP-07**: Limitaciones del caso de uso explicadas (correlación entre QR, sensibilidad a corrimientos, corrección de errores propia del QR, tabla de búsqueda equivalente)
 
@@ -106,8 +106,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HOP-01 | Phase 4 | Complete |
 | HOP-02 | Phase 4 | Complete |
 | HOP-03 | Phase 4 | Complete |
-| HOP-04 | Phase 5 | Pending |
-| HOP-05 | Phase 5 | Pending |
+| HOP-04 | Phase 5 | Complete |
+| HOP-05 | Phase 5 | Complete |
 | HOP-06 | Phase 5 | Complete |
 | HOP-07 | Phase 5 | Pending |
 | DELIV-01 | Phase 6 | Pending |
