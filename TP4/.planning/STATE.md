@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 06
 current_phase_name: Slides e informe
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-10-25T21:56:43.330Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-10-25T22:37:59.131Z"
 last_activity: 2026-10-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 45
-  completed_plans: 34
+  completed_plans: 35
   percent: 67
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-25)
 ## Current Position
 
 Phase: 06 (Slides e informe) — EXECUTING
-Plan: 2 of 12
+Plan: 3 of 12
 Status: Ready to execute
 Last activity: 2026-10-25 — Phase 06 execution started
 
@@ -77,6 +77,7 @@ Progress: [███████░░░] 67%
 | Phase 05 P04 | 80min | 3 tasks | 3 files |
 | Phase 05 P05 | 25min | 3 tasks | 5 files |
 | Phase 06 P01 | 20 min | 3 tasks | 2 files |
+| Phase 06 P02 | 5 min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,9 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-05: Phase 5 complete - HOP-04 through HOP-07 all marked complete; deliverables/05-hopfield-qr.md has no remaining placeholder sections and the frozen protocol (section 3) is unchanged from the Plan 02 commit
 - [Phase 06]: 06-01: Markdown pinned to 3.11 (not 3.11.2) after human legitimacy approval; make venv has a python3.12 -m venv + pip fallback when uv is absent
 - [Phase 06]: 06-01: make results uses file sentinels with order-only prerequisites calling drivers directly; full missing-step run took 653 s (10 min 53 s) on this machine
+- [Phase 06]: 06-02: Slide figures must be PNG uploaded as assets (uploaded SVGs lose embedded raster payloads; SOM map rendered striped); affects 06-05 and 06-10 — Probe of the real Slides Artifact type
+- [Phase 06]: 06-02: share_mode = exported presentation PDF is submitted; the Slides artifact stays private — User answer during the probe
+- [Phase 06]: 06-02: Slides canvas fixed 1920x1080; notes via <aside> are visible to deck readers, so keep D-06 fallback (notes.md + informe annex) — Observed in the smoke deck
 
 ### Pending Todos
 
@@ -139,7 +143,7 @@ None yet.
 - [Phase 2]: 02-VALIDATION.md sigue en draft (auditoría Nyquist sin correr: /gsd-validate-phase 2)
 - [Phase 4]: Hopfield síncrono (curso) vs asíncrono (energía monótona): implementar ambos, asíncrono como referencia
 - [Phase 5]: Sin verificar la pseudo-inversa bajo ruido alto ni la existencia de un decodificador de QR (HOP-09 está en v2)
-- [Phase 6]: Sin verificar el formato de Slides en Artifacts ni si plotly JS corre dentro de Artifacts
+- [Phase 6]: Formato de Slides en Artifacts verificado en 06-02 (ver 06-ARTIFACT-FORMAT.md; figuras de slide solo PNG); sigue sin verificar si plotly JS corre dentro de Artifacts (el tipo Slides no admite script)
 
 ## Deferred Items
 
@@ -151,6 +155,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T21:56:43.190Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-10-25T22:37:59.011Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
