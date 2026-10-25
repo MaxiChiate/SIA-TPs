@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Kohonen SOM** - Mapa de los 50 creadores con grilla elegida por regla multicriterio fijada de antemano y perfiles por región (completed 2026-10-21)
 - [ ] **Phase 3: Oja y decisiones de campaña** - Índice de Oja contra PC1, recomendaciones por campaña, comparación contra solo `followers` y mantenimiento
 - [x] **Phase 4: Hopfield núcleo y letras** - Núcleo validado con 4 letras 5×5: energía, ortogonalidad, capacidad y un estado espurio identificado (completed 2026-10-23)
-- [ ] **Phase 5: Hopfield con QR** - Cinco QR de 37×37 con Hebb (falla reportada), pseudo-inversa, línea base de Hamming y limitaciones
+- [x] **Phase 5: Hopfield con QR** - Cinco QR de 37×37 con Hebb (falla reportada), pseudo-inversa, línea base de Hamming y limitaciones (completed 2026-10-25)
 - [ ] **Phase 6: Slides e informe** - Slides e informe en Artifact con mapa pregunta→respuesta, y documentación para reproducir todo
 
 ## Phase Details
@@ -164,7 +164,7 @@ Plans:
   3. La regla de pseudo-inversa se compara contra Hebb y contra la línea base de Hamming al patrón almacenado más cercano, en los mismos niveles de ruido.
   4. Las limitaciones del caso de uso están explicadas con evidencia: correlación entre QR, sensibilidad a corrimientos, corrección de errores propia del QR y equivalencia con una tabla de búsqueda.
 
-**Plans:** 6/6 plans executed
+**Plans:** 6/6 plans complete
 
 Plans:
 **Wave 1**
@@ -207,5 +207,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 | 2. Kohonen SOM | 6/6 | Complete    | 2026-10-21 |
 | 3. Oja y decisiones de campaña | 6/6 | In Progress | - |
 | 4. Hopfield núcleo y letras | 7/7 | Complete    | 2026-10-23 |
-| 5. Hopfield con QR | 6/6 | In Progress | - |
+| 5. Hopfield con QR | 6/6 | Complete    | 2026-10-25 |
 | 6. Slides e informe | 0/TBD | Not started | - |
