@@ -17,6 +17,7 @@ import pytest
 
 import hopfield
 import hopfield_qr
+import hopfield_qr_limits
 import hopfield_qr_select
 
 # A 5x5 "staircase" pm-one fixture: row i and row i+1 differ in exactly one pixel (column i), so
@@ -178,3 +179,81 @@ def test_hamming_classify_breaks_an_exact_tie_by_the_lowest_index():
     distances = [int((HAMMING_FIXTURE[a] != query).sum()) for a in range(HAMMING_FIXTURE.shape[0])]
     assert distances[0] == distances[1] and distances[0] < distances[2]  # confirms the tie is real, not assumed
     assert hopfield_qr.hamming_classify(HAMMING_FIXTURE, query) == 0  # HAMMING_TIE_BREAK: the lowest index
+
+
+# ---------- Task 1 (Plan 05): the majority attractor differs from every target (D-11a) ----------
+
+# 5 patterns, N = 5: at every pixel j, exactly two of the five rows ({j, (j-1) mod 5}) hold -1 and the other
+# three hold +1, so every column sums to +1 (majority = all +1) while every row itself has exactly two -1
+# pixels - hand-verified below to differ from the all-+1 majority by Hamming distance 2 on every row, unlike
+# STAIRCASE or CORRELATED (both of which happen to coincide with one of their own rows exactly).
+MAJORITY_FIXTURE = np.array(
+    [
+        [-1, 1, 1, 1, -1],
+        [-1, -1, 1, 1, 1],
+        [1, -1, -1, 1, 1],
+        [1, 1, -1, -1, 1],
+        [1, 1, 1, -1, -1],
+    ],
+    dtype=np.int64,
+)
+EXPECTED_MAJORITY = np.array([1, 1, 1, 1, 1], dtype=np.int64)
+EXPECTED_HAMMING_TO_TARGETS = [2, 2, 2, 2, 2]
+
+
+def test_majority_fixture_column_sums_are_hand_verified():
+    # Sanity on the fixture itself: every column sums to +1 (3 rows at +1, 2 at -1).
+    assert np.array_equal(MAJORITY_FIXTURE.sum(axis=0), np.full(5, 1))
+
+
+def test_majority_attractor_differs_from_every_target():
+    majority = hopfield_qr_limits.majority_attractor(MAJORITY_FIXTURE)
+    assert np.array_equal(majority, EXPECTED_MAJORITY)
+    for a in range(MAJORITY_FIXTURE.shape[0]):
+        assert int((majority != MAJORITY_FIXTURE[a]).sum()) == EXPECTED_HAMMING_TO_TARGETS[a] > 0
+
+
+def test_majority_json_reports_hamming_and_overlap_to_every_target():
+    report = hopfield_qr_limits.majority_json(MAJORITY_FIXTURE)
+    assert report["n_pixels"] == 5
+    assert report["n_patterns"] == 5
+    assert report["majority"] == EXPECTED_MAJORITY.tolist()
+    assert report["hamming_to_targets"] == EXPECTED_HAMMING_TO_TARGETS
+    assert all(d >= 1 for d in report["hamming_to_targets"])  # differs from every target (D-11a)
+    n = report["n_pixels"]
+    for a, h in enumerate(report["hamming_to_targets"]):
+        assert report["overlap_to_targets"][a] == pytest.approx((n - 2 * h) / n)
+
+
+# ---------- Task 1 (Plan 05): the by-hand async runner's fixed-point sanity (D-11b) ----------
+
+def test_by_hand_async_run_keeps_an_unshifted_fixed_point_fixed():
+    # Reuses CORRELATED (05-04): every one of its 4 patterns is an exact fixed point under pinv (D-06/D-07).
+    # The by-hand runner (our own implementation, not hopfield.py's trace-replay) must report zero flips.
+    W = hopfield.pinv(CORRELATED)
+    for a in range(CORRELATED.shape[0]):
+        final, sweeps, flips = hopfield_qr_limits.by_hand_async_run(W, CORRELATED[a], seed=1)
+        assert flips == 0
+        assert sweeps == 1  # one sweep to confirm no neuron wants to flip
+        assert np.array_equal(final, CORRELATED[a])
+
+
+def test_by_hand_async_run_actually_moves_an_unstable_pattern():
+    # The flip side of the sanity check: hebb leaves at least one CORRELATED pattern unstable (already shown
+    # above), and the by-hand runner must actually flip something when started from one of those, so the
+    # "zero flips" result above is a real fixed-point finding and not the runner silently doing nothing.
+    W = hopfield.hebb(CORRELATED)
+    unstable = next(a for a in range(CORRELATED.shape[0]) if not hopfield.is_fixed(W, CORRELATED[a]))
+    _final, _sweeps, flips = hopfield_qr_limits.by_hand_async_run(W, CORRELATED[unstable], seed=1)
+    assert flips > 0
+
+
+# ---------- Task 1 (Plan 05): the shift builder's documented edge convention (D-11b) ----------
+
+def test_shift_pattern_zero_pads_with_light_and_preserves_the_rest():
+    side = 3
+    base = np.array([[1, -1, 1], [-1, 1, -1], [1, 1, -1]], dtype=np.int64)
+    shifted = hopfield_qr_limits.shift_pattern(base, 1)
+    assert np.array_equal(shifted[0, :], np.full(side, -1))  # vacated top row: light = -1
+    assert np.array_equal(shifted[:, 0], np.full(side, -1))  # vacated left column: light = -1
+    assert np.array_equal(shifted[1:, 1:], base[: side - 1, : side - 1])  # the rest carries over unchanged
