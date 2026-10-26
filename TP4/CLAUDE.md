@@ -112,7 +112,7 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
   por `/gsd-discuss-phase`, no por edición en el lugar.
 - Auditoría Nyquist: las fases 2 y 3 quedaron validadas el 2026-10-26 (sin huecos; `03-VALIDATION.md` se reconstruyó de los
   planes y los SUMMARY). La fase 6 también, el mismo día: los 55 chequeos de sus planes dan verde y se agregaron 8 tests de las
-  variantes de slide que solo se verificaban sobre resultados reales (WR-08 de `06-REVIEW.md`; la disposición sigue en `open`).
+  variantes de slide que solo se verificaban sobre resultados reales (WR-08 de `06-REVIEW.md`, que queda en `fixed`).
 - Sin verificar: la pseudo-inversa con ruido muy alto y la existencia de un decodificador de QR (HOP-09 quedó en v2).
 - Fase 2 (decisión 06-12, 2026-10-26): se publicó con los 11 hallazgos de `02-REVIEW-DISPOSITION.md` abiertos (WR-01 a WR-04 e
   IN-01 a IN-07). Solo dos tocan la regla fijada de antemano: WR-01 (la igualdad en los umbrales se decide en punto flotante) e

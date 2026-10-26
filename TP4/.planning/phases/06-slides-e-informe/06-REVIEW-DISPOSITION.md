@@ -33,7 +33,7 @@ findings:
     title: "Documents contradict each other on delivery state and on the slides PDF"
   - id: WR-08
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Slide-variant branches of several drivers have no test"
   - id: IN-01
     severity: info
@@ -59,7 +59,7 @@ findings:
     severity: info
     disposition: open
     title: "`make informe` alone produces a different page from `make deliverables`"
-open: 14
+open: 13
 total: 14
 recorded: 2026-10-26T03:24:07.127Z
 ---
@@ -75,7 +75,7 @@ recorded: 2026-10-26T03:24:07.127Z
 | WR-05 | warning | open | - |
 | WR-06 | warning | open | - |
 | WR-07 | warning | open | - |
-| WR-08 | warning | open | - |
+| WR-08 | warning | fixed | commit 46201f1: 8 synthetic-data tests of the slide variant (test_variants_som.py, test_variants_ej1.py, test_hopfield_qr_figures.py); legend clipping stays a visual check (06-VALIDATION.md) |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
