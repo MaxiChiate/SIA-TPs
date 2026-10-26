@@ -112,7 +112,14 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
   por `/gsd-discuss-phase`, no por edición en el lugar.
 - Auditoría Nyquist sin correr: `02-VALIDATION.md` y `06-VALIDATION.md` siguen en draft y `03-VALIDATION.md` no existe.
 - Sin verificar: la pseudo-inversa con ruido muy alto y la existencia de un decodificador de QR (HOP-09 quedó en v2).
-- Fase 2 (decisión 06-12): publicado con hallazgos abiertos: WR-01, WR-02, WR-03, WR-04, IN-01, IN-02, IN-03, IN-04, IN-05, IN-06, IN-07 (los 11 de `02-REVIEW-DISPOSITION.md`, todos en `open`), 2026-10-26. Los cinco que tocan la regla de grilla y su guarda (WR-01 a WR-04 e IN-01) hacen que los números del SOM y la afirmación D-03 de la regla fijada de antemano descansen en una regla con revisión abierta; ningún arreglo se hizo acá.
+- Fase 2 (decisión 06-12, 2026-10-26): se publicó con los 11 hallazgos de `02-REVIEW-DISPOSITION.md` abiertos (WR-01 a WR-04 e
+  IN-01 a IN-07). Solo dos tocan la regla fijada de antemano: WR-01 (la igualdad en los umbrales se decide en punto flotante) e
+  IN-01 (QE-LOO baja con k, así que la regla elige la k más grande que pasa los filtros). Arreglarlos anula el pre-registro y pasa
+  por `/gsd-discuss-phase`. WR-02 y WR-03 son guardas de `som_stage.py`, fuera de la regla, y WR-04 es el kernel gaussiano en C.
+  Ninguno cambia un número publicado: según `02-REVIEW.md`, ningún valor cae justo en un umbral salvo `epochs-1040`, que pasa
+  igual. Además, el 2026-10-26 se comprobó que el texto de la regla, `som_select.py` y la serie de la etapa 1 son idénticos a
+  `ea7a0b1`, que la serie de la etapa 2 es toda de k = 5 y que todas las series usan `radius_final` 1,0. IN-02 a IN-07 son de
+  calidad de código.
 
 ## Cómo reproducir (los resultados no se versionan)
 
