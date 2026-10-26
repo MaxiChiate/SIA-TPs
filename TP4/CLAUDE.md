@@ -103,13 +103,14 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
   misma url.
 - Se publicó antes de verificar la Fase 3 (decisión 06-12). La verificación posterior (2026-10-26: UAT 3/3, `03-VERIFICATION.md` en
   `passed`) no cambió ningún resultado, así que el deck y el informe publicados siguen valiendo y no hubo que republicar.
+- Republicado el 2026-10-26 por el arreglo de WR-03 de la Fase 6, sin cambiar ningún número: en el deck solo la slide `som-rule`
+  (título y nota; la regla de grilla elige el menor QE-LOO entre las k que pasan los filtros), y el informe entero, que lleva esa
+  nota en el anexo del guion ("Generado desde commit d4d145e.").
 
 ## Pendientes
 
-- **Republicar el deck y el informe** a las mismas url: el arreglo de WR-03 de la Fase 6 (2026-10-26) cambió el título y la nota
-  de la slide `som-rule` (la regla de grilla elige el menor QE-LOO entre las k que pasan los filtros), y esa nota también está en
-  el anexo del guion del informe. Ningún número cambió. Antes de publicar, rearmar con `slides.py --asset-map` (ver Trampas);
-  después, volver a exportar el PDF del deck desde su Artifact.
+- **Volver a exportar el PDF del deck** desde su Artifact (lo hace la persona dueña): el deck se republicó el 2026-10-26 y el PDF
+  exportado antes no tiene la slide `som-rule` corregida.
 - **Cerrar el milestone** con `/gsd-complete-milestone`: las seis fases están completas en `ROADMAP.md`.
 - **Hallazgos de code review abiertos** (`NN-REVIEW-DISPOSITION.md` de las fases 2 a 6): los de la Fase 2 son 11, los de la Fase 3,
   14 (WR-01 a WR-05 e IN-01 a IN-09), y los de la Fase 6, IN-01 a IN-06 (WR-01 a WR-08 quedaron en `fixed` el 2026-10-26).
