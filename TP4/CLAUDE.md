@@ -8,7 +8,7 @@ Enunciado: `docs/Archivo SIATP 42026.pdf`.
 
 ## Estado técnico (código)
 
-**Las fases 1 a 5 están hechas y la Fase 6 (slides e informe) tiene todo armado salvo la publicación.** El núcleo de los tres
+**Las seis fases están hechas y verificadas (UAT completo en todas, 2026-10-26), y las slides y el informe están publicados.** El núcleo de los tres
 modelos (Kohonen, Oja, Hopfield) está en C, hecho a mano; el análisis, las figuras y los entregables están en Python. Todo se
 maneja con `make` desde `TP4/`; los resultados generados no se versionan y se regeneran con `make results` (ver `README.md`).
 
@@ -88,7 +88,8 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 - **Entregables (Fase 6)**: informe como Artifact HTML autocontenido (D-15) y slides como Artifact tipo Slides (D-14), en dos
   entregables separados (KD-2). Los números del texto salen de los JSON/CSV (D-11), las notas del orador van en cada slide
   (D-06) y la publicación es manual.
-- Las figuras de slide son siempre PNG subidos como assets: el almacén del tipo Slides borra los rasters embebidos de un SVG.
+- Las figuras de slide son siempre PNG subidos como assets: el almacén del tipo Slides borra los rasters embebidos de un SVG. El tipo
+  Slides no admite script.
 
 ## Entrega
 
@@ -100,18 +101,17 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 - El informe lleva el guion de la presentación como anexo (`id="guion"`, decisión del usuario en el checkpoint de 06-12): `make deliverables` pasa `INFORME_FLAGS := --notes analysis/results/slides/notes.md`; el guion viaja además como notas del orador en cada slide.
 - Cualquier cambio de resultados: regenerar con `make deliverables`, actualizar `DECISIONS.md` y este archivo, y republicar a la
   misma url.
+- Se publicó antes de verificar la Fase 3 (decisión 06-12). La verificación posterior (2026-10-26: UAT 3/3, `03-VERIFICATION.md` en
+  `passed`) no cambió ningún resultado, así que el deck y el informe publicados siguen valiendo y no hubo que republicar.
 
 ## Pendientes
 
-- **Compartir** el link del informe (menú Share del Artifact, solo la persona dueña); las slides y el informe ya están
-  publicados (ver Entrega). El tipo Slides no admite script.
-- **UAT de la Fase 3** sin responder (`.planning/phases/03-oja-y-decisiones-de-campa-a/03-UAT.md`, 3 pruebas pendientes): justicia
-  de las recomendaciones de campaña, la regeneración de la sección 7 y la fidelidad de las secciones 1 a 3 y 6.
-- **Hallazgos de code review abiertos** (`NN-REVIEW-DISPOSITION.md` de las fases 2 a 5): los de la Fase 2 son 11 y cualquier arreglo
-  que toque la regla de grilla (por ejemplo WR-01) pasa por `/gsd-discuss-phase`, no por edición en el lugar.
-- `02-VALIDATION.md` sigue en draft (auditoría Nyquist de la Fase 2 sin correr).
+- **Cerrar el milestone** con `/gsd-complete-milestone`: las seis fases están completas en `ROADMAP.md`.
+- **Hallazgos de code review abiertos** (`NN-REVIEW-DISPOSITION.md` de las fases 2 a 5): los de la Fase 2 son 11 y los de la Fase 3,
+  14 (WR-01 a WR-05 e IN-01 a IN-09). Cualquier arreglo que toque una regla fijada de antemano (por ejemplo WR-01 de la Fase 2) pasa
+  por `/gsd-discuss-phase`, no por edición en el lugar.
+- Auditoría Nyquist sin correr: `02-VALIDATION.md` y `06-VALIDATION.md` siguen en draft y `03-VALIDATION.md` no existe.
 - Sin verificar: la pseudo-inversa con ruido muy alto y la existencia de un decodificador de QR (HOP-09 quedó en v2).
-- Fase 3 (decisión 06-12): publicado con la Fase 3 sin verificar, 2026-10-26. `03-VERIFICATION.md` sigue en `human_needed` (5/5 must-haves, 2 ítems humanos) y `03-UAT.md` en `testing`; la parte de campañas (slides E1-10 a E1-13 y secciones 5 y 6 del fragmento 03) descansa en resultados sin verificar. Si la verificación cambia un resultado, se regenera con `make deliverables` y se republica a la misma url.
 - Fase 2 (decisión 06-12): publicado con hallazgos abiertos: WR-01, WR-02, WR-03, WR-04, IN-01, IN-02, IN-03, IN-04, IN-05, IN-06, IN-07 (los 11 de `02-REVIEW-DISPOSITION.md`, todos en `open`), 2026-10-26. Los cinco que tocan la regla de grilla y su guarda (WR-01 a WR-04 e IN-01) hacen que los números del SOM y la afirmación D-03 de la regla fijada de antemano descansen en una regla con revisión abierta; ningún arreglo se hizo acá.
 
 ## Cómo reproducir (los resultados no se versionan)
