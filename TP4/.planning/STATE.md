@@ -2,16 +2,16 @@
 gsd_state_version: "1.0"
 current_phase: 06
 current_phase_name: Slides e informe
-status: executing
-stopped_at: Completed 06-11-PLAN.md
-last_updated: "2026-10-26T02:57:53.672Z"
+status: verifying
+stopped_at: Completed 06-12-PLAN.md
+last_updated: "2026-10-26T03:16:23.877Z"
 last_activity: 2026-10-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 45
-  completed_plans: 44
+  completed_plans: 45
   percent: 67
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-25)
 
 Phase: 06 (Slides e informe) — EXECUTING
 Plan: 12 of 12
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-25 — Phase 06 execution started
 
 Progress: [███████░░░] 67%
@@ -87,6 +87,7 @@ Progress: [███████░░░] 67%
 | Phase 06 P09 | 14 min | 2 tasks | 2 files |
 | Phase 06 P10 | 25 min | 2 tasks | 4 files |
 | Phase 06 P11 | 8 min | 3 tasks | 5 files |
+| Phase 06 P12 | n/a | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,7 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-10: slide titles at 56 px with MAX_TITLE_CHARS 88; slide srcs are relative until --asset-map supplies /_blob/<id> urls (06-12 rebuilds with the map)
 - [Phase 06]: 06-11: INFORME_FLAGS is empty (notes_supported true); deliverables runs slides.py before informe.py, so switching to the --notes annex is a one-line change
 - [Phase 06]: 06-11: one slide-figure sentinel per figure script (7), order-only on the results sentinel the same script writes; make deliverables rebuilds slides with local srcs, so publication must rerun slides.py --asset-map last
+- [Phase 06]: 06-12: Fase 3 and Fase 2 open items waived by the user (p3-waive, p2-waive) and recorded in CLAUDE.md Pendientes; Slides and Informe published as private Artifacts
 
 ### Pending Todos
 
@@ -178,6 +180,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T02:57:53.499Z
-Stopped at: Completed 06-11-PLAN.md
+Last session: 2026-10-26T03:16:23.710Z
+Stopped at: Completed 06-12-PLAN.md
 Resume file: None

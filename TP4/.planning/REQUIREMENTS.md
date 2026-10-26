@@ -52,9 +52,9 @@
 
 ### Entregables
 
-- [ ] **DELIV-01**: Slides en Artifact para presentar, una sección por ejercicio
-- [ ] **DELIV-02**: Informe en Artifact para entender el proyecto, con tabla que mapea cada pregunta del enunciado a dónde se responde
-- [ ] **DELIV-03**: `CLAUDE.md`, `DECISIONS.md` y README con cómo reproducir cada resultado, como en TP3
+- [x] **DELIV-01**: Slides en Artifact para presentar, una sección por ejercicio
+- [x] **DELIV-02**: Informe en Artifact para entender el proyecto, con tabla que mapea cada pregunta del enunciado a dónde se responde
+- [x] **DELIV-03**: `CLAUDE.md`, `DECISIONS.md` y README con cómo reproducir cada resultado, como en TP3
 
 ## v2 Requirements
 
@@ -110,9 +110,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HOP-05 | Phase 5 | Complete |
 | HOP-06 | Phase 5 | Complete |
 | HOP-07 | Phase 5 | Complete |
-| DELIV-01 | Phase 6 | Pending |
-| DELIV-02 | Phase 6 | Pending |
-| DELIV-03 | Phase 6 | Pending |
+| DELIV-01 | Phase 6 | Complete |
+| DELIV-02 | Phase 6 | Complete |
+| DELIV-03 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 30 total
