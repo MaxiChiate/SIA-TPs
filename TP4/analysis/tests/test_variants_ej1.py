@@ -10,6 +10,8 @@ import re
 import numpy as np
 import pytest
 
+import campaigns
+import campaigns_select
 import oja
 import pca
 import plots_style
@@ -92,3 +94,50 @@ def test_oja_vs_pc1_in_both_variants(tmp_path):
     assert (tmp_path / "slide" / "oja_vs_pc1.svg").stat().st_size > 0
     assert svg_aspect(tmp_path / "slide" / "oja_vs_pc1.svg") == pytest.approx(
         plots_style.SLIDE_FIGSIZE[0] / plots_style.SLIDE_FIGSIZE[1], abs=0.02)
+
+
+def campaign_entries(n, seed=9):
+    """Synthetic entries of the campaign lists: each CAMPAIGNS objective gets an own list of 4 creators, and each
+    campaign a followers_global list of 5; the figures read only campaign, list, objective and members."""
+    rng = np.random.default_rng(seed)
+    entries = []
+    for campaign, objectives in campaigns_select.CAMPAIGNS:
+        entries.append({"campaign": campaign, "objective": "global", "list": "followers_global",
+                        "members": [int(i) for i in rng.choice(n, size=5, replace=False)]})
+        for objective in objectives:
+            entries.append({"campaign": campaign, "objective": objective, "list": "propia",
+                            "members": [int(i) for i in rng.choice(n, size=4, replace=False)]})
+    return entries
+
+
+def test_campaign_shortlists_biplot_in_both_variants(tmp_path):
+    n = 50
+    rng = np.random.default_rng(4)
+    pc = rng.normal(size=(n, 2))
+    entries = campaign_entries(n)
+    for _ in plots_style.iter_variants():
+        campaigns.plot_shortlists_biplot(entries, pc, [0.42, 0.21], tmp_path / "shortlists_biplot")
+    for suffix in (".svg", ".png"):
+        assert (tmp_path / f"shortlists_biplot{suffix}").stat().st_size > 0
+        assert (tmp_path / "slide" / f"shortlists_biplot{suffix}").stat().st_size > 0
+    slide = tmp_path / "slide" / "shortlists_biplot.svg"
+    assert svg_aspect(slide) == pytest.approx(plots_style.SLIDE_FIGSIZE[0] / plots_style.SLIDE_FIGSIZE[1], abs=0.02)
+    assert (tmp_path / "shortlists_biplot.svg").read_bytes() != slide.read_bytes()
+    assert plots_style.variant() == "report"
+
+
+def test_campaign_shortlists_som_grid_in_both_variants(tmp_path):
+    # the slide puts the four campaign grids in one row (1 x 4); the report keeps 2 x 2: the aspect differs
+    n, k = 50, 3
+    rng = np.random.default_rng(6)
+    bmu = rng.integers(0, k * k, size=n)
+    entries = campaign_entries(n)
+    for _ in plots_style.iter_variants():
+        campaigns.plot_shortlists_som(entries, bmu, k, "sintetico", 1, tmp_path / "shortlists_som")
+    for suffix in (".svg", ".png"):
+        assert (tmp_path / f"shortlists_som{suffix}").stat().st_size > 0
+        assert (tmp_path / "slide" / f"shortlists_som{suffix}").stat().st_size > 0
+    slide = tmp_path / "slide" / "shortlists_som.svg"
+    assert svg_aspect(slide) == pytest.approx(plots_style.SLIDE_FIGSIZE[0] / plots_style.SLIDE_FIGSIZE[1], abs=0.02)
+    assert (tmp_path / "shortlists_som.svg").read_bytes() != slide.read_bytes()
+    assert plots_style.variant() == "report"

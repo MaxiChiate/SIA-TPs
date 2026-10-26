@@ -106,3 +106,64 @@ def test_energy_trace_slide_layout_on_synthetic_rows(tmp_path):
     slide = tmp_path / "slide" / "energy_trace.svg"
     assert slide.stat().st_size > 0 and (tmp_path / "energy_trace.svg").stat().st_size > 0
     assert abs(svg_aspect(slide) - target) < 0.02
+
+
+def recovery_rows():
+    """Hand-made rows of the recovery figure: hebb and pinv with both updates (dynamical cost), hamming as a
+    single no-update line, over four noise levels."""
+    rows = []
+    for rule in ("hebb", "pinv", "hamming"):
+        updates = ("none",) if rule == "hamming" else ("async", "sync")
+        for update in updates:
+            for index, noise in enumerate((0.0, 0.1, 0.3, 0.5)):
+                rows.append({"rule": rule, "update": update, "noise": str(noise), "n_trials": "5",
+                             "recall_rate": str(max(0.0, 1.0 - 2.0 * noise)), "recall_sd_seeds": "0.05",
+                             "mean_final_overlap": str(max(0.0, 0.9 - noise)), "mean_sweeps": str(2 + index),
+                             "mean_final_energy": str(-100.0 + 10 * index)})
+    return rows
+
+
+def shift_record(n_pixels=N_PIXELS):
+    """A shift.json record with two shift magnitudes; the glyphs are random so the panels differ."""
+    rng = np.random.default_rng(21)
+    side = int(round(n_pixels ** 0.5))
+    source = np.where(rng.random(n_pixels) < 0.5, -1, 1).astype(int)
+    shifts = []
+    for shift in (1, 2):
+        query = np.where(rng.random(n_pixels) < 0.5, -1, 1).astype(int)
+        recovered = np.where(rng.random(n_pixels) < 0.5, -1, 1).astype(int)
+        shifts.append({"shift": shift, "query": query.tolist(), "query_hamming": int(np.sum(query != source)),
+                       "recovered": recovered.tolist(),
+                       "recovered_hamming": int(np.sum(recovered != source))})
+    return {"n_pixels": n_pixels, "side": side, "source": 0, "source_pattern": source.tolist(),
+            "edge_convention": "zero", "shifts": shifts}
+
+
+def test_recovery_figure_slide_legend_in_both_variants(tmp_path):
+    rows = recovery_rows()
+    for _ in plots_style.iter_variants():
+        figures.plot_recovery(rows, tmp_path / "recovery")
+    target = plots_style.SLIDE_FIGSIZE[0] / plots_style.SLIDE_FIGSIZE[1]
+    for suffix in (".svg", ".png"):
+        assert (tmp_path / f"recovery{suffix}").stat().st_size > 0
+        assert (tmp_path / "slide" / f"recovery{suffix}").stat().st_size > 0
+    slide = tmp_path / "slide" / "recovery.svg"
+    assert abs(svg_aspect(slide) - target) < 0.02
+    assert (tmp_path / "recovery.svg").read_bytes() != slide.read_bytes()
+    assert plots_style.variant() == "report"
+
+
+def test_shift_figure_one_row_in_slide_in_both_variants(tmp_path):
+    shift = shift_record()
+    for _ in plots_style.iter_variants():
+        figures.plot_shift(shift, tmp_path / "shift")
+    target = plots_style.SLIDE_FIGSIZE[0] / plots_style.SLIDE_FIGSIZE[1]
+    for suffix in (".svg", ".png"):
+        assert (tmp_path / f"shift{suffix}").stat().st_size > 0
+        assert (tmp_path / "slide" / f"shift{suffix}").stat().st_size > 0
+    slide = tmp_path / "slide" / "shift.svg"
+    assert abs(svg_aspect(slide) - target) < 0.02
+    # the report keeps its 3 columns x 2 rows grid (taller than the slide), the slide one row of 5 panels
+    assert abs(svg_aspect(tmp_path / "shift.svg") - target) > 0.02
+    assert (tmp_path / "shift.svg").read_bytes() != slide.read_bytes()
+    assert plots_style.variant() == "report"
