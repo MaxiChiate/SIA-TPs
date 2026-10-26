@@ -78,6 +78,10 @@ TABLE_PX, TABLE_LINE = 28, 36
 META_PX, META_LINE = 24, 32
 MIN_FIGURE_H = 400
 CHAR_WIDTH = 0.6  # the probe's rule: a character is about 0.6 x the font size wide
+# A title wraps at spaces into lines of about TEXT_W / (0.6 x TITLE_PX) characters; two lines at 90 % fill leave room
+# for a long word that moves to the next line, so the figure area below it stays at least MIN_FIGURE_H.
+MAX_TITLE_CHARS = int(2 * int(TEXT_W / (CHAR_WIDTH * TITLE_PX)) * 0.9)
+MAX_BODY_LINES, MAX_TABLE_COLUMNS, MAX_TABLE_ROWS = 3, 4, 5
 
 
 def _key(path: str) -> str:
@@ -477,6 +481,12 @@ def build_deck(values: dict[str, str], results_dir: Path = facts.RESULTS_DIR) ->
         raise SystemExit(f"the outline has {len(OUTLINE)} slides; D-01 allows {MAX_SLIDES} at most")
     built = []
     for slide in OUTLINE:
+        if len(slide.body) > MAX_BODY_LINES:
+            raise SystemExit(f"slide {slide.id}: {len(slide.body)} líneas de cuerpo; el máximo es {MAX_BODY_LINES}")
+        if slide.table is not None and (len(slide.table[0]) > MAX_TABLE_COLUMNS or len(slide.table[1]) > MAX_TABLE_ROWS):
+            raise SystemExit(
+                f"slide {slide.id}: la tabla supera {MAX_TABLE_COLUMNS} columnas o {MAX_TABLE_ROWS} filas"
+            )
         fill = lambda text: facts.fill(text, values)  # noqa: E731
         table = None
         if slide.table is not None:
@@ -491,10 +501,15 @@ def build_deck(values: dict[str, str], results_dir: Path = facts.RESULTS_DIR) ->
                         f"slide {slide.id}: figure {relative} not found; run `make results` (step {item.make_target})"
                     )
             png = f"{slide.figure}.png"
+        title = fill(slide.title)
+        if len(title) > MAX_TITLE_CHARS or _wrap_lines(title, _chars(TITLE_PX)) > 2:
+            raise SystemExit(
+                f"slide {slide.id}: el título tiene {len(title)} caracteres; el máximo es {MAX_TITLE_CHARS} (dos líneas)"
+            )
         built.append({
             "id": slide.id,
             "exercise": slide.exercise,
-            "title": fill(slide.title),
+            "title": title,
             "tag": slide.tag,
             "question_ids": list(slide.question_ids),
             "body": [fill(line) for line in slide.body],

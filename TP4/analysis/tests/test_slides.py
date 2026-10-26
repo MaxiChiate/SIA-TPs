@@ -429,3 +429,77 @@ def test_main_reads_an_asset_map_file(tmp_path, monkeypatch):
     out = tmp_path / "out"
     assert slides.main(["--results", str(results), "--out", str(out), "--asset-map", str(map_file)]) == 0
     assert 'src="/_blob/som_map"' in (out / "project" / "slides" / "som-map.html").read_text(encoding="utf-8")
+
+
+# ---------- fit and reproducibility of the real outline (Task 2) ----------
+
+def test_max_title_chars_comes_from_the_type_scale_of_the_probe():
+    per_line = int(slides.TEXT_W / (0.6 * slides.TITLE_PX))
+    assert slides.MAX_TITLE_CHARS == int(2 * per_line * 0.9) and slides.MAX_TITLE_CHARS < 2 * per_line
+    assert slides.TITLE_PX >= 24 and slides.BODY_PX >= 24 and slides.TABLE_PX >= 24 and slides.META_PX >= 24
+
+
+def test_every_filled_title_fits_in_two_lines_under_max_title_chars(deck):
+    built, _ = deck
+    per_line = int(slides.TEXT_W / (0.6 * slides.TITLE_PX))
+    for slide in built:
+        assert len(slide["title"]) <= slides.MAX_TITLE_CHARS, (slide["id"], len(slide["title"]))
+        assert slides._wrap_lines(slide["title"], per_line) <= 2, slide["id"]
+
+
+def test_build_deck_stops_on_a_title_over_max_title_chars(tmp_path, monkeypatch):
+    results = write_figures(tmp_path / "results")
+    long_title = replace(slides.OUTLINE[2], title="palabra " * 20)
+    monkeypatch.setattr(slides, "OUTLINE", (*slides.OUTLINE[:2], long_title, *slides.OUTLINE[3:]))
+    with pytest.raises(SystemExit) as stop:
+        slides.build_deck(fixture_facts(), results)
+    assert long_title.id in str(stop.value) and "título" in str(stop.value)
+
+
+def test_tables_have_at_most_4_columns_and_5_rows_and_bodies_at_most_3_lines():
+    for slide in slides.OUTLINE:
+        assert len(slide.body) <= 3, slide.id
+        if slide.table is not None:
+            header, rows = slide.table
+            assert len(header) <= 4 and 1 <= len(rows) <= 5, slide.id
+            assert all(len(row) == len(header) for row in rows), slide.id
+
+
+def test_build_deck_stops_on_a_table_or_body_over_the_limits(tmp_path, monkeypatch):
+    results = write_figures(tmp_path / "results")
+    wide = replace(slides.OUTLINE[10], table=(("a", "b", "c", "d", "e"), (("1", "2", "3", "4", "5"),)))
+    monkeypatch.setattr(slides, "OUTLINE", (*slides.OUTLINE[:10], wide, *slides.OUTLINE[11:]))
+    with pytest.raises(SystemExit) as stop:
+        slides.build_deck(fixture_facts(), results)
+    assert wide.id in str(stop.value) and "columnas" in str(stop.value)
+    chatty = replace(slides.OUTLINE[2], body=("a", "b", "c", "d"))
+    monkeypatch.setattr(slides, "OUTLINE", (*slides.OUTLINE[:2], chatty, *slides.OUTLINE[3:]))
+    with pytest.raises(SystemExit) as stop:
+        slides.build_deck(fixture_facts(), results)
+    assert chatty.id in str(stop.value) and "líneas" in str(stop.value)
+
+
+def test_every_figure_the_slide_files_reference_exists_in_assets(deck, tmp_path):
+    out = write(deck, tmp_path / "out")
+    for page_file in (out / "project" / "slides").glob("*.html"):
+        for src in re.findall(r'<img src="([^"]+)"', page_file.read_text(encoding="utf-8")):
+            assert (page_file.parent / src).resolve().is_file(), (page_file.name, src)
+            assert (page_file.parent / src).read_bytes() == PNG
+
+
+def test_every_figure_fits_the_canvas_below_the_title(deck, tmp_path):
+    out = write(deck, tmp_path / "out")
+    for page_file in (out / "project" / "slides").glob("*.html"):
+        for height in re.findall(r"height:(\d+)px;object-fit", page_file.read_text(encoding="utf-8")):
+            assert slides.MIN_FIGURE_H <= int(height) <= slides.TEXT_H - slides.TITLE_LINE, page_file.name
+
+
+def test_two_builds_through_main_are_identical(tmp_path, monkeypatch):
+    results = write_figures(tmp_path / "results")
+    monkeypatch.setattr(slides.facts, "load_facts", lambda *_args, **_kwargs: fixture_facts())
+    for name in ("a", "b"):
+        assert slides.main(["--results", str(results), "--out", str(tmp_path / name)]) == 0
+    first, second = tmp_path / "a", tmp_path / "b"
+    files = sorted(path.relative_to(first) for path in first.rglob("*") if path.is_file())
+    assert files == sorted(path.relative_to(second) for path in second.rglob("*") if path.is_file())
+    assert all((first / name).read_bytes() == (second / name).read_bytes() for name in files)
