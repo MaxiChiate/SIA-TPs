@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 06
 current_phase_name: Slides e informe
 status: executing
-stopped_at: Completed 06-06-PLAN.md
-last_updated: "2026-10-26T00:08:06.798Z"
+stopped_at: Completed 06-07-PLAN.md
+last_updated: "2026-10-26T01:10:22.707Z"
 last_activity: 2026-10-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 45
-  completed_plans: 39
+  completed_plans: 40
   percent: 67
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-25)
 ## Current Position
 
 Phase: 06 (Slides e informe) — EXECUTING
-Plan: 7 of 12
+Plan: 8 of 12
 Status: Ready to execute
 Last activity: 2026-10-25 — Phase 06 execution started
 
@@ -82,6 +82,7 @@ Progress: [███████░░░] 67%
 | Phase 06 P04 | 17 min | 2 tasks | 6 files |
 | Phase 06 P05 | 25min | 2 tasks | 4 files |
 | Phase 06 P06 | 30 min | 2 tasks | 4 files |
+| Phase 06 P07 | 60 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -140,6 +141,8 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-04: informe top heading drops its own 'Fase n —' when prefixed 'Detalle técnico (Fase n)'; numbers in generated text only via facts.fill data-fact spans; figures only as SVG data URIs on a SURFACE card
 - [Phase 06]: 06-05: SLIDE_FIGSIZE is the recorded figure_area (12.8 x 4.85 in, about 2.6:1), slide text via plots_style.fontsize, slide PNG at 250 dpi
 - [Phase 06]: 06-06: slide variants of PCA scree/biplot (audited only), Oja index vs PC1 and campaign shortlists; campaign SOM slide as a row of four; report SVGs byte-identical to baseline
+- [Phase 06]: 06-07: spurious (letters), energy_trace and shift (QR) use a different grid in the slide variant; energy panels of spurious stay in the report
+- [Phase 06]: 06-07: QR recovery slide keeps the three panels (Hebb, pinv, Hamming) with one legend under them (D-04 comparison)
 
 ### Pending Todos
 
@@ -163,6 +166,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T00:08:06.649Z
-Stopped at: Completed 06-06-PLAN.md
+Last session: 2026-10-26T01:10:22.543Z
+Stopped at: Completed 06-07-PLAN.md
 Resume file: None
