@@ -3,15 +3,15 @@ gsd_state_version: "1.0"
 current_phase: 06
 current_phase_name: Slides e informe
 status: executing
-stopped_at: Completed 06-09-PLAN.md
-last_updated: "2026-10-26T02:32:28.890Z"
+stopped_at: Completed 06-10-PLAN.md
+last_updated: "2026-10-26T02:49:12.143Z"
 last_activity: 2026-10-25
 last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 45
-  completed_plans: 42
+  completed_plans: 43
   percent: 67
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-25)
 ## Current Position
 
 Phase: 06 (Slides e informe) — EXECUTING
-Plan: 10 of 12
+Plan: 11 of 12
 Status: Ready to execute
 Last activity: 2026-10-25 — Phase 06 execution started
 
@@ -85,6 +85,7 @@ Progress: [███████░░░] 67%
 | Phase 06 P07 | 60 min | 2 tasks | 4 files |
 | Phase 06 P08 | two sessions | 3 tasks | 4 files |
 | Phase 06 P09 | 14 min | 2 tasks | 2 files |
+| Phase 06 P10 | 25 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -149,6 +150,8 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-08: pct_short prints whole percentages without decimals (0 %, 100 %) for the QR recovery facts
 - [Phase 06]: 06-09: informe build reads the questions_checked flags at call time and strips base64 data URIs before the leak scan (the e-mail regex was quadratic on multi-megabyte runs)
 - [Phase 06]: 06-09: jargon links resolve D-NN to the fragment phase, 'Fase M (D-NN' to phase M, a lettered ID or Pitfall without its own entry to its parent; KD entries are not glossary jargon
+- [Phase 06]: 06-10: two deck.json files: <out>/deck.json is the build manifest, <out>/project/deck.json the Slides v4 index; only project/ and the PNGs are published
+- [Phase 06]: 06-10: slide titles at 56 px with MAX_TITLE_CHARS 88; slide srcs are relative until --asset-map supplies /_blob/<id> urls (06-12 rebuilds with the map)
 
 ### Pending Todos
 
@@ -172,6 +175,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T02:32:28.722Z
-Stopped at: Completed 06-09-PLAN.md
+Last session: 2026-10-26T02:49:11.973Z
+Stopped at: Completed 06-10-PLAN.md
 Resume file: None

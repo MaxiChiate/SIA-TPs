@@ -194,7 +194,7 @@ Plans:
   2. El informe está publicado como Artifact y su tabla mapea cada pregunta literal del enunciado a la sección donde se responde.
   3. `CLAUDE.md`, `DECISIONS.md` y el README indican cómo reproducir cada resultado (comando, config y seed), y esos pasos regeneran las figuras y tablas que muestran slides e informe.
 
-**Plans:** 9/12 plans executed
+**Plans:** 10/12 plans executed
 
 Plans:
 **Wave 1**
@@ -215,7 +215,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [x] 06-09-PLAN.md — Informe completo: cinco fragmentos, figuras, resumen de hallazgos, glosario y enlaces de jerga (D-13), guion opcional
-- [ ] 06-10-PLAN.md — Constructor de slides: 24 slides con títulos-conclusión, notas del orador y figuras de slide (15 ubicadas, las otras 5 listadas como sin slide), en el formato sondeado
+- [x] 06-10-PLAN.md — Constructor de slides: 24 slides con títulos-conclusión, notas del orador y figuras de slide (15 ubicadas, las otras 5 listadas como sin slide), en el formato sondeado
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 06-11-PLAN.md — `make deliverables` reproducible, README.md, CLAUDE.md y test de documentos de reproducción
@@ -235,4 +235,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 | 3. Oja y decisiones de campaña | 6/6 | In Progress | - |
 | 4. Hopfield núcleo y letras | 7/7 | Complete    | 2026-10-23 |
 | 5. Hopfield con QR | 6/6 | Complete    | 2026-10-25 |
-| 6. Slides e informe | 9/12 | In Progress | - |
+| 6. Slides e informe | 10/12 | In Progress | - |
