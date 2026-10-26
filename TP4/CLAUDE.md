@@ -103,8 +103,8 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Pendientes
 
-- **Publicar** las slides (subir los PNG, rearmar con `--asset-map`, publicar) y el informe; sigue sin verificarse que plotly JS
-  corra dentro de un Artifact, y el tipo Slides no admite script.
+- **Compartir** el link del informe (menú Share del Artifact, solo la persona dueña); las slides y el informe ya están
+  publicados (ver Entrega). El tipo Slides no admite script.
 - **UAT de la Fase 3** sin responder (`.planning/phases/03-oja-y-decisiones-de-campa-a/03-UAT.md`, 3 pruebas pendientes): justicia
   de las recomendaciones de campaña, la regeneración de la sección 7 y la fidelidad de las secciones 1 a 3 y 6.
 - **Hallazgos de code review abiertos** (`NN-REVIEW-DISPOSITION.md` de las fases 2 a 5): los de la Fase 2 son 11 y cualquier arreglo
