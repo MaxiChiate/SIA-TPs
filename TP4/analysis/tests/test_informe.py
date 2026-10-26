@@ -408,3 +408,281 @@ def test_real_question_table_quotes_all_25_questions_and_links_every_anchor():
     for question in manifest.QUESTIONS:
         for anchor in question.anchors:
             assert f'href="#{anchor}"' in out
+
+
+# ---------- glossary, jargon links and presenter script (06-09 task 2) ----------
+
+DECISIONS_TEXT = """# Decisiones del TP4
+
+Texto de introducción con D-01 y Pitfall 1 que no es una entrada.
+
+## Decisiones del proyecto
+
+### KD-1 — Núcleo en C
+
+**Qué:** el núcleo está en C.
+
+## Fase 2 — Kohonen
+
+### F2 D-07 — Rango k = 2 a 8, con "comillas" y <b>
+
+**Qué:** se barre `k` de 2 a 8, también grillas con más neuronas que creadores.
+
+**Por qué:** ver todo el rango.
+
+### F1 D-09 — Regla fija por grupo
+
+**Qué:** una regla fija elige qué variable se saca.
+
+### F4 D-04b — Abecedario borrador descartado
+
+**Qué:** se descarta el borrador.
+
+### F5 D-11 — Limitaciones demostradas
+
+**Qué:** las limitaciones se demuestran con experimentos.
+
+### F9 D-07 — Detalle del fixture
+
+**Qué:** lo que dice el fixture.
+
+## Pitfalls
+
+### Pitfall 1 — Hopfield con Hebb sobre los QR
+
+**Qué:** Hebb no funciona sobre los 5 QR.
+
+### Pitfall 14 — Letras 5×5
+
+**Qué:** conclusiones erróneas sobre capacidad.
+
+## Requisitos
+
+### HOP-04 — Preparación de los 5 QR
+
+Responde la [sección 2 del fragmento 05](deliverables/05-hopfield-qr.md) (decisión relacionada: F5 D-01).
+"""
+
+
+def parsed_glossary():
+    return informe.parse_glossary(DECISIONS_TEXT)
+
+
+def test_parse_glossary_keys_by_the_documented_anchor_scheme():
+    glossary = parsed_glossary()
+    assert set(glossary) == {
+        "g-f2-d-07", "g-f1-d-09", "g-f4-d-04b", "g-f5-d-11", "g-f9-d-07", "g-pitfall-1", "g-pitfall-14", "g-req-hop-04",
+    }
+
+
+def test_parse_glossary_entry_has_label_title_and_the_que_sentence():
+    glossary = parsed_glossary()
+    entry = glossary["g-f2-d-07"]
+    assert entry.anchor == "g-f2-d-07" and entry.label == "F2 D-07"
+    assert entry.title.startswith("Rango k = 2 a 8")
+    assert entry.que == "se barre `k` de 2 a 8, también grillas con más neuronas que creadores."
+    assert glossary["g-f4-d-04b"].label == "F4 D-04b"
+    assert glossary["g-pitfall-1"].label == "Pitfall 1"
+    assert glossary["g-req-hop-04"].label == "HOP-04"
+
+
+def test_parse_glossary_requirement_without_que_line_uses_its_first_paragraph_without_links():
+    glossary = parsed_glossary()
+    que = glossary["g-req-hop-04"].que
+    assert que.startswith("Responde la sección 2 del fragmento 05") and "](" not in que
+
+
+def test_parse_glossary_skips_project_decisions_and_the_introduction():
+    glossary = parsed_glossary()
+    assert not any(anchor.startswith("g-kd") for anchor in glossary)
+
+
+def test_parse_glossary_entry_is_immutable():
+    glossary = parsed_glossary()
+    with pytest.raises(Exception):
+        glossary["g-f2-d-07"].title = "otro"
+
+
+def test_link_jargon_links_a_decision_of_the_fragment_phase():
+    glossary = parsed_glossary()
+    out, used = informe.link_jargon("<p>según D-07</p>", 2, glossary)
+    assert '<a class="jargon" href="#g-f2-d-07" title="F2 D-07 — ' in out
+    assert out.startswith("<p>según ") and out.endswith(">D-07</a></p>")
+    assert used == {"g-f2-d-07"}
+
+
+def test_link_jargon_cross_phase_form_resolves_to_the_named_phase():
+    glossary = parsed_glossary()
+    out, used = informe.link_jargon("<p>salió del conjunto de la Fase 1 (D-09) pero sigue</p>", 3, glossary)
+    assert 'href="#g-f1-d-09"' in out and "Fase 1 (<a" in out
+    assert used == {"g-f1-d-09"}
+
+
+def test_link_jargon_cross_phase_list_keeps_the_named_phase_for_every_id():
+    glossary = parsed_glossary()
+    out, used = informe.link_jargon("<p>la Fase 2 (D-07, D-07)</p>", 4, glossary)
+    assert used == {"g-f2-d-07"} and out.count("g-f2-d-07") == 2
+
+
+def test_link_jargon_lettered_id_without_entry_falls_back_to_the_parent():
+    glossary = parsed_glossary()
+    out, used = informe.link_jargon("<p>los sub-ítems D-11a</p>", 5, glossary)
+    assert 'href="#g-f5-d-11"' in out and ">D-11a</a>" in out
+    assert used == {"g-f5-d-11"}
+
+
+def test_link_jargon_lettered_id_with_its_own_entry_keeps_the_letter():
+    glossary = parsed_glossary()
+    _out, used = informe.link_jargon("<p>D-04b</p>", 4, glossary)
+    assert used == {"g-f4-d-04b"}
+
+
+def test_link_jargon_pitfall_and_requirement_ids():
+    glossary = parsed_glossary()
+    out, used = informe.link_jargon("<p>Pitfall 1 y HOP-04, también Pitfall 14b</p>", 5, glossary)
+    assert 'href="#g-pitfall-1"' in out and 'href="#g-req-hop-04"' in out
+    assert ">Pitfall 14b</a>" in out
+    assert used == {"g-pitfall-1", "g-req-hop-04", "g-pitfall-14"}
+
+
+@pytest.mark.parametrize("fragment", [
+    "<p><code>D-07</code></p>",
+    "<pre><code>D-07 y Pitfall 1</code></pre>",
+    '<p><a href="#x">D-07</a></p>',
+    '<p><span title="según D-07" data-x="HOP-04">texto</span></p>',
+    '<p><img alt="D-07" src="data:image/png;base64,AAAA"></p>',
+])
+def test_link_jargon_leaves_code_pre_links_and_attribute_values_unchanged(fragment):
+    glossary = parsed_glossary()
+    out, used = informe.link_jargon(fragment, 2, glossary)
+    assert out == fragment and used == set()
+
+
+def test_link_jargon_links_text_after_a_code_element_in_the_same_paragraph():
+    glossary = parsed_glossary()
+    out, used = informe.link_jargon("<p><code>D-07</code> y D-07</p>", 2, glossary)
+    assert out.count('class="jargon"') == 1 and used == {"g-f2-d-07"}
+
+
+def test_link_jargon_does_not_link_inside_a_jargon_link_again():
+    glossary = parsed_glossary()
+    once, _ = informe.link_jargon("<p>D-07</p>", 2, glossary)
+    twice, used = informe.link_jargon(once, 2, glossary)
+    assert twice == once and used == set()
+
+
+def test_link_jargon_title_is_attribute_escaped():
+    glossary = parsed_glossary()
+    out, _ = informe.link_jargon("<p>D-07</p>", 2, glossary)
+    title = re.search(r'title="([^"]*)"', out).group(1)
+    assert "&quot;comillas&quot;" in title and "&lt;b&gt;" in title
+    assert "<b>" not in out
+
+
+def test_link_jargon_unknown_decision_id_names_the_fragment_and_the_id():
+    glossary = parsed_glossary()
+    with pytest.raises(SystemExit) as stop:
+        informe.link_jargon("<p>según D-99</p>", 2, glossary)
+    assert "fragment 2" in str(stop.value) and "D-99" in str(stop.value)
+
+
+def test_link_jargon_unknown_pitfall_and_requirement_stop():
+    glossary = parsed_glossary()
+    for text, name in (("Pitfall 77", "Pitfall 77"), ("HOP-99", "HOP-99")):
+        with pytest.raises(SystemExit) as stop:
+            informe.link_jargon(f"<p>{text}</p>", 3, glossary)
+        assert name in str(stop.value)
+
+
+def test_link_jargon_ignores_ids_of_other_shapes():
+    glossary = parsed_glossary()
+    fragment = "<p>KD-1, SHA-256, UTF-8 y ABC-12 no son jerga del informe</p>"
+    assert informe.link_jargon(fragment, 2, glossary) == (fragment, set())
+
+
+def glossary_file(tmp_path):
+    path = tmp_path / "DECISIONS.md"
+    path.write_text(DECISIONS_TEXT, encoding="utf-8")
+    return path
+
+
+def test_build_links_the_jargon_of_the_fragments_and_lists_only_the_referenced_entries(tmp_path):
+    results, deliverables, fragments, questions, figures = make_fixture(tmp_path)
+    (deliverables / "09-x.md").write_text(
+        FRAGMENT + "\n\nVer D-07, Pitfall 1 y HOP-04; la Fase 2 (D-07) también.\n", encoding="utf-8"
+    )
+    page = fixture_build(results, deliverables, tmp_path / "o.html", questions, figures, fragments, tmp_path,
+                         glossary_path=glossary_file(tmp_path)).read_text(encoding="utf-8")
+    for anchor in ("g-f9-d-07", "g-pitfall-1", "g-req-hop-04", "g-f2-d-07"):
+        assert f'href="#{anchor}"' in page and f'id="{anchor}"' in page
+    annex = page[page.index('id="glosario"'):]
+    assert "Glosario de decisiones y referencias" in annex
+    assert 'id="g-f5-d-11"' not in page and 'id="g-pitfall-14"' not in page
+    order = [annex.index(f'id="{a}"') for a in ("g-f2-d-07", "g-f9-d-07", "g-pitfall-1", "g-req-hop-04")]
+    assert order == sorted(order)
+
+
+def test_build_stops_on_a_jargon_id_without_a_glossary_entry(tmp_path):
+    results, deliverables, fragments, questions, figures = make_fixture(tmp_path)
+    (deliverables / "09-x.md").write_text(FRAGMENT + "\n\nSegún D-99.\n", encoding="utf-8")
+    with pytest.raises(SystemExit) as stop:
+        fixture_build(results, deliverables, tmp_path / "o.html", questions, figures, fragments, tmp_path,
+                      glossary_path=glossary_file(tmp_path))
+    assert "fragment 9" in str(stop.value) and "D-99" in str(stop.value)
+
+
+def test_build_never_writes_the_glossary_source(tmp_path):
+    path = glossary_file(tmp_path)
+    before = hashlib.sha256(path.read_bytes()).hexdigest()
+    build(tmp_path, glossary_path=path)
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == before
+
+
+def test_build_stops_when_the_glossary_source_is_missing(tmp_path):
+    with pytest.raises(SystemExit) as stop:
+        build(tmp_path, glossary_path=tmp_path / "no-such.md")
+    assert "no-such.md" in str(stop.value)
+
+
+NOTES = "# Guion\n\n## Slide 1\n\nDecir la conclusión.\n\n| a | b |\n|---|---|\n| 1 | 2 |\n"
+
+
+def test_build_with_notes_appends_the_script_annex_without_clashing_ids(tmp_path):
+    notes = tmp_path / "notes.md"
+    notes.write_text(NOTES, encoding="utf-8")
+    page = build(tmp_path, glossary_path=glossary_file(tmp_path), notes_path=notes).read_text(encoding="utf-8")
+    assert page.count('id="guion"') == 1 and "Guion de la presentación" in page
+    annex = page[page.index('id="guion"'):]
+    assert "Decir la conclusión." in annex and "table-wrap" in annex
+    assert not re.search(r"<h[1-6] id=", annex.split("</h2>", 1)[1])
+    assert page.index('id="glosario"') < page.index('id="guion"') < page.index("<footer>")
+
+
+def test_build_without_notes_has_no_script_annex(tmp_path):
+    page = build(tmp_path, glossary_path=glossary_file(tmp_path)).read_text(encoding="utf-8")
+    assert 'id="guion"' not in page and "Guion de la presentación" not in page
+
+
+def test_build_stops_when_the_notes_file_is_missing(tmp_path):
+    with pytest.raises(SystemExit) as stop:
+        build(tmp_path, glossary_path=glossary_file(tmp_path), notes_path=tmp_path / "gone.md")
+    assert "gone.md" in str(stop.value)
+
+
+def test_build_stops_on_a_script_element_in_the_notes(tmp_path):
+    notes = tmp_path / "notes.md"
+    notes.write_text("<script>x</script>\n", encoding="utf-8")
+    with pytest.raises(SystemExit):
+        build(tmp_path, glossary_path=glossary_file(tmp_path), notes_path=notes)
+
+
+def test_cli_notes_flag_is_accepted(tmp_path, monkeypatch):
+    seen = {}
+
+    def fake_build(results, deliverables, out, **kwargs):
+        seen.update(kwargs)
+        return out
+
+    monkeypatch.setattr(informe, "build", fake_build)
+    informe.main(["--out", str(tmp_path / "o.html"), "--notes", str(tmp_path / "n.md")])
+    assert seen["notes_path"] == tmp_path / "n.md"
