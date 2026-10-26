@@ -121,3 +121,11 @@ def test_main_prints_the_sheet(capsys):
 
 def test_main_rejects_other_arguments():
     assert manifest.main([]) == 2
+
+
+def test_questions_checked_against_pdf():
+    assert manifest.QUESTIONS_CHECKED_AGAINST_PDF is True
+
+
+def test_answer_sections_checked():
+    assert manifest.ANSWER_SECTIONS_CHECKED is True

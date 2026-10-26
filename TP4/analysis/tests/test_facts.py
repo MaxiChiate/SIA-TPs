@@ -10,20 +10,104 @@ import facts
 import informe
 
 
+def write_csv(path, header, rows):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [",".join(header)] + [",".join(str(cell) for cell in row) for row in rows]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def write_json(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
 def write_results(root, *, robust=False):
-    """A results tree with only the keys facts.load_facts reads."""
-    files = {
-        "som/profiles/pca_contrast.json": {
-            "r2_pc1": 0.9613, "p_r2_pc1": 0.000999, "r2_pc2": 0.0552, "p_r2_pc2": 0.2667,
-            "n_regions": 1, "n_permutations": 1000,
-        },
-        "som/series_som_stage1/selection.json": {"outcome": "chosen", "chosen_k": 5},
-        "som/series_som_stage2/robustness.json": {"robust": robust, "te_checked": True},
-    }
-    for relative, payload in files.items():
-        path = root / relative
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload), encoding="utf-8")
+    """A results tree with minimal versions of every file facts.load_facts reads (values chosen to print round)."""
+    write_json(root / "pca/audited/decision.json", {
+        "n_variables": 26, "k_80": 3, "kaiser": 2, "explained_pc1": 0.5322, "explained_pc2": 0.0851,
+        "min_eigenvalue": 0.00046018,
+    })
+    write_json(root / "pca/sensitivity.json", {
+        "all31_sensitivity": {"kaiser": 7}, "abs_cos_pc1": 0.9999752, "spearman_pc1": -0.99817,
+    })
+    write_csv(root / "pca/audited/eigenvalues.csv", ["component", "eigenvalue", "explained", "cumulative"],
+              [["PC1", 13.8, 0.5322, 0.5322], ["PC2", 2.2, 0.0851, 0.6173], ["PC3", 1.8, 0.0714, 0.8312]])
+    write_json(root / "som/profiles/pca_contrast.json", {
+        "r2_pc1": 0.9613, "p_r2_pc1": 0.000999, "r2_pc2": 0.0552, "p_r2_pc2": 0.2667,
+        "mantel_plane_rho": 0.599, "p_mantel_plane": 0.000999, "mantel_z26_rho": 0.6349,
+        "edge_rho_pc1": 0.4808, "edge_rho_pc2": 0.2714, "n_edges": 29, "n_excluded_edges": 11,
+        "n_regions": 1, "n_permutations": 1000,
+    })
+    write_json(root / "som/series_som_stage1/selection.json", {
+        "outcome": "chosen", "chosen_k": 5, "qe_train_argmin_k": 8, "figure_seed": 4,
+    })
+    write_json(root / "som/series_som_stage2/robustness.json", {
+        "robust": robust, "failing_variants": [] if robust else ["a", "b"], "te_checked": True,
+    })
+    write_json(root / "oja/comparison.json", {"max_abs_diff": 0.00197})
+    write_json(root / "oja/dispersion.json", {
+        "n_seeds": 10, "n_abs_cos_above": 10, "min_pairwise_abs_cos": 0.99999932, "mean_pairwise_abs_cos": 0.99999978,
+        "worst_seed": 6, "pivots": ["average_caption_words"], "pivot_margin": {"margin": 0.0027477},
+    })
+    write_json(root / "oja/evidence.json", {"maximum": {
+        "+1": {"creator_id": "INF031", "name": "@mundo", "dominant_topic": "perros", "followers": 17062, "index": 6.703},
+        "-1": {"creator_id": "INF045", "name": "@futbol", "dominant_topic": "fútbol", "followers": 493194, "index": 6.26},
+    }})
+    write_csv(root / "oja/evidence_correlations.csv", ["target", "sign", "pearson", "spearman"],
+              [["followers", "+1", -0.87868, -0.92105], ["followers", "-1", 0.87868, 0.92105]])
+    write_csv(root / "oja/index.csv", ["creator_id", "name", "oja_index"], [["INF001", "@a", 1.0], ["INF002", "@b", 2.0]])
+    write_json(root / "campaigns/selection_identity.json", {
+        "rule_commit": "a6212e89cdc654021cfda02d9d16237c8c21c332", "k": 5,
+        "pairs": [{"campaign": "fútbol", "objective": "profundidad"}, {"campaign": "perros", "objective": "costo_por_mil"},
+                  {"campaign": "maquillaje", "objective": "profundidad"},
+                  {"campaign": "arte", "objective": "engagement_profundidad"}],
+    })
+    shortlist, comparison = [], []
+    for campaign, objective in (("fútbol", "profundidad"), ("perros", "costo_por_mil"), ("maquillaje", "profundidad"),
+                                ("arte", "engagement_profundidad")):
+        for rank in range(6, 0, -1):  # written out of order: load_facts sorts by rank and keeps five
+            shortlist.append([campaign, objective, "propia", rank, f"I{rank}", f"@{campaign}{rank}"])
+        shortlist.append([campaign, objective, "followers_global", 1, "G1", "@global1"])
+        comparison.append([campaign, objective, "propia", 5, 1, 2, 12.3456, 0.8826])
+    write_csv(root / "campaigns/shortlists.csv", ["campaign", "objective", "list", "rank", "creator_id", "name"], shortlist)
+    write_csv(root / "campaigns/comparison.csv", ["campaign", "objective", "list", "n", "overlap_followers_global",
+                                                  "overlap_followers_tema", "cost_per_thousand", "criterion_mean"], comparison)
+    write_json(root / "maintenance/demo.json", {
+        "bmu": {"row": 3, "col": 1, "distance": 1.3290},
+        "drift": {"qe": 2.7238, "max": 3.6509, "p95": 3.5446, "percentile": 0.0, "drift": False},
+        "oja_index": 0.2494, "oja_rank": 24,
+    })
+    write_json(root / "hopfield/letters/selection.json", {
+        "separated": {"letters": "GRTV", "pairs": [{"overlap": -0.04}, {"overlap": 0.04}]},
+        "correlated": {"letters": "HMNW", "pairs": [{"overlap": 0.68}, {"overlap": 0.84}]},
+    })
+    write_json(root / "hopfield/letters/orthogonality.json", {
+        "n_pixels": 25, "separated": {"min_margin": [18, 18, 18, 18]}, "correlated": {"min_margin": [4, -30, -34, -34]},
+    })
+    write_json(root / "hopfield/letters/capacity.json", {
+        "p4_n_stable_counts": {"0": 284, "1": 1687, "2": 2653, "3": 3073, "4": 7253},
+        "p4_mean_stable_fraction": 0.75625, "p4_all_stable_fraction": 0.48515,
+    })
+    write_json(root / "hopfield/letters/spurious.json", {
+        "seeds_tried": [1],
+        "counts_by_seed": {"1": {"stored": 463, "inverse": 334, "mixture": 254, "other": 149}},
+    })
+    write_json(root / "hopfield/qr/verdict.json", {
+        "hebb_exact_recovery_noise0_async": 0.0, "pinv_exact_recovery_noise0_async": 1.0,
+    })
+    write_json(root / "hopfield/qr/qr_facts.json", {"n_pixels": 1369, "identical_fraction": 0.6976, "min_pair_hamming": 96})
+    write_json(root / "hopfield/qr/overlaps.json", {
+        "dots": [[1] * 5] * 5, "max_abs_overlap": 0.8598, "mean_abs_overlap": 0.6701,
+    })
+    write_json(root / "hopfield/qr/protocol.json", {"trials": 30, "seeds": list(range(1, 11))})
+    write_csv(root / "hopfield/qr/recovery_table.csv", ["level", "hebb", "pinv", "hamming"], [
+        [0.0, 0.0, 1.0, 1.0], [0.3, 0.0, 1.0, 1.0], [0.35, 0.0, 0.99867, 1.0], [0.4, 0.0, 0.97333, 0.98533],
+        [0.45, 0.0, 0.694, 0.81533], [0.5, 0.0, 0.0, 0.16667],
+    ])
+    write_json(root / "hopfield/qr_limits/majority.json", {"hamming_to_targets": [225, 225, 71, 103, 91]})
+    write_json(root / "hopfield/qr_limits/shift.json", {"shifts": [
+        {"shift": 1, "query_hamming": 741, "recovered_hamming": 1034}, {"shift": 2, "query_hamming": 699, "recovered_hamming": 1198},
+    ]})
     return root
 
 
@@ -91,3 +175,161 @@ def test_dump_prints_sorted_json(tmp_path, capsys):
     printed = json.loads(capsys.readouterr().out)
     assert printed["som.chosen_k"] == "5"
     assert list(printed) == sorted(printed)
+
+
+def test_pct_short_drops_decimals_of_whole_percentages():
+    assert facts.pct_short(0.0) == "0 %"
+    assert facts.pct_short(1.0) == "100 %"
+    assert facts.pct_short(0.99867) == "99,9 %"
+    assert facts.pct_short(0.694) == "69,4 %"
+
+
+def test_read_csv_source_returns_dict_rows(tmp_path):
+    write_results(tmp_path)
+    rows = facts.read_csv_source(tmp_path, "qr.recovery")
+    assert rows[0] == {"level": "0.0", "hebb": "0.0", "pinv": "1.0", "hamming": "1.0"}
+    assert {row["pinv"] for row in rows if row["level"] == "0.45"} == {"0.694"}
+
+
+def test_every_source_is_written_by_the_fixture(tmp_path):
+    write_results(tmp_path)
+    for name, (relative, _) in facts.SOURCES.items():
+        assert (tmp_path / relative).is_file(), name
+
+
+@pytest.mark.parametrize("name", sorted(facts.SOURCES))
+def test_load_facts_names_make_results_and_the_step_for_any_missing_file(tmp_path, name):
+    write_results(tmp_path)
+    relative, step = facts.SOURCES[name]
+    (tmp_path / relative).unlink()
+    with pytest.raises(SystemExit) as stop:
+        facts.load_facts(tmp_path)
+    assert "make results" in str(stop.value)
+    assert step in str(stop.value)
+
+
+def test_load_facts_reads_the_values_of_every_phase(tmp_path):
+    values = facts.load_facts(write_results(tmp_path))
+    assert values["pca.k_80"] == "3" and values["pca.kaiser"] == "2" and values["pca.n_features"] == "26"
+    assert values["pca.var_pc1"] == "53,2 %" and values["pca.cum_k80"] == "83,1 %"
+    assert values["som.mantel_rho"] == "0,599" and values["som.n_failing_variants"] == "2"
+    assert values["oja.corr_followers_pearson"] == "-0,879" and values["oja.corr_followers_spearman"] == "-0,921"
+    assert values["oja.max_id"] == "INF031" and values["oja.max_followers"] == "17062"
+    assert values["camp.rule_commit"] == "a6212e8" and values["camp.k"] == "5"
+    assert values["maint.bmu"] == "(fila 3, col 1)" and values["maint.retrain"] == "no hace falta re-entrenar"
+    assert values["letters.separated_set"] == "GRTV" and values["letters.correlated_max_overlap"] == "0,84"
+    assert values["letters.spurious_class"] == "inverso" and values["letters.spur_total_pct"] == "61,4 %"
+    assert values["qr.hebb_exact_noise0"] == "0 %" and values["qr.pinv_exact_noise0"] == "100 %"
+    assert values["qr.pinv_at_0_45"] == "69,4 %" and values["qr.hamming_at_0_45"] == "81,5 %"
+    assert values["qr.pinv_at_0_50"] == "0 %" and values["qr.hamming_at_0_50"] == "16,7 %"
+    assert values["qr.noise_high"] == "0,45" and values["qr.pinv_last_full_noise"] == "0,30"
+    assert values["qr.majority_hamming_min"] == "71" and values["qr.majority_hamming_max"] == "225"
+
+
+def test_campaign_facts_take_the_first_five_by_rank_and_the_own_list(tmp_path):
+    values = facts.load_facts(write_results(tmp_path))
+    assert values["camp.futbol.top5"] == "@fútbol1, @fútbol2, @fútbol3, @fútbol4, @fútbol5"
+    assert values["camp.perros.cost_per_thousand_ar"] == "12,35"
+    assert values["camp.arte.criterion"] == "0,883"
+    assert values["camp.perros.overlap_followers"] == "1" and values["camp.perros.overlap_followers_tema"] == "2"
+
+
+def test_campaign_objective_not_in_the_committed_pairs_stops(tmp_path):
+    write_results(tmp_path)
+    write_json(tmp_path / "campaigns/selection_identity.json", {"rule_commit": "abcdef0123", "k": 5, "pairs": []})
+    with pytest.raises(SystemExit) as stop:
+        facts.load_facts(tmp_path)
+    assert "make results" in str(stop.value)
+
+
+def test_recovery_level_without_a_row_stops(tmp_path):
+    write_results(tmp_path)
+    rows = [[0.0, 0.0, 1.0, 1.0], [0.5, 0.0, 0.0, 0.16667]]
+    write_csv(tmp_path / "hopfield/qr/recovery_table.csv", ["level", "hebb", "pinv", "hamming"], rows)
+    with pytest.raises(SystemExit) as stop:
+        facts.load_facts(tmp_path)
+    assert "hopfield-qr" in str(stop.value)
+
+
+# ---------- drift pins (D-12) ----------
+
+def write_fragments(directory, pins, values):
+    """One fragment per number holding every filled pin phrase (joined across a line break)."""
+    directory.mkdir(parents=True, exist_ok=True)
+    by_number: dict[int, list[str]] = {}
+    for number, template in pins:
+        by_number.setdefault(number, []).append(facts.fill(template, values))
+    for number, phrases in by_number.items():
+        (directory / f"{number:02d}-x.md").write_text("Texto.\n\n" + " y\n".join(phrases) + "\n", encoding="utf-8")
+
+
+def test_drift_pins_are_at_least_25_with_at_least_3_per_fragment():
+    counts = {number: 0 for number in range(1, 6)}
+    for number, _ in facts.DRIFT_PINS:
+        counts[number] += 1
+    assert len(facts.DRIFT_PINS) >= 25
+    assert all(count >= 3 for count in counts.values()), counts
+
+
+def test_every_pin_has_a_placeholder_and_every_placeholder_is_a_loaded_fact(tmp_path):
+    values = facts.load_facts(write_results(tmp_path))
+    for number, template in facts.DRIFT_PINS:
+        keys = facts.TOKEN.findall(template)
+        assert keys, template
+        assert all(key in values for key in keys), (number, template, [k for k in keys if k not in values])
+
+
+def test_check_fragment_numbers_is_empty_when_every_phrase_is_present(tmp_path):
+    values = facts.load_facts(write_results(tmp_path / "results"))
+    write_fragments(tmp_path / "deliverables", facts.DRIFT_PINS, values)
+    assert facts.check_fragment_numbers(values, tmp_path / "deliverables") == []
+
+
+def test_check_fragment_numbers_collapses_whitespace_runs(tmp_path):
+    values = {"a.b": "1"}
+    (tmp_path / "01-x.md").write_text("R² de\n  1   y p", encoding="utf-8")
+    assert facts.check_fragment_numbers(values, tmp_path, ((1, "R² de {a.b} y p"),)) == []
+
+
+def test_check_fragment_numbers_names_the_fragment_phrase_and_filled_text(tmp_path):
+    values = {"a.b": "2"}
+    (tmp_path / "03-x.md").write_text("R² de 1 y p", encoding="utf-8")
+    failures = facts.check_fragment_numbers(values, tmp_path, ((3, "R² de {a.b} y p"),))
+    assert len(failures) == 1
+    assert "fragment 3" in failures[0] and "R² de 2 y p" in failures[0] and "R² de {a.b} y p" in failures[0]
+
+
+def test_check_fragment_numbers_reports_a_missing_fragment_and_an_unknown_key(tmp_path):
+    (tmp_path / "01-x.md").write_text("texto", encoding="utf-8")
+    failures = facts.check_fragment_numbers({"a.b": "1"}, tmp_path, ((2, "{a.b}"), (1, "{a.nada}")))
+    assert len(failures) == 2
+    assert "fragment 2" in failures[0] and "a.nada" in failures[1]
+
+
+def test_check_prints_drift_ok_and_exits_0_on_a_matching_tree(tmp_path, capsys):
+    results = write_results(tmp_path / "results")
+    write_fragments(tmp_path / "deliverables", facts.DRIFT_PINS, facts.load_facts(results))
+    code = facts.main(["check", "--results", str(results), "--deliverables", str(tmp_path / "deliverables")])
+    assert code == 0
+    assert capsys.readouterr().out.strip() == f"DRIFT_OK {len(facts.DRIFT_PINS)} pins"
+
+
+def test_check_exits_1_and_lists_the_altered_phrase(tmp_path, capsys):
+    results = write_results(tmp_path / "results")
+    write_fragments(tmp_path / "deliverables", facts.DRIFT_PINS, facts.load_facts(results))
+    target = tmp_path / "deliverables" / "02-x.md"
+    text = target.read_text(encoding="utf-8")
+    assert "R² de PC2 sobre la grilla: 0,055" in text
+    target.write_text(text.replace("R² de PC2 sobre la grilla: 0,055", "R² de PC2 sobre la grilla: 0,056"), encoding="utf-8")
+    code = facts.main(["check", "--results", str(results), "--deliverables", str(tmp_path / "deliverables")])
+    out = capsys.readouterr().out
+    assert code == 1
+    assert "fragment 2" in out and "R² de PC2 sobre la grilla: 0,055" in out
+
+
+def test_check_does_not_modify_the_fragments(tmp_path):
+    results = write_results(tmp_path / "results")
+    write_fragments(tmp_path / "deliverables", facts.DRIFT_PINS, facts.load_facts(results))
+    before = {p.name: p.read_bytes() for p in (tmp_path / "deliverables").iterdir()}
+    facts.main(["check", "--results", str(results), "--deliverables", str(tmp_path / "deliverables")])
+    assert {p.name: p.read_bytes() for p in (tmp_path / "deliverables").iterdir()} == before

@@ -24,15 +24,14 @@ from pathlib import Path
 TP_DIR = Path(__file__).resolve().parent.parent
 
 # The question texts were reconstructed from the enunciado PDF (docs/Archivo SIATP 42026.pdf) with the accents
-# rebuilt from TeX escapes (06-RESEARCH A6). Task 3 of 06-08 sets this to True only after a human compared the
-# 25 texts with the PDF at the Task 2 checkpoint. test_questions_checked_against_pdf guards it.
-QUESTIONS_CHECKED_AGAINST_PDF = False
+# rebuilt from TeX escapes (06-RESEARCH A6). A human compared the 25 texts with that PDF at the 06-08 checkpoint
+# and approved them as they stand. test_questions_checked_against_pdf guards it.
+QUESTIONS_CHECKED_AGAINST_PDF = True
 
-# The anchors come from the research proposal and the executor's reading of the fragments; the anchor tests only
-# prove that each section exists, not that it answers its question. Task 3 of 06-08 sets this to True only after a
-# human confirmed at the Task 2 checkpoint that every linked section answers its question.
-# test_answer_sections_checked guards it.
-ANSWER_SECTIONS_CHECKED = False
+# The anchors came from the research proposal and a first reading of the fragments; the anchor tests only prove
+# that each section exists. A human confirmed at the 06-08 checkpoint that every linked section answers its
+# question. test_answer_sections_checked guards it.
+ANSWER_SECTIONS_CHECKED = True
 
 
 @dataclass(frozen=True)
