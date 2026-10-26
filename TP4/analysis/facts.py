@@ -23,6 +23,7 @@ import json
 import math
 import re
 import sys
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Callable
 
@@ -305,7 +306,9 @@ def _letters_facts(results_dir: Path) -> dict[str, str]:
         )
         if row is None:
             raise SystemExit(f"no async recall row of the {name} set with {flipped} flipped pixels; run `make results` (step hopfield-letters)")
-        return pct(row["recall_rate"], 1)
+        # Half-up on the decimal text, as the fragment rounds its 3-decimal rates: 0,3225 is 32,3 %, not 32,2 %.
+        percent = (Decimal(row["recall_rate"]) * 100).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+        return f"{percent} %".replace(".", ",")
 
     def max_overlap(name: str) -> float:
         return max(abs(float(pair["overlap"])) for pair in selection[name]["pairs"])
