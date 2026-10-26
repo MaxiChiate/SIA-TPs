@@ -194,7 +194,7 @@ Plans:
   2. El informe está publicado como Artifact y su tabla mapea cada pregunta literal del enunciado a la sección donde se responde.
   3. `CLAUDE.md`, `DECISIONS.md` y el README indican cómo reproducir cada resultado (comando, config y seed), y esos pasos regeneran las figuras y tablas que muestran slides e informe.
 
-**Plans:** 5/12 plans executed
+**Plans:** 6/12 plans executed
 
 Plans:
 **Wave 1**
@@ -207,7 +207,7 @@ Plans:
 - [x] 06-05-PLAN.md — Variante «slide» en plots_style (D-08) y figuras de slide del SOM, informe byte-idéntico
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 06-06-PLAN.md — Variantes de slide de PCA, Oja y campañas
+- [x] 06-06-PLAN.md — Variantes de slide de PCA, Oja y campañas
 - [ ] 06-07-PLAN.md — Variantes de slide de letras y QR de Hopfield
 
 **Wave 4** *(blocked on Wave 3 completion)*
@@ -235,4 +235,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 | 3. Oja y decisiones de campaña | 6/6 | In Progress | - |
 | 4. Hopfield núcleo y letras | 7/7 | Complete    | 2026-10-23 |
 | 5. Hopfield con QR | 6/6 | Complete    | 2026-10-25 |
-| 6. Slides e informe | 5/12 | In Progress | - |
+| 6. Slides e informe | 6/12 | In Progress | - |
