@@ -704,11 +704,11 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 **Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
 
-### F6 D-14 — Las slides se entregan solo como Artifact
+### F6 D-14 — Las slides se publican como Artifact y se entregan como su PDF exportado, fuera del repo
 
-**Qué:** las slides se entregan solo como Artifact. No se exporta ni versiona un PDF de slides en `docs/`.
+**Qué:** el deck se publica como Artifact tipo Slides, privado, y al docente se le entrega el PDF que exporta ese Artifact. El PDF no se versiona, ni en `docs/` ni en `deliverables/`: después de republicar el deck se vuelve a exportar.
 
-**Por qué:** decisión de entrega registrada en la planificación de la fase (2026-10-25). Después, al sondear el formato, el usuario respondió que al docente se le entrega el PDF exportado del deck (ver [06-ARTIFACT-FORMAT.md](.planning/phases/06-slides-e-informe/06-ARTIFACT-FORMAT.md), `share_mode`); ese PDF exportado es el entregable, y el documento de formato indica dónde se agrega (bajo `deliverables/`, no en `docs/`).
+**Por qué:** la planificación de la fase (2026-10-25) registró "solo como Artifact". Al sondear el formato, el usuario respondió que al docente se le entrega el PDF exportado del deck (ver [06-ARTIFACT-FORMAT.md](.planning/phases/06-slides-e-informe/06-ARTIFACT-FORMAT.md), `share_mode`), y ese documento proponía agregarlo bajo `deliverables/`. Al final no se versionó: es una exportación del Artifact, que a su vez sale de `make deliverables`, y una copia en el repo podría quedar desactualizada respecto del deck publicado sin que nada lo detecte. `test_repro_docs.py` impide que aparezca una exportación de slides en `docs/`.
 
 **Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md) · [06-ARTIFACT-FORMAT.md](.planning/phases/06-slides-e-informe/06-ARTIFACT-FORMAT.md)
 

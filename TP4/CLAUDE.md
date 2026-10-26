@@ -39,7 +39,7 @@ analysis/                        # README.md explica las series y los drivers
   hopfield_qr.py, hopfield_qr_limits.py, hopfield_qr_select.py, hopfield_qr_figures.py   # Hopfield sobre los 5 QR
   plots_style.py                 # estilo común y variantes de figura (informe y slide)
   deliverables_manifest.py       # fuente única: 31 figuras, 25 preguntas del enunciado, fragmentos
-  facts.py                       # los números del texto salen de los JSON/CSV; `facts.py check` fija 68 frases de los fragmentos
+  facts.py                       # los números del texto salen de los JSON/CSV; `facts.py check` fija 69 frases de los fragmentos
   informe.py                     # arma analysis/results/informe/informe.html
   slides.py                      # arma analysis/results/slides/ (24 slides, PNG y guion)
   tests/                         # pytest; incluye test_repro_docs.py, que cuida README.md, CLAUDE.md y DECISIONS.md
@@ -97,7 +97,7 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 - **Informe**: `analysis/results/informe/informe.html`, publicado como Artifact HTML (D-15).
 - Slides: https://claude.ai/artifact/9YjSxsDcVYSwvnXaD5JVy1
 - Informe: https://claude.ai/artifact/32SjYXD12gS2Lh6vY22jyM
-- Los dos Artifacts son privados; el deck se entrega como su PDF exportado (no se versiona en `docs/`), y compartir el link del informe lo decide la persona dueña desde el menú Share.
+- Los dos Artifacts son privados; el deck se entrega como su PDF exportado (D-14: queda fuera del repo, ni en `docs/` ni en `deliverables/`), y compartir el link del informe lo decide la persona dueña desde el menú Share.
 - El informe lleva el guion de la presentación como anexo (`id="guion"`, decisión del usuario en el checkpoint de 06-12): `make deliverables` pasa `INFORME_FLAGS := --notes analysis/results/slides/notes.md`; el guion viaja además como notas del orador en cada slide.
 - Cualquier cambio de resultados: regenerar con `make deliverables`, actualizar `DECISIONS.md` y este archivo, y republicar a la
   misma url.
@@ -106,10 +106,15 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Pendientes
 
+- **Republicar el deck y el informe** a las mismas url: el arreglo de WR-03 de la Fase 6 (2026-10-26) cambió el título y la nota
+  de la slide `som-rule` (la regla de grilla elige el menor QE-LOO entre las k que pasan los filtros), y esa nota también está en
+  el anexo del guion del informe. Ningún número cambió. Antes de publicar, rearmar con `slides.py --asset-map` (ver Trampas);
+  después, volver a exportar el PDF del deck desde su Artifact.
 - **Cerrar el milestone** con `/gsd-complete-milestone`: las seis fases están completas en `ROADMAP.md`.
-- **Hallazgos de code review abiertos** (`NN-REVIEW-DISPOSITION.md` de las fases 2 a 5): los de la Fase 2 son 11 y los de la Fase 3,
-  14 (WR-01 a WR-05 e IN-01 a IN-09). Cualquier arreglo que toque una regla fijada de antemano (por ejemplo WR-01 de la Fase 2) pasa
-  por `/gsd-discuss-phase`, no por edición en el lugar.
+- **Hallazgos de code review abiertos** (`NN-REVIEW-DISPOSITION.md` de las fases 2 a 6): los de la Fase 2 son 11, los de la Fase 3,
+  14 (WR-01 a WR-05 e IN-01 a IN-09), y los de la Fase 6, IN-01 a IN-06 (WR-01 a WR-08 quedaron en `fixed` el 2026-10-26).
+  Cualquier arreglo que toque una regla fijada de antemano (por ejemplo WR-01 de la Fase 2) pasa por `/gsd-discuss-phase`, no por
+  edición en el lugar.
 - Auditoría Nyquist: las fases 2 y 3 quedaron validadas el 2026-10-26 (sin huecos; `03-VALIDATION.md` se reconstruyó de los
   planes y los SUMMARY). La fase 6 también, el mismo día: los 55 chequeos de sus planes dan verde y se agregaron 8 tests de las
   variantes de slide que solo se verificaban sobre resultados reales (WR-08 de `06-REVIEW.md`, que queda en `fixed`).
