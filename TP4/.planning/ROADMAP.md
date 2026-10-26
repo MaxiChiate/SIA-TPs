@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: Oja y decisiones de campaña** - Índice de Oja contra PC1, recomendaciones por campaña, comparación contra solo `followers` y mantenimiento
 - [x] **Phase 4: Hopfield núcleo y letras** - Núcleo validado con 4 letras 5×5: energía, ortogonalidad, capacidad y un estado espurio identificado (completed 2026-10-23)
 - [x] **Phase 5: Hopfield con QR** - Cinco QR de 37×37 con Hebb (falla reportada), pseudo-inversa, línea base de Hamming y limitaciones (completed 2026-10-25)
-- [ ] **Phase 6: Slides e informe** - Slides e informe en Artifact con mapa pregunta→respuesta, y documentación para reproducir todo
+- [x] **Phase 6: Slides e informe** - Slides e informe en Artifact con mapa pregunta→respuesta, y documentación para reproducir todo (completed 2026-10-26)
 
 ## Phase Details
 
@@ -194,7 +194,7 @@ Plans:
   2. El informe está publicado como Artifact y su tabla mapea cada pregunta literal del enunciado a la sección donde se responde.
   3. `CLAUDE.md`, `DECISIONS.md` y el README indican cómo reproducir cada resultado (comando, config y seed), y esos pasos regeneran las figuras y tablas que muestran slides e informe.
 
-**Plans:** 12/12 plans executed
+**Plans:** 12/12 plans complete
 
 Plans:
 **Wave 1**
@@ -235,4 +235,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 | 3. Oja y decisiones de campaña | 6/6 | In Progress | - |
 | 4. Hopfield núcleo y letras | 7/7 | Complete    | 2026-10-23 |
 | 5. Hopfield con QR | 6/6 | Complete    | 2026-10-25 |
-| 6. Slides e informe | 12/12 | In Progress | - |
+| 6. Slides e informe | 12/12 | Complete    | 2026-10-26 |

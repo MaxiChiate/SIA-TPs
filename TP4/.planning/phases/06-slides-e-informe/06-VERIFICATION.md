@@ -1,7 +1,7 @@
 ---
 phase: 06-slides-e-informe
 verified: 2026-10-26T12:00:00Z
-status: human_needed
+status: passed
 score: 3/3 must-haves verified
 covered_files:
   - ".planning/phases/06-slides-e-informe/06-01-PLAN.md"

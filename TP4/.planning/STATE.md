@@ -1,42 +1,42 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 06
-current_phase_name: Slides e informe
+current_phase: 3
+current_phase_name: Oja y decisiones de campaña
 status: verifying
-stopped_at: Completed 06-12-PLAN.md
-last_updated: "2026-10-26T03:16:23.877Z"
-last_activity: 2026-10-25
-last_activity_desc: Phase 06 execution started
+stopped_at: Phase 06 complete, ready to verify Phase 3
+last_updated: "2026-10-26T03:42:00.356Z"
+last_activity: 2026-10-26
+last_activity_desc: Phase 06 complete, transitioned to Phase 3
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 45
   completed_plans: 45
-  percent: 67
+  percent: 83
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-25)
+See: .planning/PROJECT.md (updated 2026-10-26)
 
 **Core value:** Interpretar correctamente los resultados de los métodos no supervisados para tomar decisiones de campaña fundamentadas en evidencia
-**Current focus:** Phase 06 — Slides e informe
+**Current focus:** Phase 3 — Oja y decisiones de campaña (UAT y verificación humana pendientes)
 
 ## Current Position
 
-Phase: 06 (Slides e informe) — EXECUTING
-Plan: 12 of 12
+Phase: 3 — Oja y decisiones de campaña
+Plan: 6
 Status: Phase complete — ready for verification
-Last activity: 2026-10-25 — Phase 06 execution started
+Last activity: 2026-10-26 — Phase 06 complete, transitioned to Phase 3
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 28
+- Total plans completed: 40
 - Average duration: - min
 - Total execution time: 0.0 hours
 
@@ -48,6 +48,7 @@ Progress: [███████░░░] 67%
 | 02 | 6 | - | - |
 | 4 | 8 | - | - |
 | 05 | 6 | - | - |
+| 06 | 12 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -157,6 +158,7 @@ Recent decisions affecting current work:
 - [Phase 06]: 06-11: INFORME_FLAGS is empty (notes_supported true); deliverables runs slides.py before informe.py, so switching to the --notes annex is a one-line change
 - [Phase 06]: 06-11: one slide-figure sentinel per figure script (7), order-only on the results sentinel the same script writes; make deliverables rebuilds slides with local srcs, so publication must rerun slides.py --asset-map last
 - [Phase 06]: 06-12: Fase 3 and Fase 2 open items waived by the user (p3-waive, p2-waive) and recorded in CLAUDE.md Pendientes; Slides and Informe published as private Artifacts
+- [Phase 06]: UAT 4/4 passed 2026-10-26 (hosted deck, hosted informe build, exported PDF, share decision); 06-SECURITY.md 36/36 closed; verification passed
 
 ### Pending Todos
 
@@ -168,6 +170,7 @@ None yet.
 - [Phase 2]: 02-VALIDATION.md sigue en draft (auditoría Nyquist sin correr: /gsd-validate-phase 2)
 - [Phase 4]: Hopfield síncrono (curso) vs asíncrono (energía monótona): implementar ambos, asíncrono como referencia
 - [Phase 5]: Sin verificar la pseudo-inversa bajo ruido alto ni la existencia de un decodificador de QR (HOP-09 está en v2)
+- [Phase 6]: 06-VALIDATION.md sigue en draft (auditoría Nyquist sin correr: /gsd-validate-phase 6)
 - [Phase 6]: Formato de Slides en Artifacts verificado en 06-02 (ver 06-ARTIFACT-FORMAT.md; figuras de slide solo PNG); sigue sin verificar si plotly JS corre dentro de Artifacts (el tipo Slides no admite script)
 
 ## Deferred Items
@@ -180,6 +183,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T03:16:23.710Z
-Stopped at: Completed 06-12-PLAN.md
+Last session: 2026-10-26T03:45:00Z
+Stopped at: Phase 06 complete (UAT 4/4, security verified), ready to verify Phase 3
 Resume file: None
