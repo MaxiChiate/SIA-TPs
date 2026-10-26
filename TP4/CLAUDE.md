@@ -110,8 +110,8 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 - **Hallazgos de code review abiertos** (`NN-REVIEW-DISPOSITION.md` de las fases 2 a 5): los de la Fase 2 son 11 y los de la Fase 3,
   14 (WR-01 a WR-05 e IN-01 a IN-09). Cualquier arreglo que toque una regla fijada de antemano (por ejemplo WR-01 de la Fase 2) pasa
   por `/gsd-discuss-phase`, no por edición en el lugar.
-- Auditoría Nyquist: la Fase 2 quedó validada el 2026-10-26 (sin huecos); `06-VALIDATION.md` sigue en draft y `03-VALIDATION.md`
-  no existe.
+- Auditoría Nyquist: las fases 2 y 3 quedaron validadas el 2026-10-26 (sin huecos; `03-VALIDATION.md` se reconstruyó de los
+  planes y los SUMMARY); `06-VALIDATION.md` sigue en draft.
 - Sin verificar: la pseudo-inversa con ruido muy alto y la existencia de un decodificador de QR (HOP-09 quedó en v2).
 - Fase 2 (decisión 06-12, 2026-10-26): se publicó con los 11 hallazgos de `02-REVIEW-DISPOSITION.md` abiertos (WR-01 a WR-04 e
   IN-01 a IN-07). Solo dos tocan la regla fijada de antemano: WR-01 (la igualdad en los umbrales se decide en punto flotante) e
