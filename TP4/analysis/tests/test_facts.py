@@ -44,6 +44,10 @@ def write_results(root, *, robust=False):
     write_json(root / "som/series_som_stage2/robustness.json", {
         "robust": robust, "failing_variants": [] if robust else ["a", "b"], "te_checked": True,
     })
+    write_csv(root / "som/series_som_stage2/robustness.csv", ["label", "radius0", "eta0", "epochs", "te_mean"], [
+        ["base", 2.5, 0.5, 260, 0.046], ["a", 5.0, 0.5, 260, 0.05600000000000001],
+        ["b", 2.5, 0.25, 260, 0.06], ["c", 2.5, 0.5, 50, 0.052],
+    ])
     write_json(root / "oja/comparison.json", {"max_abs_diff": 0.00197})
     write_json(root / "oja/dispersion.json", {
         "n_seeds": 10, "n_abs_cos_above": 10, "min_pairwise_abs_cos": 0.99999932, "mean_pairwise_abs_cos": 0.99999978,
@@ -69,6 +73,7 @@ def write_results(root, *, robust=False):
             shortlist.append([campaign, objective, "propia", rank, f"I{rank}", f"@{campaign}{rank}"])
         shortlist.append([campaign, objective, "followers_global", 1, "G1", "@global1"])
         comparison.append([campaign, objective, "propia", 5, 1, 2, 12.3456, 0.8826])
+        comparison.append([campaign, objective, "followers_global", 5, 5, 1, 25.7069, -1.1077])
     write_csv(root / "campaigns/shortlists.csv", ["campaign", "objective", "list", "rank", "creator_id", "name"], shortlist)
     write_csv(root / "campaigns/comparison.csv", ["campaign", "objective", "list", "n", "overlap_followers_global",
                                                   "overlap_followers_tema", "cost_per_thousand", "criterion_mean"], comparison)
@@ -84,6 +89,11 @@ def write_results(root, *, robust=False):
     write_json(root / "hopfield/letters/orthogonality.json", {
         "n_pixels": 25, "separated": {"min_margin": [18, 18, 18, 18]}, "correlated": {"min_margin": [4, -30, -34, -34]},
     })
+    write_csv(root / "hopfield/letters/recall.csv", ["set", "update", "noise", "flipped", "recall_rate"], [
+        ["separated", "async", 0.12, 3, 0.99667], ["separated", "async", 0.24, 6, 0.847],
+        ["separated", "async", 0.36, 9, 0.3233], ["separated", "sync", 0.12, 3, 1.0],
+        ["correlated", "async", 0.12, 3, 0.25], ["correlated", "async", 0.24, 6, 0.25],
+    ])
     write_json(root / "hopfield/letters/capacity.json", {
         "p4_n_stable_counts": {"0": 284, "1": 1687, "2": 2653, "3": 3073, "4": 7253},
         "p4_mean_stable_fraction": 0.75625, "p4_all_stable_fraction": 0.48515,
@@ -232,6 +242,27 @@ def test_campaign_facts_take_the_first_five_by_rank_and_the_own_list(tmp_path):
     assert values["camp.perros.cost_per_thousand_ar"] == "12,35"
     assert values["camp.arte.criterion"] == "0,883"
     assert values["camp.perros.overlap_followers"] == "1" and values["camp.perros.overlap_followers_tema"] == "2"
+
+
+def test_slide_facts_failing_variants_are_labelled_by_what_moved(tmp_path):
+    values = facts.load_facts(write_results(tmp_path))
+    assert values["som.fail_1.variant"] == "R0 = 5" and values["som.fail_1.te"] == "0,056"
+    assert values["som.fail_2.variant"] == "η0 = 0,25" and values["som.fail_2.te"] == "0,060"
+    assert "som.fail_3.variant" not in values
+
+
+def test_slide_facts_robust_run_has_no_failing_variant_facts(tmp_path):
+    values = facts.load_facts(write_results(tmp_path, robust=True))
+    assert not [key for key in values if key.startswith("som.fail_")]
+
+
+def test_slide_facts_cover_followers_cost_letters_recall_and_opposite_topic(tmp_path):
+    values = facts.load_facts(write_results(tmp_path))
+    assert values["camp.futbol.followers_global_cost_per_thousand_ar"] == "25,71"
+    assert values["letters.separated_recall_k3"] == "99,7 %" and values["letters.separated_recall_k6"] == "84,7 %"
+    assert values["letters.separated_recall_k9"] == "32,3 %" and values["letters.correlated_recall_k3"] == "25,0 %"
+    assert values["letters.separated_n_stable"] == "4" and values["letters.correlated_n_stable"] == "1"
+    assert values["oja.max_opposite_topic"] == "fútbol"
 
 
 def test_campaign_objective_not_in_the_committed_pairs_stops(tmp_path):
