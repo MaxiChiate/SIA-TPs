@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """The informe of TP4 as one self-contained HTML page (DELIV-02, D-09 to D-12).
 
-    .venv/bin/python analysis/informe.py [--results DIR] [--deliverables DIR] [--out FILE]
+    .venv/bin/python analysis/informe.py [--results DIR] [--deliverables DIR] [--out FILE] [--notes FILE]
 
 The page is hybrid (D-12): a generated front section (summary of findings, table that maps each question of the
 enunciado to where it is answered, method) followed by the Markdown fragments of deliverables/ converted with
 Python-Markdown as "Detalle técnico", grouped under "Ejercicio 1" (fragments 1-3) and "Ejercicio 2" (fragments
-4-5). Numbers of the generated text come from the results JSON through facts.py and are wrapped as
+4-5). Every D-NN, Pitfall N and requirement ID of the fragments becomes a link (class jargon) to an annex generated
+from DECISIONS.md (D-13; an ID without an entry stops the build); --notes appends the presenter script as an annex
+(the D-06 fallback when the Slides type has no notes). Numbers of the generated text come from the results JSON through facts.py and are wrapped as
 <span class="fact" data-fact="KEY">; none is typed here (D-11), and build stops if one is (typed_numbers). Before
 writing, build runs facts.check_fragment_numbers and stops with the failing pins if a number typed in a fragment
 drifted from the results (D-12). Fragment headings
@@ -415,9 +417,11 @@ def typed_numbers(section_html: str) -> list[str]:
     return TYPED_NUMBER.findall(bare)
 
 
-def _inline_code(text: str) -> str:
-    """Escape text and turn `x` into <code>x</code>."""
-    return re.sub(r"`([^`]+)`", r"<code>\1</code>", html.escape(text, quote=False))
+def _inline_markup(text: str) -> str:
+    """Escape text and turn `x` into <code>x</code> and **x** into <strong>x</strong> (the only inline markup used)."""
+    escaped = html.escape(text, quote=False)
+    escaped = re.sub(r"`([^`]+)`", r"<code>\1</code>", escaped)
+    return re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
 
 
 def summary_section(findings: Iterable[Finding], fact_values: dict[str, str]) -> str:
@@ -437,8 +441,172 @@ def summary_section(findings: Iterable[Finding], fact_values: dict[str, str]) ->
 
 
 def method_section(fact_values: dict[str, str]) -> str:
-    paragraphs = [f"<p>{facts.fill(_inline_code(text), fact_values, wrap=fact_span)}</p>" for text in METHOD_PARAGRAPHS]
+    paragraphs = [f"<p>{facts.fill(_inline_markup(text), fact_values, wrap=fact_span)}</p>" for text in METHOD_PARAGRAPHS]
     return '<h2 id="metodo">Cómo trabajamos</h2>\n' + "\n".join(paragraphs)
+
+
+# ---------- glossary and jargon links (D-13) ----------
+
+@dataclass(frozen=True)
+class GlossaryEntry:
+    anchor: str
+    label: str
+    title: str
+    que: str
+
+
+DECISION_HEADING = re.compile(r"^### F(\d+) D-(\d+)([a-z]?) — (.+?)\s*$")
+PITFALL_HEADING = re.compile(r"^### Pitfall (\d+)([a-z]?) — (.+?)\s*$")
+REQUIREMENT_HEADING = re.compile(r"^### ([A-Z]{2,6})-(\d+) — (.+?)\s*$")
+MARKDOWN_LINK = re.compile(r"\[([^\]]+)\]\([^)]*\)")
+QUE_PREFIX = "**Qué:**"
+DECISION_ID = re.compile(r"D-(\d+)([a-z]?)")
+TAG_SPLIT = re.compile(r"(<[^>]*>)")
+TAG_NAME = re.compile(r"<(/?)([A-Za-z][A-Za-z0-9]*)")
+SKIP_ELEMENTS = frozenset({"code", "pre", "a"})
+
+
+def _que_of(body: list[str]) -> str:
+    """The **Qué:** sentence of an entry; an entry without one (a requirement) gives its first paragraph line."""
+    lines = [line.strip() for line in body if line.strip()]
+    for line in lines:
+        if line.startswith(QUE_PREFIX):
+            return MARKDOWN_LINK.sub(r"\1", line[len(QUE_PREFIX):].strip())
+    return MARKDOWN_LINK.sub(r"\1", lines[0]) if lines else ""
+
+
+def parse_glossary(text: str) -> dict[str, GlossaryEntry]:
+    """Entries of DECISIONS.md keyed by anchor: g-f<n>-d-<nn><letter>, g-pitfall-<n><letter>, g-req-<id>.
+
+    Reads the fixed heading grammar `### F<n> D-<nn> — `, `### Pitfall <n> — ` and `### <REQ-ID> — `; the project
+    decisions (`### KD-<n> — `) are not jargon of the fragments and are skipped. A duplicate anchor stops the build.
+    """
+    lines = text.splitlines()
+    entries: dict[str, GlossaryEntry] = {}
+    for index, line in enumerate(lines):
+        decision = DECISION_HEADING.match(line)
+        pitfall = PITFALL_HEADING.match(line)
+        requirement = REQUIREMENT_HEADING.match(line)
+        if decision:
+            phase, number, letter, title = decision.groups()
+            anchor, label = f"g-f{phase}-d-{number}{letter}", f"F{phase} D-{number}{letter}"
+        elif pitfall:
+            number, letter, title = pitfall.groups()
+            anchor, label = f"g-pitfall-{number}{letter}", f"Pitfall {number}{letter}"
+        elif requirement and requirement.group(1) != "KD":
+            prefix, number, title = requirement.groups()
+            anchor, label = f"g-req-{prefix.lower()}-{number}", f"{prefix}-{number}"
+        else:
+            continue
+        end = next((i for i in range(index + 1, len(lines)) if lines[i].startswith("#")), len(lines))
+        if anchor in entries:
+            raise SystemExit(f"DECISIONS.md has two entries for {label}")
+        entries[anchor] = GlossaryEntry(anchor, label, title.replace("`", ""), _que_of(lines[index + 1:end]))
+    return entries
+
+
+def link_jargon(html_text: str, fragment_no: int, glossary: dict[str, GlossaryEntry]) -> tuple[str, set[str]]:
+    """Link decision IDs, Pitfall N and requirement IDs of the text of an HTML fragment to the glossary annex.
+
+    A decision ID belongs to the phase of the fragment, except in "Fase M (D-NN, ...": there it belongs to phase M. A
+    lettered ID without an entry of its own (D-11a, Pitfall 14b) links to its parent. Text inside code, pre and a
+    elements and every attribute value are left alone. An ID without an entry stops the build. Returns the new HTML
+    and the set of glossary anchors it linked.
+    """
+    used: set[str] = set()
+    prefixes = sorted({m.group(1) for anchor in glossary if (m := re.match(r"g-req-([a-z]+)-", anchor))})
+
+    def anchor_for(kind: str, found: str, candidates: list[str], phase: int | None = None) -> str:
+        for candidate in candidates:
+            if candidate in glossary:
+                return candidate
+        where = f" (looked for phase {phase})" if phase is not None else ""
+        raise SystemExit(
+            f"fragment {fragment_no}: {kind} {found} has no entry in the glossary{where}; add it to DECISIONS.md"
+        )
+
+    def link(anchor: str, text: str) -> str:
+        entry = glossary[anchor]
+        used.add(anchor)
+        title = html.escape(f"{entry.label} — {entry.title}", quote=True)
+        return f'<a class="jargon" href="#{anchor}" title="{title}">{text}</a>'
+
+    def link_decision(found: str, phase: int) -> str:
+        number, letter = DECISION_ID.fullmatch(found).groups()
+        candidates = [f"g-f{phase}-d-{number}{letter}"] + ([f"g-f{phase}-d-{number}"] if letter else [])
+        return link(anchor_for("decision", found, candidates, phase), found)
+
+    alternatives = [
+        r"(?P<lead>Fase\s+(?P<phase>\d+)\s*\()(?P<group>D-\d+[a-z]?(?![\w-])(?:\s*(?:,|;|\by\b|\be\b)\s*D-\d+[a-z]?(?![\w-]))*)",
+        r"(?<![\w-])(?P<decision>D-\d+[a-z]?)(?![\w-])",
+        r"(?<![\w-])(?P<pitfall>Pitfall\s+(?P<pn>\d+)(?P<pl>[a-z]?))(?![\w-])",
+    ]
+    if prefixes:
+        alternatives.append(rf"(?<![\w-])(?P<req>(?P<rp>{'|'.join(prefixes).upper()})-(?P<rn>\d+))(?![\w-])")
+    jargon = re.compile("|".join(alternatives))
+
+    def replace(match: re.Match) -> str:
+        if match.group("group") is not None:
+            phase = int(match.group("phase"))
+            return match.group("lead") + DECISION_ID.sub(lambda i: link_decision(i.group(0), phase), match.group("group"))
+        if match.group("decision") is not None:
+            return link_decision(match.group("decision"), fragment_no)
+        if match.group("pitfall") is not None:
+            number, letter = match.group("pn"), match.group("pl")
+            candidates = [f"g-pitfall-{number}{letter}"] + ([f"g-pitfall-{number}"] if letter else [])
+            return link(anchor_for("Pitfall", match.group("pitfall"), candidates), match.group("pitfall"))
+        found = match.group("req")
+        return link(anchor_for("requirement", found, [f"g-req-{match.group('rp').lower()}-{match.group('rn')}"]), found)
+
+    out: list[str] = []
+    depth = 0  # open code, pre or a elements around the current text
+    for index, piece in enumerate(TAG_SPLIT.split(html_text)):
+        if index % 2:  # a tag: only its name matters, its attributes are never rewritten
+            tag = TAG_NAME.match(piece)
+            if tag and tag.group(2).lower() in SKIP_ELEMENTS and not piece.endswith("/>"):
+                depth = max(0, depth + (-1 if tag.group(1) else 1))
+            out.append(piece)
+        else:
+            out.append(piece if depth else jargon.sub(replace, piece))
+    return "".join(out), used
+
+
+def _glossary_order(anchor: str) -> tuple:
+    """Decisions by phase and ID, then pitfalls, then requirements."""
+    if match := re.fullmatch(r"g-f(\d+)-d-(\d+)([a-z]?)", anchor):
+        return (0, "", int(match.group(1)), int(match.group(2)), match.group(3))
+    if match := re.fullmatch(r"g-pitfall-(\d+)([a-z]?)", anchor):
+        return (1, "", int(match.group(1)), 0, match.group(2))
+    match = re.fullmatch(r"g-req-([a-z]+)-(\d+)", anchor)
+    return (2, match.group(1), 0, int(match.group(2)), "") if match else (3, anchor, 0, 0, "")
+
+
+def glossary_section(glossary: dict[str, GlossaryEntry], used: set[str]) -> str:
+    """The annex: a definition list of the referenced entries, each term carrying the id its links point to."""
+    items = []
+    for anchor in sorted(used, key=_glossary_order):
+        entry = glossary[anchor]
+        items.append(
+            f'<dt id="{anchor}">{html.escape(entry.label)} — {html.escape(entry.title)}</dt>'
+            f"<dd>{_inline_markup(entry.que)}</dd>"
+        )
+    return (
+        '<h2 id="glosario">Glosario de decisiones y referencias</h2>\n'
+        '<p class="lead">Cada sigla de los fragmentos (decisión, Pitfall o requisito) enlaza a su entrada.</p>\n'
+        f'<dl class="glossary">{"".join(items)}</dl>'
+    )
+
+
+def notes_section(notes_path: Path) -> str:
+    """The presenter script (D-06 fallback) as an annex: the Markdown file rendered without ids, headings demoted."""
+    path = Path(notes_path)
+    if not path.is_file():
+        raise SystemExit(f"{path} not found; --notes needs the presenter script as a Markdown file")
+    body = markdown.markdown(path.read_text(encoding="utf-8"), extensions=["tables", "fenced_code"])
+    body = re.sub(r"<!--.*?-->", "", body, flags=re.S)
+    body = re.sub(r"<table>.*?</table>", lambda m: f'<div class="table-wrap">{m.group(0)}</div>', body, flags=re.S)
+    body = re.sub(r"<(/?)h([1-6])>", lambda m: f"<{m.group(1)}h{min(int(m.group(2)) + 2, 6)}>", body)
+    return f'<h2 id="guion">Guion de la presentación</h2>\n<section class="guion">{body}</section>'
 
 
 # ---------- build ----------
@@ -481,6 +649,8 @@ def build(
     repo_dir: Path = TP_DIR,
     questions_checked: bool | None = None,
     pins: tuple[tuple[int, str], ...] = facts.DRIFT_PINS,
+    glossary_path: Path = TP_DIR / "DECISIONS.md",
+    notes_path: Path | None = None,
 ) -> Path:
     results_dir, deliverables_dir, out_path = Path(results_dir), Path(deliverables_dir), Path(out_path)
     if questions_checked is None:  # read at call time, so a test (or a later edit of the flags) is honored
@@ -495,6 +665,10 @@ def build(
             "QUESTIONS_CHECKED_AGAINST_PDF and ANSWER_SECTIONS_CHECKED in analysis/deliverables_manifest.py after "
             "that review"
         )
+    glossary_path = Path(glossary_path)
+    if not glossary_path.is_file():
+        raise SystemExit(f"{glossary_path} not found; the glossary annex is generated from DECISIONS.md")
+    glossary = parse_glossary(glossary_path.read_text(encoding="utf-8"))
     fact_values = facts.load_facts(results_dir)
     drifted = facts.check_fragment_numbers(fact_values, deliverables_dir, pins)
     if drifted:
@@ -508,6 +682,7 @@ def build(
         raise SystemExit(f"typed number(s) in the generated front section, use a fact placeholder (D-11): {typed}")
 
     exercises = []
+    used: set[str] = set()
     for exercise_number, anchor, title in EXERCISES:
         chosen = [item for item in fragments if item[2] == exercise_number]
         if not chosen:
@@ -517,7 +692,10 @@ def build(
             source = deliverables_dir / Path(relative).name
             if not source.is_file():
                 raise SystemExit(f"{source} not found; the fragment of phase {number} is missing")
-            exercises.append(render_fragment(source.read_text(encoding="utf-8"), number, figures, results_dir))
+            rendered = render_fragment(source.read_text(encoding="utf-8"), number, figures, results_dir)
+            rendered, anchors = link_jargon(rendered, number, glossary)
+            used |= anchors
+            exercises.append(rendered)
 
     parts = [
         "<title>Informe TP4 SIA</title>",
@@ -530,6 +708,8 @@ def build(
         question_table(questions),
         front[1],
         *exercises,
+        glossary_section(glossary, used),
+        *([notes_section(notes_path)] if notes_path is not None else []),
         f"<footer>Generado desde {html.escape(stamp(repo_dir))}.</footer>",
         "</div>",
     ]
@@ -551,8 +731,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--results", type=Path, default=facts.RESULTS_DIR)
     parser.add_argument("--deliverables", type=Path, default=TP_DIR / "deliverables")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument(
+        "--notes", type=Path, default=None,
+        help="presenter script (Markdown) appended as the annex 'Guion de la presentación' (D-06 fallback)",
+    )
     args = parser.parse_args(argv)
-    written = build(args.results, args.deliverables, args.out)
+    written = build(args.results, args.deliverables, args.out, notes_path=args.notes)
     try:
         shown = written.resolve().relative_to(TP_DIR)
     except ValueError:

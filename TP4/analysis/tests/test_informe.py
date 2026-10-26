@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import re
+from pathlib import Path
 
 import pytest
 
@@ -77,6 +78,7 @@ def fixture_build(results, deliverables, out_path, questions, figures, fragments
         "findings": FIXTURE_FINDINGS, "pins": (),
     }
     kwargs.update(override)
+    kwargs.setdefault("glossary_path", glossary_file(Path(repo_dir)))
     return informe.build(results, deliverables, out_path, **kwargs)
 
 
@@ -686,3 +688,16 @@ def test_cli_notes_flag_is_accepted(tmp_path, monkeypatch):
     monkeypatch.setattr(informe, "build", fake_build)
     informe.main(["--out", str(tmp_path / "o.html"), "--notes", str(tmp_path / "n.md")])
     assert seen["notes_path"] == tmp_path / "n.md"
+
+
+def test_every_jargon_id_of_the_real_fragments_resolves_in_the_real_decisions_file():
+    """Versioned inputs only (deliverables/ and DECISIONS.md): an ID without an entry would stop the real build."""
+    glossary = informe.parse_glossary((informe.TP_DIR / "DECISIONS.md").read_text(encoding="utf-8"))
+    linked = 0
+    for number, relative, _exercise, _title in manifest.FRAGMENTS:
+        text = (informe.TP_DIR / relative).read_text(encoding="utf-8")
+        rendered = informe.render_fragment(text, number, ())
+        out, used = informe.link_jargon(rendered, number, glossary)
+        linked += out.count('class="jargon"')
+        assert used <= set(glossary)
+    assert linked >= 120
