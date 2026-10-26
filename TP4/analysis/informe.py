@@ -3,21 +3,26 @@
 
     .venv/bin/python analysis/informe.py [--results DIR] [--deliverables DIR] [--out FILE]
 
-The page is hybrid (D-12): a generated front section (summary, table that maps each question of the enunciado
-to where it is answered, method) followed by the Markdown fragments of deliverables/ converted with
-Python-Markdown as "Detalle técnico". Numbers of the generated text come from the results JSON through
-facts.py and are wrapped as <span class="fact" data-fact="KEY">; none is typed here (D-11). Fragment headings
+The page is hybrid (D-12): a generated front section (summary of findings, table that maps each question of the
+enunciado to where it is answered, method) followed by the Markdown fragments of deliverables/ converted with
+Python-Markdown as "Detalle técnico", grouped under "Ejercicio 1" (fragments 1-3) and "Ejercicio 2" (fragments
+4-5). Numbers of the generated text come from the results JSON through facts.py and are wrapped as
+<span class="fact" data-fact="KEY">; none is typed here (D-11), and build stops if one is (typed_numbers). Before
+writing, build runs facts.check_fragment_numbers and stops with the failing pins if a number typed in a fragment
+drifted from the results (D-12). Fragment headings
 get number-based anchors (heading "### 6.4 ..." of fragment 2 is id="f2-s6-4") and the question table links to
 them. Figures are embedded as <img src="data:image/svg+xml;base64,..."> inside a card whose background is
 plots_style.SURFACE in both themes (D-09 static, D-10 light panel): matplotlib SVGs carry a global <style> and
-non-unique ids, so they cannot be inlined, and inside an <img> they cannot run script.
+non-unique ids, so they cannot be inlined, and inside an <img> they cannot run script. An SVG larger than
+EMBED_SVG_MAX is embedded as the PNG that plots_style.save_figure writes next to it.
 
 The page follows the Artifact page contract: own <title> and <style> first, no document skeleton tags, colour
 tokens on bare :root redefined for dark, side gutters with safe-area insets, tables in their own scroll box.
 The fragments are only read, never written (sha256 guard of Phase 2); every change happens at render time.
-The build fails loudly (SystemExit with the make command to run) when a result file is missing, a question
-anchor is absent, a fact placeholder is unresolved, the page is over MAX_BYTES, or it leaks a home path or an
-email address. Output: analysis/results/informe/informe.html (not versioned).
+The build fails loudly (SystemExit with the make command to run) when a result file is missing, the question
+texts or their answering sections were not checked by a human (deliverables_manifest flags), a number drifted, a
+question anchor or an internal link target is absent, a fact placeholder is unresolved, the page is over MAX_BYTES,
+or it leaks a home path or an email address. Output: analysis/results/informe/informe.html (not versioned).
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ import re
 import subprocess
 import sys
 import unicodedata
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
@@ -44,12 +50,24 @@ import plots_style  # noqa: E402
 
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "informe" / "informe.html"
 MAX_BYTES = 12_000_000  # below the 16 MB Artifact limit, data: images included
+EMBED_SVG_MAX = 1_500_000  # a larger SVG goes into the page as its PNG sibling
 
 TOKEN_SHAPE = re.compile(r"\{[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+\}")
 HOME_PATH = re.compile(r"/Users/|/home/|[A-Za-z]:\\Users\\")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}")
 NUMBERED = re.compile(r"(\d+(?:\.\d+)*)\.?(?:\s|$)")
 ANCHOR_SHAPE = re.compile(r"^f(\d+)-s(\d+(?:-\d+)*)$")
+FACT_SPAN = re.compile(r'<span class="fact"[^>]*>.*?</span>', re.S)
+TYPED_NUMBER = re.compile(r"\d+(?:,\d+)?[ \u00a0]?%|\d+,\d+")
+DATA_URI = re.compile(r"data:image/(?:svg\+xml|png);base64,[A-Za-z0-9+/=]+")
+HREF_TARGET = re.compile(r'href="#([^"]+)"')
+ID_VALUE = re.compile(r'\bid="([^"]+)"')
+
+# Exercise number -> (page id, heading) of the groups that hold the fragments as "Detalle técnico".
+EXERCISES = (
+    (1, "ej1", "Ejercicio 1: aprendizaje no supervisado"),
+    (2, "ej2", "Ejercicio 2: memoria asociativa (Hopfield)"),
+)
 
 STYLE = """
 :root {
@@ -96,6 +114,12 @@ th { background: var(--th-bg); }
   border-radius: 8px; color: #2b2b28; }
 .fig img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
 .fig figcaption { margin-top: 8px; font-size: .88rem; }
+li.unfavorable { border-left: 3px solid var(--accent); padding-left: 10px; margin-left: -13px; }
+tr.group th { background: var(--code-bg); font-size: .95rem; }
+a.jargon { text-decoration: underline dotted; text-underline-offset: 2px; }
+dl.glossary dt { font-weight: 600; margin-top: .9rem; }
+dl.glossary dd { margin: .2rem 0 0 0; max-width: 78ch; }
+section.guion { margin-top: 1rem; }
 footer { margin-top: 3rem; padding-top: .8rem; border-top: 1px solid var(--rule); font-size: .85rem; }
 """.replace("__SURFACE__", plots_style.SURFACE)
 
@@ -121,12 +145,24 @@ def make_slugify(n: int):
     return slugify
 
 
-def figure_card(path: Path, alt: str, caption: str) -> str:
-    """A figure element whose img carries the SVG bytes as a data URI (never inline svg)."""
-    data = base64.b64encode(Path(path).read_bytes()).decode("ascii")
+def figure_card(path: Path, alt: str, caption: str, *, png_only: bool = False) -> str:
+    """A figure element whose img carries the SVG bytes as a data URI (never inline svg).
+
+    An SVG larger than EMBED_SVG_MAX (or any figure with png_only) is embedded as the PNG that save_figure wrote next
+    to it; with no PNG sibling the build stops.
+    """
+    source = Path(path)
+    if png_only or source.stat().st_size > EMBED_SVG_MAX:
+        sibling = source.with_suffix(".png")
+        if not sibling.is_file():
+            raise SystemExit(f"{source} is too large to embed as SVG and {sibling} is missing; run its make target")
+        mime, payload = "image/png", sibling.read_bytes()
+    else:
+        mime, payload = "image/svg+xml", source.read_bytes()
+    data = base64.b64encode(payload).decode("ascii")
     return (
         '<figure class="fig">'
-        f'<img src="data:image/svg+xml;base64,{data}" alt="{html.escape(alt)}">'
+        f'<img src="data:{mime};base64,{data}" alt="{html.escape(alt)}">'
         f"<figcaption>{html.escape(caption)}</figcaption>"
         "</figure>"
     )
@@ -164,7 +200,8 @@ def render_fragment(text: str, n: int, figures: Iterable, results_dir: Path = fa
         source = Path(results_dir) / figure.path
         if not source.is_file():
             raise SystemExit(f"{source} not found; run `make {figure.make_target}` (or `make results`)")
-        page = _insert_cards(page, figure, figure_card(source, figure.alt, figure.caption))
+        card = figure_card(source, figure.alt, figure.caption, png_only=figure.embed == "png")
+        page = _insert_cards(page, figure, card)
     return page
 
 
@@ -177,21 +214,36 @@ def anchor_label(anchor: str) -> str:
     return f"Fase {match.group(1)}, §{match.group(2).replace('-', '.')}"
 
 
+def _exercise_of(question) -> int | None:
+    """The exercise a question belongs to, from its id ("Q2.3" is exercise 2); None for an id of another shape."""
+    match = re.match(r"^Q(\d+)\.", question.id)
+    return int(match.group(1)) if match else None
+
+
 def question_table(questions: Iterable) -> str:
-    """Question of the enunciado -> link to where it is answered."""
+    """Question of the enunciado -> link to where it is answered, with a header row per exercise."""
+    titles = {number: title for number, _anchor, title in EXERCISES}
     rows = []
+    current = None
     for question in questions:
+        exercise = _exercise_of(question)
+        if exercise is not None and exercise != current:
+            current = exercise
+            rows.append(
+                f'<tr class="group"><th colspan="3">{html.escape(titles.get(exercise, f"Ejercicio {exercise}"))}</th></tr>'
+            )
         links = " · ".join(
             f'<a href="#{html.escape(anchor, quote=True)}">{html.escape(anchor_label(anchor))}</a>'
             for anchor in question.anchors
         )
         rows.append(
-            f"<tr><td>“{html.escape(question.text)}” (sección {html.escape(question.enunciado_section)})</td>"
+            f"<tr><td>{html.escape(question.id)}</td>"
+            f"<td>“{html.escape(question.text)}” (sección {html.escape(question.enunciado_section)})</td>"
             f"<td>{links}</td></tr>"
         )
     return (
         '<div class="table-wrap"><table>'
-        "<thead><tr><th>Pregunta del enunciado</th><th>Dónde se responde</th></tr></thead>"
+        "<thead><tr><th>Pregunta</th><th>Texto del enunciado</th><th>Dónde se responde</th></tr></thead>"
         f"<tbody>{''.join(rows)}</tbody></table></div>"
     )
 
@@ -214,15 +266,179 @@ def fact_span(key: str, value: str) -> str:
     return f'<span class="fact" data-fact="{html.escape(key, quote=True)}">{html.escape(value)}</span>'
 
 
-SUMMARY_BULLET = (
-    "La grilla del SOM de {som.chosen_k}×{som.chosen_k} sigue a PC1 (R² {som.r2_pc1}, p = {som.p_r2_pc1}) "
-    "y no a PC2 (R² {som.r2_pc2}, p = {som.p_r2_pc2})."
+@dataclass(frozen=True)
+class Finding:
+    """One bullet of "Qué encontramos": a template of {group.key} facts and the section it summarizes."""
+
+    topic: str
+    text: str
+    anchor: str
+    unfavorable: bool = False
+
+
+# Wording follows the conclusions of the fragments. Every number is a {group.key} fact (D-11); the unfavorable
+# results are stated as they came out (PROJECT.md Key Decisions, D-04 of the slides).
+FINDINGS: tuple[Finding, ...] = (
+    Finding(
+        "PCA",
+        "El conjunto auditado tiene {pca.n_features} variables y {pca.k_80} componentes retendrían {pca.cum_k80} de la "
+        "varianza; el criterio de Kaiser da {pca.kaiser}. PC1 sola explica {pca.var_pc1} y es un eje de tamaño, alcance "
+        "y precio. La PCA queda como diagnóstico: los modelos corren sobre las {pca.n_features} variables.",
+        "f1-s6",
+    ),
+    Finding(
+        "PCA, sensibilidad",
+        "Con todas las columnas originales, que incluyen cinco dependencias lineales exactas, Kaiser pasa de "
+        "{pca.kaiser} a {pca.kaiser_all31} componentes y aparecen autovalores nulos: por eso los modelos usan el "
+        "conjunto auditado.",
+        "f1-s7",
+    ),
+    Finding(
+        "SOM, grilla",
+        "La regla de elección de la grilla, fijada y commiteada antes de ver resultados, eligió k = {som.chosen_k}; "
+        "por error de cuantización de entrenamiento solo se habría elegido k = {som.qe_train_argmin_k}, que deja casi "
+        "la mitad de las neuronas vacías.",
+        "f2-s3",
+    ),
+    Finding(
+        "SOM frente a PCA",
+        "El mapa de {som.chosen_k}×{som.chosen_k} sigue a PC1 (R² {som.r2_pc1}, p = {som.p_r2_pc1}) y no a PC2 "
+        "(R² {som.r2_pc2}, p = {som.p_r2_pc2}); los p salen de {som.n_permutations} permutaciones.",
+        "f2-s6-4",
+    ),
+    Finding(
+        "SOM, regiones",
+        "Cantidad de regiones que da la regla fijada de antemano sobre el mapa: {som.n_regions}. No hay segmentos de "
+        "creadores que interpretar; el mapa se lee como un continuo de tamaño y precio, y la regla no se retocó para "
+        "obtener más regiones.",
+        "f2-s6-1",
+        True,
+    ),
+    Finding(
+        "SOM, robustez",
+        "Robustez de la grilla elegida frente al schedule de entrenamiento: {som.robust}. En {som.n_failing_variants} "
+        "variantes de radio, tasa o épocas el error topográfico medio queda apenas sobre el máximo fijado; la "
+        "ocupación de las neuronas no se degrada.",
+        "f2-s4",
+        True,
+    ),
+    Finding(
+        "Oja",
+        "La regla de Oja converge a PC1 en las {oja.n_seeds} seeds (abs(cos) mínimo entre pares de seeds "
+        "{oja.abs_cos_min}), así que el índice es en lo esencial un orden por tamaño (Spearman {oja.corr_followers_spearman} "
+        "con followers con el signo fijado). Elegir automáticamente al creador con el índice más alto no es correcto "
+        "para cualquier campaña: con un signo sale {oja.max_name} (tema {oja.max_topic}, {oja.max_followers} followers) y "
+        "con el signo opuesto {oja.max_opposite_name} ({oja.max_opposite_followers} followers).",
+        "f3-s3",
+    ),
+    Finding(
+        "Campañas",
+        "Cada campaña tiene su regla, fijada antes de calcular las listas (commit {camp.rule_commit}). Para fútbol se "
+        "recomienda empezar por profundidad educativa, que es la lista más barata en total y la más cara por mil "
+        "argentinos alcanzados (USD {camp.futbol.cost_per_thousand_ar}); en perros, la lista propia cuesta USD "
+        "{camp.perros.cost_per_thousand_ar} por mil. Es un juicio apoyado en supuestos escritos, no un resultado de la regla.",
+        "f3-s5-1",
+    ),
+    Finding(
+        "Campañas frente a followers",
+        "Elegir solo por followers ignora el tema y el objetivo: la lista de fútbol por profundidad comparte "
+        "{camp.futbol.overlap_followers} de {camp.k} creadores con la lista de más followers y "
+        "{camp.futbol.overlap_followers_tema} con la de más followers dentro del tema; la de perros comparte "
+        "{camp.perros.overlap_followers} y {camp.perros.overlap_followers_tema}. Estos datos no permiten afirmar nada "
+        "sobre el retorno de ninguna de las dos estrategias.",
+        "f3-s5-5",
+    ),
+    Finding(
+        "Letras",
+        "En letras de {letters.n_pixels} píxeles, el set separado {letters.separated_set} tiene máximo |solapamiento| "
+        "{letters.separated_max_overlap} y margen mínimo {letters.separated_min_margin}; el correlacionado "
+        "{letters.correlated_set} llega a {letters.correlated_max_overlap}. Entre todos los subconjuntos de cuatro "
+        "letras, {letters.p4_stable_4} ({letters.p4_all_stable_fraction}) tienen las cuatro estables.",
+        "f4-s6",
+    ),
+    Finding(
+        "Letras, estados espurios",
+        "Con ruido alto, {letters.spur_total} de {letters.spur_trials} corridas ({letters.spur_total_pct}) terminan en un "
+        "estado espurio (inverso, mezcla u otro); el más común es el {letters.spurious_class}.",
+        "f4-s7",
+    ),
+    Finding(
+        "QR, Hebb",
+        "Con la regla de Hebb la recuperación exacta de los {qr.n_qr} QR es {qr.hebb_exact_noise0} incluso sin ruido: no "
+        "son puntos fijos de la red. Siempre cae al mismo atractor, la mayoría píxel a píxel de los QR, a entre "
+        "{qr.majority_hamming_min} y {qr.majority_hamming_max} píxeles de cada uno (de {qr.n_pixels}); la causa es la "
+        "correlación entre los QR (máximo |solapamiento| {qr.max_abs_overlap}).",
+        "f5-s4",
+        True,
+    ),
+    Finding(
+        "QR, pseudo-inversa",
+        "La pseudo-inversa sostiene {qr.pinv_exact_noise0} de recuperación exacta hasta el nivel de ruido "
+        "{qr.pinv_last_full_noise}, pero en el nivel {qr.noise_high} cae a {qr.pinv_at_0_45}. Una tabla de búsqueda por "
+        "distancia de Hamming, sin dinámica, queda en {qr.hamming_at_0_45} en ese mismo nivel: iguala o supera a la red "
+        "en todo el rango evaluado.",
+        "f5-s5",
+        True,
+    ),
+    Finding(
+        "QR, límites",
+        "Un corrimiento de un píxel ya deja la consulta a {qr.shift1_query_hamming} de {qr.n_pixels} píxeles de la fuente "
+        "y el estado que recupera la pseudo-inversa queda todavía más lejos, a {qr.shift1_recovered_hamming}. No se "
+        "corrió ningún decodificador de QR: no se afirma que un QR recuperado se pueda escanear.",
+        "f5-s6",
+        True,
+    ),
 )
-METHOD_PARAGRAPH = (
-    "Las reglas de cada fase se fijaron y se commitearon antes de mirar los resultados, y un sha256 las "
-    "custodia: si cambian, los scripts se niegan a correr. Los contrastes usan nulos por permutación "
-    "({som.n_permutations} permutaciones, semilla fija)."
+
+SUMMARY_LEAD = (
+    "Los números de esta sección se leen de los archivos de resultados cuando se arma la página y se marcan con "
+    "fondo; los resultados poco favorables van de frente, con la marca de la izquierda, tal como salieron."
 )
+METHOD_PARAGRAPHS = (
+    "Las reglas de cada análisis se fijaron y se commitearon antes de mirar los resultados, y un sha256 las custodia: "
+    "si cambia el texto de la regla o el código que la aplica, los scripts se niegan a correr. Son la regla de la "
+    "grilla del SOM, la regla de cada campaña (commit {camp.rule_commit}), la selección de letras y el protocolo de "
+    "los QR. Lo que sale de una regla se informa como salió, aunque sea poco favorable.",
+    "Cada experimento corre varias seeds ({oja.n_seeds} en Oja, {qr.n_seeds} en los QR) y las tablas muestran la media y "
+    "el desvío entre seeds, no una seed sola. Los contrastes del SOM usan nulos por permutación "
+    "({som.n_permutations} permutaciones, semilla fija).",
+    "Para reconstruir todo: `make results` regenera las tablas y las figuras desde los datos, y `make deliverables` "
+    "arma además las slides y esta página. Los números de las secciones generadas se leen de los resultados; los que "
+    "están escritos en los fragmentos se verifican contra ellos al armar la página, que se niega a construirse si "
+    "alguno cambió.",
+)
+
+
+def typed_numbers(section_html: str) -> list[str]:
+    """Every decimal number (with comma) or percentage in the text of the HTML outside the data-fact spans."""
+    bare = re.sub(r"<[^>]+>", " ", FACT_SPAN.sub("", section_html))
+    return TYPED_NUMBER.findall(bare)
+
+
+def _inline_code(text: str) -> str:
+    """Escape text and turn `x` into <code>x</code>."""
+    return re.sub(r"`([^`]+)`", r"<code>\1</code>", html.escape(text, quote=False))
+
+
+def summary_section(findings: Iterable[Finding], fact_values: dict[str, str]) -> str:
+    items = []
+    for finding in findings:
+        body = facts.fill(finding.text, fact_values, wrap=fact_span)
+        mark = "Resultado desfavorable" if finding.unfavorable else finding.topic
+        topic = f"{finding.topic}. " if finding.unfavorable else ""
+        link = f'<a href="#{html.escape(finding.anchor, quote=True)}">{html.escape(anchor_label(finding.anchor))}</a>'
+        css = ' class="unfavorable"' if finding.unfavorable else ""
+        items.append(f"<li{css}><strong>{html.escape(mark)}.</strong> {html.escape(topic)}{body} Detalle: {link}.</li>")
+    return (
+        '<h2 id="resumen">Qué encontramos</h2>\n'
+        f'<p class="lead">{html.escape(SUMMARY_LEAD)}</p>\n'
+        f"<ul>{''.join(items)}</ul>"
+    )
+
+
+def method_section(fact_values: dict[str, str]) -> str:
+    paragraphs = [f"<p>{facts.fill(_inline_code(text), fact_values, wrap=fact_span)}</p>" for text in METHOD_PARAGRAPHS]
+    return '<h2 id="metodo">Cómo trabajamos</h2>\n' + "\n".join(paragraphs)
 
 
 # ---------- build ----------
@@ -232,6 +448,9 @@ def _check_page(page: str, questions: Iterable, figure_texts: list[str]) -> None
         for anchor in question.anchors:
             if f'id="{anchor}"' not in page:
                 raise SystemExit(f"question {question.id}: anchor {anchor} is not in the page")
+    missing = sorted(set(HREF_TARGET.findall(page)) - set(ID_VALUE.findall(page)))
+    if missing:
+        raise SystemExit(f"internal link target(s) not in the page: {', '.join(missing[:10])}")
     leftover = TOKEN_SHAPE.search(page)
     if leftover:
         raise SystemExit(f"unresolved fact placeholder {leftover.group(0)} in the page")
@@ -240,7 +459,10 @@ def _check_page(page: str, questions: Iterable, figure_texts: list[str]) -> None
     size = len(page.encode("utf-8"))
     if size > MAX_BYTES:
         raise SystemExit(f"the page is {size} bytes, over the {MAX_BYTES} byte ceiling")
-    for label, body in [("page", page), *[("embedded figure", t) for t in figure_texts]]:
+    # The base64 runs hold the figures, scanned below once decoded; left in, the e-mail pattern would rescan each
+    # multi-megabyte run from every position (quadratic).
+    page_text = DATA_URI.sub("data:", page)
+    for label, body in [("page", page_text), *[("embedded figure", t) for t in figure_texts]]:
         if HOME_PATH.search(body):
             raise SystemExit(f"{label} contains an absolute home-directory path")
         if EMAIL.search(body):
@@ -255,22 +477,47 @@ def build(
     questions=deliverables_manifest.QUESTIONS,
     figures=deliverables_manifest.FIGURES,
     fragments=deliverables_manifest.FRAGMENTS,
+    findings: Iterable[Finding] = FINDINGS,
     repo_dir: Path = TP_DIR,
+    questions_checked: bool | None = None,
+    pins: tuple[tuple[int, str], ...] = facts.DRIFT_PINS,
 ) -> Path:
     results_dir, deliverables_dir, out_path = Path(results_dir), Path(deliverables_dir), Path(out_path)
+    if questions_checked is None:  # read at call time, so a test (or a later edit of the flags) is honored
+        questions_checked = bool(
+            deliverables_manifest.QUESTIONS_CHECKED_AGAINST_PDF is True
+            and deliverables_manifest.ANSWER_SECTIONS_CHECKED is True
+        )
+    if questions_checked is not True:
+        raise SystemExit(
+            "the question table is built only from texts compared with docs/Archivo SIATP 42026.pdf and from "
+            "answering sections a human confirmed (06-08 blocking-human checkpoint); set "
+            "QUESTIONS_CHECKED_AGAINST_PDF and ANSWER_SECTIONS_CHECKED in analysis/deliverables_manifest.py after "
+            "that review"
+        )
     fact_values = facts.load_facts(results_dir)
+    drifted = facts.check_fragment_numbers(fact_values, deliverables_dir, pins)
+    if drifted:
+        raise SystemExit(
+            f"{len(drifted)} number(s) typed in the fragments drifted from the results (D-12):\n  " + "\n  ".join(drifted)
+        )
 
-    summary = facts.fill(SUMMARY_BULLET, fact_values, wrap=fact_span)
-    method = facts.fill(METHOD_PARAGRAPH, fact_values, wrap=fact_span)
+    front = [summary_section(findings, fact_values), method_section(fact_values)]
+    typed = typed_numbers("\n".join(front))
+    if typed:
+        raise SystemExit(f"typed number(s) in the generated front section, use a fact placeholder (D-11): {typed}")
 
-    exercise_one = []
-    for number, relative, exercise, _title in fragments:
-        if exercise != 1:
+    exercises = []
+    for exercise_number, anchor, title in EXERCISES:
+        chosen = [item for item in fragments if item[2] == exercise_number]
+        if not chosen:
             continue
-        source = deliverables_dir / Path(relative).name
-        if not source.is_file():
-            raise SystemExit(f"{source} not found; the fragment of phase {number} is missing")
-        exercise_one.append(render_fragment(source.read_text(encoding="utf-8"), number, figures, results_dir))
+        exercises.append(f'<h2 id="{anchor}">{html.escape(title)}</h2>')
+        for number, relative, _exercise, _title in chosen:
+            source = deliverables_dir / Path(relative).name
+            if not source.is_file():
+                raise SystemExit(f"{source} not found; the fragment of phase {number} is missing")
+            exercises.append(render_fragment(source.read_text(encoding="utf-8"), number, figures, results_dir))
 
     parts = [
         "<title>Informe TP4 SIA</title>",
@@ -278,14 +525,11 @@ def build(
         f"<style>{STYLE}</style>",
         '<div class="informe">',
         "<h1>Informe TP4 SIA</h1>",
-        '<h2 id="resumen">Qué encontramos</h2>',
-        f"<ul><li>{summary}</li></ul>",
+        front[0],
         '<h2 id="preguntas">Preguntas del enunciado</h2>',
         question_table(questions),
-        '<h2 id="metodo">Cómo trabajamos</h2>',
-        f"<p>{method}</p>",
-        '<h2 id="ej1">Ejercicio 1</h2>',
-        *exercise_one,
+        front[1],
+        *exercises,
         f"<footer>Generado desde {html.escape(stamp(repo_dir))}.</footer>",
         "</div>",
     ]
