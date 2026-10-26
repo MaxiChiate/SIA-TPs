@@ -254,11 +254,11 @@ SLIDE_SENTINELS := \
 	$(RES)/hopfield/figures/slide/spurious.svg \
 	$(RES)/hopfield/qr/figures/slide/majority.svg
 
-# Guion de la presentacion en el informe: 06-ARTIFACT-FORMAT.md (probe del 2026-10-25) dice notes_supported: true, asi
-# que el guion ya viaja como notas del orador de cada slide y el informe no lleva el anexo. Si el tipo Slides dejara
-# de soportar notas, la linea de abajo pasa a "--notes analysis/results/slides/notes.md" (el anexo "Guion de la
-# presentacion" de informe.py) y deliverables ya corre slides.py antes del informe, asi que notes.md existe.
-INFORME_FLAGS :=
+# Guion de la presentacion en el informe: el guion viaja como notas del orador de cada slide (06-ARTIFACT-FORMAT.md,
+# notes_supported: true) y ademas, por decision del usuario en el checkpoint de 06-12, el informe lleva el anexo
+# "Guion de la presentacion" (--notes de informe.py). deliverables ya corre slides.py antes del informe, asi que
+# notes.md existe cuando informe.py lo lee.
+INFORME_FLAGS := --notes analysis/results/slides/notes.md
 
 # Variantes de slide de la PCA (el conjunto auditado).
 $(RES)/pca/audited/slide/biplot.svg: | $(RES)/pca/audited/decision.json

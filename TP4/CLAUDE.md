@@ -97,6 +97,7 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
   no se versiona en `docs/` (D-14).
 - **Informe**: `analysis/results/informe/informe.html`, sin publicar. Se entrega como link compartido del Artifact (D-15).
 - Los links publicados se agregan acá y en `README.md` después de publicar (plan 06-12). Hasta entonces no hay ninguno.
+- El informe lleva el guion de la presentación como anexo (`id="guion"`, decisión del usuario en el checkpoint de 06-12): `make deliverables` pasa `INFORME_FLAGS := --notes analysis/results/slides/notes.md`; el guion viaja además como notas del orador en cada slide.
 - Cualquier cambio de resultados: regenerar con `make deliverables`, actualizar `DECISIONS.md` y este archivo, y republicar a la
   misma url.
 
@@ -110,6 +111,8 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
   que toque la regla de grilla (por ejemplo WR-01) pasa por `/gsd-discuss-phase`, no por edición en el lugar.
 - `02-VALIDATION.md` sigue en draft (auditoría Nyquist de la Fase 2 sin correr).
 - Sin verificar: la pseudo-inversa con ruido muy alto y la existencia de un decodificador de QR (HOP-09 quedó en v2).
+- Fase 3 (decisión 06-12): publicado con la Fase 3 sin verificar, 2026-10-26. `03-VERIFICATION.md` sigue en `human_needed` (5/5 must-haves, 2 ítems humanos) y `03-UAT.md` en `testing`; la parte de campañas (slides E1-10 a E1-13 y secciones 5 y 6 del fragmento 03) descansa en resultados sin verificar. Si la verificación cambia un resultado, se regenera con `make deliverables` y se republica a la misma url.
+- Fase 2 (decisión 06-12): publicado con hallazgos abiertos: WR-01, WR-02, WR-03, WR-04, IN-01, IN-02, IN-03, IN-04, IN-05, IN-06, IN-07 (los 11 de `02-REVIEW-DISPOSITION.md`, todos en `open`), 2026-10-26. Los cinco que tocan la regla de grilla y su guarda (WR-01 a WR-04 e IN-01) hacen que los números del SOM y la afirmación D-03 de la regla fijada de antemano descansen en una regla con revisión abierta; ningún arreglo se hizo acá.
 
 ## Cómo reproducir (los resultados no se versionan)
 

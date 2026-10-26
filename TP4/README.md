@@ -151,7 +151,8 @@ Dos corridas seguidas de `make deliverables` dejan idénticos byte a byte el inf
 
 Las slides se entregan solo como Artifact: no se versiona ningún PDF ni `.pptx` de slides en `docs/` (D-14). El informe llega
 como el link compartido del Artifact (D-15); no se usa el tipo Docs. Las notas del orador viajan en cada slide y también en
-`notes.md`.
+`notes.md`. El informe lleva además el guion como anexo "Guion de la presentación": `make deliverables` pasa
+`INFORME_FLAGS := --notes analysis/results/slides/notes.md` (el `make informe` suelto arma el informe sin el anexo).
 
 ## Entrega
 
