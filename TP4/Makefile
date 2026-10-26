@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr hopfield-qr-limits hopfield-qr-figures results informe
+.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr hopfield-qr-limits hopfield-qr-figures results informe slides deliverables
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -231,3 +231,66 @@ $(RES)/hopfield/qr/figures/majority.svg: | $(RES)/hopfield/qr/verdict.json $(RES
 # analysis/results/informe/informe.html (no se versiona). Necesita los resultados de make results.
 informe: venv
 	$(PY) analysis/informe.py
+
+# Arma las slides en analysis/results/slides/ (project/deck.json, project/slides/*.html, assets/*.png y notes.md)
+# listas para publicar; no se versiona. Necesita los resultados y las figuras de slide (make deliverables los regenera).
+slides: venv
+	$(PY) analysis/slides.py
+
+# ---------------------------------------------------------------------------------------------------------------------
+# make deliverables (D-11): regenera lo que falta y arma las slides y el informe. Las figuras de slide son la variante
+# "slide/" que cada script de figuras escribe junto a la del informe. GNU Make 3.81 no tiene targets agrupados, asi que
+# hay un centinela por script (la ultima figura de slide que escribe), no uno por archivo: una regla por archivo
+# correria el mismo script una vez por cada archivo faltante. Un arbol de results armado antes de que existieran las
+# variantes de slide se repara con estos centinelas sin volver a correr los pasos lentos (som_stage, hopfield_qr).
+# Los prerequisitos son order-only (despues de |), como en make results.
+# ---------------------------------------------------------------------------------------------------------------------
+SLIDE_SENTINELS := \
+	$(RES)/pca/audited/slide/biplot.svg \
+	$(RES)/som/figures/slide/stage1_curves.svg \
+	$(RES)/som/profiles/slide/pc_planes.svg \
+	$(RES)/oja/slide/oja_vs_pc1.svg \
+	$(RES)/campaigns/slide/shortlists_som.svg \
+	$(RES)/hopfield/figures/slide/spurious.svg \
+	$(RES)/hopfield/qr/figures/slide/majority.svg
+
+# Guion de la presentacion en el informe: 06-ARTIFACT-FORMAT.md (probe del 2026-10-25) dice notes_supported: true, asi
+# que el guion ya viaja como notas del orador de cada slide y el informe no lleva el anexo. Si el tipo Slides dejara
+# de soportar notas, la linea de abajo pasa a "--notes analysis/results/slides/notes.md" (el anexo "Guion de la
+# presentacion" de informe.py) y deliverables ya corre slides.py antes del informe, asi que notes.md existe.
+INFORME_FLAGS :=
+
+# Variantes de slide de la PCA (el conjunto auditado).
+$(RES)/pca/audited/slide/biplot.svg: | $(RES)/pca/audited/decision.json
+	$(PY) analysis/pca.py
+
+# Variantes de slide de las figuras del SOM (mapa y curvas de la etapa 1).
+$(RES)/som/figures/slide/stage1_curves.svg: | $(RES)/som/figures/map.svg
+	$(PY) analysis/som_figures.py
+
+# Variantes de slide de regiones y planos PC1/PC2 del SOM.
+$(RES)/som/profiles/slide/pc_planes.svg: | $(RES)/som/profiles/pca_contrast.json
+	$(PY) analysis/som_profiles.py
+
+# Variante de slide de Oja contra PC1.
+$(RES)/oja/slide/oja_vs_pc1.svg: | $(RES)/oja/index.csv
+	$(PY) analysis/oja.py
+
+# Variantes de slide de las listas por campaña.
+$(RES)/campaigns/slide/shortlists_som.svg: | $(RES)/campaigns/selection_identity.json
+	$(PY) analysis/campaigns.py
+
+# Variantes de slide de Hopfield sobre las letras.
+$(RES)/hopfield/figures/slide/spurious.svg: | $(RES)/hopfield/figures/spurious.svg
+	$(PY) analysis/hopfield_figures.py
+
+# Variantes de slide de Hopfield sobre los 5 QR.
+$(RES)/hopfield/qr/figures/slide/majority.svg: | $(RES)/hopfield/qr/figures/majority.svg
+	$(PY) analysis/hopfield_qr_figures.py
+
+# Regenera solo lo que falta (resultados y figuras de slide), despues rearma slides e informe en segundos. slides.py
+# corre antes que informe.py para que notes.md exista si INFORME_FLAGS pide el anexo. Publicar los dos Artifacts es un
+# paso manual aparte (README.md, seccion "Slides e informe").
+deliverables: results $(SLIDE_SENTINELS)
+	$(PY) analysis/slides.py
+	$(PY) analysis/informe.py $(INFORME_FLAGS)
