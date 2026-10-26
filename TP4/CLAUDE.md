@@ -92,11 +92,11 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Entrega
 
-- **Slides**: 24 slides armadas por `make deliverables` en `analysis/results/slides/` (local, sin publicar). El Artifact queda
-  privado; según la respuesta del usuario en la prueba de formato, lo que se entrega al docente es el PDF exportado del deck, que
-  no se versiona en `docs/` (D-14).
-- **Informe**: `analysis/results/informe/informe.html`, sin publicar. Se entrega como link compartido del Artifact (D-15).
-- Los links publicados se agregan acá y en `README.md` después de publicar (plan 06-12). Hasta entonces no hay ninguno.
+- **Slides**: 24 slides armadas por `make deliverables` en `analysis/results/slides/` y publicadas como Artifact tipo Slides.
+- **Informe**: `analysis/results/informe/informe.html`, publicado como Artifact HTML (D-15).
+- Slides: https://claude.ai/artifact/9YjSxsDcVYSwvnXaD5JVy1
+- Informe: https://claude.ai/artifact/32SjYXD12gS2Lh6vY22jyM
+- Los dos Artifacts son privados; el deck se entrega como su PDF exportado (no se versiona en `docs/`), y compartir el link del informe lo decide la persona dueña desde el menú Share.
 - El informe lleva el guion de la presentación como anexo (`id="guion"`, decisión del usuario en el checkpoint de 06-12): `make deliverables` pasa `INFORME_FLAGS := --notes analysis/results/slides/notes.md`; el guion viaja además como notas del orador en cada slide.
 - Cualquier cambio de resultados: regenerar con `make deliverables`, actualizar `DECISIONS.md` y este archivo, y republicar a la
   misma url.

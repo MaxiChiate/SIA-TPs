@@ -156,8 +156,10 @@ como el link compartido del Artifact (D-15); no se usa el tipo Docs. Las notas d
 
 ## Entrega
 
-Los links publicados de las slides y del informe se agregan acá (y en `CLAUDE.md`) después de publicarlos. Hasta entonces, lo
-entregable se regenera con `make deliverables`.
+- Slides: https://claude.ai/artifact/9YjSxsDcVYSwvnXaD5JVy1
+- Informe: https://claude.ai/artifact/32SjYXD12gS2Lh6vY22jyM
+
+Los dos Artifacts son privados; el deck se entrega como su PDF exportado (no se versiona en `docs/`), y compartir el link del informe lo decide la persona dueña desde el menú Share. Lo entregable se regenera con `make deliverables`.
 
 ## Dónde seguir
 
