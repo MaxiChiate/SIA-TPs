@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +18,7 @@ import hopfield
 import hopfield_figures
 import hopfield_letters
 import hopfield_select
+import plots_style
 import sweep
 
 FIXTURE = Path(__file__).resolve().parent.parent.parent / "neuron" / "tests" / "fixtures" / "patterns_mix.csv"
@@ -71,6 +73,31 @@ def test_figures_deterministic(results, tmp_path):
         assert path_b.exists() and path_b.stat().st_size > 0
         if path_a.suffix == ".svg":
             assert path_a.read_bytes() == path_b.read_bytes()
+
+
+SLIDE_STEMS = ("letters", "overlaps", "recall_noise", "capacity_p4", "spurious")
+
+
+def svg_aspect(path):
+    head = Path(path).read_text(encoding="utf-8")[:2000]
+    width = float(re.search(r'<svg[^>]*\swidth="([\d.]+)pt"', head).group(1))
+    height = float(re.search(r'<svg[^>]*\sheight="([\d.]+)pt"', head).group(1))
+    return width / height
+
+
+def test_slide_variants_of_the_letter_figures(results, tmp_path):
+    out = tmp_path / "figures"
+    draw_into(results, out)
+    target = plots_style.SLIDE_FIGSIZE[0] / plots_style.SLIDE_FIGSIZE[1]
+    for stem in SLIDE_STEMS:
+        svg = out / "slide" / f"{stem}.svg"
+        assert svg.stat().st_size > 0, stem
+        assert (out / "slide" / f"{stem}.png").stat().st_size > 0, stem
+        assert abs(svg_aspect(svg) - target) < 0.02, stem
+    for stem in set(STEMS) - set(SLIDE_STEMS):  # max_overlap_hist, cross_terms, energy, capacity_by_p
+        assert not (out / "slide" / f"{stem}.svg").exists(), stem
+        assert (out / f"{stem}.svg").exists(), stem
+    assert plots_style.variant() == "report"
 
 
 def test_draw_refuses_changed_rule(results, tmp_path):
