@@ -64,10 +64,7 @@ GLYPH_OFF = "#ecebe6"
 # ---------- small helpers ----------
 
 def _caption(fig, text: str, width: int = 125, y: float = 0.01) -> None:
-    import textwrap
-
-    fig.text(0.01, y, textwrap.fill(text, width), ha="left", va="bottom", fontsize=8,
-             color=plots_style.TEXT_SECONDARY)
+    plots_style.caption(fig, text, width, y)
 
 
 def _fmt(value: float, digits: int = 2) -> str:
@@ -107,13 +104,13 @@ def plot_qr(patterns, out_stem) -> None:
     side = int(round(n_pixels ** 0.5))
     labels = _qr_labels()
     cmap = ListedColormap([GLYPH_OFF, GLYPH_ON])
-    fig, axes = plt.subplots(1, p, figsize=(2.6 * p + 0.6, 3.2))
+    fig, axes = plt.subplots(1, p, figsize=plots_style.figsize((2.6 * p + 0.6, 3.2)))
     for index, ax in enumerate(axes):
         ax.imshow(patterns[index].reshape(side, side), cmap=cmap, vmin=-1, vmax=1, interpolation="nearest")
-        ax.set_title(labels[index], fontsize=10)
+        ax.set_title(labels[index], fontsize=plots_style.fontsize(10))
         _clean_glyph_axes(ax)
-    fig.suptitle("Los 5 QR almacenados (37x37, pixel oscuro = +1)", fontsize=12, x=0.01, ha="left")
-    fig.tight_layout(rect=(0, 0.08, 1, 0.92))
+    plots_style.suptitle(fig, "Los 5 QR almacenados (37x37, pixel oscuro = +1)", fontsize=12, x=0.01, ha="left")
+    fig.tight_layout(rect=plots_style.rect((0, 0.08, 1, 0.92)))
     _caption(fig, "Cada glifo es el patron +-1 del QR, fila por fila, en el orden fijo de scripts/qr.py SOURCES "
                   "(el que indexa el subconjunto [0, 1, 2, 3, 4]).")
     plots_style.save_figure(fig, out_stem)
@@ -129,24 +126,33 @@ def plot_overlaps(overlaps: dict, out_stem) -> None:
     dots = np.asarray(overlaps["dots"])
     matrix = np.asarray(overlaps["overlaps"], dtype=np.float64)
     p = matrix.shape[0]
-    fig, ax = plt.subplots(figsize=(6.4, 6.0))
+    slide = plots_style.variant() == "slide"
+    fig, ax = plt.subplots(figsize=plots_style.figsize((6.4, 6.0)))
     image = ax.imshow(matrix, cmap=plots_style.DIVERGING, vmin=-1, vmax=1, aspect="equal")
     for row in range(p):
         for col in range(p):
             strong = abs(matrix[row, col]) > 0.6
             ax.text(col, row, f"{int(dots[row, col])}\n{_fmt(matrix[row, col])}", ha="center", va="center",
-                    fontsize=10, color="white" if strong else plots_style.TEXT_PRIMARY)
+                    fontsize=plots_style.fontsize(10), color="white" if strong else plots_style.TEXT_PRIMARY)
     ax.set_xticks(range(p))
     ax.set_yticks(range(p))
-    ax.set_xticklabels(labels, fontsize=10, rotation=20, ha="right")
-    ax.set_yticklabels(labels, fontsize=10)
+    ax.set_xticklabels(labels, fontsize=plots_style.fontsize(10), rotation=20, ha="right")
+    ax.set_yticklabels(labels, fontsize=plots_style.fontsize(10))
     ax.tick_params(length=0)
     for spine in ax.spines.values():
         spine.set_visible(False)
-    bar = fig.colorbar(image, ax=ax, fraction=0.045, pad=0.03)
+    if slide:  # square matrix at the left, its numbers read off at the right
+        fig.subplots_adjust(left=0.25, right=0.5344, top=0.95, bottom=0.2)
+        bar = fig.colorbar(image, cax=fig.add_axes([0.56, 0.2, 0.015, 0.75]))
+        fig.text(0.68, 0.58, f"max |solapamiento| = {_fmt(overlaps['max_abs_overlap'])}\n"
+                             f"media = {_fmt(overlaps['mean_abs_overlap'])}", ha="left", va="center",
+                 fontsize=plots_style.fontsize(10), color=plots_style.TEXT_PRIMARY)
+    else:
+        bar = fig.colorbar(image, ax=ax, fraction=0.045, pad=0.03)
     bar.set_label("solapamiento d / N")
-    fig.suptitle("Solapamientos entre los 5 QR almacenados", fontsize=12, x=0.01, ha="left")
-    fig.subplots_adjust(left=0.18, right=0.86, top=0.88, bottom=0.2)
+    plots_style.suptitle(fig, "Solapamientos entre los 5 QR almacenados", fontsize=12, x=0.01, ha="left")
+    if not slide:
+        fig.subplots_adjust(left=0.18, right=0.86, top=0.88, bottom=0.2)
     _caption(fig, f"En cada celda, el producto escalar entero d y el solapamiento d / {n}. max|solapamiento| = "
                   f"{_fmt(overlaps['max_abs_overlap'])}, media = {_fmt(overlaps['mean_abs_overlap'])}: los 5 QR "
                   "estan lejos de ser ortogonales entre si, la causa raiz del fallo de Hebb (HOP-04, D-11a).")
@@ -163,7 +169,9 @@ def plot_recovery(rows: list[dict], out_stem) -> None:
     panels), linestyle by update (solid async, dashed sync)."""
     plt = plots_style.apply_style()
     colors = plots_style.palette_for(list(RULES))
-    fig, axes = plt.subplots(1, 3, figsize=(16.5, 5.4))
+    slide = plots_style.variant() == "slide"
+    short = {"hebb": "Hebb", "pinv": "pinv", "hamming": "Hamming"}
+    fig, axes = plt.subplots(1, 3, figsize=plots_style.figsize((16.5, 5.4)))
     recall_ax, overlap_ax, cost_ax = axes
     energy_ax = cost_ax.twinx()
 
@@ -180,6 +188,8 @@ def plot_recovery(rows: list[dict], out_stem) -> None:
             overlap = np.array([float(r["mean_final_overlap"]) for r in mine])
             style = "-" if (rule == "hamming" or update == "async") else "--"
             label = RULE_LABELS[rule] if rule == "hamming" else f"{RULE_LABELS[rule]} ({UPDATE_LABELS[update]})"
+            if slide:  # short names; one legend under the three panels
+                label = "Hamming (lookup)" if rule == "hamming" else f"{short[rule]} ({update})"
             recall_ax.plot(noise, rate, style, marker="o", markersize=4, color=colors[rule], label=label)
             recall_ax.fill_between(noise, np.clip(rate - sd, 0, 1), np.clip(rate + sd, 0, 1), color=colors[rule],
                                    alpha=0.12, linewidth=0)
@@ -201,43 +211,56 @@ def plot_recovery(rows: list[dict], out_stem) -> None:
             energy_ax.plot(noise, energy, style, marker="^", markersize=4, color=colors[rule], alpha=0.55,
                            label=f"{label}: energia")
 
-    recall_ax.set_ylim(0, 1.18)
-    recall_ax.set_xlabel("nivel de ruido (fraccion de pixeles invertidos)")
+    recall_ax.set_ylim(0, 1.05 if slide else 1.18)
+    recall_ax.set_xlabel("nivel de ruido" if slide else "nivel de ruido (fraccion de pixeles invertidos)")
     recall_ax.set_ylabel("tasa de recuperacion exacta")
-    recall_ax.legend(fontsize=6.5, frameon=False, ncol=1, loc="upper left", bbox_to_anchor=(0.0, 1.02))
-    recall_ax.set_title("Exito exacto, 3 reglas (D-03, D-08)", fontsize=10, loc="left")
+    if slide:
+        slide_handles, slide_labels = recall_ax.get_legend_handles_labels()
+        fig.legend(slide_handles, slide_labels, fontsize=plots_style.fontsize(8), frameon=False, ncol=5,
+                   loc="lower center")
+    else:
+        recall_ax.legend(fontsize=6.5, frameon=False, ncol=1, loc="upper left", bbox_to_anchor=(0.0, 1.02))
+    recall_ax.set_title("Recuperacion exacta" if slide else "Exito exacto, 3 reglas (D-03, D-08)",
+                        fontsize=plots_style.fontsize(10), loc="left")
 
     pinv_zero = next((r for r in rows if r["rule"] == "pinv" and r["update"] == "async"
                       and abs(float(r["noise"])) < 1e-9), None)
     if pinv_zero is not None:
         rate0 = float(pinv_zero["recall_rate"])
+        note = (f"pinv a ruido 0: {_fmt(rate0 * 100, 0)}% exacto" if slide else
+                f"pinv a ruido 0: {_fmt(rate0 * 100, 0)}% exacto\n({'los 5 QR son' if rate0 == 1.0 else 'no todos los QR son'} "
+                "puntos fijos)")
         recall_ax.annotate(
-            f"pinv a ruido 0: {_fmt(rate0 * 100, 0)}% exacto\n({'los 5 QR son' if rate0 == 1.0 else 'no todos los QR son'} "
-            "puntos fijos)",
-            xy=(0.98, 0.04), xycoords="axes fraction", ha="right", va="bottom", fontsize=7.5,
-            color=plots_style.TEXT_SECONDARY, style="italic")
+            note, xy=(0.9, 0.12) if slide else (0.98, 0.04), xycoords="axes fraction", ha="right", va="bottom",
+            fontsize=plots_style.fontsize(7.5), color=plots_style.TEXT_SECONDARY, style="italic")
 
     overlap_ax.set_ylim(0, 1.02)
     overlap_ax.set_xlabel("nivel de ruido")
-    overlap_ax.set_ylabel("|solapamiento final| medio con el objetivo")
-    overlap_ax.legend(fontsize=6.5, frameon=False, loc="lower left")
-    overlap_ax.set_title("Cercania continua, 3 reglas (|m|, D-03)", fontsize=10, loc="left")
+    overlap_ax.set_ylabel("|solapamiento final| medio" if slide else "|solapamiento final| medio con el objetivo")
+    if not slide:
+        overlap_ax.legend(fontsize=6.5, frameon=False, loc="lower left")
+    overlap_ax.set_title("Cercania continua" if slide else "Cercania continua, 3 reglas (|m|, D-03)",
+                         fontsize=plots_style.fontsize(10), loc="left")
 
     cost_ax.set_xlabel("nivel de ruido")
-    cost_ax.set_ylabel("barridos medios (marcador cuadrado)")
-    energy_ax.set_ylabel("energia final media (marcador triangulo)")
-    handles = cost_ax.get_legend_handles_labels()[0] + energy_ax.get_legend_handles_labels()[0]
-    labels_all = cost_ax.get_legend_handles_labels()[1] + energy_ax.get_legend_handles_labels()[1]
-    cost_ax.legend(handles, labels_all, fontsize=6, frameon=False, loc="lower right", bbox_to_anchor=(0.72, 0.0))
-    cost_ax.set_title("Costo dinamico: hebb vs pinv (D-09)", fontsize=10, loc="left")
-    cost_ax.annotate("Hamming: lookup\ninstantaneo, sin\nbarridos ni energia", xy=(0.99, 0.5),
-                     xycoords="axes fraction", ha="right", va="center", fontsize=7,
+    cost_ax.set_ylabel("barridos (cuadrado)" if slide else "barridos medios (marcador cuadrado)")
+    energy_ax.set_ylabel("energia final (triangulo)" if slide else "energia final media (marcador triangulo)")
+    if not slide:  # in the slide the colour and line style are those of the legend under the panels
+        handles = cost_ax.get_legend_handles_labels()[0] + energy_ax.get_legend_handles_labels()[0]
+        labels_all = cost_ax.get_legend_handles_labels()[1] + energy_ax.get_legend_handles_labels()[1]
+        cost_ax.legend(handles, labels_all, fontsize=6, frameon=False, loc="lower right", bbox_to_anchor=(0.72, 0.0))
+    cost_ax.set_title("Costo: hebb vs pinv" if slide else "Costo dinamico: hebb vs pinv (D-09)",
+                      fontsize=plots_style.fontsize(10), loc="left")
+    cost_ax.annotate("Hamming: lookup\ninstantaneo, sin\nbarridos ni energia" if not slide else
+                     "Hamming: lookup,\nsin barridos", xy=(0.02, 0.8) if slide else (0.99, 0.5),
+                     xycoords="axes fraction", ha="left" if slide else "right", va="center",
+                     fontsize=plots_style.fontsize(7),
                      color=plots_style.TEXT_SECONDARY, style="italic")
 
     trials = int(rows[0]["n_trials"]) if rows else 0
-    fig.suptitle("Hebb, pseudo-inversa y Hamming sobre los 5 QR: recuperacion frente al ruido", fontsize=12,
-                x=0.01, ha="left")
-    fig.tight_layout(rect=(0, 0.1, 1, 0.94))
+    plots_style.suptitle(fig, "Hebb, pseudo-inversa y Hamming sobre los 5 QR: recuperacion frente al ruido",
+                         fontsize=12, x=0.01, ha="left")
+    fig.tight_layout(rect=plots_style.rect((0, 0.1, 1, 0.94), slide=(0, 0.12, 1, 1)))
     _caption(fig, f"Cada punto agrupa {trials} ensayos (5 QR, 30 ensayos, 10 seeds); la banda es +- el desvio "
                   "entre seeds. hebb y pinv comparten la MISMA grilla de ruido (D-05); el lookup de Hamming la "
                   "reproduce con el mismo k y las mismas etiquetas de seed pero sorteos propios, independientes "
@@ -247,6 +270,41 @@ def plot_recovery(rows: list[dict], out_stem) -> None:
 
 
 # ---------- per-step energy trace, hebb and pinv (HOP-05 "energia por paso") ----------
+
+def _plot_energy_trace_slide(by_key: dict, rules: list, sources: list, levels: list, labels: list, out_stem) -> None:
+    """Slide layout of the energy trace: 5 rows x 3 columns do not fit the slide figure area at slide type size,
+    so there is one row per dynamical rule and one column per noise level, with the five QR traces of the same
+    cell overlaid (colour by QR). The same traced trials as the report figure, each on its own energy scale."""
+    plt = plots_style.apply_style()
+    qr_colors = plots_style.palette_for(labels)
+    fig, axes = plt.subplots(len(rules), len(levels), figsize=plots_style.figsize((12.0, 6.0)), squeeze=False)
+    for i, rule in enumerate(rules):
+        for c, level in enumerate(levels):
+            ax = axes[i, c]
+            values = []
+            for source in sources:
+                series = sorted(by_key.get((rule, source, round(level, 2)), []))
+                if series:
+                    ax.step([step for step, _e in series], [energy for _s, energy in series], where="post",
+                            color=qr_colors[labels[source]], linewidth=1.8, label=labels[source])
+                    values.extend(energy for _s, energy in series)
+            if values and max(values) - min(values) < 1e-6 * max(1.0, abs(max(values))):
+                # a constant trace (the stored QR is already a fixed point): one tick, no 1e-9 offset label
+                level_value = float(np.mean(values))
+                ax.set_ylim(level_value - 1.0, level_value + 1.0)
+                ax.set_yticks([level_value])
+                ax.set_yticklabels([f"{level_value:.1f}".replace("-", "\u2212")])
+            if i == 0:
+                ax.set_title(f"ruido {_fmt(level)}", fontsize=plots_style.fontsize(10), loc="left")
+            if c == 0:
+                ax.set_ylabel(f"energia {rule}")
+            if i == len(rules) - 1:
+                ax.set_xlabel("paso (asincrono)")
+    handles, names = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, names, fontsize=plots_style.fontsize(8), frameon=False, ncol=len(names), loc="lower center")
+    fig.tight_layout(rect=(0, 0.1, 1, 1))
+    plots_style.save_figure(fig, out_stem)
+
 
 def plot_energy_trace(rows: list[dict], out_stem) -> None:
     """Rows: the five QR; columns: ENERGY_LEVELS, fixed by index before looking at any curve. Overlays hebb's and
@@ -265,6 +323,9 @@ def plot_energy_trace(rows: list[dict], out_stem) -> None:
     for r in rows:
         key = (r["rule"], int(r["source"]), round(float(r["noise"]), 2))
         by_key.setdefault(key, []).append((int(r["step"]), float(r["energy"])))
+    if plots_style.variant() == "slide":
+        _plot_energy_trace_slide(by_key, rules, sources, levels, labels, out_stem)
+        return
     fig, axes = plt.subplots(len(sources), len(levels), figsize=(4.0 * len(levels), 2.3 * len(sources) + 1.3),
                              squeeze=False, sharex=False)
     legend_handles: list = []
@@ -300,8 +361,8 @@ def plot_energy_trace(rows: list[dict], out_stem) -> None:
     if legend_handles:
         fig.legend(legend_handles, [h.get_label() for h in legend_handles], fontsize=8, frameon=False, ncol=2,
                   loc="upper right", bbox_to_anchor=(0.99, 0.985))
-    fig.suptitle("Energia por paso, asincrono (hebb vs pinv, un ensayo trazado por celda, seed fija)", fontsize=12,
-                x=0.01, ha="left")
+    plots_style.suptitle(fig, "Energia por paso, asincrono (hebb vs pinv, un ensayo trazado por celda, seed fija)",
+                         fontsize=12, x=0.01, ha="left")
     fig.tight_layout(rect=(0, 0.07, 1, 0.93))
     _caption(fig, "Un ensayo por panel (el primero trazado de cada QR y nivel de ruido de la seed fija de "
                   "energy_trace.csv) para hebb y para pinv, no elegido por su forma. Cada panel tiene un eje "
@@ -328,8 +389,24 @@ def plot_shift(shift: dict, out_stem) -> None:
     labels = _qr_labels()
     source_label = labels[int(shift["source"])]
     cmap = ListedColormap([GLYPH_OFF, GLYPH_ON])
-    fig, axes = plt.subplots(len(shifts), 3, figsize=(8.4, 3.6 * len(shifts) + 0.8), squeeze=False)
-    for row, entry in enumerate(shifts):
+    slide = plots_style.variant() == "slide"
+    if slide:  # one row: the source, then (shifted, recovered) for each shift magnitude
+        fig, axes = plt.subplots(1, 1 + 2 * len(shifts), figsize=plots_style.figsize((8.4, 3.6 * len(shifts) + 0.8)),
+                                 squeeze=False)
+        panels_row = [(source_img, f"{source_label}\n(original)")]
+        for entry in shifts:
+            panels_row.append((np.asarray(entry["query"], dtype=np.int64).reshape(side, side),
+                               f"desplazado {entry['shift']} px\nHamming = {entry['query_hamming']}"))
+            panels_row.append((np.asarray(entry["recovered"], dtype=np.int64).reshape(side, side),
+                               f"pinv recupera\nHamming = {entry['recovered_hamming']}"))
+        for col, (img, title) in enumerate(panels_row):
+            ax = axes[0, col]
+            ax.imshow(img, cmap=cmap, vmin=-1, vmax=1, interpolation="nearest")
+            ax.set_title(title, fontsize=plots_style.fontsize(9))
+            _clean_glyph_axes(ax)
+    else:
+        fig, axes = plt.subplots(len(shifts), 3, figsize=(8.4, 3.6 * len(shifts) + 0.8), squeeze=False)
+    for row, entry in enumerate([] if slide else shifts):  # the report grid; the slide row is drawn above
         query_img = np.asarray(entry["query"], dtype=np.int64).reshape(side, side)
         recovered_img = np.asarray(entry["recovered"], dtype=np.int64).reshape(side, side)
         panels = (
@@ -342,11 +419,14 @@ def plot_shift(shift: dict, out_stem) -> None:
             ax.imshow(img, cmap=cmap, vmin=-1, vmax=1, interpolation="nearest")
             ax.set_title(title, fontsize=9)
             _clean_glyph_axes(ax)
-    fig.suptitle("Sensibilidad a corrimientos: antes / desplazado / recuperado bajo pinv (HOP-07, D-11b)",
+    plots_style.suptitle(fig, "Sensibilidad a corrimientos: antes / desplazado / recuperado bajo pinv (HOP-07, D-11b)",
                 fontsize=12, x=0.01, ha="left")
     # subplots_adjust (not tight_layout, D-11b figure legibility fix): row titles need generous hspace or
     # they collide with the glyph of the row above (found and fixed before this task's commit).
-    fig.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.14, hspace=0.75, wspace=0.08)
+    if slide:
+        fig.subplots_adjust(left=0.02, right=0.98, top=0.78, bottom=0.02, wspace=0.12)
+    else:
+        fig.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.14, hspace=0.75, wspace=0.08)
     _caption(fig, f"Corrimiento con relleno en cero ({shift['edge_convention']}); la red evoluciona desde la "
                   "consulta desplazada bajo la W de pseudo-inversa con una corrida asincrona propia (no la traza "
                   "de hopfield.py). La distancia de Hamming medida a la fuente es un hallazgo, nunca forzada: "
@@ -370,20 +450,25 @@ def plot_majority(majority: dict, out_stem) -> None:
     hamming = [int(h) for h in majority["hamming_to_targets"]]
     colors = plots_style.palette_for(labels)
     cmap = ListedColormap([GLYPH_OFF, GLYPH_ON])
-    fig, (glyph_ax, bar_ax) = plt.subplots(1, 2, figsize=(9.6, 3.6), gridspec_kw={"width_ratios": [1, 1.6]})
+    fig, (glyph_ax, bar_ax) = plt.subplots(1, 2, figsize=plots_style.figsize((9.6, 3.6)),
+                                           gridspec_kw={"width_ratios": [1, 1.6]})
     glyph_ax.imshow(maj_img, cmap=cmap, vmin=-1, vmax=1, interpolation="nearest")
-    glyph_ax.set_title("Atractor mayoria de Hebb", fontsize=10)
+    glyph_ax.set_title("Atractor mayoria de Hebb", fontsize=plots_style.fontsize(10))
     _clean_glyph_axes(glyph_ax)
     bar_ax.bar(labels, hamming, color=[colors[label] for label in labels])
     top = max(hamming) if hamming else 0
     bar_ax.set_ylim(0, top * 1.18 if top else 1)
     for index, value in enumerate(hamming):
-        bar_ax.text(index, value + top * 0.03, str(value), ha="center", va="bottom", fontsize=8)
-    bar_ax.set_ylabel(f"distancia de Hamming al atractor (de {n})", fontsize=9)
-    bar_ax.set_title("Distancia a cada QR almacenado", fontsize=10, loc="left")
-    fig.suptitle("El atractor comun de Hebb no coincide con ningun QR almacenado (HOP-07, D-11a)", fontsize=12,
+        bar_ax.text(index, value + top * 0.03, str(value), ha="center", va="bottom", fontsize=plots_style.fontsize(8))
+    bar_ax.set_ylabel("distancia de Hamming" if plots_style.variant() == "slide"
+                      else f"distancia de Hamming al atractor (de {n})", fontsize=plots_style.fontsize(9))
+    bar_ax.set_title("Distancia a cada QR almacenado", fontsize=plots_style.fontsize(10), loc="left")
+    plots_style.suptitle(fig, "El atractor comun de Hebb no coincide con ningun QR almacenado (HOP-07, D-11a)", fontsize=12,
                 x=0.01, ha="left")
-    fig.subplots_adjust(left=0.03, right=0.98, top=0.82, bottom=0.26, wspace=0.28)
+    if plots_style.variant() == "slide":
+        fig.subplots_adjust(left=0.03, right=0.98, top=0.9, bottom=0.1, wspace=0.3)
+    else:
+        fig.subplots_adjust(left=0.03, right=0.98, top=0.82, bottom=0.26, wspace=0.28)
     _caption(fig, f"Mayoria pixel a pixel de los 5 QR (signo de la suma por pixel); distancia minima "
                   f"{min(hamming) if hamming else 0}, maxima {max(hamming) if hamming else 0} de {n} pixeles - "
                   "nunca cero. Es el estado al que la dinamica de Hebb tiende a colapsar en vez de recuperar la "
@@ -447,12 +532,14 @@ def draw(results_dir, out_dir, patterns_path=None, check_rule: bool = True, chec
     shift = _read_json(limits_results_dir / "shift.json")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    plot_qr(patterns, out_dir / "qr")
-    plot_overlaps(overlaps, out_dir / "overlaps")
-    plot_recovery(recall_rows, out_dir / "recovery")
-    plot_energy_trace(energy_rows, out_dir / "energy_trace")
-    plot_shift(shift, out_dir / "shift")
-    plot_majority(majority, out_dir / "majority")
+    # D-08: all six figures also get a slide variant, drawn by the same plot functions.
+    for _ in plots_style.iter_variants():
+        plot_qr(patterns, out_dir / "qr")
+        plot_overlaps(overlaps, out_dir / "overlaps")
+        plot_recovery(recall_rows, out_dir / "recovery")
+        plot_energy_trace(energy_rows, out_dir / "energy_trace")
+        plot_shift(shift, out_dir / "shift")
+        plot_majority(majority, out_dir / "majority")
     return [out_dir / f"{stem}.{suffix}" for stem in FIGURE_STEMS for suffix in ("svg", "png")]
 
 
