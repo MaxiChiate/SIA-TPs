@@ -40,6 +40,7 @@ SOURCES: dict[str, tuple[str, str]] = {
     "som.contrast": ("som/profiles/pca_contrast.json", "som-profiles"),
     "som.selection": ("som/series_som_stage1/selection.json", "som-stage1"),
     "som.robustness": ("som/series_som_stage2/robustness.json", "som-stage2"),
+    "som.robustness_table": ("som/series_som_stage2/robustness.csv", "som-stage2"),
     "oja.comparison": ("oja/comparison.json", "oja"),
     "oja.dispersion": ("oja/dispersion.json", "oja"),
     "oja.evidence": ("oja/evidence.json", "oja"),
@@ -52,6 +53,7 @@ SOURCES: dict[str, tuple[str, str]] = {
     "letters.selection": ("hopfield/letters/selection.json", "hopfield-letters"),
     "letters.orthogonality": ("hopfield/letters/orthogonality.json", "hopfield-letters"),
     "letters.capacity": ("hopfield/letters/capacity.json", "hopfield-letters"),
+    "letters.recall": ("hopfield/letters/recall.csv", "hopfield-letters"),
     "letters.spurious": ("hopfield/letters/spurious.json", "hopfield-letters"),
     "qr.verdict": ("hopfield/qr/verdict.json", "hopfield-qr"),
     "qr.facts": ("hopfield/qr/qr_facts.json", "hopfield-qr"),
@@ -162,11 +164,27 @@ def _pca_facts(results_dir: Path) -> dict[str, str]:
     }
 
 
+def _number(value: float) -> str:
+    """A parameter value without trailing zeros (5 and not 5,00; 0,25; 0,9)."""
+    text = dec(value, 2)
+    return text.rstrip("0").rstrip(",") if "," in text else text
+
+
+def _variant_label(row: dict[str, str], base: dict[str, str]) -> str:
+    """What a stage-2 variant moved from the baseline: R0, eta0 or the number of epochs."""
+    if float(row["radius0"]) != float(base["radius0"]):
+        return f"R0 = {_number(row['radius0'])}"
+    if float(row["eta0"]) != float(base["eta0"]):
+        return f"η0 = {_number(row['eta0'])}"
+    return f"{integer(row['epochs'])} épocas"
+
+
 def _som_facts(results_dir: Path) -> dict[str, str]:
     contrast = read_source(results_dir, "som.contrast")
     selection = read_source(results_dir, "som.selection")
     robustness = read_source(results_dir, "som.robustness")
-    return {
+    table = {row["label"]: row for row in read_csv_source(results_dir, "som.robustness_table")}
+    values = {
         "som.r2_pc1": dec(contrast["r2_pc1"], 3),
         "som.r2_pc1_pct": pct(contrast["r2_pc1"], 1),
         "som.p_r2_pc1": dec(contrast["p_r2_pc1"], 3),
@@ -187,6 +205,14 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
         "som.robust": "sí" if robustness["robust"] else "no",
         "som.n_failing_variants": str(len(robustness["failing_variants"])),
     }
+    # One pair of facts per stage-2 variant that failed the TE filter, in the order robustness.json lists them
+    # (the slide of the failed variants reads som.fail_1 ... som.fail_N).
+    for position, label in enumerate(robustness["failing_variants"], start=1):
+        if label not in table or "base" not in table:
+            raise SystemExit(f"stage-2 variant {label!r} is not in robustness.csv; run `make results` (step som-stage2)")
+        values[f"som.fail_{position}.variant"] = _variant_label(table[label], table["base"])
+        values[f"som.fail_{position}.te"] = dec(table[label]["te_mean"], 3)
+    return values
 
 
 def _oja_facts(results_dir: Path) -> dict[str, str]:
@@ -217,6 +243,7 @@ def _oja_facts(results_dir: Path) -> dict[str, str]:
         "oja.max_opposite_id": str(top_opposite["creator_id"]),
         "oja.max_opposite_name": str(top_opposite["name"]),
         "oja.max_opposite_followers": integer(top_opposite["followers"]),
+        "oja.max_opposite_topic": str(top_opposite["dominant_topic"]),
     }
 
 
@@ -243,6 +270,11 @@ def _campaign_facts(results_dir: Path) -> dict[str, str]:
         values[f"camp.{key}.cost_per_thousand_ar"] = dec(row["cost_per_thousand"], 2)
         values[f"camp.{key}.overlap_followers"] = integer(row["overlap_followers_global"])
         values[f"camp.{key}.overlap_followers_tema"] = integer(row["overlap_followers_tema"])
+        baseline = next(
+            r for r in comparison
+            if r["campaign"] == campaign and r["objective"] == objective and r["list"] == "followers_global"
+        )
+        values[f"camp.{key}.followers_global_cost_per_thousand_ar"] = dec(baseline["cost_per_thousand"], 2)
     return values
 
 
@@ -265,6 +297,15 @@ def _letters_facts(results_dir: Path) -> dict[str, str]:
     orthogonality = read_source(results_dir, "letters.orthogonality")
     capacity = read_source(results_dir, "letters.capacity")
     spurious = read_source(results_dir, "letters.spurious")
+    recall = read_csv_source(results_dir, "letters.recall")
+
+    def recall_rate(name: str, flipped: int) -> str:
+        row = next(
+            (r for r in recall if r["set"] == name and r["update"] == "async" and int(r["flipped"]) == flipped), None
+        )
+        if row is None:
+            raise SystemExit(f"no async recall row of the {name} set with {flipped} flipped pixels; run `make results` (step hopfield-letters)")
+        return pct(row["recall_rate"], 1)
 
     def max_overlap(name: str) -> float:
         return max(abs(float(pair["overlap"])) for pair in selection[name]["pairs"])
@@ -283,6 +324,12 @@ def _letters_facts(results_dir: Path) -> dict[str, str]:
         "letters.separated_max_overlap": dec(max_overlap("separated"), 2),
         "letters.correlated_max_overlap": dec(max_overlap("correlated"), 2),
         "letters.separated_min_margin": integer(min(orthogonality["separated"]["min_margin"])),
+        "letters.separated_n_stable": str(sum(1 for margin in orthogonality["separated"]["min_margin"] if margin >= 0)),
+        "letters.correlated_n_stable": str(sum(1 for margin in orthogonality["correlated"]["min_margin"] if margin >= 0)),
+        "letters.separated_recall_k3": recall_rate("separated", 3),
+        "letters.separated_recall_k6": recall_rate("separated", 6),
+        "letters.separated_recall_k9": recall_rate("separated", 9),
+        "letters.correlated_recall_k3": recall_rate("correlated", 3),
         "letters.p4_mean_stable_fraction": dec(capacity["p4_mean_stable_fraction"], 3),
         "letters.p4_all_stable_fraction": dec(capacity["p4_all_stable_fraction"], 3),
         "letters.spurious_class": CLASS_NAMES[most_common],
