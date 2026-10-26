@@ -260,38 +260,56 @@ def plot_scree(result: PcaResult, dec: dict, title: str, out: Path) -> None:
     x = np.arange(1, p + 1)
     blue = plots_style.palette_for(["a"])["a"]
     orange = plots_style._SERIES[1]
-    fig, (top, bottom) = plt.subplots(
-        2, 1, figsize=(11, 7.5), sharex=True, gridspec_kw={"height_ratios": [3, 2]}
-    )
+    slide = plots_style.variant() == "slide"
+    if slide:  # side by side: two stacked panels would be too flat in the 2.6:1 slide box
+        fig, (top, bottom) = plt.subplots(1, 2, figsize=plots_style.figsize((11, 7.5)), sharex=True)
+    else:
+        fig, (top, bottom) = plt.subplots(
+            2, 1, figsize=plots_style.figsize((11, 7.5)), sharex=True, gridspec_kw={"height_ratios": [3, 2]}
+        )
 
     colors = [orange if i + 1 == k80 else blue for i in range(p)]
     top.bar(x, result.eigenvalues, color=colors, width=0.7, edgecolor=plots_style.SURFACE, linewidth=1)
     top.axhline(1.0, color=plots_style.TEXT_SECONDARY, linewidth=1, linestyle="--")
     top.annotate("Kaiser (autovalor = 1)", (p + 0.4, 1.0), xytext=(0, 4), textcoords="offset points",
-                 va="bottom", ha="right", color=plots_style.TEXT_SECONDARY, fontsize=9)
+                 va="bottom", ha="right", color=plots_style.TEXT_SECONDARY, fontsize=plots_style.fontsize(9))
     top.set_ylabel("autovalor")
-    top.set_title(f"{title}\nScree: autovalores y varianza acumulada", fontsize=12, loc="left")
-    top.text(0.99, 0.93,
-             f"k para 80 % = {k80} (barra naranja)   |   Kaiser: {dec['kaiser']}   |   "
-             f"{'coinciden' if dec['rule_agrees'] else 'NO coinciden'}",
-             transform=top.transAxes, ha="right", va="top", fontsize=9, color=plots_style.TEXT_PRIMARY)
+    agree = "coinciden" if dec["rule_agrees"] else "NO coinciden"
+    if slide:  # the slide has its own title: panel titles only, the reading note in two short lines
+        top.set_title("Autovalores", fontsize=plots_style.fontsize(12), loc="left")
+        top.text(0.99, 0.93, f"k para 80 % = {k80} (barra naranja)\nKaiser: {dec['kaiser']} ({agree})",
+                 transform=top.transAxes, ha="right", va="top", fontsize=plots_style.fontsize(9),
+                 color=plots_style.TEXT_PRIMARY)
+    else:
+        top.set_title(f"{title}\nScree: autovalores y varianza acumulada", fontsize=12, loc="left")
+        top.text(0.99, 0.93,
+                 f"k para 80 % = {k80} (barra naranja)   |   Kaiser: {dec['kaiser']}   |   {agree}",
+                 transform=top.transAxes, ha="right", va="top", fontsize=9, color=plots_style.TEXT_PRIMARY)
 
     bottom.plot(x, result.cumulative * 100, color=blue, linewidth=2, marker="o", markersize=5,
                 markeredgecolor=plots_style.SURFACE)
     bottom.axhline(VARIANCE_THRESHOLD * 100, color=plots_style.TEXT_SECONDARY, linewidth=1, linestyle="--")
     bottom.annotate("80 %", (p + 0.4, VARIANCE_THRESHOLD * 100), xytext=(0, 4),
                     textcoords="offset points", va="bottom", ha="right",
-                    color=plots_style.TEXT_SECONDARY, fontsize=9)
+                    color=plots_style.TEXT_SECONDARY, fontsize=plots_style.fontsize(9))
     bottom.plot([k80], [result.cumulative[k80 - 1] * 100], marker="o", markersize=9, color=orange,
                 markeredgecolor=plots_style.SURFACE, markeredgewidth=2, linestyle="none")
     bottom.annotate(f"k = {k80}: {result.cumulative[k80 - 1] * 100:.1f} %",
-                    (k80, result.cumulative[k80 - 1] * 100), xytext=(8, -16),
-                    textcoords="offset points", fontsize=9, color=plots_style.TEXT_PRIMARY)
+                    (k80, result.cumulative[k80 - 1] * 100), xytext=(14, -48) if slide else (8, -16),
+                    textcoords="offset points", fontsize=plots_style.fontsize(9),
+                    color=plots_style.TEXT_PRIMARY)
+    if slide:
+        bottom.set_title("Varianza acumulada", fontsize=plots_style.fontsize(12), loc="left")
     bottom.set_ylim(0, 105)
     bottom.set_ylabel("varianza acumulada (%)")
     bottom.set_xlabel("componente principal")
     bottom.set_xticks(x)
-    bottom.set_xticklabels([str(i) for i in x], fontsize=8)
+    bottom.set_xticklabels([str(i) for i in x], fontsize=plots_style.fontsize(8))
+    if slide:  # 15 pt tick labels collide past 9: label every other component
+        top.set_xlabel("componente principal")
+        for ax in (top, bottom):
+            ax.set_xticks(x)
+            ax.set_xticklabels([str(i) if i % 2 == 1 else "" for i in x], fontsize=plots_style.fontsize(8))
     fig.tight_layout()
     plots_style.save_figure(fig, out / "scree")
 
@@ -349,7 +367,8 @@ def plot_biplot(result: PcaResult, z: np.ndarray, meta: dict, title: str, out: P
     order = [label for _, label in TOPICS]
     colors = plots_style.palette_for(order)
 
-    fig, ax = plt.subplots(figsize=(11, 8.5))
+    slide = plots_style.variant() == "slide"
+    fig, ax = plt.subplots(figsize=plots_style.figsize((11, 8.5)))
     ax.axhline(0, color=plots_style.GRID, linewidth=1, zorder=0)
     ax.axvline(0, color=plots_style.GRID, linewidth=1, zorder=0)
 
@@ -376,7 +395,7 @@ def plot_biplot(result: PcaResult, z: np.ndarray, meta: dict, title: str, out: P
     x0, x1 = ax.get_xlim()
     ax.set_xlim(x0 - 0.28 * (x1 - x0), x1 + 0.28 * (x1 - x0))
     y0, y1 = ax.get_ylim()
-    gap = 0.04 * (y1 - y0)
+    gap = (0.075 if slide else 0.04) * (y1 - y0)  # slide type is larger in a lower figure
     for side in (-1, 1):
         members = sorted((i for i in labelled if (load[i, 0] >= 0) == (side > 0)),
                          key=lambda i: load[i, 1])
@@ -391,16 +410,18 @@ def plot_biplot(result: PcaResult, z: np.ndarray, meta: dict, title: str, out: P
                 ax.plot([tip[0], tip[0] + side * 0.12], [tip[1], y], color=plots_style.TEXT_SECONDARY,
                         linewidth=0.5, zorder=4)
             ax.text(tip[0] + side * 0.12, y, result.features[i], ha="left" if side > 0 else "right",
-                    va="center", fontsize=8.5, color=plots_style.TEXT_PRIMARY, zorder=5)
+                    va="center", fontsize=plots_style.fontsize(8.5), color=plots_style.TEXT_PRIMARY, zorder=5)
 
     ax.set_xlabel(f"PC1 ({result.explained[0] * 100:.1f} %)")
     ax.set_ylabel(f"PC2 ({result.explained[1] * 100:.1f} %)")
-    ax.set_title(
-        f"{title}\nBiplot PC1-PC2. Flechas: correlación de cada variable con PC1 y PC2 "
-        f"(factor de escala s = {scale:.2f}); {BIPLOT_LABELS} con mayor norma etiquetadas",
-        fontsize=10.5, loc="left")
-    ax.legend(title="tema dominante", loc="best", frameon=True, facecolor=plots_style.SURFACE,
-              edgecolor=plots_style.GRID, fontsize=9)
+    if not slide:  # the slide has its own title
+        ax.set_title(
+            f"{title}\nBiplot PC1-PC2. Flechas: correlación de cada variable con PC1 y PC2 "
+            f"(factor de escala s = {scale:.2f}); {BIPLOT_LABELS} con mayor norma etiquetadas",
+            fontsize=10.5, loc="left")
+    legend = {"loc": "center left", "bbox_to_anchor": (1.01, 0.5)} if slide else {"loc": "best"}
+    ax.legend(title="tema dominante", frameon=True, facecolor=plots_style.SURFACE,
+              edgecolor=plots_style.GRID, fontsize=plots_style.fontsize(9), **legend)
     fig.tight_layout()
     plots_style.save_figure(fig, out / "biplot")
     return scale
@@ -470,6 +491,12 @@ def sensitivity_markdown(comp: dict) -> str:
 # ----------------------------------------------------------------------------------------------
 
 
+def _figure_variants(folder: str):
+    """The figure variants to draw for a data set (D-08): report then slide for the audited set, report only
+    for the all-31 sensitivity set. Not this module's VARIANTS, which are the data sets."""
+    return plots_style.iter_variants() if folder == "audited" else ["report"]
+
+
 def run_variant(stem: str, folder: str, title: str, out_dir: Path):
     features, z, meta = read_prepared(stem)
     result = pca_eigh(z, features)
@@ -477,9 +504,11 @@ def run_variant(stem: str, folder: str, title: str, out_dir: Path):
     out.mkdir(parents=True, exist_ok=True)
     dec = decision(result, str(meta["variant"]))
     write_tables(out, result, z, meta)
-    plot_scree(result, dec, title, out)
+    for _ in _figure_variants(folder):
+        plot_scree(result, dec, title, out)
     plot_loadings(result, dec, title, out)
-    plot_biplot(result, z, meta, title, out)
+    for _ in _figure_variants(folder):
+        plot_biplot(result, z, meta, title, out)
     (out / "decision.json").write_text(json.dumps(dec, indent=2, ensure_ascii=False) + "\n",
                                        encoding="utf-8")
     return result, z, dec, out

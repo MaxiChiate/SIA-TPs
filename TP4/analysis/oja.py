@@ -339,7 +339,8 @@ def plot_oja_vs_pc1(index, pc1, topic_labels, comparison, out_stem) -> None:
     order = [label for _, label in TOPICS]
     colors = plots_style.palette_for(order)
 
-    fig, ax = plt.subplots(figsize=(8, 7))
+    slide = plots_style.variant() == "slide"
+    fig, ax = plt.subplots(figsize=plots_style.figsize((8, 7)))
     low, high = float(min(index.min(), pc1.min())), float(max(index.max(), pc1.max()))
     pad = 0.05 * (high - low)
     ax.plot([low - pad, high + pad], [low - pad, high + pad], color=plots_style.GRID, linewidth=1.2, zorder=1,
@@ -353,14 +354,22 @@ def plot_oja_vs_pc1(index, pc1, topic_labels, comparison, out_stem) -> None:
     ax.set_aspect("equal", adjustable="box")
     ax.set_xlabel("score de PC1")
     ax.set_ylabel(f"índice de Oja (seed {FIGURE_SEED})")
-    ax.set_title(f"Índice de Oja contra la proyección sobre PC1 ({len(index)} creadores)", fontsize=11, loc="left")
+    if not slide:  # the slide has its own title
+        ax.set_title(f"Índice de Oja contra la proyección sobre PC1 ({len(index)} creadores)", fontsize=11,
+                     loc="left")
     stats = (f"|cos(w, v1)| = {_decimal(comparison['abs_cos'], 7)}\nPearson = {_decimal(comparison['pearson'], 4)}\n"
              f"Spearman = {_decimal(comparison['spearman'], 4)}")
-    ax.text(0.97, 0.05, stats, transform=ax.transAxes, ha="right", va="bottom", fontsize=9,
-            color=plots_style.TEXT_PRIMARY,
-            bbox={"facecolor": plots_style.SURFACE, "edgecolor": plots_style.GRID, "boxstyle": "round,pad=0.4"})
-    ax.legend(title="tema dominante", loc="upper left", frameon=True, facecolor=plots_style.SURFACE,
-              edgecolor=plots_style.GRID, fontsize=9)
+    box = {"facecolor": plots_style.SURFACE, "edgecolor": plots_style.GRID, "boxstyle": "round,pad=0.4"}
+    if slide:  # square plot on the left; legend and agreement statistics in the free space on its right
+        ax.text(1.04, 0.0, stats, transform=ax.transAxes, ha="left", va="bottom",
+                fontsize=plots_style.fontsize(9), color=plots_style.TEXT_PRIMARY, bbox=box)
+        ax.legend(title="tema dominante", loc="upper left", bbox_to_anchor=(1.04, 1.0), frameon=True,
+                  facecolor=plots_style.SURFACE, edgecolor=plots_style.GRID, fontsize=plots_style.fontsize(9))
+    else:
+        ax.text(0.97, 0.05, stats, transform=ax.transAxes, ha="right", va="bottom", fontsize=9,
+                color=plots_style.TEXT_PRIMARY, bbox=box)
+        ax.legend(title="tema dominante", loc="upper left", frameon=True, facecolor=plots_style.SURFACE,
+                  edgecolor=plots_style.GRID, fontsize=9)
     fig.tight_layout()
     plots_style.save_figure(fig, out_stem)
 
@@ -673,7 +682,8 @@ def main(argv: list[str] | None = None) -> int:
                   for row in ev["top10"]])
     _write_json(out / "evidence.json", {"figure_seed": FIGURE_SEED, "maximum": ev["maximum"]})
     _write_lines(out / "report_evidence.md", evidence_lines(ev))
-    plot_oja_vs_pc1(figure.index, pca_ref.pc1, dominant_topics(pca_ref.creator_ids), comp, out / "oja_vs_pc1")
+    for _ in plots_style.iter_variants():  # report, then slide (D-08)
+        plot_oja_vs_pc1(figure.index, pca_ref.pc1, dominant_topics(pca_ref.creator_ids), comp, out / "oja_vs_pc1")
     print(f"oja -> {out}")
     return 0
 
