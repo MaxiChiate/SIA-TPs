@@ -257,7 +257,7 @@ def test_there_are_at_least_8_findings_one_per_method_with_the_unfavorable_ones_
         assert method in topics
     assert len(informe.FINDINGS) >= 8
     text = " ".join(finding.text for finding in informe.FINDINGS)
-    for key in ("som.n_regions", "som.robust", "qr.hebb_exact_noise0", "qr.hamming_at_0_45", "qr.pinv_at_0_45",
+    for key in ("som.n_regions", "som.robust", "qr.hebb_exact_noise0", "qr.hamming_at_high", "qr.pinv_at_high",
                 "qr.noise_high"):
         assert "{" + key + "}" in text, key
     assert sum(finding.unfavorable for finding in informe.FINDINGS) >= 4
@@ -671,11 +671,21 @@ def test_build_stops_when_the_notes_file_is_missing(tmp_path):
     assert "gone.md" in str(stop.value)
 
 
-def test_build_stops_on_a_script_element_in_the_notes(tmp_path):
+def test_markup_in_the_notes_is_escaped_not_rendered(tmp_path):
+    # the notes quote names and handles from the data: a tag there is text, never an element of the page
     notes = tmp_path / "notes.md"
-    notes.write_text("<script>x</script>\n", encoding="utf-8")
-    with pytest.raises(SystemExit):
-        build(tmp_path, glossary_path=glossary_file(tmp_path), notes_path=notes)
+    notes.write_text("## Slide 1\n\n<script>x</script> y <b>@a&b</b>, `<i>` y > 3.\n", encoding="utf-8")
+    page = build(tmp_path, glossary_path=glossary_file(tmp_path), notes_path=notes).read_text(encoding="utf-8")
+    annex = page[page.index('id="guion"'):]
+    assert "<script" not in page.lower() and "<b>" not in annex and "<i>" not in annex
+    assert "&lt;script&gt;x&lt;/script&gt;" in annex and "&lt;b&gt;@a&amp;b&lt;/b&gt;" in annex
+
+
+def test_summary_escapes_the_finding_template_and_the_fact_values():
+    finding = informe.Finding("QR", "Texto con <b>marca</b> & {qr.n_qr} QR.", "f5-s5")
+    section = informe.summary_section([finding], {"qr.n_qr": "<i>5</i>"})
+    assert "<b>" not in section and "<i>" not in section
+    assert "&lt;b&gt;marca&lt;/b&gt; &amp; " in section and "&lt;i&gt;5&lt;/i&gt;" in section
 
 
 def test_cli_notes_flag_is_accepted(tmp_path, monkeypatch):

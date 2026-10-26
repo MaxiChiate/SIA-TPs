@@ -39,15 +39,24 @@ def write_results(root, *, robust=False):
         "n_regions": 1, "n_permutations": 1000,
     })
     write_json(root / "som/series_som_stage1/selection.json", {
-        "outcome": "chosen", "chosen_k": 5, "qe_train_argmin_k": 8, "figure_seed": 4,
+        "outcome": "chosen", "chosen_k": 5, "qe_train_argmin_k": 8, "figure_seed": 4, "decided_by": "qe_loo",
     })
     write_json(root / "som/series_som_stage2/robustness.json", {
         "robust": robust, "failing_variants": [] if robust else ["a", "b"], "te_checked": True,
     })
-    write_csv(root / "som/series_som_stage2/robustness.csv", ["label", "radius0", "eta0", "epochs", "te_mean"], [
-        ["base", 2.5, 0.5, 260, 0.046], ["a", 5.0, 0.5, 260, 0.05600000000000001],
-        ["b", 2.5, 0.25, 260, 0.06], ["c", 2.5, 0.5, 50, 0.052],
+    write_csv(root / "som/series_som_stage2/robustness.csv",
+              ["label", "radius0", "eta0", "epochs", "te_mean", "passes_empty", "passes_creators"], [
+        ["base", 2.5, 0.5, 260, 0.046, True, True], ["a", 5.0, 0.5, 260, 0.05600000000000001, True, True],
+        ["b", 2.5, 0.25, 260, 0.06, True, True], ["c", 2.5, 0.5, 50, 0.052, True, True],
     ])
+    # 5 x 5 map: the three highest walls each touch a neuron with one creator, and size and price grow towards the
+    # bottom right (the sentences check_claims guards)
+    write_csv(root / "som/figures/hits_members.csv", ["neuron", "row", "col", "hits", "creators"],
+              [[n, n // 5, n % 5, 1 if n in (9, 11, 13) else 2, ""] for n in range(25)])
+    write_csv(root / "som/profiles/high_u_edges.csv", ["edge_rank", "neuron_a", "neuron_b", "distance", "variable"],
+              [[1, 9, 14, 3.67, "price_usd"], [2, 13, 14, 2.99, "price_usd"], [3, 11, 12, 2.98, "content_entertainment_pct"]])
+    write_csv(root / "som/profiles/neuron_profiles.csv", ["group", "n", "followers", "price_usd"],
+              [[n, 2, 10000 * (1 + n // 5 + n % 5), 100 * (1 + n // 5 + n % 5)] for n in range(25)])
     write_json(root / "oja/comparison.json", {"max_abs_diff": 0.00197})
     write_json(root / "oja/dispersion.json", {
         "n_seeds": 10, "n_abs_cos_above": 10, "min_pairwise_abs_cos": 0.99999932, "mean_pairwise_abs_cos": 0.99999978,
@@ -98,8 +107,9 @@ def write_results(root, *, robust=False):
         "p4_n_stable_counts": {"0": 284, "1": 1687, "2": 2653, "3": 3073, "4": 7253},
         "p4_mean_stable_fraction": 0.75625, "p4_all_stable_fraction": 0.48515,
     })
+    write_csv(root / "hopfield/letters/capacity_by_p.csv", ["p", "n_subsets", "exhaustive"], [[1, 26, 1], [2, 200, 0]])
     write_json(root / "hopfield/letters/spurious.json", {
-        "seeds_tried": [1],
+        "levels": [0.4, 0.44, 0.48], "seeds_tried": [1],
         "counts_by_seed": {"1": {"stored": 463, "inverse": 334, "mixture": 254, "other": 149}},
     })
     write_json(root / "hopfield/qr/verdict.json", {
@@ -280,6 +290,121 @@ def test_recovery_level_without_a_row_stops(tmp_path):
     with pytest.raises(SystemExit) as stop:
         facts.load_facts(tmp_path)
     assert "hopfield-qr" in str(stop.value)
+
+
+def test_typed_numbers_of_the_letter_slides_are_facts(tmp_path):
+    values = facts.load_facts(write_results(tmp_path))
+    assert (values["letters.flips_k3"], values["letters.flips_k6"], values["letters.flips_k9"]) == ("3", "6", "9")
+    assert values["letters.set_size"] == "4" and values["letters.alphabet_size"] == "26"
+    # lround(level x 25) for the levels 0,40, 0,44 and 0,48, as the C binary flips them
+    assert values["letters.spur_flip_min"] == "10" and values["letters.spur_flip_max"] == "12"
+    assert values["letters.draft_matching_glyphs"] == "25"
+
+
+def test_noise_high_is_the_fixed_reporting_level_not_where_pinv_dies(tmp_path):
+    write_results(tmp_path)
+    # pinv still recovers something at 0,50: the high-noise facts must stay those of 0,45
+    write_csv(tmp_path / "hopfield/qr/recovery_table.csv", ["level", "hebb", "pinv", "hamming"], [
+        [0.0, 0.0, 1.0, 1.0], [0.3, 0.0, 1.0, 1.0], [0.35, 0.0, 0.99867, 1.0], [0.4, 0.0, 0.97333, 0.98533],
+        [0.45, 0.0, 0.694, 0.81533], [0.5, 0.0, 0.01, 0.16667],
+    ])
+    values = facts.load_facts(tmp_path)
+    assert values["qr.noise_high"] == "0,45"
+    assert values["qr.pinv_at_high"] == values["qr.pinv_at_0_45"] == "69,4 %"
+    assert values["qr.hamming_at_high"] == values["qr.hamming_at_0_45"] == "81,5 %"
+
+
+def test_recovery_table_that_does_not_end_at_the_last_named_level_stops(tmp_path):
+    write_results(tmp_path)
+    rows = [[0.0, 0.0, 1.0, 1.0], [0.35, 0.0, 0.99867, 1.0], [0.4, 0.0, 0.97333, 0.98533],
+            [0.45, 0.0, 0.694, 0.81533], [0.5, 0.0, 0.0, 0.16667], [0.55, 0.0, 0.0, 0.1]]
+    write_csv(tmp_path / "hopfield/qr/recovery_table.csv", ["level", "hebb", "pinv", "hamming"], rows)
+    with pytest.raises(SystemExit) as stop:
+        facts.load_facts(tmp_path)
+    assert "last" in str(stop.value)
+
+
+def _drop_followers_row(root):
+    write_csv(root / "oja/evidence_correlations.csv", ["target", "sign", "pearson", "spearman"],
+              [["followers", "-1", 0.87868, 0.92105]])
+
+
+def _drop_followers_global_rows(root):
+    write_csv(root / "campaigns/comparison.csv", ["campaign", "objective", "list", "n", "overlap_followers_global",
+                                                  "overlap_followers_tema", "cost_per_thousand", "criterion_mean"],
+              [[campaign, objective, "propia", 5, 1, 2, 12.3456, 0.8826]
+               for campaign, objective in facts.RECOMMENDED_OBJECTIVE.values()])
+
+
+def _drop_shift_1(root):
+    write_json(root / "hopfield/qr_limits/shift.json",
+               {"shifts": [{"shift": 2, "query_hamming": 699, "recovered_hamming": 1198}]})
+
+
+def _empty_majority(root):
+    write_json(root / "hopfield/qr_limits/majority.json", {"hamming_to_targets": []})
+
+
+def _pinv_never_full(root):
+    write_csv(root / "hopfield/qr/recovery_table.csv", ["level", "hebb", "pinv", "hamming"], [
+        [0.0, 0.0, 0.9, 1.0], [0.35, 0.0, 0.8, 1.0], [0.4, 0.0, 0.7, 0.98533], [0.45, 0.0, 0.6, 0.81533],
+        [0.5, 0.0, 0.0, 0.16667],
+    ])
+
+
+@pytest.mark.parametrize("damage, step", [
+    (_drop_followers_row, "oja"), (_drop_followers_global_rows, "campaigns"), (_drop_shift_1, "hopfield-qr-limits"),
+    (_empty_majority, "hopfield-qr-limits"), (_pinv_never_full, "hopfield-qr"),
+])
+def test_a_partial_result_stops_with_the_make_step_not_a_bare_error(tmp_path, damage, step):
+    write_results(tmp_path)
+    damage(tmp_path)
+    with pytest.raises(SystemExit) as stop:
+        facts.load_facts(tmp_path)
+    assert "make results" in str(stop.value) and step in str(stop.value)
+
+
+def _pinv_above_hamming(root):
+    write_csv(root / "hopfield/qr/recovery_table.csv", ["level", "hebb", "pinv", "hamming"], [
+        [0.0, 0.0, 1.0, 1.0], [0.35, 0.0, 0.99867, 1.0], [0.4, 0.0, 0.99, 0.98533], [0.45, 0.0, 0.694, 0.81533],
+        [0.5, 0.0, 0.0, 0.16667],
+    ])
+
+
+def _occupancy_fails(root):
+    write_csv(root / "som/series_som_stage2/robustness.csv",
+              ["label", "radius0", "eta0", "epochs", "te_mean", "passes_empty", "passes_creators"],
+              [["base", 2.5, 0.5, 260, 0.046, True, True], ["a", 5.0, 0.5, 260, 0.056, False, True],
+               ["b", 2.5, 0.25, 260, 0.06, True, True]])
+
+
+def _decided_by_another_measure(root):
+    write_json(root / "som/series_som_stage1/selection.json",
+               {"outcome": "chosen", "chosen_k": 5, "qe_train_argmin_k": 8, "figure_seed": 4, "decided_by": "qe"})
+
+
+def _high_walls_between_full_neurons(root):
+    write_csv(root / "som/figures/hits_members.csv", ["neuron", "row", "col", "hits", "creators"],
+              [[n, n // 5, n % 5, 2, ""] for n in range(25)])
+
+
+def _price_falls_towards_the_bottom_right(root):
+    write_csv(root / "som/profiles/neuron_profiles.csv", ["group", "n", "followers", "price_usd"],
+              [[n, 2, 10000 * (1 + n // 5 + n % 5), 100 * (9 - n // 5 - n % 5)] for n in range(25)])
+
+
+@pytest.mark.parametrize("damage, sentence", [
+    (_pinv_above_hamming, "lookup de Hamming"), (_occupancy_fails, "ocupación"),
+    (_decided_by_another_measure, "QE-LOO"), (_high_walls_between_full_neurons, "un solo creador"),
+    (_price_falls_towards_the_bottom_right, "price_usd"),
+])
+def test_check_claims_stops_when_a_result_falsifies_a_sentence(tmp_path, damage, sentence):
+    write_results(tmp_path)
+    facts.check_claims(tmp_path)  # the fixture supports every sentence
+    damage(tmp_path)
+    with pytest.raises(SystemExit) as stop:
+        facts.load_facts(tmp_path)
+    assert sentence in str(stop.value)
 
 
 # ---------- drift pins (D-12) ----------

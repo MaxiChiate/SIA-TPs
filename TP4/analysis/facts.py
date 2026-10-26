@@ -9,10 +9,11 @@ the Spanish decimal comma: `dec`, `pct` and `integer` are the only formatters (t
 that analysis/campaigns.py kept for its own report lines). `load_facts` returns flat display strings keyed
 `group.name`; `fill` replaces the `{group.name}` tokens of a template with them (or with whatever the `wrap`
 callback returns, which is how informe.py marks each number as a `data-fact` span). A missing result file or
-an unknown key stops the build with the make command to run, never a blank number. `DRIFT_PINS` ties the numbers
-that the fragments of deliverables/ carry as hand-typed text to the results (D-12): `check_fragment_numbers` fills
-each pin with the facts and looks the phrase up in its fragment, and the `check` subcommand exits 1 naming every
-pin that no longer matches. Stdlib only.
+an unknown key stops the build with the make command to run, never a blank number. `check_claims` stops it too
+when a result no longer supports one of the few sentences that state a result without a number. `DRIFT_PINS` ties
+the numbers that the fragments of deliverables/ carry as hand-typed text to the results (D-12):
+`check_fragment_numbers` fills each pin with the facts and looks the phrase up in its fragment, and the `check`
+subcommand exits 1 naming every pin that no longer matches. Stdlib only.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ import csv
 import json
 import math
 import re
+import statistics
 import sys
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
@@ -42,6 +44,9 @@ SOURCES: dict[str, tuple[str, str]] = {
     "som.selection": ("som/series_som_stage1/selection.json", "som-stage1"),
     "som.robustness": ("som/series_som_stage2/robustness.json", "som-stage2"),
     "som.robustness_table": ("som/series_som_stage2/robustness.csv", "som-stage2"),
+    "som.hits": ("som/figures/hits_members.csv", "som-figures"),
+    "som.high_u_edges": ("som/profiles/high_u_edges.csv", "som-profiles"),
+    "som.neuron_profiles": ("som/profiles/neuron_profiles.csv", "som-profiles"),
     "oja.comparison": ("oja/comparison.json", "oja"),
     "oja.dispersion": ("oja/dispersion.json", "oja"),
     "oja.evidence": ("oja/evidence.json", "oja"),
@@ -54,6 +59,7 @@ SOURCES: dict[str, tuple[str, str]] = {
     "letters.selection": ("hopfield/letters/selection.json", "hopfield-letters"),
     "letters.orthogonality": ("hopfield/letters/orthogonality.json", "hopfield-letters"),
     "letters.capacity": ("hopfield/letters/capacity.json", "hopfield-letters"),
+    "letters.capacity_by_p": ("hopfield/letters/capacity_by_p.csv", "hopfield-letters"),
     "letters.recall": ("hopfield/letters/recall.csv", "hopfield-letters"),
     "letters.spurious": ("hopfield/letters/spurious.json", "hopfield-letters"),
     "qr.verdict": ("hopfield/qr/verdict.json", "hopfield-qr"),
@@ -77,6 +83,18 @@ RECOMMENDED_OBJECTIVE: dict[str, tuple[str, str]] = {
 
 # Spanish names of the final classes of a Hopfield trial (spurious.json keys).
 CLASS_NAMES = {"stored": "almacenado", "inverse": "inverso", "mixture": "mezcla", "other": "otro"}
+
+# Flipped pixels of the letter recall rates the texts quote; each letters.flips_k<n> is read from the recall row it names.
+LETTER_RECALL_FLIPS = (3, 6, 9)
+# The disclosure of fragment 04 (D-04b): glyphs of the alphabet that match the discarded draft. It is not a result of
+# any run, so it is a constant here and a drift pin ties it to the fragment's own sentence.
+DRAFT_MATCHING_GLYPHS = 25
+
+# QR noise levels the texts name. QR_HIGH_NOISE is the level they call "ruido alto", a fixed reporting level and not
+# the last level where pinv recovers anything; QR_LAST_NOISE is what the slide notes call "el último nivel", and
+# load_facts stops if the recovery table ends anywhere else.
+QR_REPORTED_LEVELS = (0.35, 0.40, 0.45, 0.50)
+QR_HIGH_NOISE, QR_LAST_NOISE = 0.45, 0.50
 
 TOKEN = re.compile(r"\{([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)\}")
 
@@ -144,6 +162,21 @@ def _row_at(rows: list[dict[str, str]], column: str, level: float) -> dict[str, 
         if abs(float(row[column]) - level) < 1e-9:
             return row
     raise SystemExit(f"no row with {column} = {level} in the recovery table; run `make results` (step hopfield-qr)")
+
+
+def _first(items: list[dict], condition: Callable[[dict], bool], what: str, step: str) -> dict:
+    """The first item that meets `condition`; none stops the build with the make step to run, as `_row_at` does."""
+    for item in items:
+        if condition(item):
+            return item
+    raise SystemExit(f"no {what}; run `make results` (step {step})")
+
+
+def _nonempty(values: list[float], what: str, step: str) -> list[float]:
+    """`values` itself, so that max()/min() on an empty list stops with the make step instead of a ValueError."""
+    if not values:
+        raise SystemExit(f"no {what}; run `make results` (step {step})")
+    return values
 
 
 def _pca_facts(results_dir: Path) -> dict[str, str]:
@@ -222,7 +255,10 @@ def _oja_facts(results_dir: Path) -> dict[str, str]:
     evidence = read_source(results_dir, "oja.evidence")
     correlations = read_csv_source(results_dir, "oja.correlations")
     index = read_csv_source(results_dir, "oja.index")
-    followers = next(row for row in correlations if row["target"] == "followers" and row["sign"] == "+1")
+    followers = _first(
+        correlations, lambda row: row["target"] == "followers" and row["sign"] == "+1",
+        "followers/+1 row in oja/evidence_correlations.csv", "oja",
+    )
     top, top_opposite = evidence["maximum"]["+1"], evidence["maximum"]["-1"]
     return {
         "oja.n_seeds": integer(dispersion["n_seeds"]),
@@ -262,8 +298,9 @@ def _campaign_facts(results_dir: Path) -> dict[str, str]:
             )
         own = [r for r in shortlists if r["campaign"] == campaign and r["objective"] == objective and r["list"] == "propia"]
         own.sort(key=lambda r: int(r["rank"]))
-        row = next(
-            r for r in comparison if r["campaign"] == campaign and r["objective"] == objective and r["list"] == "propia"
+        row = _first(
+            comparison, lambda r: r["campaign"] == campaign and r["objective"] == objective and r["list"] == "propia",
+            f"{campaign}/{objective} own-list row in campaigns/comparison.csv", "campaigns",
         )
         values[f"camp.{key}.objective"] = objective
         values[f"camp.{key}.top5"] = ", ".join(r["name"] for r in own[:5])
@@ -271,9 +308,10 @@ def _campaign_facts(results_dir: Path) -> dict[str, str]:
         values[f"camp.{key}.cost_per_thousand_ar"] = dec(row["cost_per_thousand"], 2)
         values[f"camp.{key}.overlap_followers"] = integer(row["overlap_followers_global"])
         values[f"camp.{key}.overlap_followers_tema"] = integer(row["overlap_followers_tema"])
-        baseline = next(
-            r for r in comparison
-            if r["campaign"] == campaign and r["objective"] == objective and r["list"] == "followers_global"
+        baseline = _first(
+            comparison,
+            lambda r: r["campaign"] == campaign and r["objective"] == objective and r["list"] == "followers_global",
+            f"{campaign}/{objective} followers_global row in campaigns/comparison.csv", "campaigns",
         )
         values[f"camp.{key}.followers_global_cost_per_thousand_ar"] = dec(baseline["cost_per_thousand"], 2)
     return values
@@ -300,14 +338,15 @@ def _letters_facts(results_dir: Path) -> dict[str, str]:
     spurious = read_source(results_dir, "letters.spurious")
     recall = read_csv_source(results_dir, "letters.recall")
 
-    def recall_rate(name: str, flipped: int) -> str:
-        row = next(
-            (r for r in recall if r["set"] == name and r["update"] == "async" and int(r["flipped"]) == flipped), None
+    def recall_row(name: str, flipped: int) -> dict[str, str]:
+        return _first(
+            recall, lambda r: r["set"] == name and r["update"] == "async" and int(r["flipped"]) == flipped,
+            f"async recall row of the {name} set with {flipped} flipped pixels", "hopfield-letters",
         )
-        if row is None:
-            raise SystemExit(f"no async recall row of the {name} set with {flipped} flipped pixels; run `make results` (step hopfield-letters)")
+
+    def recall_rate(name: str, flipped: int) -> str:
         # Half-up on the decimal text, as the fragment rounds its 3-decimal rates: 0,3225 is 32,3 %, not 32,2 %.
-        percent = (Decimal(row["recall_rate"]) * 100).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+        percent = (Decimal(recall_row(name, flipped)["recall_rate"]) * 100).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
         return f"{percent} %".replace(".", ",")
 
     def max_overlap(name: str) -> float:
@@ -320,8 +359,25 @@ def _letters_facts(results_dir: Path) -> dict[str, str]:
     trials = sum(counts.values())
     spurious_total = trials - counts["stored"]
     most_common = max((name for name in counts if name != "stored"), key=lambda name: counts[name])
+    set_size = len(selection["separated"]["letters"])
+    if len(selection["correlated"]["letters"]) != set_size:
+        raise SystemExit("the separated and correlated letter sets differ in size; run `make results` (step hopfield-letters)")
+    n_pixels = int(orthogonality["n_pixels"])
+    # p = 1 is enumerated exhaustively: one subset per letter of the alphabet.
+    singles = _first(read_csv_source(results_dir, "letters.capacity_by_p"),
+                     lambda r: int(r["p"]) == 1 and r["exhaustive"] == "1", "exhaustive p = 1 row in capacity_by_p.csv",
+                     "hopfield-letters")
+    # The C binary flips lround(level x N) pixels per trial (neuron/models/hopfield.c); floor(x + 0.5) is the same
+    # for positive x.
+    spurious_flips = [math.floor(float(level) * n_pixels + 0.5)
+                      for level in _nonempty(spurious["levels"], "noise level in spurious.json", "hopfield-letters")]
     values = {
-        "letters.n_pixels": integer(orthogonality["n_pixels"]),
+        "letters.n_pixels": integer(n_pixels),
+        "letters.set_size": str(set_size),
+        "letters.alphabet_size": integer(singles["n_subsets"]),
+        "letters.draft_matching_glyphs": str(DRAFT_MATCHING_GLYPHS),
+        "letters.spur_flip_min": str(min(spurious_flips)),
+        "letters.spur_flip_max": str(max(spurious_flips)),
         "letters.separated_set": str(selection["separated"]["letters"]),
         "letters.correlated_set": str(selection["correlated"]["letters"]),
         "letters.separated_max_overlap": dec(max_overlap("separated"), 2),
@@ -329,9 +385,6 @@ def _letters_facts(results_dir: Path) -> dict[str, str]:
         "letters.separated_min_margin": integer(min(orthogonality["separated"]["min_margin"])),
         "letters.separated_n_stable": str(sum(1 for margin in orthogonality["separated"]["min_margin"] if margin >= 0)),
         "letters.correlated_n_stable": str(sum(1 for margin in orthogonality["correlated"]["min_margin"] if margin >= 0)),
-        "letters.separated_recall_k3": recall_rate("separated", 3),
-        "letters.separated_recall_k6": recall_rate("separated", 6),
-        "letters.separated_recall_k9": recall_rate("separated", 9),
         "letters.correlated_recall_k3": recall_rate("correlated", 3),
         "letters.p4_mean_stable_fraction": dec(capacity["p4_mean_stable_fraction"], 3),
         "letters.p4_all_stable_fraction": dec(capacity["p4_all_stable_fraction"], 3),
@@ -340,6 +393,9 @@ def _letters_facts(results_dir: Path) -> dict[str, str]:
         "letters.spur_total": str(spurious_total),
         "letters.spur_total_pct": pct(spurious_total / trials, 1),
     }
+    for flipped in LETTER_RECALL_FLIPS:
+        values[f"letters.separated_recall_k{flipped}"] = recall_rate("separated", flipped)
+        values[f"letters.flips_k{flipped}"] = integer(recall_row("separated", flipped)["flipped"])
     for n_stable in range(5):
         values[f"letters.p4_stable_{n_stable}"] = integer(capacity["p4_n_stable_counts"][str(n_stable)])
     for name in CLASS_NAMES:
@@ -356,9 +412,17 @@ def _qr_facts(results_dir: Path) -> dict[str, str]:
     majority = read_source(results_dir, "qr.majority")
     shift = read_source(results_dir, "qr.shift")
     table = read_csv_source(results_dir, "qr.recovery")
-    first_shift = next(item for item in shift["shifts"] if int(item["shift"]) == 1)
-    pinv_alive = [float(row["level"]) for row in table if float(row["pinv"]) > 0.0]
-    pinv_full = [float(row["level"]) for row in table if abs(float(row["pinv"]) - 1.0) < 1e-12]
+    first_shift = _first(shift["shifts"], lambda item: int(item["shift"]) == 1, "shift of 1 pixel in shift.json",
+                         "hopfield-qr-limits")
+    pinv_full = _nonempty([float(row["level"]) for row in table if abs(float(row["pinv"]) - 1.0) < 1e-12],
+                          "noise level where pinv recovers every QR", "hopfield-qr")
+    hamming_to_targets = _nonempty(majority["hamming_to_targets"], "Hamming distance in majority.json",
+                                   "hopfield-qr-limits")
+    last_level = max(_nonempty([float(row["level"]) for row in table], "row in recovery_table.csv", "hopfield-qr"))
+    if abs(last_level - QR_LAST_NOISE) > 1e-9:
+        raise SystemExit(f"the recovery table ends at noise {last_level}, but the texts call {QR_LAST_NOISE} the last "
+                         "level; update QR_LAST_NOISE and the texts that name it")
+    high = _row_at(table, "level", QR_HIGH_NOISE)
     values = {
         "qr.n_qr": str(len(overlaps["dots"])),
         "qr.n_pixels": integer(pair_facts["n_pixels"]),
@@ -369,16 +433,18 @@ def _qr_facts(results_dir: Path) -> dict[str, str]:
         "qr.hebb_exact_noise0": pct_short(verdict["hebb_exact_recovery_noise0_async"], 1),
         "qr.pinv_exact_noise0": pct_short(verdict["pinv_exact_recovery_noise0_async"], 1),
         "qr.pinv_last_full_noise": dec(max(pinv_full), 2),
-        "qr.noise_high": dec(max(pinv_alive), 2),
-        "qr.majority_hamming_min": integer(min(majority["hamming_to_targets"])),
-        "qr.majority_hamming_max": integer(max(majority["hamming_to_targets"])),
+        "qr.noise_high": dec(QR_HIGH_NOISE, 2),
+        "qr.pinv_at_high": pct_short(high["pinv"], 1),
+        "qr.hamming_at_high": pct_short(high["hamming"], 1),
+        "qr.majority_hamming_min": integer(min(hamming_to_targets)),
+        "qr.majority_hamming_max": integer(max(hamming_to_targets)),
         "qr.n_noise_levels": str(len(table)),
         "qr.trials": integer(protocol["trials"]),
         "qr.n_seeds": str(len(protocol["seeds"])),
         "qr.shift1_query_hamming": integer(first_shift["query_hamming"]),
         "qr.shift1_recovered_hamming": integer(first_shift["recovered_hamming"]),
     }
-    for level in (0.35, 0.40, 0.45, 0.50):
+    for level in QR_REPORTED_LEVELS:
         row = _row_at(table, "level", level)
         label = f"{level:.2f}".replace(".", "_")
         values[f"qr.pinv_at_{label}"] = pct_short(row["pinv"], 1)
@@ -386,8 +452,44 @@ def _qr_facts(results_dir: Path) -> dict[str, str]:
     return values
 
 
+def check_claims(results_dir: Path = RESULTS_DIR) -> None:
+    """Stop the build when a result no longer supports a sentence that the slides or the informe state as plain text.
+
+    The drift pins guard numbers; these sentences carry no number, so a regenerated result could falsify them with
+    the build still green. Each check names the sentence it guards.
+    """
+    results_dir = Path(results_dir)
+    failed: list[str] = []
+    table = read_csv_source(results_dir, "qr.recovery")
+    if any(float(row["pinv"]) > float(row["hamming"]) for row in table):
+        failed.append("QR: «un lookup de Hamming iguala o supera a la pseudo-inversa» (pinv > Hamming at some level)")
+    robustness = read_csv_source(results_dir, "som.robustness_table")
+    if not all(row["passes_empty"] == "True" and row["passes_creators"] == "True" for row in robustness):
+        failed.append("SOM: «la ocupación de las neuronas no se degrada» (a stage-2 variant fails an occupancy filter)")
+    selection = read_source(results_dir, "som.selection")
+    if selection.get("decided_by") != "qe_loo":
+        failed.append("SOM: «entre las grillas que pasan gana el menor QE-LOO» (selection.json decided_by is not qe_loo)")
+    hits = {int(row["neuron"]): int(row["hits"]) for row in read_csv_source(results_dir, "som.hits")}
+    edges = {
+        int(row["edge_rank"]): (int(row["neuron_a"]), int(row["neuron_b"]))
+        for row in read_csv_source(results_dir, "som.high_u_edges")
+    }
+    if any(rank not in edges or min(hits[n] for n in edges[rank]) != 1 for rank in (1, 2, 3)):
+        failed.append("SOM: «en las tres paredes más altas hay una neurona con un solo creador»")
+    k = int(selection["chosen_k"])
+    profiles = read_csv_source(results_dir, "som.neuron_profiles")
+    diagonal = [int(row["group"]) // k + int(row["group"]) % k for row in profiles]
+    for column in ("price_usd", "followers"):
+        if statistics.correlation(diagonal, [float(row[column]) for row in profiles]) <= 0:
+            failed.append(f"SOM: «chicos y baratos arriba a la izquierda, grandes y caros abajo a la derecha» "
+                          f"({column} does not grow with row + col)")
+    if failed:
+        raise SystemExit("a sentence of the slides or the informe no longer holds:\n- " + "\n- ".join(failed))
+
+
 def load_facts(results_dir: Path = RESULTS_DIR) -> dict[str, str]:
-    """Flat display strings of every fact the generated text may quote."""
+    """Flat display strings of every fact the generated text may quote; check_claims runs first."""
+    check_claims(Path(results_dir))
     values: dict[str, str] = {}
     for part in (
         _pca_facts, _som_facts, _oja_facts, _campaign_facts, _maintenance_facts, _letters_facts, _qr_facts,
@@ -471,6 +573,7 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (4, "almacenado {letters.spur_stored} ({letters.spur_stored_pct}), inverso {letters.spur_inverse} ({letters.spur_inverse_pct}), mezcla {letters.spur_mixture} ({letters.spur_mixture_pct}) y otro {letters.spur_other} ({letters.spur_other_pct})"),
     (4, "seguida por el {letters.spurious_class}, la mezcla y el otro"),
     (4, "({letters.spur_total} de {letters.spur_trials}, {letters.spur_total_pct})"),
+    (4, "{letters.draft_matching_glyphs} de sus {letters.alphabet_size} glifos coinciden con los del borrador"),
     # 5: Hopfield, QR
     (5, "el máximo |solapamiento| entre pares es {qr.max_abs_overlap}"),
     (5, "y la media es {qr.mean_abs_overlap}; todos"),

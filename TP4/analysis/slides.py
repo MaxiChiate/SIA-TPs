@@ -152,12 +152,14 @@ OUTLINE: tuple[Slide, ...] = (
         "Los temas de fútbol y maquillaje aparecen recién en PC3 y PC4, fuera de este plano.",
     ),
     Slide(
-        "som-rule", 1, "La grilla sale de la regla fijada, k = {som.chosen_k}, y no del menor QE (k = {som.qe_train_argmin_k})",
+        "som-rule", 1,
+        "La regla fijada elige k = {som.chosen_k}; el menor QE de entrenamiento daría k = {som.qe_train_argmin_k}",
         "Regla fijada de antemano", ("Q1.3",), (), None, _key("som/figures/stage1_curves.svg"),
-        "La regla filtra por error topográfico, neuronas vacías y creadores por neurona ocupada, y no por QE, que baja "
-        "siempre al agrandar la grilla. "
-        "El menor QE de entrenamiento elegiría k = {som.qe_train_argmin_k}, con muchas neuronas vacías, y la regla "
-        "eligió k = {som.chosen_k}. "
+        "La regla descarta las grillas que no pasan los filtros de error topográfico, neuronas vacías y creadores por "
+        "neurona ocupada, y entre las que pasan gana el menor QE-LOO: el error de cuantización medido sobre cada creador "
+        "con un mapa entrenado sin él (leave-one-out). "
+        "El QE de entrenamiento no decide porque baja siempre al agrandar la grilla: elegiría k = "
+        "{som.qe_train_argmin_k}, con muchas neuronas vacías, y la regla eligió k = {som.chosen_k}. "
         "Todas las curvas son media entre seeds y no una corrida.",
     ),
     Slide(
@@ -337,24 +339,27 @@ OUTLINE: tuple[Slide, ...] = (
         "Regla fijada de antemano", ("Q2.6", "Q2.7"),
         ("Con N = {letters.n_pixels} píxeles ningún par de letras es exactamente ortogonal",),
         None, _key("hopfield/figures/letters.svg"),
-        "El alfabeto son las 26 mayúsculas dibujadas a mano en 5×5, y la regla elige, solo con los bitmaps, el set más "
+        "El alfabeto son las {letters.alphabet_size} mayúsculas dibujadas a mano en 5×5, y la regla elige, solo con los "
+        "bitmaps, el set más "
         "separado ({letters.separated_set}) y el más correlacionado ({letters.correlated_set}) entre todos los "
         "subconjuntos de cuatro letras. "
         "Con N = {letters.n_pixels} el producto escalar es siempre impar, así que ningún par es exactamente ortogonal: el "
         "máximo solapamiento es {letters.separated_max_overlap} en el primero y {letters.correlated_max_overlap} en el segundo. "
-        "Una divulgación: 25 de los 26 glifos coinciden con un borrador que se usó en un prototipo, y el desempate del set "
+        "Una divulgación: {letters.draft_matching_glyphs} de los {letters.alphabet_size} glifos coinciden con un "
+        "borrador que se usó en un prototipo, y el desempate del set "
         "correlacionado no es independiente de él.",
     ),
     Slide(
         "letras-ruido", 2, "El set separado resiste el ruido; el correlacionado nunca pasa de {letters.correlated_recall_k3}",
         "Regla fijada de antemano", ("Q2.7",),
-        ("Recuperación exacta con 3, 6 y 9 píxeles invertidos en el set separado: {letters.separated_recall_k3}, "
-         "{letters.separated_recall_k6} y {letters.separated_recall_k9}",),
+        ("Recuperación exacta con {letters.flips_k3}, {letters.flips_k6} y {letters.flips_k9} píxeles invertidos en el "
+         "set separado: {letters.separated_recall_k3}, {letters.separated_recall_k6} y {letters.separated_recall_k9}",),
         None, _key("hopfield/figures/recall_noise.svg"),
         "Recuperar es llegar exactamente a la letra de la consulta: en el set separado la tasa es "
-        "{letters.separated_recall_k3} con 3 píxeles invertidos, {letters.separated_recall_k6} con 6 y "
-        "{letters.separated_recall_k9} con 9. "
-        "En el correlacionado solo {letters.correlated_n_stable} de las 4 letras es punto fijo y las otras caen sobre ella, "
+        "{letters.separated_recall_k3} con {letters.flips_k3} píxeles invertidos, {letters.separated_recall_k6} con "
+        "{letters.flips_k6} y {letters.separated_recall_k9} con {letters.flips_k9}. "
+        "En el correlacionado solo {letters.correlated_n_stable} de las {letters.set_size} letras es punto fijo y las "
+        "otras caen sobre ella, "
         "de ahí el techo de {letters.correlated_recall_k3}. "
         "La capacidad con p = 4 depende de cuánto se solapen las letras: {letters.p4_all_stable_fraction} de los "
         "subconjuntos posibles de cuatro letras las tienen todas estables, y la fracción estable media es "
@@ -366,7 +371,8 @@ OUTLINE: tuple[Slide, ...] = (
         ("{letters.spur_trials} ensayos: inverso {letters.spur_inverse_pct}, mezcla {letters.spur_mixture_pct}, "
          "otro {letters.spur_other_pct}",),
         None, _key("hopfield/figures/spurious.svg"),
-        "Con ruido alto sobre el set separado (10 a 12 píxeles invertidos de 25), {letters.spur_total} de "
+        "Con ruido alto sobre el set separado ({letters.spur_flip_min} a {letters.spur_flip_max} píxeles invertidos de "
+        "{letters.n_pixels}), {letters.spur_total} de "
         "{letters.spur_trials} ensayos ({letters.spur_total_pct}) terminan en un estado que no es una letra almacenada. "
         "Las clases son inverso ({letters.spur_inverse_pct}), mezcla ({letters.spur_mixture_pct}) y otro "
         "({letters.spur_other_pct}), y la más frecuente es la del {letters.spurious_class}. "
@@ -401,12 +407,12 @@ OUTLINE: tuple[Slide, ...] = (
     Slide(
         "qr-lookup", 2, "Un lookup de Hamming iguala o supera a la pseudo-inversa con ruido alto",
         "Regla fijada de antemano", ("Q2.3",),
-        ("Con ruido alto (nivel {qr.noise_high}): Hamming {qr.hamming_at_0_45}, pseudo-inversa {qr.pinv_at_0_45}",),
+        ("Con ruido alto (nivel {qr.noise_high}): Hamming {qr.hamming_at_high}, pseudo-inversa {qr.pinv_at_high}",),
         None, _key("hopfield/qr/figures/recovery.svg"),
         "La pseudo-inversa sí guarda los {qr.n_qr} QR: recupera {qr.pinv_exact_noise0} sin ruido y se mantiene así hasta "
         "el nivel {qr.pinv_last_full_noise}. "
-        "Pero la línea base de Hamming, un 1-NN sin dinámica, queda por encima de ella con ruido alto: {qr.hamming_at_0_45} "
-        "contra {qr.pinv_at_0_45} en el nivel {qr.noise_high} y {qr.hamming_at_0_50} contra {qr.pinv_at_0_50} en el último nivel. "
+        "Pero la línea base de Hamming, un 1-NN sin dinámica, queda por encima de ella con ruido alto: {qr.hamming_at_high} "
+        "contra {qr.pinv_at_high} en el nivel {qr.noise_high} y {qr.hamming_at_0_50} contra {qr.pinv_at_0_50} en el último nivel. "
         "Con cinco patrones conocidos de antemano, la ventaja de Hopfield frente a una tabla de búsqueda no está en la tasa de acierto.",
     ),
     Slide(

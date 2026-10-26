@@ -376,8 +376,8 @@ FINDINGS: tuple[Finding, ...] = (
     Finding(
         "QR, pseudo-inversa",
         "La pseudo-inversa sostiene {qr.pinv_exact_noise0} de recuperación exacta hasta el nivel de ruido "
-        "{qr.pinv_last_full_noise}, pero en el nivel {qr.noise_high} cae a {qr.pinv_at_0_45}. Una tabla de búsqueda por "
-        "distancia de Hamming, sin dinámica, queda en {qr.hamming_at_0_45} en ese mismo nivel: iguala o supera a la red "
+        "{qr.pinv_last_full_noise}, pero en el nivel {qr.noise_high} cae a {qr.pinv_at_high}. Una tabla de búsqueda por "
+        "distancia de Hamming, sin dinámica, queda en {qr.hamming_at_high} en ese mismo nivel: iguala o supera a la red "
         "en todo el rango evaluado.",
         "f5-s5",
         True,
@@ -427,7 +427,8 @@ def _inline_markup(text: str) -> str:
 def summary_section(findings: Iterable[Finding], fact_values: dict[str, str]) -> str:
     items = []
     for finding in findings:
-        body = facts.fill(finding.text, fact_values, wrap=fact_span)
+        # escape the template first, as method_section does; fact_span escapes the values
+        body = facts.fill(html.escape(finding.text, quote=False), fact_values, wrap=fact_span)
         mark = "Resultado desfavorable" if finding.unfavorable else finding.topic
         topic = f"{finding.topic}. " if finding.unfavorable else ""
         link = f'<a href="#{html.escape(finding.anchor, quote=True)}">{html.escape(anchor_label(finding.anchor))}</a>'
@@ -598,11 +599,16 @@ def glossary_section(glossary: dict[str, GlossaryEntry], used: set[str]) -> str:
 
 
 def notes_section(notes_path: Path) -> str:
-    """The presenter script (D-06 fallback) as an annex: the Markdown file rendered without ids, headings demoted."""
+    """The presenter script (D-06 fallback) as an annex: the Markdown file rendered without ids, headings demoted.
+
+    The notes quote creator names and handles from the data, so `&` and `<` are escaped before Markdown runs: Markdown
+    passes raw HTML through, and an entity it keeps as text. `>` is left alone, since it marks a Markdown quote.
+    """
     path = Path(notes_path)
     if not path.is_file():
         raise SystemExit(f"{path} not found; --notes needs the presenter script as a Markdown file")
-    body = markdown.markdown(path.read_text(encoding="utf-8"), extensions=["tables", "fenced_code"])
+    source = path.read_text(encoding="utf-8").replace("&", "&amp;").replace("<", "&lt;")
+    body = markdown.markdown(source, extensions=["tables", "fenced_code"])
     body = re.sub(r"<!--.*?-->", "", body, flags=re.S)
     body = re.sub(r"<table>.*?</table>", lambda m: f'<div class="table-wrap">{m.group(0)}</div>', body, flags=re.S)
     body = re.sub(r"<(/?)h([1-6])>", lambda m: f"<{m.group(1)}h{min(int(m.group(2)) + 2, 6)}>", body)
