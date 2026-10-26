@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Fundación, auditoría de datos y PCA** - Pipeline C/Python reproducible, `creadores.csv` auditado y estandarizado, PCA con decisión escrita (completed 2026-10-20)
 - [x] **Phase 2: Kohonen SOM** - Mapa de los 50 creadores con grilla elegida por regla multicriterio fijada de antemano y perfiles por región (completed 2026-10-21)
-- [ ] **Phase 3: Oja y decisiones de campaña** - Índice de Oja contra PC1, recomendaciones por campaña, comparación contra solo `followers` y mantenimiento
+- [x] **Phase 3: Oja y decisiones de campaña** - Índice de Oja contra PC1, recomendaciones por campaña, comparación contra solo `followers` y mantenimiento (completed 2026-10-26)
 - [x] **Phase 4: Hopfield núcleo y letras** - Núcleo validado con 4 letras 5×5: energía, ortogonalidad, capacidad y un estado espurio identificado (completed 2026-10-23)
 - [x] **Phase 5: Hopfield con QR** - Cinco QR de 37×37 con Hebb (falla reportada), pseudo-inversa, línea base de Hamming y limitaciones (completed 2026-10-25)
 - [x] **Phase 6: Slides e informe** - Slides e informe en Artifact con mapa pregunta→respuesta, y documentación para reproducir todo (completed 2026-10-26)
@@ -101,7 +101,7 @@ Plans:
   4. Para cada campaña (fútbol, perros, maquillaje, arte) hay una recomendación justificada con Kohonen, Oja y PCA, comparada contra elegir solo por `followers` con el mismo k (overlap@k, proporción por tema, costo por alcance argentino) y sin afirmaciones de ROI.
   5. Hay respuestas concretas de mantenimiento para una campaña nueva, creadores o variables nuevas y la actualización mensual, apoyadas en el scaler guardado y en las decisiones de re-entrenamiento.
 
-**Plans:** 6/6 plans executed
+**Plans:** 6/6 plans complete
 
 Plans:
 **Wave 1**
@@ -232,7 +232,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Las Fases 4 y 
 |-------|----------------|--------|-----------|
 | 1. Fundación, auditoría de datos y PCA | 8/8 | Complete    | 2026-10-20 |
 | 2. Kohonen SOM | 6/6 | Complete    | 2026-10-21 |
-| 3. Oja y decisiones de campaña | 6/6 | In Progress | - |
+| 3. Oja y decisiones de campaña | 6/6 | Complete    | 2026-10-26 |
 | 4. Hopfield núcleo y letras | 7/7 | Complete    | 2026-10-23 |
 | 5. Hopfield con QR | 6/6 | Complete    | 2026-10-25 |
 | 6. Slides e informe | 12/12 | Complete    | 2026-10-26 |
