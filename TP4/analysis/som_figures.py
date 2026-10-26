@@ -18,7 +18,6 @@ import csv
 import json
 import math
 import sys
-import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -89,6 +88,7 @@ def _hatch(ax, mask: np.ndarray) -> None:
 
 
 def _grid_axes(ax, k: int, fontsize: int = 8) -> None:
+    fontsize = plots_style.fontsize(fontsize)
     ax.set_xticks(range(k))
     ax.set_yticks(range(k))
     ax.set_xticklabels([str(i) for i in range(k)], fontsize=fontsize)
@@ -101,8 +101,8 @@ def _grid_axes(ax, k: int, fontsize: int = 8) -> None:
 
 
 def _caption(fig, text: str, width: int = 125, y: float = 0.01) -> None:
-    fig.text(0.01, y, textwrap.fill(text, width), ha="left", va="bottom", fontsize=8,
-             color=plots_style.TEXT_SECONDARY)
+    """Kept for campaigns.py; the caption itself lives in plots_style (nothing is drawn in the slide variant)."""
+    plots_style.caption(fig, text, width=width, y=y)
 
 
 def _fmt(value: float) -> str:
@@ -116,7 +116,7 @@ def plot_map(hits, U, k: int, title: str, caption: str, out_stem) -> None:
     hits = np.asarray(hits).reshape(k, k)
     U = np.asarray(U, dtype=np.float64)
     empty = hits == 0
-    fig, (left, right) = plt.subplots(1, 2, figsize=(11.5, 6.4))
+    fig, (left, right) = plt.subplots(1, 2, figsize=plots_style.figsize((11.5, 6.4)))
 
     shown = np.ma.masked_where(empty, hits)
     cmap = plt.get_cmap("Blues").with_extremes(bad=plots_style.SURFACE)
@@ -125,11 +125,11 @@ def plot_map(hits, U, k: int, title: str, caption: str, out_stem) -> None:
         for col in range(k):
             if hits[row, col] > 0:
                 dark = hits[row, col] > 0.6 * max(int(hits.max()), 1)
-                left.text(col, row, str(int(hits[row, col])), ha="center", va="center", fontsize=11,
-                          color="white" if dark else plots_style.TEXT_PRIMARY)
+                left.text(col, row, str(int(hits[row, col])), ha="center", va="center",
+                          fontsize=plots_style.fontsize(11), color="white" if dark else plots_style.TEXT_PRIMARY)
     _hatch(left, empty)
     _grid_axes(left, k)
-    left.set_title("Creadores por neurona (celdas rayadas: vacías)", fontsize=10, loc="left")
+    left.set_title("Creadores por neurona (celdas rayadas: vacías)", fontsize=plots_style.fontsize(10), loc="left")
     bar = fig.colorbar(image, ax=left, fraction=0.046, pad=0.03)
     bar.set_label("creadores")
 
@@ -137,17 +137,17 @@ def plot_map(hits, U, k: int, title: str, caption: str, out_stem) -> None:
     for row in range(k):
         for col in range(k):
             frac = (U[row, col] - U.min()) / (U.max() - U.min()) if U.max() > U.min() else 0.5
-            right.text(col, row, _fmt(U[row, col]), ha="center", va="center", fontsize=8,
-                       color="white" if frac < 0.55 else plots_style.TEXT_PRIMARY)
+            right.text(col, row, _fmt(U[row, col]), ha="center", va="center",
+                       fontsize=plots_style.fontsize(8), color="white" if frac < 0.55 else plots_style.TEXT_PRIMARY)
     _hatch(right, empty)
     _grid_axes(right, k)
-    right.set_title("Matriz U (celdas rayadas: neuronas vacías)", fontsize=10, loc="left")
+    right.set_title("Matriz U (celdas rayadas: neuronas vacías)", fontsize=plots_style.fontsize(10), loc="left")
     bar = fig.colorbar(image, ax=right, fraction=0.046, pad=0.03)
     bar.set_label("distancia media a los 4 vecinos (z)")
 
-    fig.suptitle(title, fontsize=12, x=0.01, ha="left")
-    fig.tight_layout(rect=(0, 0.13, 1, 0.96))
-    _caption(fig, caption)
+    plots_style.suptitle(fig, title, fontsize=12, x=0.01, ha="left")
+    fig.tight_layout(rect=plots_style.rect((0, 0.13, 1, 0.96)))
+    plots_style.caption(fig, caption)
     plots_style.save_figure(fig, out_stem)
 
 
@@ -163,7 +163,7 @@ def plot_planes(planes: list[Plane], k: int, hits, title: str, caption: str, out
     n = len(planes)
     nrows = math.ceil(n / ncols)
     cell = 2.5 if ncols >= 5 else 3.1
-    fig = plt.figure(figsize=(cell * ncols * 0.85 + 1.8, cell * nrows * 0.85 + 1.7))
+    fig = plt.figure(figsize=plots_style.figsize((cell * ncols * 0.85 + 1.8, cell * nrows * 0.85 + 1.7)))
     grid = GridSpec(nrows, ncols + 1, figure=fig, width_ratios=[1.0] * ncols + [0.07], wspace=0.5 if ncols < 5 else 0.85, hspace=0.45)
 
     z_values = [p.values for p in planes if p.kind == "z"]
@@ -180,25 +180,28 @@ def plot_planes(planes: list[Plane], k: int, hits, title: str, caption: str, out
             image = ax.imshow(values, cmap=cmap, aspect="equal")
             inset = ax.inset_axes([1.05, 0.0, 0.06, 1.0])
             bar = fig.colorbar(image, cax=inset)
-            bar.ax.tick_params(labelsize=6)
+            bar.ax.tick_params(labelsize=plots_style.fontsize(6))
             bar.formatter = FuncFormatter(lambda v, _pos: f"{v:,.0f}" if abs(v) >= 1000 else f"{v:g}")
             bar.update_ticks()
         _hatch(ax, empty | np.isnan(plane.values))
         _grid_axes(ax, k, fontsize=7)
         if plane.kind == "z":
-            ax.set_title(plane.name, fontsize=8, loc="left")
+            ax.set_title(plane.name, fontsize=plots_style.fontsize(8), loc="left")
         else:
             unit = f", {plane.unit}" if plane.unit else ""
-            ax.set_title(f"{plane.name}\n(media cruda{unit})", fontsize=8, loc="left")
+            ax.set_title(f"{plane.name}\n(media cruda{unit})", fontsize=plots_style.fontsize(8), loc="left")
     if z_image is not None:
         cax = fig.add_subplot(grid[:, ncols])
         bar = fig.colorbar(z_image, cax=cax)
-        bar.set_label("valor del prototipo (z)", fontsize=8)
-        bar.ax.tick_params(labelsize=7)
-    fig.suptitle(title, fontsize=12, x=0.01, ha="left", y=0.995)
+        bar.set_label("valor del prototipo (z)", fontsize=plots_style.fontsize(8))
+        bar.ax.tick_params(labelsize=plots_style.fontsize(7))
+    plots_style.suptitle(fig, title, fontsize=12, x=0.01, ha="left", y=0.995)
     height = cell * nrows * 0.85 + 1.7
-    fig.subplots_adjust(left=0.04, right=0.92, top=1 - 0.55 / height, bottom=1.1 / height)
-    _caption(fig, caption, width=int(22 * ncols + 30))
+    if plots_style.variant() == "slide":
+        fig.subplots_adjust(left=0.04, right=0.92, top=0.9, bottom=0.08)
+    else:
+        fig.subplots_adjust(left=0.04, right=0.92, top=1 - 0.55 / height, bottom=1.1 / height)
+    plots_style.caption(fig, caption, width=int(22 * ncols + 30))
     plots_style.save_figure(fig, out_stem)
 
 
@@ -221,7 +224,7 @@ def plot_stage1_curves(rows: list[dict], selection: dict, out_stem) -> None:
     limits = {"te": thresholds["te_max"], "empty_fraction": thresholds["empty_max"] * 100.0,
               "creators_per_occupied": thresholds["creators_min"]}
     chosen = selection.get("chosen_k")
-    fig, axes = plt.subplots(2, 3, figsize=(13.0, 7.6))
+    fig, axes = plt.subplots(2, 3, figsize=plots_style.figsize((13.0, 7.6)))
     for ax, (measure, label, scale) in zip(axes.flat, CURVE_PANELS):
         for neighborhood, name in (("step", "escalón"), ("gaussian", "gaussiana")):
             subset = sorted((r for r in rows if r["neighborhood"] == neighborhood), key=lambda r: int(r["grid_k"]))
@@ -236,31 +239,39 @@ def plot_stage1_curves(rows: list[dict], selection: dict, out_stem) -> None:
             ax.axhline(limits[measure], color=plots_style.TEXT_SECONDARY, linestyle="--", linewidth=1)
             ax.annotate(f"umbral {_fmt(limits[measure]).rstrip('0').rstrip(',')}", (0.99, limits[measure]),
                         xycoords=("axes fraction", "data"), xytext=(0, 3), textcoords="offset points",
-                        ha="right", va="bottom", fontsize=8, color=plots_style.TEXT_SECONDARY)
+                        ha="right", va="bottom", fontsize=plots_style.fontsize(8),
+                        color=plots_style.TEXT_SECONDARY)
         if chosen is not None:
             ax.axvline(chosen, color=plots_style.TEXT_PRIMARY, linewidth=1, alpha=0.5)
             if measure == "qe_loo":
                 ax.annotate(f"k elegida = {chosen}", (chosen, 1.0), xycoords=("data", "axes fraction"),
-                            xytext=(4, -12), textcoords="offset points", fontsize=8,
+                            xytext=(4, -12), textcoords="offset points", fontsize=plots_style.fontsize(8),
                             color=plots_style.TEXT_PRIMARY)
         if measure == "qe":
             argmin = selection.get("qe_train_argmin_k")
             if argmin is not None:
                 value = next(float(r["qe_mean"]) for r in rows
                              if r["neighborhood"] == "step" and int(r["grid_k"]) == int(argmin))
-                ax.annotate(f"menor QE: k = {argmin}", (argmin, value), xytext=(-70, 40),
-                            textcoords="offset points", ha="right", fontsize=8,
+                # the slide type is larger: the note sits in the empty top right of the panel (the legend
+                # moves to another panel), instead of an offset that lands on the curves
+                slide = plots_style.variant() == "slide"
+                ax.annotate(f"menor QE: k = {argmin}", (argmin, value),
+                            xytext=(0.74, 0.86) if slide else (-70, 40),
+                            textcoords="axes fraction" if slide else "offset points",
+                            ha="center" if slide else "right", fontsize=plots_style.fontsize(8),
                             color=plots_style.TEXT_PRIMARY,
                             arrowprops={"arrowstyle": "-", "color": plots_style.TEXT_SECONDARY})
-        ax.set_title(label, fontsize=10, loc="left")
+        ax.set_title(label, fontsize=plots_style.fontsize(10), loc="left")
         ax.set_xlabel("k (lado de la grilla)")
         ks_all = sorted({int(r["grid_k"]) for r in rows})
         ax.set_xticks(ks_all)
         ax.grid(True, axis="y")
-    axes.flat[0].legend(frameon=False, fontsize=9, loc="upper right")
-    fig.suptitle("Etapa 1: medidas contra k (media ± desvío entre las 10 seeds; línea vertical: k elegida; "
-                 "los umbrales de la regla valen para el escalón)", fontsize=11, x=0.01, ha="left")
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    slide = plots_style.variant() == "slide"
+    # slide: the legend moves to the empty top right of the "Creadores por neurona ocupada" panel
+    axes.flat[4 if slide else 0].legend(frameon=False, fontsize=plots_style.fontsize(9), loc="upper right")
+    plots_style.suptitle(fig, "Etapa 1: medidas contra k (media ± desvío entre las 10 seeds; línea vertical: k elegida; "
+                         "los umbrales de la regla valen para el escalón)", fontsize=11, x=0.01, ha="left")
+    fig.tight_layout(rect=plots_style.rect((0, 0, 1, 0.95)))
     plots_style.save_figure(fig, out_stem)
 
 
@@ -354,10 +365,11 @@ def main(argv: list[str] | None = None) -> int:
 
     # hit map + U-matrix
     U = som.umatrix(run.prototypes, k)
-    plot_map(run.hits, U, k, f"SOM {k} x {k} ({label})",
-             f"{ident}. La orientación del mapa es arbitraria (rotarlo o reflejarlo no cambia nada de lo "
-             "medido). Celdas rayadas: neuronas sin creadores; la escala de la matriz U cubre todo el rango de "
-             "sus valores.", out / "map")
+    for _ in plots_style.iter_variants():  # report, then slide (D-08)
+        plot_map(run.hits, U, k, f"SOM {k} x {k} ({label})",
+                 f"{ident}. La orientación del mapa es arbitraria (rotarlo o reflejarlo no cambia nada de lo "
+                 "medido). Celdas rayadas: neuronas sin creadores; la escala de la matriz U cubre todo el rango de "
+                 "sus valores.", out / "map")
 
     # component planes
     prototypes = run.prototypes.reshape(k, k, -1)
@@ -391,7 +403,8 @@ def main(argv: list[str] | None = None) -> int:
     sd = _stability_sd(stage1)
     for row in rows:
         row["stability_sd"] = str(sd.get(row["label"], 0.0))
-    plot_stage1_curves(rows, selection, out / "stage1_curves")
+    for _ in plots_style.iter_variants():
+        plot_stage1_curves(rows, selection, out / "stage1_curves")
     plot_trace(run.trace, f"Traza del entrenamiento de la corrida dibujada: k = {k}, seed {seed}", out / "trace")
 
     # who is in each neuron

@@ -265,7 +265,13 @@ def plot_regions(result: RegionResult, hits, k: int, cut_pairs, title: str, capt
     colored = len(interpretable) <= len(plots_style._SERIES)
     palette = plots_style.palette_for([names[r] for r in interpretable]) if colored else {}
     neutral = "#cfcdc6"
-    fig, ax = plt.subplots(figsize=(7.4, 7.6))
+    slide = plots_style.variant() == "slide"
+    if slide:  # the square map and its legend side by side, so the map fills the 16:9 area unstretched
+        fig, (ax, legend_ax) = plt.subplots(1, 2, figsize=plots_style.figsize((7.4, 7.6)),
+                                            gridspec_kw={"width_ratios": [1.0, 1.15]})
+        legend_ax.axis("off")
+    else:
+        fig, ax = plt.subplots(figsize=plots_style.figsize((7.4, 7.6)))
     for neuron in range(k * k):
         row, col = divmod(neuron, k)
         region = int(result.labels[neuron])
@@ -283,9 +289,10 @@ def plot_regions(result: RegionResult, hits, k: int, cut_pairs, title: str, capt
             ax.add_patch(Rectangle((col - 0.5, row - 0.5), 1, 1, fill=False, hatch="////", linewidth=0,
                                    edgecolor=som_figures.HATCH_COLOR))
         else:
-            ax.text(col, row - 0.12, names[region], ha="center", va="center", fontsize=9, color=edge_text)
-            ax.text(col, row + 0.18, f"{int(hits[neuron])}", ha="center", va="center", fontsize=12,
-                    fontweight="bold", color=edge_text)
+            ax.text(col, row - 0.12, names[region], ha="center", va="center", fontsize=plots_style.fontsize(9),
+                    color=edge_text)
+            ax.text(col, row + 0.18, f"{int(hits[neuron])}", ha="center", va="center",
+                    fontsize=plots_style.fontsize(12), fontweight="bold", color=edge_text)
     for (a, b), is_cut in zip(som.adjacent_pairs(k), result.cut):
         if not is_cut:
             continue
@@ -297,6 +304,8 @@ def plot_regions(result: RegionResult, hits, k: int, cut_pairs, title: str, capt
             ax.plot([ca - 0.5, ca + 0.5], [ra + 0.5, ra + 0.5], color=plots_style.TEXT_PRIMARY, linewidth=4,
                     solid_capstyle="butt")
     som_figures._grid_axes(ax, k)
+    if slide:
+        ax.set_aspect("equal")  # square cells whatever the 16:9 size
     handles = []
     if colored:
         for region in interpretable:
@@ -308,10 +317,15 @@ def plot_regions(result: RegionResult, hits, k: int, cut_pairs, title: str, capt
     handles.append(Patch(facecolor=plots_style.SURFACE, hatch="////", edgecolor=som_figures.HATCH_COLOR,
                          label="neurona vacía"))
     handles.append(plt.Line2D([0], [0], color=plots_style.TEXT_PRIMARY, linewidth=4, label="arista cortada"))
-    ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.04), ncol=2, frameon=False, fontsize=8)
-    fig.suptitle(title, fontsize=12, x=0.01, ha="left")
-    fig.tight_layout(rect=(0, 0.14, 1, 0.96))
-    som_figures._caption(fig, caption, width=100)
+    if slide:
+        legend_ax.legend(handles=handles, loc="center left", ncol=1, frameon=False,
+                         fontsize=plots_style.fontsize(10))
+    else:
+        ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.04), ncol=2, frameon=False,
+                  fontsize=8)
+    plots_style.suptitle(fig, title, fontsize=12, x=0.01, ha="left")
+    fig.tight_layout(rect=plots_style.rect((0, 0.14, 1, 0.96)))
+    plots_style.caption(fig, caption, width=100)
     plots_style.save_figure(fig, out_stem)
 
 
@@ -441,17 +455,19 @@ def main(argv: list[str] | None = None) -> int:
     cut_pairs = [pair for pair, is_cut in zip(som.adjacent_pairs(k), result.cut) if is_cut]
     label = selection["chosen_label"]
     ident = f"k = {k} ({label}), seed {seed} (medoide de estabilidad entre las 10 seeds)"
-    plot_regions(result, run.hits, k, cut_pairs, f"Regiones de SOM {k} x {k} ({label})",
-                 f"{ident}. Regla: se cortan las aristas de 4 vecinos cuya distancia entre prototipos supera "
-                 f"{_decimal(result.threshold)} (percentil {REGION_PERCENTILE:g} de las {len(result.cut)} aristas); "
-                 "cada región es una componente conexa de neuronas ocupadas. Cada celda muestra su región y su "
-                 "número de creadores. La orientación del mapa es arbitraria.", out / "regions")
+    for _ in plots_style.iter_variants():  # report, then slide (D-08)
+        plot_regions(result, run.hits, k, cut_pairs, f"Regiones de SOM {k} x {k} ({label})",
+                     f"{ident}. Regla: se cortan las aristas de 4 vecinos cuya distancia entre prototipos supera "
+                     f"{_decimal(result.threshold)} (percentil {REGION_PERCENTILE:g} de las {len(result.cut)} aristas); "
+                     "cada región es una componente conexa de neuronas ocupadas. Cada celda muestra su región y su "
+                     "número de creadores. La orientación del mapa es arbitraria.", out / "regions")
     planes = [som_figures.Plane("PC1", som_figures.neuron_raw_means(bmu, k, pc[:, 0]), "raw", "score"),
               som_figures.Plane("PC2", som_figures.neuron_raw_means(bmu, k, pc[:, 1]), "raw", "score")]
-    som_figures.plot_planes(planes, k, run.hits, f"PC1 y PC2 sobre el mapa SOM {k} x {k}",
-                            f"{ident}. Cada celda es la media de los scores de PC1 o de PC2 (orientación de la Fase 1) "
-                            "de los creadores de la neurona; en blanco rayado, neuronas vacías. La orientación del "
-                            "mapa es arbitraria.", out / "pc_planes", ncols=2)
+    for _ in plots_style.iter_variants():
+        som_figures.plot_planes(planes, k, run.hits, f"PC1 y PC2 sobre el mapa SOM {k} x {k}",
+                                f"{ident}. Cada celda es la media de los scores de PC1 o de PC2 (orientación de la Fase 1) "
+                                "de los creadores de la neurona; en blanco rayado, neuronas vacías. La orientación del "
+                                "mapa es arbitraria.", out / "pc_planes", ncols=2)
     print(f"profiles -> {out}")
     return 0
 

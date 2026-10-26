@@ -125,3 +125,16 @@ def test_report_figure_bytes_survive_a_slide_pass(tmp_path):
     after = draw(tmp_path / "after")
     assert before == after
 
+
+def test_plot_map_writes_both_variants(tmp_path):
+    import som_figures
+
+    k = 2
+    hits = np.array([3, 0, 1, 2])
+    U = np.array([[1.0, 2.0], [3.0, 4.0]])
+    for _ in plots_style.iter_variants():
+        som_figures.plot_map(hits, U, k, "t", "caption", tmp_path / "map")
+    assert (tmp_path / "map.svg").is_file()
+    assert (tmp_path / "slide" / "map.svg").is_file()
+    assert (tmp_path / "map.svg").read_bytes() != (tmp_path / "slide" / "map.svg").read_bytes()
+    assert plots_style.variant() == "report"
