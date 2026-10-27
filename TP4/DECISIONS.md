@@ -719,6 +719,14 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 **Por qué:** decisión de entrega registrada en la planificación de la fase (2026-10-25).
 
 **Dónde:** [06-CONTEXT.md](.planning/phases/06-slides-e-informe/06-CONTEXT.md)
+
+### F6 D-16 — Revisión del deck contra el enunciado: tres slides nuevas y cuatro reescritas
+
+**Qué:** el deck pasa de 24 a 27 slides (`MAX_SLIDES` 28). Se agregan `eda` (EDA y selección de variables, Q1.1), `som-zonas` (perfiles por zona del mapa: tema dominante, mediana de followers y de precio por neurona, Q1.5) y `letras-capacidad` (fracción estable contra p con la referencia del curso p ≤ 0,15·N, Q2.7). Se reescriben `camp-futbol` y `ej1-conclusiones` (la PCA como fundamento de la decisión: PC1 opone tamaño a profundidad, los temas están en PC3 y PC4 y el top 5 por followers casi no tiene creadores del tema) y se corrigen `som-not-robust` (las variantes que fallan sobre el total, con la base y las que pasan) y `qr-energia` (Hebb cae al estado común; la pseudo-inversa, al QR). Las figuras nuevas son variantes de slide: `eda/correlation`, `som/profiles/zones` (nueva, también en el informe) y `hopfield/figures/capacity_by_p`.
+
+**Por qué:** una revisión del deck contra el enunciado y contra el feedback de los TP anteriores (2026-10-27) encontró que el EDA, la capacidad y los perfiles por región, que el enunciado pide, no tenían slide, que la decisión de fútbol no se apoyaba en los resultados previos como pide la consigna y que dos slides decían algo falso ("5 de 5 variantes" sobre 10; la pseudo-inversa sí converge al QR). Ninguna regla fijada de antemano cambia: las zonas describen dónde cae cada perfil y no son regiones de la regla, y 0,15·N se cita como orden de magnitud, no como umbral.
+
+**Dónde:** `analysis/slides.py` · `analysis/facts.py` · `analysis/som_profiles.py`
 ## Pitfalls citados en los fragmentos
 
 Los títulos completos y el análisis de cada trampa están en `.planning/research/PITFALLS.md`. Acá figuran solo los que citan los fragmentos.

@@ -37,6 +37,9 @@ RESULTS_DIR = TP_DIR / "analysis" / "results"
 
 # source name -> (path relative to the results directory, make step that writes it)
 SOURCES: dict[str, tuple[str, str]] = {
+    "eda.summary": ("eda/summary_stats.csv", "eda"),
+    "eda.strong": ("eda/strong_correlations.csv", "eda"),
+    "eda.dependencies": ("eda/exact_dependencies.csv", "eda"),
     "pca.decision": ("pca/audited/decision.json", "pca"),
     "pca.sensitivity": ("pca/sensitivity.json", "pca"),
     "pca.eigenvalues": ("pca/audited/eigenvalues.csv", "pca"),
@@ -47,6 +50,7 @@ SOURCES: dict[str, tuple[str, str]] = {
     "som.hits": ("som/figures/hits_members.csv", "som-figures"),
     "som.high_u_edges": ("som/profiles/high_u_edges.csv", "som-profiles"),
     "som.neuron_profiles": ("som/profiles/neuron_profiles.csv", "som-profiles"),
+    "som.zones": ("som/profiles/zones.csv", "som-profiles"),
     "oja.comparison": ("oja/comparison.json", "oja"),
     "oja.dispersion": ("oja/dispersion.json", "oja"),
     "oja.evidence": ("oja/evidence.json", "oja"),
@@ -95,6 +99,12 @@ DRAFT_MATCHING_GLYPHS = 25
 # load_facts stops if the recovery table ends anywhere else.
 QR_REPORTED_LEVELS = (0.35, 0.40, 0.45, 0.50)
 QR_HIGH_NOISE, QR_LAST_NOISE = 0.45, 0.50
+
+# The size block of the EDA slide: the four size variables whose pairwise correlations the slide quotes.
+SIZE_BLOCK = ("followers", "average_reach", "average_impressions", "average_video_views")
+# The capacity reference of the course slides (3 - Modelo de Hopfield, "Limitaciones": p <= 0,15 N), quoted as an
+# order of magnitude and never as a threshold (fragment 04, section 6).
+COURSE_CAPACITY_RATIO = 0.15
 
 TOKEN = re.compile(r"\{([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)\}")
 
@@ -179,6 +189,27 @@ def _nonempty(values: list[float], what: str, step: str) -> list[float]:
     return values
 
 
+def _eda_facts(results_dir: Path) -> dict[str, str]:
+    summary = read_csv_source(results_dir, "eda.summary")
+    strong = read_csv_source(results_dir, "eda.strong")
+    dependencies = read_csv_source(results_dir, "eda.dependencies")
+    block = [abs(float(row["r"])) for row in strong
+             if row["variable_a"] in SIZE_BLOCK and row["variable_b"] in SIZE_BLOCK]
+    pairs = len(SIZE_BLOCK) * (len(SIZE_BLOCK) - 1) // 2
+    if len(block) != pairs:
+        raise SystemExit(f"strong_correlations.csv has {len(block)} of the {pairs} size-block pairs; "
+                         "run `make results` (step eda)")
+    skewest = max(summary, key=lambda row: abs(float(row["skewness"])))
+    return {
+        "eda.n_columns": str(len(summary)),
+        "eda.n_dropped": str(sum(1 for row in dependencies if row["exact"] == "True")),
+        "eda.size_r_min": dec(min(block), 2),
+        "eda.size_r_max": dec(max(block), 3),
+        "eda.max_skew": dec(abs(float(skewest["skewness"])), 2),
+        "eda.max_skew_variable": skewest["variable"],
+    }
+
+
 def _pca_facts(results_dir: Path) -> dict[str, str]:
     decision = read_source(results_dir, "pca.decision")
     sensitivity = read_source(results_dir, "pca.sensitivity")
@@ -246,6 +277,28 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
             raise SystemExit(f"stage-2 variant {label!r} is not in robustness.csv; run `make results` (step som-stage2)")
         values[f"som.fail_{position}.variant"] = _variant_label(table[label], table["base"])
         values[f"som.fail_{position}.te"] = dec(table[label]["te_mean"], 3)
+    base = table["base"]
+    variants = [label for label in table if label != "base"]
+    passing = [label for label in variants if label not in robustness["failing_variants"]]
+    values.update({
+        "som.n_stage2_variants": str(len(variants)),
+        "som.base_radius0": _number(base["radius0"]),
+        "som.base_eta0": _number(base["eta0"]),
+        "som.base_epochs": integer(base["epochs"]),
+        "som.base_te": dec(base["te_mean"], 3),
+        "som.passing_variants": "; ".join(_variant_label(table[label], base) for label in passing),
+    })
+    # Zones of the zones figure: the occupied neurons with at least 2 creators that have the smallest and the largest
+    # median followers (the two ends of the size axis the slide reads).
+    zones = [row for row in read_csv_source(results_dir, "som.zones") if int(row["n"]) >= 2]
+    zones = _nonempty(zones, "neuron with 2 or more creators in zones.csv", "som-profiles")
+    for name, row in (("small", min(zones, key=lambda r: float(r["median_followers"]))),
+                      ("large", max(zones, key=lambda r: float(r["median_followers"])))):
+        values[f"som.zone_{name}.cell"] = f"({row['row']},{row['col']})"
+        values[f"som.zone_{name}.n"] = integer(row["n"])
+        values[f"som.zone_{name}.topic"] = row["topic"]
+        values[f"som.zone_{name}.followers"] = integer(row["median_followers"])
+        values[f"som.zone_{name}.price"] = integer(row["median_price"])
     return values
 
 
@@ -314,6 +367,16 @@ def _campaign_facts(results_dir: Path) -> dict[str, str]:
             f"{campaign}/{objective} followers_global row in campaigns/comparison.csv", "campaigns",
         )
         values[f"camp.{key}.followers_global_cost_per_thousand_ar"] = dec(baseline["cost_per_thousand"], 2)
+        values[f"camp.{key}.followers_global_topic_share"] = pct(baseline["topic_dominant_share"], 0)
+        values[f"camp.{key}.cost_total"] = integer(row["cost_total"])
+        values[f"camp.{key}.pc1_mean"] = dec(statistics.mean(float(r["pc1"]) for r in own), 2)
+    global_rows = [r for r in shortlists if r["list"] == "followers_global"]
+    seen: dict[str, float] = {}
+    for r in global_rows:
+        seen[r["creator_id"]] = float(r["pc1"])
+    values["camp.followers_global_pc1_mean"] = dec(statistics.mean(seen.values()), 2)
+    futbol_costs = [float(r["cost_total"]) for r in comparison if r["campaign"] == "fútbol" and r["list"] == "propia"]
+    values["camp.futbol.other_cost_total_min"] = integer(sorted(futbol_costs)[1] if len(futbol_costs) > 1 else futbol_costs[0])
     return values
 
 
@@ -393,6 +456,14 @@ def _letters_facts(results_dir: Path) -> dict[str, str]:
         "letters.spur_total": str(spurious_total),
         "letters.spur_total_pct": pct(spurious_total / trials, 1),
     }
+    by_p = {int(r["p"]): r for r in read_csv_source(results_dir, "letters.capacity_by_p")}
+    for p in (3, 4, 6):
+        values[f"letters.stable_p{p}"] = dec(by_p[p]["mean_stable_fraction"], 3)
+    last_p = max(by_p)
+    values["letters.capacity_last_p"] = str(last_p)
+    values["letters.stable_last_p"] = dec(by_p[last_p]["mean_stable_fraction"], 3)
+    values["letters.course_capacity_ratio"] = dec(COURSE_CAPACITY_RATIO, 2)
+    values["letters.course_capacity"] = dec(COURSE_CAPACITY_RATIO * n_pixels, 2)
     for flipped in LETTER_RECALL_FLIPS:
         values[f"letters.separated_recall_k{flipped}"] = recall_rate("separated", flipped)
         values[f"letters.flips_k{flipped}"] = integer(recall_row("separated", flipped)["flipped"])
@@ -443,6 +514,10 @@ def _qr_facts(results_dir: Path) -> dict[str, str]:
         "qr.n_seeds": str(len(protocol["seeds"])),
         "qr.shift1_query_hamming": integer(first_shift["query_hamming"]),
         "qr.shift1_recovered_hamming": integer(first_shift["recovered_hamming"]),
+        # 0,15 N of the course for the QR network, and the energy of a stored QR under the projection rule:
+        # W xi = xi, so E = -1/2 xi.xi = -N/2.
+        "qr.course_capacity": integer(math.floor(COURSE_CAPACITY_RATIO * float(pair_facts["n_pixels"]))),
+        "qr.pinv_stored_energy": dec(-float(pair_facts["n_pixels"]) / 2, 1).replace("-", "−"),
     }
     for level in QR_REPORTED_LEVELS:
         row = _row_at(table, "level", level)
@@ -492,7 +567,7 @@ def load_facts(results_dir: Path = RESULTS_DIR) -> dict[str, str]:
     check_claims(Path(results_dir))
     values: dict[str, str] = {}
     for part in (
-        _pca_facts, _som_facts, _oja_facts, _campaign_facts, _maintenance_facts, _letters_facts, _qr_facts,
+        _eda_facts, _pca_facts, _som_facts, _oja_facts, _campaign_facts, _maintenance_facts, _letters_facts, _qr_facts,
     ):
         values.update(part(Path(results_dir)))
     return values

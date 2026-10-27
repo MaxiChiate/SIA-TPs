@@ -49,7 +49,7 @@ import deliverables_manifest  # noqa: E402
 import facts  # noqa: E402
 
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "slides"
-MAX_SLIDES = 25  # D-01: about 20 to 25 slides
+MAX_SLIDES = 28  # D-01 said 20 to 25; three slides added after the review of the enunciado (EDA, zones, capacity)
 HOME_PATH = re.compile(r"/Users/|/home/|[A-Za-z]:\\Users\\")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}")
 SLIDE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -133,6 +133,24 @@ OUTLINE: tuple[Slide, ...] = (
         "Por eso los resultados poco favorables se muestran tal cual salieron, cada uno con su slide.",
     ),
     Slide(
+        "eda", 1, "EDA: un bloque de tamaño muy correlacionado y {eda.n_dropped} columnas redundantes que salen",
+        None, ("Q1.1",),
+        (
+            "Tamaño (followers, alcance, impresiones y vistas): r entre {eda.size_r_min} y {eda.size_r_max}",
+            "Salen {eda.n_dropped} de {eda.n_columns} columnas por ser combinación exacta de otras; quedan {pca.n_features}, con z-score",
+        ),
+        None, _key("eda/correlation.svg"),
+        "Las {eda.n_columns} variables tienen escalas muy distintas y varias son asimétricas, con un máximo de "
+        "{eda.max_skew} en {eda.max_skew_variable}: muchos creadores chicos y pocos grandes. "
+        "Las variables de tamaño se mueven juntas (r entre {eda.size_r_min} y {eda.size_r_max}), el precio va con ellas "
+        "y los epígrafes largos van en contra, que es lo que después ordena PC1. "
+        "Salen {eda.n_dropped} columnas que son combinación exacta de otras (precio en pesos, publicaciones orgánicas, "
+        "engagement total y el tema y el tipo de contenido que completan su grupo), porque vuelven singular la matriz "
+        "de correlación y repiten información. "
+        "Quedan {pca.n_features} variables estandarizadas con z-score y sin logaritmo: con una asimetría de ese orden y "
+        "{oja.n_creators} creadores preferimos no deformar la escala.",
+    ),
+    Slide(
         "pca-scree", 1, "{pca.k_80} componentes retienen {pca.cum_k80} de la varianza, pero no reducimos la dimensión",
         None, ("Q1.1", "Q1.2"),
         ("Los dos criterios coinciden: Kaiser también da {pca.kaiser} componentes",), None, _key("pca/audited/scree.svg"),
@@ -164,13 +182,18 @@ OUTLINE: tuple[Slide, ...] = (
     ),
     Slide(
         "som-not-robust", 1,
-        "La etapa 2 no es robusta: {som.n_failing_variants} variantes del schedule rompen el filtro de TE",
+        "La etapa 2 no es robusta: {som.n_failing_variants} de {som.n_stage2_variants} variantes del schedule rompen "
+        "el filtro de TE",
         "Regla fijada de antemano", ("Q1.3",),
-        ("k = {som.chosen_k} se mantiene; lo que cambia es cuánto cumple el TE al mover el schedule",),
+        (
+            "Base: R0 = {som.base_radius0}, η0 = {som.base_eta0}, {som.base_epochs} épocas, TE {som.base_te}; "
+            "pasan {som.passing_variants}",
+            "k = {som.chosen_k} se mantiene; lo que cambia es cuánto cumple el TE al mover el schedule",
+        ),
         (("Variante del schedule", "TE medio"), _FAIL_ROWS), None,
         "Sobre k = {som.chosen_k} se movió una cosa a la vez: el radio inicial, la tasa η0 y las épocas. "
-        "En {som.n_failing_variants} variantes el error topográfico medio queda apenas sobre el máximo de la regla, "
-        "mientras que la ocupación de las neuronas pasa en todas. "
+        "En {som.n_failing_variants} de las {som.n_stage2_variants} variantes el error topográfico medio queda apenas "
+        "sobre el máximo de la regla, en las otras pasa, y la ocupación de las neuronas pasa en todas. "
         "La conclusión es que el TE de esta grilla depende del schedule y no que la ocupación se degrade, y por eso el "
         "veredicto de robustez es «no robusta».",
     ),
@@ -195,6 +218,23 @@ OUTLINE: tuple[Slide, ...] = (
         "{oja.n_creators} creadores. "
         "Cambiar el percentil para obtener más regiones sería elegir la regla mirando el mapa, y por eso se informa como salió. "
         "La lectura útil es la de un continuo: creadores chicos y baratos arriba a la izquierda y grandes y caros abajo a la derecha.",
+    ),
+    Slide(
+        "som-zonas", 1, "Dentro de la única región, el mapa ordena por tamaño y agrupa los temas en zonas",
+        None, ("Q1.5",),
+        ("Perros chicos arriba a la izquierda, arte abajo a la izquierda, maquillaje a la derecha y fútbol en una "
+         "zona de creadores chicos y otra de grandes",),
+        None, _key("som/profiles/zones.svg"),
+        "Cada neurona ocupada toma el color del tema dominante más frecuente entre sus creadores y muestra la mediana "
+        "de followers y de precio por post. "
+        "El tamaño crece en diagonal: en {som.zone_small.cell} hay {som.zone_small.n} creadores de "
+        "{som.zone_small.topic} con una mediana de {som.zone_small.followers} followers y USD {som.zone_small.price}, y "
+        "en {som.zone_large.cell} hay {som.zone_large.n} de {som.zone_large.topic} con {som.zone_large.followers} "
+        "followers y USD {som.zone_large.price}. "
+        "Dentro de ese eje los temas forman zonas: perros arriba a la izquierda, arte abajo a la izquierda, maquillaje "
+        "en la columna derecha y fútbol repartido entre creadores chicos y grandes. "
+        "Los temas son entradas del mapa, así que describen dónde cae cada perfil y no validan grupos, y por eso la "
+        "regla de regiones sigue dando una sola.",
     ),
     Slide(
         "som-pc", 1, "El mapa coincide con PC1 (R² {som.r2_pc1}, p = {som.p_r2_pc1}) pero no con PC2 (R² {som.r2_pc2})",
@@ -239,17 +279,29 @@ OUTLINE: tuple[Slide, ...] = (
         "Una campaña debe filtrar primero por su tema y ordenar por su propio objetivo.",
     ),
     Slide(
-        "camp-futbol", 1, "Para fútbol recomendamos profundidad: es el que más se aleja de elegir por followers",
+        "camp-futbol", 1, "Fútbol: profundidad; elegir por followers se queda en el extremo de alcance de PC1",
         "Regla fijada de antemano", ("Q1.12",),
-        ("Recomendación: profundidad educativa, con descubrimiento como segunda opción",),
+        (
+            "Alcance: alcance argentino · Descubrimiento: alcance de no seguidores · Profundidad: tutoriales, "
+            "guardados y tiempo de visualización",
+            "Recomendación: profundidad, con descubrimiento como segunda opción (USD {camp.futbol.cost_total} en "
+            "total, USD {camp.futbol.cost_per_thousand_ar} por mil argentinos)",
+        ),
         None, _key("campaigns/shortlists_biplot.svg"),
-        "La recomendación es un juicio y no un resultado de la regla, que no elige el objetivo: para una marca de ropa de "
-        "entrenamiento se empieza por profundidad educativa, descubrimiento queda segunda y alcance masivo es la menos conveniente. "
-        "La lista de profundidad ({camp.futbol.top5}) comparte {camp.futbol.overlap_followers} de {camp.k} con los más "
-        "seguidos y {camp.futbol.overlap_followers_tema} de {camp.k} con los más seguidos del tema. "
-        "Su límite es el volumen: USD {camp.futbol.cost_per_thousand_ar} por mil argentinos, el costo más alto de las tres "
-        "listas de fútbol. "
-        "Si la marca fuera nueva el objetivo pasa a ser descubrimiento, y con presupuesto grande y prioridad en el volumen, alcance masivo.",
+        "Los tres objetivos son reglas sobre variables del dataset: alcance masivo ordena por alcance argentino "
+        "estimado, descubrimiento por la parte del alcance que viene de no seguidores, y profundidad por la media en z "
+        "de contenido tutorial, guardados por mil y tiempo de visualización. "
+        "La PCA da el fundamento: PC1 opone tamaño, video corto y tendencias a tutoriales, guardados y epígrafes "
+        "largos, y los más seguidos caen en el extremo de tamaño (PC1 media {camp.followers_global_pc1_mean}) mientras "
+        "la lista de profundidad cae en el opuesto ({camp.futbol.pc1_mean}), que es justo lo que la agencia no estaba "
+        "alcanzando. "
+        "Para una marca de ropa de entrenamiento, que se vende mostrándola en uso, recomendamos profundidad, con "
+        "descubrimiento como segunda opción si la marca necesita darse a conocer; es un juicio con ese supuesto y no un "
+        "resultado de la regla. "
+        "La lista ({camp.futbol.top5}) comparte {camp.futbol.overlap_followers} de {camp.k} con los más seguidos, "
+        "cuesta USD {camp.futbol.cost_total} en total contra USD {camp.futbol.other_cost_total_min} o más de las otras "
+        "dos, y su límite es el volumen: USD {camp.futbol.cost_per_thousand_ar} por mil argentinos, el costo por mil "
+        "más alto de las tres.",
     ),
     Slide(
         "camp-table", 1, "Perros, maquillaje y arte se ordenan con su propio criterio, no con followers",
@@ -319,19 +371,29 @@ OUTLINE: tuple[Slide, ...] = (
         "veredicto es: {maint.retrain}; es una demostración del mecanismo y no una prueba sobre creadores reales.",
     ),
     Slide(
-        "ej1-conclusiones", 1, "Cada método describe y la regla de la campaña decide quién entra",
+        "ej1-conclusiones", 1, "La PCA explica por qué falla elegir por followers; cada campaña decide con su regla",
         None, (),
         (
-            "PCA: {pca.n_features} variables y un eje de tamaño y precio, como diagnóstico sin reducir",
-            "SOM y Oja: describen dónde cae cada lista y ninguno eligió a nadie",
-            "Campañas: filtro por tema y criterio propio, fijados antes de ver las listas",
+            "PCA: PC1 opone tamaño a profundidad y los temas recién aparecen en PC3 y PC4",
+            "Por eso el top {camp.k} por followers tiene {camp.futbol.followers_global_topic_share}, "
+            "{camp.perros.followers_global_topic_share}, {camp.maquillaje.followers_global_topic_share} y "
+            "{camp.arte.followers_global_topic_share} del tema de fútbol, perros, maquillaje y arte",
+            "SOM y Oja confirman ese eje (R² {som.r2_pc1}; Spearman {oja.corr_followers_spearman} con followers): "
+            "la regla filtra por tema y ordena por objetivo",
         ),
         None, None,
-        "La PCA mostró un eje dominante de tamaño y precio (PC1 explica {pca.var_pc1}), pero los modelos corren sobre las "
-        "{pca.n_features} variables. "
-        "El SOM da un mapa continuo de perfiles, con una sola región según la regla fijada, y Oja aprende PC1 sin agregar "
-        "información, por eso elegir por su índice no daría ninguna de las listas de campaña. "
-        "La decisión de cada campaña sale de su regla de selección, y las lecturas con SOM, Oja y PCA describen dónde cae cada lista.",
+        "La PCA explica el problema de la agencia: PC1 ({pca.var_pc1}) opone tamaño, video corto y tendencias a "
+        "profundidad, y los temas no aparecen hasta PC3 y PC4, así que ordenar por followers es moverse sobre PC1 sin "
+        "mirar el tema. "
+        "Se ve en la lista de los {camp.k} más seguidos: solo {camp.futbol.followers_global_topic_share}, "
+        "{camp.perros.followers_global_topic_share}, {camp.maquillaje.followers_global_topic_share} y "
+        "{camp.arte.followers_global_topic_share} de sus creadores tienen como tema dominante el de fútbol, perros, "
+        "maquillaje y arte. "
+        "El SOM reproduce ese eje (R² {som.r2_pc1} con PC1) y agrupa los temas en zonas que sirven para ubicar "
+        "creadores nuevos y buscar sustitutos, y el índice de Oja es casi el inverso de followers (Spearman "
+        "{oja.corr_followers_spearman}), así que elegir su máximo tampoco resuelve. "
+        "Por eso cada campaña primero filtra por su tema y después ordena por su propio objetivo, con reglas fijadas "
+        "antes de ver las listas.",
     ),
     Slide(
         "letras", 2, "El set {letters.separated_set} casi no se solapa (máximo {letters.separated_max_overlap}); el set "
@@ -364,6 +426,31 @@ OUTLINE: tuple[Slide, ...] = (
         "La capacidad con p = 4 depende de cuánto se solapen las letras: {letters.p4_all_stable_fraction} de los "
         "subconjuntos posibles de cuatro letras las tienen todas estables, y la fracción estable media es "
         "{letters.p4_mean_stable_fraction}.",
+    ),
+    Slide(
+        "letras-capacidad", 2,
+        "Capacidad: el curso da {letters.course_capacity} patrones para N = {letters.n_pixels} y la estabilidad cae sin "
+        "un corte",
+        "Regla fijada de antemano", ("Q2.7",),
+        (
+            "Fracción de letras estables: {letters.stable_p3} con p = 3, {letters.stable_p4} con p = 4 y "
+            "{letters.stable_p6} con p = 6",
+            "Con p = 4 manda el solapamiento: {letters.p4_all_stable_fraction} de los subconjuntos tienen las cuatro "
+            "letras estables",
+        ),
+        None, _key("hopfield/figures/capacity_by_p.svg"),
+        "La referencia del curso es p ≤ {letters.course_capacity_ratio}·N, que con N = {letters.n_pixels} da "
+        "{letters.course_capacity}: con cuatro letras ya estamos en ese orden, aunque es una estimación para patrones "
+        "al azar con N grande y no para letras dibujadas. "
+        "Medida sobre subconjuntos al azar, la fracción de letras estables cae de forma gradual, de {letters.stable_p3} "
+        "con p = 3 a {letters.stable_p4} con p = 4 y {letters.stable_p6} con p = 6, y con p = "
+        "{letters.capacity_last_p} todavía vale {letters.stable_last_p}, así que no hay un quiebre en "
+        "{letters.course_capacity}. "
+        "Lo que decide es el solapamiento: con p = 4 solo {letters.p4_all_stable_fraction} de los subconjuntos tienen "
+        "las cuatro letras estables, porque el término de cruce de las letras parecidas le gana al de la propia letra. "
+        "En los QR la misma referencia da {qr.course_capacity} patrones para {qr.n_pixels} píxeles, muy por encima de "
+        "{qr.n_qr}: ahí Hebb no falla por capacidad sino por ese término de cruce, que solo se anula con patrones "
+        "ortogonales.",
     ),
     Slide(
         "espurio", 2, "Con mucho ruido la red cae en estados espurios: {letters.spur_total_pct} de los ensayos",
@@ -416,17 +503,20 @@ OUTLINE: tuple[Slide, ...] = (
         "Con cinco patrones conocidos de antemano, la ventaja de Hopfield frente a una tabla de búsqueda no está en la tasa de acierto.",
     ),
     Slide(
-        "qr-energia", 2, "La energía baja en cada paso y la red converge, pero al estado común y no al QR",
+        "qr-energia", 2, "Con Hebb la red converge al estado común; con la pseudo-inversa, al QR consultado",
         None, ("Q2.4", "Q2.5"),
         ("Ensayos fijos por QR y nivel de ruido: la energía asíncrona nunca sube",),
         None, _key("hopfield/qr/figures/energy_trace.svg"),
-        "La figura traza la energía asíncrona, paso a paso, de un ensayo fijo por QR y nivel de ruido, y en todos los "
-        "ensayos trazados la energía nunca sube. "
-        "Cada corrida converge, pero al estado común y no al QR consultado, y la energía final por sí sola no distingue un "
-        "estado recuperado de uno que no lo es. "
-        "El número de barridos crece poco con el ruido, y una limitación es la sensibilidad a corrimientos: con un solo "
-        "píxel de corrimiento la consulta ya está a {qr.shift1_query_hamming} de {qr.n_pixels} píxeles de la fuente y la "
-        "pseudo-inversa la deja a {qr.shift1_recovered_hamming}.",
+        "La figura traza la energía asíncrona, paso a paso, de un ensayo fijo por QR y nivel de ruido, arriba con Hebb "
+        "y abajo con la pseudo-inversa, y en ningún ensayo trazado la energía sube. "
+        "Con Hebb cada corrida converge al estado común y no al QR consultado; con la pseudo-inversa converge al QR "
+        "consultado hasta el nivel {qr.pinv_last_full_noise}, y cada QR guardado queda en la energía mínima, −N/2 = "
+        "{qr.pinv_stored_energy}. "
+        "Las escalas no se comparan: Hebb suma los productos de los patrones sin dividir por N y su energía es del "
+        "orden de millones. "
+        "El número de barridos crece poco con el ruido, y con un solo píxel de corrimiento la consulta ya está a "
+        "{qr.shift1_query_hamming} de {qr.n_pixels} píxeles de la fuente y la pseudo-inversa la deja a "
+        "{qr.shift1_recovered_hamming}.",
     ),
     Slide(
         "ej2-conclusiones", 2, "Hopfield para QR: la correlación rompe Hebb y un lookup resuelve el mismo problema",
@@ -446,7 +536,7 @@ OUTLINE: tuple[Slide, ...] = (
     ),
 )
 
-# Slide figures that are on no slide: the D-01 budget of 24 slides leaves no room for them, their slide variants
+# Slide figures that are on no slide: the slide budget (MAX_SLIDES) leaves no room for them, their slide variants
 # exist so that a later outline edit can swap one in without touching figure code, and each stays in the informe.
 UNPLACED_SLIDE_FIGURES: dict[str, str] = {
     _key("campaigns/shortlists_som.svg"):
@@ -496,7 +586,14 @@ def build_deck(values: dict[str, str], results_dir: Path = facts.RESULTS_DIR) ->
         fill = lambda text: facts.fill(text, values)  # noqa: E731
         table = None
         if slide.table is not None:
-            table = {"header": [fill(cell) for cell in slide.table[0]], "rows": [[fill(cell) for cell in row] for row in slide.table[1]]}
+            # A row of a stage-2 variant that did not fail is dropped: the number of failing variants comes from the
+            # results (som.fail_1 ... som.fail_N), and the outline reserves one row per possible failure.
+            rows = [
+                row for row in slide.table[1]
+                if not any(key.startswith("som.fail_") and key not in values
+                           for cell in row for key in facts.TOKEN.findall(cell))
+            ]
+            table = {"header": [fill(cell) for cell in slide.table[0]], "rows": [[fill(cell) for cell in row] for row in rows]}
         figure_path = png = None
         if slide.figure is not None:
             item = deliverables_manifest.figure(slide.figure)

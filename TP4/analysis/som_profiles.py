@@ -329,6 +329,88 @@ def plot_regions(result: RegionResult, hits, k: int, cut_pairs, title: str, capt
     plots_style.save_figure(fig, out_stem)
 
 
+TIE_LABEL = "empate de temas"
+
+
+def neuron_zones(bmu, k: int, topic_labels, followers, price) -> list[dict]:
+    """Per neuron: creators, the dominant topic of its creators (the most frequent dominant topic; a tie between
+    topics is TIE_LABEL) and the median followers and price of its creators. An empty neuron has n = 0."""
+    zones = []
+    for neuron in range(k * k):
+        members = [i for i in range(len(bmu)) if int(bmu[i]) == neuron]
+        entry = {"neuron": neuron, "row": neuron // k, "col": neuron % k, "n": len(members), "topic": "",
+                 "median_followers": float("nan"), "median_price": float("nan")}
+        if members:
+            counts: dict[str, int] = {}
+            for i in members:
+                counts[topic_labels[i]] = counts.get(topic_labels[i], 0) + 1
+            best = max(counts.values())
+            leaders = [label for label, count in counts.items() if count == best]
+            entry["topic"] = leaders[0] if len(leaders) == 1 else TIE_LABEL
+            entry["median_followers"] = float(np.median([followers[i] for i in members]))
+            entry["median_price"] = float(np.median([price[i] for i in members]))
+        zones.append(entry)
+    return zones
+
+
+def _thousands(value: float) -> str:
+    return f"{value / 1000:.0f} mil" if value >= 1000 else f"{value:.0f}"
+
+
+def plot_zones(zones: list[dict], k: int, title: str, caption: str, out_stem) -> None:
+    """The chosen map with every occupied neuron coloured by the dominant topic of its creators (the same topic
+    colours as the biplot) and labelled with its creators and their median followers and price; empty neurons
+    hatched. It describes where each profile sits; topics are inputs of the map and validate nothing."""
+    from matplotlib.patches import Patch, Rectangle
+
+    plt = plots_style.apply_style()
+    order = [label for _, label in pca.TOPICS]
+    colors = plots_style.palette_for(order)
+    slide = plots_style.variant() == "slide"
+    if slide:
+        fig, (ax, legend_ax) = plt.subplots(1, 2, figsize=plots_style.figsize((7.4, 7.6)),
+                                            gridspec_kw={"width_ratios": [1.0, 1.15]})
+        legend_ax.axis("off")
+    else:
+        fig, ax = plt.subplots(figsize=(7.4, 7.6))
+    for zone in zones:
+        row, col = zone["row"], zone["col"]
+        if zone["n"] == 0:
+            ax.add_patch(Rectangle((col - 0.5, row - 0.5), 1, 1, facecolor=plots_style.SURFACE,
+                                   edgecolor=plots_style.GRID, linewidth=1.0))
+            ax.add_patch(Rectangle((col - 0.5, row - 0.5), 1, 1, fill=False, hatch="////", linewidth=0,
+                                   edgecolor=som_figures.HATCH_COLOR))
+            continue
+        face = colors.get(zone["topic"], plots_style.TEXT_SECONDARY)
+        ax.add_patch(Rectangle((col - 0.5, row - 0.5), 1, 1, facecolor=face, edgecolor=plots_style.SURFACE,
+                               linewidth=2.0))
+        ax.text(col, row - 0.24, f"n = {zone['n']}", ha="center", va="center",
+                fontsize=plots_style.fontsize(6.5), color="white")
+        ax.text(col, row + 0.02, _thousands(zone["median_followers"]), ha="center", va="center",
+                fontsize=plots_style.fontsize(9), fontweight="bold", color="white")
+        ax.text(col, row + 0.27, f"USD {zone['median_price']:.0f}", ha="center", va="center",
+                fontsize=plots_style.fontsize(6.5), color="white")
+    som_figures._grid_axes(ax, k)
+    ax.set_aspect("equal")
+    handles = [Patch(facecolor=colors[label], label=f"tema dominante: {label}") for label in order]
+    if any(zone["topic"] == TIE_LABEL for zone in zones):
+        handles.append(Patch(facecolor=plots_style.TEXT_SECONDARY, label=TIE_LABEL))
+    handles.append(Patch(facecolor=plots_style.SURFACE, hatch="////", edgecolor=som_figures.HATCH_COLOR,
+                         label="neurona vacía"))
+    note = "cada celda: n creadores, mediana de\nfollowers (grande) y de precio por post"
+    if slide:
+        legend_ax.legend(handles=handles, loc="center left", ncol=1, frameon=False,
+                         fontsize=plots_style.fontsize(10), title=note, title_fontsize=plots_style.fontsize(9),
+                         alignment="left")
+    else:
+        ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.04), ncol=2, frameon=False,
+                  fontsize=8, title=note.replace("\n", " "), title_fontsize=8)
+    plots_style.suptitle(fig, title, fontsize=12, x=0.01, ha="left")
+    fig.tight_layout(rect=plots_style.rect((0, 0.14, 1, 0.96)))
+    plots_style.caption(fig, caption, width=100)
+    plots_style.save_figure(fig, out_stem)
+
+
 # ---------- driver ----------
 
 def _fmt_float(value: float) -> str:
@@ -461,7 +543,18 @@ def main(argv: list[str] | None = None) -> int:
                      f"{_decimal(result.threshold)} (percentil {REGION_PERCENTILE:g} de las {len(result.cut)} aristas); "
                      "cada región es una componente conexa de neuronas ocupadas. Cada celda muestra su región y su "
                      "número de creadores. La orientación del mapa es arbitraria.", out / "regions")
-    planes = [som_figures.Plane("PC1", som_figures.neuron_raw_means(bmu, k, pc[:, 0]), "raw", "score"),
+    zones = neuron_zones(bmu, k, topic_labels, raw.values[:, raw.columns.index("followers")],
+                         raw.values[:, raw.columns.index("price_usd")])
+    _write_csv(out / "zones.csv", ["neuron", "row", "col", "n", "topic", "median_followers", "median_price"],
+               [[z["neuron"], z["row"], z["col"], z["n"], z["topic"], z["median_followers"], z["median_price"]]
+                for z in zones])
+    for _ in plots_style.iter_variants():
+        plot_zones(zones, k, f"Perfiles por zona del mapa SOM {k} x {k} ({label})",
+                   f"{ident}. Cada neurona ocupada se colorea con el tema dominante más frecuente entre sus creadores "
+                   "(empate de temas en gris) y muestra cuántos creadores tiene y la mediana de sus followers y de su "
+                   "precio por post. Los temas son entradas del mapa: describen dónde cae cada perfil y no validan "
+                   "ninguna región. La orientación del mapa es arbitraria.", out / "zones")
+    planes = [som_figures.Plane("PC1",som_figures.neuron_raw_means(bmu, k, pc[:, 0]), "raw", "score"),
               som_figures.Plane("PC2", som_figures.neuron_raw_means(bmu, k, pc[:, 1]), "raw", "score")]
     for _ in plots_style.iter_variants():
         som_figures.plot_planes(planes, k, run.hits, f"PC1 y PC2 sobre el mapa SOM {k} x {k}",

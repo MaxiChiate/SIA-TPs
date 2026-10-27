@@ -64,12 +64,12 @@ def deck(tmp_path):
 
 # ---------- outline (D-01, D-02, D-04, D-05, D-07) ----------
 
-def test_outline_has_24_unique_slides_in_method_order():
+def test_outline_has_27_unique_slides_in_method_order():
     ids = [slide.id for slide in slides.OUTLINE]
-    assert len(ids) == 24 and len(set(ids)) == 24
+    assert len(ids) == 27 and len(set(ids)) == 27
     assert ids[:2] == ["portada", "metodo"]
     counts = {exercise: sum(1 for s in slides.OUTLINE if s.exercise == exercise) for exercise in (0, 1, 2)}
-    assert counts == {0: 2, 1: 14, 2: 8}
+    assert counts == {0: 2, 1: 16, 2: 9}
     assert [s.exercise for s in slides.OUTLINE] == sorted(s.exercise for s in slides.OUTLINE)
     assert [s.id for s in slides.OUTLINE if s.exercise == 1][-1] == "ej1-conclusiones"
     assert ids[-1] == "ej2-conclusiones"
@@ -105,7 +105,7 @@ def test_every_figure_is_a_slide_figure_and_questions_cover_the_enunciado():
 def test_figures_placed_and_unplaced_are_exactly_the_slide_figures():
     placed = [slide.figure for slide in slides.OUTLINE if slide.figure is not None]
     assert all(isinstance(key, str) for key in placed)
-    assert len(placed) == 15 and len(set(placed)) == 15
+    assert len(placed) == 18 and len(set(placed)) == 18
     unplaced = set(slides.UNPLACED_SLIDE_FIGURES)
     slide_true = {item.key for item in manifest.FIGURES if item.slide}
     assert not (set(placed) & unplaced)
@@ -170,7 +170,7 @@ def test_no_title_body_or_note_makes_a_forbidden_claim():
 
 def test_build_deck_fills_every_template_and_every_note_has_two_to_four_sentences(deck):
     built, _ = deck
-    assert len(built) == 24
+    assert len(built) == 27
     for slide in built:
         for text in [slide["title"], *slide["body"], slide["notes"]]:
             assert "{" not in text and "}" not in text, slide["id"]
@@ -182,7 +182,7 @@ def test_build_deck_fills_every_template_and_every_note_has_two_to_four_sentence
 def test_build_deck_resolves_each_figure_to_its_slide_variant(deck):
     built, _ = deck
     with_figure = [slide for slide in built if slide["figure"] is not None]
-    assert len(with_figure) == 15
+    assert len(with_figure) == 18
     for slide in with_figure:
         expected = manifest.slide_path(manifest.figure(slide["figure"]))
         assert slide["figure_path"] == expected
@@ -209,13 +209,13 @@ def test_build_deck_stops_on_a_missing_slide_figure_and_names_the_make_target(tm
     assert item.make_target in str(stop.value) and manifest.slide_path(item) in str(stop.value)
 
 
-def test_build_deck_stops_when_the_outline_has_more_than_25_slides(tmp_path, monkeypatch):
+def test_build_deck_stops_when_the_outline_has_more_than_28_slides(tmp_path, monkeypatch):
     results = write_figures(tmp_path / "results")
     extra = replace(slides.OUTLINE[-1], id="extra-slide")
     monkeypatch.setattr(slides, "OUTLINE", (*slides.OUTLINE, extra, replace(extra, id="extra-slide-2")))
     with pytest.raises(SystemExit) as stop:
         slides.build_deck(fixture_facts(), results)
-    assert "25" in str(stop.value)
+    assert "28" in str(stop.value)
 
 
 def test_a_long_handle_list_stays_in_a_table_cell_and_the_notes(deck):
@@ -256,14 +256,14 @@ def test_write_deck_writes_the_probed_tree(deck, tmp_path):
         assert page.startswith(f'<section id="{slide_id}" style="') and page.rstrip().endswith("</section>")
         assert page.count("<section") == 1 and page.count("<aside>") == 1
         assert page.rstrip().endswith("</aside></section>")
-    assert len(list((out / "project" / "slides").glob("*.html"))) == 24
+    assert len(list((out / "project" / "slides").glob("*.html"))) == 27
 
 
 def test_write_deck_copies_the_png_of_each_figure_and_lists_them(deck, tmp_path):
     out = write(deck, tmp_path / "out")
     built, _ = deck
     pngs = sorted(slide["png"] for slide in built if slide["png"])
-    assert sorted(path.name for path in (out / "assets").glob("*.png")) == pngs and len(pngs) == 15
+    assert sorted(path.name for path in (out / "assets").glob("*.png")) == pngs and len(pngs) == 18
     listed = json.loads((out / "deck.json").read_text(encoding="utf-8"))["assets"]
     assert sorted(item["png"] for item in listed) == pngs
     assert all(item["file"] == f"assets/{item['png']}" for item in listed)
@@ -339,7 +339,7 @@ def test_notes_md_is_the_presenter_script(deck, tmp_path):
     text = (out / "notes.md").read_text(encoding="utf-8")
     assert text.startswith("# Guion de la presentación")
     headings = re.findall(r"^## (\d+)\. (.+)$", text, flags=re.M)
-    assert [int(number) for number, _ in headings] == list(range(1, 25))
+    assert [int(number) for number, _ in headings] == list(range(1, 28))
     assert [title for _, title in headings] == [slide["title"] for slide in built]
     for slide in built:
         assert slide["notes"] in text
@@ -416,7 +416,7 @@ def test_main_prints_the_summary_line_and_writes_the_files(tmp_path, monkeypatch
     monkeypatch.setattr(slides.facts, "load_facts", lambda *_args, **_kwargs: fixture_facts())
     out = tmp_path / "out"
     assert slides.main(["--results", str(results), "--out", str(out)]) == 0
-    assert f"slides -> {out} (24 slides)" in capsys.readouterr().out
+    assert f"slides -> {out} (27 slides)" in capsys.readouterr().out
     assert (out / "deck.json").is_file() and (out / "notes.md").is_file()
 
 
