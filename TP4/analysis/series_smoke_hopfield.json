@@ -1,0 +1,10 @@
+{
+  "_comment": "Smoke test: Hopfield network (Phase 4) on the synthetic fixture patterns_mix.csv",
+  "base_config": "../neuron/config.json.hopfield.example",
+  "variants": [
+    {"label": "low", "set": {"noise_levels": [0.0, 0.12]}},
+    {"label": "high", "set": {"noise_levels": [0.32, 0.48]}},
+    {"label": "sync", "set": {"update": "sync", "noise_levels": [0.24, 0.4]}}
+  ],
+  "seeds": [1, 2]
+}

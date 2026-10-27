@@ -1,0 +1,13 @@
+{
+  "model": "hopfield",
+  "seed": 1,
+  "input": "datos/prepared/qr_pm1.csv",
+  "task": "recall",
+  "rule": "pinv",
+  "update": "async",
+  "max_sweeps": 100,
+  "trials": 10,
+  "noise_levels": [0.0, 0.2, 0.4],
+  "subset": [0, 1, 2, 3, 4],
+  "trace_trials": 1
+}

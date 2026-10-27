@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-10-21T18:24:48.805Z",
+  "phase": "02",
+  "phase_name": "Kohonen SOM",
+  "phase_dir": ".planning/phases/02-kohonen-som",
+  "plan": null,
+  "task": 1,
+  "total_tasks": 5,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": "02-03", "name": "Pre-register grid-selection rule", "status": "done", "commit": "ea7a0b1"},
+    {"id": "02-01", "name": "Kohonen SOM in C", "status": "done", "commit": "ffec073"},
+    {"id": "02-02", "name": "Python reader, numpy cross-check, LOO, stability", "status": "done", "commit": "31c2e15"},
+    {"id": "02-04", "name": "Run stage 1 and stage 2 selection", "status": "done", "commit": "56a5b2e"},
+    {"id": "02-05", "name": "Hit map, U-matrix, component planes", "status": "done", "commit": "97309b4"},
+    {"id": "02-06", "name": "Regions, profiles, PCA contrast", "status": "done", "commit": "f3b2f40"},
+    {"id": "code-review", "name": "Phase 02 code review (0 critical, 4 warning, 7 info)", "status": "done", "commit": "5d67056"},
+    {"id": "verification", "name": "gsd-verifier: human_needed, 4/4 criteria", "status": "done", "commit": "d1d734e"}
+  ],
+  "remaining_tasks": [
+    {"id": 1, "name": "UAT 1: decide whether a single region (R1 = all 50 creators) satisfies 'profiles by region'", "status": "not_started"},
+    {"id": 2, "name": "UAT 2: read rule section (between regla markers) against D-10..D-15", "status": "not_started"},
+    {"id": 3, "name": "UAT 3: judge figure legibility (som/figures, som/profiles)", "status": "not_started"},
+    {"id": 4, "name": "UAT 4: read sections 5-7 against Phase 1 biplot (run make pca first; biplot not on disk)", "status": "not_started"},
+    {"id": 5, "name": "UAT 5: confirm 12 judgment-tier prohibitions held", "status": "not_started"}
+  ],
+  "blockers": [],
+  "async_jobs": [],
+  "human_actions_pending": [
+    {"action": "Answer the 5 UAT items in 02-UAT.md via /gsd-verify-work 2", "context": "Verifier status human_needed; phase cannot be marked complete until UAT passes", "blocking": true}
+  ],
+  "decisions": [
+    {"decision": "Task 1 of 02-03 approved terms 1-10 as written, no edits", "rationale": "User reply 'approve' at the blocking-human checkpoint", "phase": "02"},
+    {"decision": "Executed all waves sequentially on dev-tp4 without worktrees", "rationale": "HEAD diverged from origin/HEAD; worktree.base-check shouldDegrade=true", "phase": "02"},
+    {"decision": "verify:post step hooks (validate-phase, secure-phase, ui-review) not run inline", "rationale": "Advisory; Phase 1 has no such artifacts; no UI in this phase. Available as /gsd-validate-phase 02, /gsd-secure-phase 02", "phase": "02"}
+  ],
+  "uncommitted_files": [
+    " M TP4/.planning/config.json",
+    "?? TP4/.planning/milestone.lock",
+    "?? TP4/.planning/state.json"
+  ],
+  "next_action": "Run /gsd-verify-work 2 and resume at UAT test 1 (single-region decision)",
+  "context_notes": "All 6 plans executed and committed; make test passes (118 C checks, 48 pytest). Stage 1 chose k=5 (step), stage 2 'no robusta', region rule yields one region, PC1 R2 0.961 / PC2 R2 0.055. The pre-registered rule (ea7a0b1: rule text between markers, som_select.py, series_som_stage1.json) must never be edited in place. 02-REVIEW-DISPOSITION.md lists 11 open findings; WR-01 touches the pre-registered rule."
+}

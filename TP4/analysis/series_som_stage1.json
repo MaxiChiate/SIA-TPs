@@ -1,0 +1,26 @@
+{
+  "_comment": "Stage 1 of the Kohonen sweep (D-06): k = 2..8 x {step, gaussian}, radius0 = max(1, k/2), radius_final 1, eta 0.5 -> 0.01, 260 epochs, seeds 1..10. Committed with the rule of deliverables/02-kohonen.md section 2 and analysis/som_select.py before any trained SOM runs on the creators' data (D-10).",
+  "base_config": "../neuron/config.json.kohonen.example",
+  "set": {
+    "eta0": 0.5,
+    "eta_final": 0.01,
+    "epochs": 260
+  },
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "variants": [
+    {"label": "k2-step", "set": {"grid_k": 2, "neighborhood": "step", "radius0": 1.0, "radius_final": 1.0}},
+    {"label": "k3-step", "set": {"grid_k": 3, "neighborhood": "step", "radius0": 1.5, "radius_final": 1.0}},
+    {"label": "k4-step", "set": {"grid_k": 4, "neighborhood": "step", "radius0": 2.0, "radius_final": 1.0}},
+    {"label": "k5-step", "set": {"grid_k": 5, "neighborhood": "step", "radius0": 2.5, "radius_final": 1.0}},
+    {"label": "k6-step", "set": {"grid_k": 6, "neighborhood": "step", "radius0": 3.0, "radius_final": 1.0}},
+    {"label": "k7-step", "set": {"grid_k": 7, "neighborhood": "step", "radius0": 3.5, "radius_final": 1.0}},
+    {"label": "k8-step", "set": {"grid_k": 8, "neighborhood": "step", "radius0": 4.0, "radius_final": 1.0}},
+    {"label": "k2-gaussian", "set": {"grid_k": 2, "neighborhood": "gaussian", "radius0": 1.0, "radius_final": 1.0}},
+    {"label": "k3-gaussian", "set": {"grid_k": 3, "neighborhood": "gaussian", "radius0": 1.5, "radius_final": 1.0}},
+    {"label": "k4-gaussian", "set": {"grid_k": 4, "neighborhood": "gaussian", "radius0": 2.0, "radius_final": 1.0}},
+    {"label": "k5-gaussian", "set": {"grid_k": 5, "neighborhood": "gaussian", "radius0": 2.5, "radius_final": 1.0}},
+    {"label": "k6-gaussian", "set": {"grid_k": 6, "neighborhood": "gaussian", "radius0": 3.0, "radius_final": 1.0}},
+    {"label": "k7-gaussian", "set": {"grid_k": 7, "neighborhood": "gaussian", "radius0": 3.5, "radius_final": 1.0}},
+    {"label": "k8-gaussian", "set": {"grid_k": 8, "neighborhood": "gaussian", "radius0": 4.0, "radius_final": 1.0}}
+  ]
+}
