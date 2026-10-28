@@ -38,11 +38,11 @@ analysis/                        # README.md explica las series y los drivers
   hopfield.py, hopfield_letters.py, hopfield_select.py, hopfield_figures.py     # Hopfield sobre las letras
   hopfield_qr.py, hopfield_qr_limits.py, hopfield_qr_select.py, hopfield_qr_figures.py   # Hopfield sobre los 5 QR
   plots_style.py                 # estilo común y variantes de figura (informe y slide)
-  deliverables_manifest.py       # fuente única: 31 figuras, 25 preguntas del enunciado, fragmentos
+  deliverables_manifest.py       # fuente única: 32 figuras, 25 preguntas del enunciado, fragmentos
   facts.py                       # los números del texto salen de los JSON/CSV; `facts.py check` fija 67 frases de los fragmentos
   informe.py                     # arma analysis/results/informe/informe.html
   corr_prune.py                  # sensibilidad de la PCA a podar por umbral de |r| (tabla de la slide pca-prune; no rehace SOM ni Oja)
-  slides.py                      # arma analysis/results/slides/ (25 slides, PNG y guion)
+  slides.py                      # arma analysis/results/slides/ (28 slides, PNG y guion)
   tests/                         # pytest; incluye test_repro_docs.py, que cuida README.md, CLAUDE.md y DECISIONS.md
 deliverables/                    # un fragmento por fase (01 a 05): lo que se entrega por escrito, congelado por guardas sha256
 DECISIONS.md                     # decisiones para la defensa y fuente del glosario del informe
@@ -94,7 +94,7 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Entrega
 
-- **Slides**: 25 slides armadas por `make deliverables` en `analysis/results/slides/`; publicadas como Artifact tipo Slides (republicado el 2026-10-28 con la slide `pca-prune`).
+- **Slides**: 28 slides armadas por `make deliverables` en `analysis/results/slides/`; el Artifact tipo Slides publicado tiene 25 (sin las slides `eda`, `som-zonas` y `letras-capacidad`), falta republicar.
 - **Informe**: `analysis/results/informe/informe.html`, publicado como Artifact HTML (D-15).
 - Slides: https://claude.ai/artifact/CxnuCZKwF55r2tUMPWXBSN (las URLs `9YjSx…` y `32SjY…` de antes ya no existen; el 2026-10-28 se reemplazó el contenido de este deck por las 25 slides del repo)
 - Informe: https://claude.ai/artifact/ScERzQ4wTc8TrCNfuw2kKq (republicado el 2026-10-28 con el guion de las 25 slides en el anexo; está compartido por link)
@@ -110,6 +110,13 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Pendientes
 
+- **Revisión del deck contra el enunciado (F6 D-16, 2026-10-27)**: 3 slides nuevas (`eda`, `som-zonas`, `letras-capacidad`) y 4
+  reescritas (`som-not-robust`, `camp-futbol`, `ej1-conclusiones`, `qr-energia`). El deck que se presenta ahora es un Google
+  Slides (convertido del Artifact): los cambios se copiaron a mano ahí, y las 3 figuras nuevas se suben a mano. El informe
+  publicado no se republicó todavía.
+- **La etapa 2 del SOM no es idéntica entre máquinas**: regenerada el 2026-10-27 en otra máquina (gcc 13.3, glibc 2.39), da 4
+  variantes que fallan TE en vez de 5 (`radius0-5` 0,052 y `eta0-0.9` 0,050, contra 0,056 y 0,052 publicados). La etapa 1 y la k
+  elegida no cambian; el veredicto «no robusta» tampoco. El deck y el informe publicados usan los números de la corrida original.
 - **Volver a exportar el PDF del deck** desde su Artifact (lo hace la persona dueña): el deck se republicó el 2026-10-26 y el PDF
   exportado antes no tiene la slide `som-rule` corregida.
 - **Cerrar el milestone** con `/gsd-complete-milestone`: las seis fases están completas en `ROADMAP.md`.

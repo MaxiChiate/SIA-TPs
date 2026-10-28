@@ -23,6 +23,21 @@ def write_json(path, payload):
 
 def write_results(root, *, robust=False):
     """A results tree with minimal versions of every file facts.load_facts reads (values chosen to print round)."""
+    write_csv(root / "eda/summary_stats.csv", ["variable", "skewness"],
+              [["followers", 0.955], ["estimated_argentina_reach", 1.9712], ["average_caption_words", -0.28]])
+    write_csv(root / "eda/strong_correlations.csv", ["variable_a", "variable_b", "r"], [
+        ["average_reach", "average_video_views", 0.99728], ["average_impressions", "average_video_views", 0.988],
+        ["average_reach", "average_impressions", 0.987], ["followers", "average_reach", 0.918],
+        ["followers", "average_impressions", 0.912], ["followers", "average_video_views", 0.9064],
+        ["price_usd", "price_ars", 1.0],
+    ])
+    write_csv(root / "eda/exact_dependencies.csv", ["relation", "max_abs_residual", "exact"],
+              [[name, 0.0, "True"] for name in ("price_ars", "organic_posts_pct", "total_engagement_per_1000",
+                                                "topic_sum_100", "content_sum_100")])
+    write_csv(root / "som/profiles/zones.csv",
+              ["neuron", "row", "col", "n", "topic", "median_followers", "median_price"],
+              [[0, 0, 0, 5, "perros", 17062.0, 84.77], [1, 0, 1, 1, "perros", 5000.0, 10.0],
+               [19, 3, 4, 3, "maquillaje", 638718.0, 6310.69], [18, 3, 3, 0, "", "nan", "nan"]])
     write_json(root / "pca/audited/decision.json", {
         "n_variables": 26, "k_80": 3, "explained_pc1": 0.5322, "explained_pc2": 0.0851,
         "min_eigenvalue": 0.00046018,
@@ -93,13 +108,16 @@ def write_results(root, *, robust=False):
     for campaign, objective in (("fútbol", "profundidad"), ("perros", "costo_por_mil"), ("maquillaje", "profundidad"),
                                 ("arte", "engagement_profundidad")):
         for rank in range(6, 0, -1):  # written out of order: load_facts sorts by rank and keeps five
-            shortlist.append([campaign, objective, "propia", rank, f"I{rank}", f"@{campaign}{rank}"])
-        shortlist.append([campaign, objective, "followers_global", 1, "G1", "@global1"])
-        comparison.append([campaign, objective, "propia", 5, 1, 2, 12.3456, 0.8826])
-        comparison.append([campaign, objective, "followers_global", 5, 5, 1, 25.7069, -1.1077])
-    write_csv(root / "campaigns/shortlists.csv", ["campaign", "objective", "list", "rank", "creator_id", "name"], shortlist)
+            shortlist.append([campaign, objective, "propia", rank, f"I{rank}", f"@{campaign}{rank}", 3.25])
+        shortlist.append([campaign, objective, "followers_global", 1, "G1", "@global1", -5.69])
+        comparison.append([campaign, objective, "propia", 5, 1, 2, 12.3456, 0.8826, 0.0, 1367.0])
+        comparison.append([campaign, objective, "followers_global", 5, 5, 1, 25.7069, -1.1077, 0.2, 22657.0])
+    comparison.append(["fútbol", "alcance", "propia", 5, 1, 3, 26.99, 1.0, 1.0, 14714.0])
+    write_csv(root / "campaigns/shortlists.csv",
+              ["campaign", "objective", "list", "rank", "creator_id", "name", "pc1"], shortlist)
     write_csv(root / "campaigns/comparison.csv", ["campaign", "objective", "list", "n", "overlap_followers_global",
-                                                  "overlap_followers_tema", "cost_per_thousand", "criterion_mean"], comparison)
+                                                  "overlap_followers_tema", "cost_per_thousand", "criterion_mean",
+                                                  "topic_dominant_share", "cost_total"], comparison)
     write_json(root / "maintenance/demo.json", {
         "bmu": {"row": 3, "col": 1, "distance": 1.3290},
         "drift": {"qe": 2.7238, "max": 3.6509, "p95": 3.5446, "percentile": 0.0, "drift": False},
@@ -121,7 +139,9 @@ def write_results(root, *, robust=False):
         "p4_n_stable_counts": {"0": 284, "1": 1687, "2": 2653, "3": 3073, "4": 7253},
         "p4_mean_stable_fraction": 0.75625, "p4_all_stable_fraction": 0.48515,
     })
-    write_csv(root / "hopfield/letters/capacity_by_p.csv", ["p", "n_subsets", "exhaustive"], [[1, 26, 1], [2, 200, 0]])
+    write_csv(root / "hopfield/letters/capacity_by_p.csv", ["p", "n_subsets", "exhaustive", "mean_stable_fraction"],
+              [[1, 26, 1, 1.0], [2, 200, 0, 1.0], [3, 200, 0, 0.9177], [4, 200, 0, 0.7488], [6, 200, 0, 0.4247],
+               [26, 1, 1, 0.1154]])
     write_json(root / "hopfield/letters/spurious.json", {
         "levels": [0.4, 0.44, 0.48], "seeds_tried": [1],
         "counts_by_seed": {"1": {"stored": 463, "inverse": 334, "mixture": 254, "other": 149}},
@@ -503,3 +523,19 @@ def test_check_does_not_modify_the_fragments(tmp_path):
     before = {p.name: p.read_bytes() for p in (tmp_path / "deliverables").iterdir()}
     facts.main(["check", "--results", str(results), "--deliverables", str(tmp_path / "deliverables")])
     assert {p.name: p.read_bytes() for p in (tmp_path / "deliverables").iterdir()} == before
+
+
+def test_facts_of_the_review_slides_eda_zones_capacity_and_campaign_evidence(tmp_path):
+    values = facts.load_facts(write_results(tmp_path))
+    assert values["eda.n_columns"] == "3" and values["eda.n_dropped"] == "5"
+    assert values["eda.size_r_min"] == "0,91" and values["eda.size_r_max"] == "0,997"
+    assert values["eda.max_skew"] == "1,97" and values["eda.max_skew_variable"] == "estimated_argentina_reach"
+    assert values["som.n_stage2_variants"] == "3" and values["som.base_te"] == "0,046"
+    assert values["som.passing_variants"] == "50 épocas"
+    assert values["som.zone_small.cell"] == "(0,0)" and values["som.zone_large.topic"] == "maquillaje"
+    assert values["letters.course_capacity"] == "3,75" and values["letters.stable_p4"] == "0,749"
+    assert values["letters.capacity_last_p"] == "26" and values["qr.course_capacity"] == "205"
+    assert values["qr.pinv_stored_energy"] == "−684,5"
+    assert values["camp.futbol.followers_global_topic_share"] == "20 %"
+    assert values["camp.futbol.cost_total"] == "1367" and values["camp.futbol.other_cost_total_min"] == "14714"
+    assert values["camp.followers_global_pc1_mean"] == "-5,69" and values["camp.futbol.pc1_mean"] == "3,25"

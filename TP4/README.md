@@ -73,7 +73,7 @@ comando. Las filas salen del manifiesto `analysis/deliverables_manifest.py` y `m
 | Figura | Fragmento | Comando | Config | Seed |
 |---|---|---|---|---|
 | `analysis/results/eda/distributions.svg` | `01-datos-pca.md` §2 | `make eda` | datos/creadores.csv (analysis/eda.py, sin config) | sin seed (determinista) |
-| `analysis/results/eda/correlation.svg` | `01-datos-pca.md` §2 | `make eda` | datos/creadores.csv (analysis/eda.py, sin config) | sin seed (determinista) |
+| `analysis/results/eda/correlation.svg` (y `slide/`) | `01-datos-pca.md` §2 | `make eda` | datos/creadores.csv (analysis/eda.py, sin config) | sin seed (determinista) |
 | `analysis/results/pca/audited/eigenvalues_variance.svg` (y `slide/`) | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
 | `analysis/results/pca/audited/loadings.svg` | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
 | `analysis/results/pca/audited/biplot.svg` (y `slide/`) | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
@@ -83,6 +83,7 @@ comando. Las filas salen del manifiesto `analysis/deliverables_manifest.py` y `m
 | `analysis/results/som/figures/trace.svg` | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
 | `analysis/results/som/figures/stage1_curves.svg` (y `slide/`) | `02-kohonen.md` §3 | `make som-figures` | analysis/series_som_stage1.json | 1-10 (las seeds de la serie; la media y el desvío entre ellas) |
 | `analysis/results/som/profiles/regions.svg` (y `slide/`) | `02-kohonen.md` §6.1 | `make som-profiles` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
+| `analysis/results/som/profiles/zones.svg` (y `slide/`) | `02-kohonen.md` §6.2 | `make som-profiles` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
 | `analysis/results/som/profiles/pc_planes.svg` (y `slide/`) | `02-kohonen.md` §6.4 | `make som-profiles` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
 | `analysis/results/oja/convergence.svg` | `03-oja-campanas.md` §1 | `make oja` | analysis/series_oja.json | 1 (la seed que produce las figuras; la serie corre las seeds 1-10) |
 | `analysis/results/oja/oja_vs_pc1.svg` (y `slide/`) | `03-oja-campanas.md` §2 | `make oja` | analysis/series_oja.json | 1 (la seed que produce las figuras; la serie corre las seeds 1-10) |
@@ -95,7 +96,7 @@ comando. Las filas salen del manifiesto `analysis/deliverables_manifest.py` y `m
 | `analysis/results/hopfield/figures/recall_noise.svg` (y `slide/`) | `04-hopfield-letras.md` §5 | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
 | `analysis/results/hopfield/figures/energy.svg` | `04-hopfield-letras.md` §5 | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1 (ENERGY_SEED de analysis/hopfield_figures.py) |
 | `analysis/results/hopfield/figures/capacity_p4.svg` (y `slide/`) | `04-hopfield-letras.md` §6 | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
-| `analysis/results/hopfield/figures/capacity_by_p.svg` | `04-hopfield-letras.md` §6 | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
+| `analysis/results/hopfield/figures/capacity_by_p.svg` (y `slide/`) | `04-hopfield-letras.md` §6 | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
 | `analysis/results/hopfield/figures/spurious.svg` (y `slide/`) | `04-hopfield-letras.md` §7 | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
 | `analysis/results/hopfield/qr/figures/qr.svg` (y `slide/`) | `05-hopfield-qr.md` §2 | `make hopfield-qr-figures` | deliverables/05-hopfield-qr.md sección 3 (analysis/hopfield_qr_select.py) | sin seed (los 5 QR son fijos) |
 | `analysis/results/hopfield/qr/figures/overlaps.svg` (y `slide/`) | `05-hopfield-qr.md` §2 | `make hopfield-qr-figures` | deliverables/05-hopfield-qr.md sección 3 (analysis/hopfield_qr_select.py) | sin seed (los 5 QR son fijos) |
@@ -128,7 +129,7 @@ no se arma si un número citado de los fragmentos cambió.
 
 `make deliverables` deja listo, sin publicar, lo siguiente (no se versiona):
 
-- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 25 slides), los PNG de las figuras
+- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 28 slides), los PNG de las figuras
   (`assets/`) y `notes.md` (el guion). Lo arma `analysis/slides.py`; `make slides` corre solo ese paso.
 - `analysis/results/informe/informe.html`: el informe, una página autocontenida. Lo arma `analysis/informe.py`; `make informe`
   corre solo ese paso.

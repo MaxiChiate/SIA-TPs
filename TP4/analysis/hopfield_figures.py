@@ -542,7 +542,8 @@ def plot_capacity_by_p(rows: list[dict], capacity: dict, out_stem) -> None:
         ["a", "b"])["a"], "o"),
               ("mean_recall_rate", "sd_recall_rate", "tasa de recuperación media (ruido 0,12)",
                plots_style.palette_for(["a", "b"])["b"], "s"))
-    fig, ax = plt.subplots(figsize=(12.0, 6.2))
+    slide = plots_style.variant() == "slide"
+    fig, ax = plt.subplots(figsize=plots_style.figsize((12.0, 6.2)))
     for mean_key, sd_key, label, color, marker in series:
         mean = np.array([float(r[mean_key]) for r in rows])
         sd = np.array([float(r[sd_key]) for r in rows])
@@ -560,13 +561,13 @@ def plot_capacity_by_p(rows: list[dict], capacity: dict, out_stem) -> None:
     if extension.any():
         first = int(p_values[extension].min())
         ax.axvline(first - 0.5, color=plots_style.TEXT_SECONDARY, linewidth=1.0, linestyle=":")
-        ax.text(first - 0.4, 0.96, "extensión por la regla\n(rombos)", fontsize=8, va="top",
+        ax.text(first - 0.4, 0.96, "extensión por la regla\n(rombos)", fontsize=plots_style.fontsize(8), va="top",
                 color=plots_style.TEXT_SECONDARY)
     near_zero = capacity.get("p_extension", {}).get("near_zero")
     if near_zero is not None:
         ax.axhline(float(near_zero), color=plots_style.TEXT_SECONDARY, linewidth=1.0, linestyle="--")
         ax.text(float(p_values.min()) + 3.0, float(near_zero) - 0.012, f"\"~0\" de la regla = {_fmt(float(near_zero))}",
-                fontsize=8, ha="left", va="top", color=plots_style.TEXT_SECONDARY)
+                fontsize=plots_style.fontsize(8), ha="left", va="top", color=plots_style.TEXT_SECONDARY)
     orders = capacity.get("orders_of_magnitude", {})
     references = (("0.138N", "0,138N ≈ {v} (orden de magnitud, patrones al azar)", "-."),
                   ("0.15N", "0,15N = {v} (curso, orden de magnitud)", (0, (1, 1))))
@@ -580,9 +581,11 @@ def plot_capacity_by_p(rows: list[dict], capacity: dict, out_stem) -> None:
     ax.set_ylim(0, 1.02)
     ax.set_xlabel("cantidad de letras almacenadas p")
     ax.set_ylabel("media entre las 10 seeds (banda: ± desvío)")
-    ax.legend(fontsize=8, frameon=False, loc="upper right", bbox_to_anchor=(1.0, 0.9))
+    ax.legend(fontsize=plots_style.fontsize(8), frameon=False, loc="upper right", bbox_to_anchor=(1.0, 0.9))
+    if slide:
+        ax.set_ylabel("media entre seeds (± desvío)")
     plots_style.suptitle(fig, f"Capacidad frente a p (N = {n})", fontsize=12, x=0.01, ha="left")
-    fig.tight_layout(rect=(0, 0.1, 1, 0.95))
+    fig.tight_layout(rect=plots_style.rect((0, 0.1, 1, 0.95)))
     _caption(fig, "Por p, 200 subconjuntos al azar de letras por seed (todos los posibles cuando son menos; marcador "
                   "hueco = exhaustivo). Las letras son patrones correlacionados; las referencias 0,138N y 0,15N valen "
                   "para patrones al azar con N grande, se marcan solo como órdenes de magnitud y no son un umbral.")
@@ -726,7 +729,7 @@ def draw(results_dir, out_dir, patterns_path=None, check_rule: bool = True, chec
     recall_rows = _read_rows(results_dir / "recall.csv")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    # D-08: letters, overlaps, recall_noise, capacity_p4 and spurious also get a slide variant; the other four
+    # D-08: letters, overlaps, recall_noise, capacity_p4, capacity_by_p and spurious also get a slide variant; the other three
     # stay report-only.
     for _ in plots_style.iter_variants():
         plot_letters(patterns, design["letters"], sets, out_dir / "letters")
@@ -738,8 +741,9 @@ def draw(results_dir, out_dir, patterns_path=None, check_rule: bool = True, chec
     plot_energy(energy_panels(results_dir), out_dir / "energy")
     for _ in plots_style.iter_variants():
         plot_capacity_p4(_read_rows(results_dir / "capacity_p4.csv"), selection, out_dir / "capacity_p4")
-    plot_capacity_by_p(_read_rows(results_dir / "capacity_by_p.csv"), _read_json(results_dir / "capacity.json"),
-                       out_dir / "capacity_by_p")
+    for _ in plots_style.iter_variants():  # the slide variant is the capacity slide of the deck
+        plot_capacity_by_p(_read_rows(results_dir / "capacity_by_p.csv"), _read_json(results_dir / "capacity.json"),
+                           out_dir / "capacity_by_p")
     for _ in plots_style.iter_variants():
         plot_spurious(_read_json(results_dir / "spurious.json"), out_dir / "spurious")
     return [out_dir / f"{stem}.{suffix}" for stem in FIGURE_STEMS for suffix in ("svg", "png")]

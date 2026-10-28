@@ -6,7 +6,7 @@ No I/O at import: informe.py reads these tables and checks them against the real
 - `QUESTIONS`: the 25 literal questions of the enunciado with the anchors that answer them. An anchor is
   `f<n>-s<a>-<b>` for the heading "<a>.<b> ..." of fragment n (informe.make_slugify).
 - `FIGURES`: every report figure of the fragments, with the make target that regenerates it, its config and
-  its seed. `path` is relative to analysis/results; `slide` marks the 20 figures that also have a slide
+  its seed. `path` is relative to analysis/results; `slide` marks the 23 figures that also have a slide
   variant (`slide_path`, written by plots_style next to the report figure).
 
 CLI: `python analysis/deliverables_manifest.py questions` prints the review sheet a human compares with the
@@ -234,7 +234,7 @@ FIGURES = (
         config=_EDA[0], seed=_EDA[1], fragment=1, anchor="f1-s2",
         alt="Matriz de correlación de Pearson entre las 31 variables",
         caption="Correlación de Pearson entre todas las variables del conjunto de datos.",
-        slide=False,
+        slide=True,
     ),
     Figure(
         key="pca_eigenvalues", path="pca/audited/eigenvalues_variance.svg", make_target="pca",
@@ -298,6 +298,13 @@ FIGURES = (
         config=_SOM[0], seed=_SOM[1], fragment=2, anchor="f2-s6-1",
         alt="Mapa de Kohonen con las regiones que resultan de la regla fijada de antemano",
         caption="Las regiones de la grilla elegida.",
+        slide=True,
+    ),
+    Figure(
+        key="som_zones", path="som/profiles/zones.svg", make_target="som-profiles",
+        config=_SOM[0], seed=_SOM[1], fragment=2, anchor="f2-s6-2",
+        alt="Mapa de Kohonen con cada neurona coloreada por el tema dominante de sus creadores y su mediana de followers y precio",
+        caption="Perfiles por zona del mapa: tema dominante, followers y precio de cada neurona.",
         slide=True,
     ),
     Figure(
@@ -389,7 +396,7 @@ FIGURES = (
         config=_LETTERS_SEEDS[0], seed=_LETTERS_SEEDS[1], fragment=4, anchor="f4-s6",
         alt="Estabilidad y recuperación de la red frente a la cantidad de patrones almacenados",
         caption="Estabilidad y recuperación en función del número de patrones.",
-        slide=False,
+        slide=True,
     ),
     Figure(
         key="letters_spurious", path="hopfield/figures/spurious.svg", make_target="hopfield-figures",

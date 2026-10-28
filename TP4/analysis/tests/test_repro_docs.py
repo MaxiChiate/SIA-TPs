@@ -145,7 +145,7 @@ def test_real_documents_only_name_make_targets_the_makefile_defines():
 
 
 def test_real_readme_has_a_row_with_the_make_target_for_every_manifest_figure():
-    assert len(FIGURES) == 31
+    assert len(FIGURES) == 32
     assert check_figure_rows(TP_DIR) == []
 
 
