@@ -64,12 +64,12 @@ def deck(tmp_path):
 
 # ---------- outline (D-01, D-02, D-04, D-05, D-07) ----------
 
-def test_outline_has_24_unique_slides_in_method_order():
+def test_outline_has_25_unique_slides_in_method_order():
     ids = [slide.id for slide in slides.OUTLINE]
-    assert len(ids) == 24 and len(set(ids)) == 24
+    assert len(ids) == 25 and len(set(ids)) == 25
     assert ids[:2] == ["portada", "metodo"]
     counts = {exercise: sum(1 for s in slides.OUTLINE if s.exercise == exercise) for exercise in (0, 1, 2)}
-    assert counts == {0: 2, 1: 14, 2: 8}
+    assert counts == {0: 2, 1: 15, 2: 8}
     assert [s.exercise for s in slides.OUTLINE] == sorted(s.exercise for s in slides.OUTLINE)
     assert [s.id for s in slides.OUTLINE if s.exercise == 1][-1] == "ej1-conclusiones"
     assert ids[-1] == "ej2-conclusiones"
@@ -170,7 +170,7 @@ def test_no_title_body_or_note_makes_a_forbidden_claim():
 
 def test_build_deck_fills_every_template_and_every_note_has_two_to_four_sentences(deck):
     built, _ = deck
-    assert len(built) == 24
+    assert len(built) == 25
     for slide in built:
         for text in [slide["title"], *slide["body"], slide["notes"]]:
             assert "{" not in text and "}" not in text, slide["id"]
@@ -256,7 +256,7 @@ def test_write_deck_writes_the_probed_tree(deck, tmp_path):
         assert page.startswith(f'<section id="{slide_id}" style="') and page.rstrip().endswith("</section>")
         assert page.count("<section") == 1 and page.count("<aside>") == 1
         assert page.rstrip().endswith("</aside></section>")
-    assert len(list((out / "project" / "slides").glob("*.html"))) == 24
+    assert len(list((out / "project" / "slides").glob("*.html"))) == 25
 
 
 def test_write_deck_copies_the_png_of_each_figure_and_lists_them(deck, tmp_path):
@@ -339,7 +339,7 @@ def test_notes_md_is_the_presenter_script(deck, tmp_path):
     text = (out / "notes.md").read_text(encoding="utf-8")
     assert text.startswith("# Guion de la presentación")
     headings = re.findall(r"^## (\d+)\. (.+)$", text, flags=re.M)
-    assert [int(number) for number, _ in headings] == list(range(1, 25))
+    assert [int(number) for number, _ in headings] == list(range(1, 26))
     assert [title for _, title in headings] == [slide["title"] for slide in built]
     for slide in built:
         assert slide["notes"] in text
@@ -416,7 +416,7 @@ def test_main_prints_the_summary_line_and_writes_the_files(tmp_path, monkeypatch
     monkeypatch.setattr(slides.facts, "load_facts", lambda *_args, **_kwargs: fixture_facts())
     out = tmp_path / "out"
     assert slides.main(["--results", str(results), "--out", str(out)]) == 0
-    assert f"slides -> {out} (24 slides)" in capsys.readouterr().out
+    assert f"slides -> {out} (25 slides)" in capsys.readouterr().out
     assert (out / "deck.json").is_file() and (out / "notes.md").is_file()
 
 
@@ -456,18 +456,18 @@ def test_build_deck_stops_on_a_title_over_max_title_chars(tmp_path, monkeypatch)
     assert long_title.id in str(stop.value) and "título" in str(stop.value)
 
 
-def test_tables_have_at_most_4_columns_and_5_rows_and_bodies_at_most_3_lines():
+def test_tables_have_at_most_6_columns_and_7_rows_and_bodies_at_most_3_lines():
     for slide in slides.OUTLINE:
         assert len(slide.body) <= 3, slide.id
         if slide.table is not None:
             header, rows = slide.table
-            assert len(header) <= 4 and 1 <= len(rows) <= 5, slide.id
+            assert len(header) <= 6 and 1 <= len(rows) <= 7, slide.id
             assert all(len(row) == len(header) for row in rows), slide.id
 
 
 def test_build_deck_stops_on_a_table_or_body_over_the_limits(tmp_path, monkeypatch):
     results = write_figures(tmp_path / "results")
-    wide = replace(slides.OUTLINE[10], table=(("a", "b", "c", "d", "e"), (("1", "2", "3", "4", "5"),)))
+    wide = replace(slides.OUTLINE[10], table=(("a", "b", "c", "d", "e", "f", "g"), (("1", "2", "3", "4", "5", "6", "7"),)))
     monkeypatch.setattr(slides, "OUTLINE", (*slides.OUTLINE[:10], wide, *slides.OUTLINE[11:]))
     with pytest.raises(SystemExit) as stop:
         slides.build_deck(fixture_facts(), results)

@@ -1,4 +1,4 @@
-"""Tests of the report and slide variants (D-08) of the Exercise 1 figures: PCA scree and biplot, Oja index vs PC1.
+"""Tests of the report and slide variants (D-08) of the Exercise 1 figures: PCA eigenvalue plot and biplot, Oja index vs PC1.
 
 Synthetic data only: no dependence on datos/ or on analysis/results/.
 """
@@ -45,34 +45,34 @@ def svg_aspect(path) -> float:
     return width / height
 
 
-def test_pca_scree_and_biplot_in_both_variants(tmp_path, synthetic):
+def test_pca_eigenvalues_and_biplot_in_both_variants(tmp_path, synthetic):
     result, z, meta = synthetic
     dec = pca.decision(result, "synthetic")
     for _ in plots_style.iter_variants():
-        pca.plot_scree(result, dec, "sintetico", tmp_path)
+        pca.plot_eigenvalues(result, dec, "sintetico", tmp_path)
         pca.plot_biplot(result, z, meta, "sintetico", tmp_path)
-    for stem in ("scree", "biplot"):
+    for stem in ("eigenvalues_variance", "biplot"):
         for suffix in (".svg", ".png"):
             assert (tmp_path / f"{stem}{suffix}").stat().st_size > 0
             assert (tmp_path / "slide" / f"{stem}{suffix}").stat().st_size > 0
         slide_aspect = svg_aspect(tmp_path / "slide" / f"{stem}.svg")
         assert slide_aspect == pytest.approx(plots_style.SLIDE_FIGSIZE[0] / plots_style.SLIDE_FIGSIZE[1], abs=0.02)
-    assert svg_aspect(tmp_path / "scree.svg") == pytest.approx(11 / 7.5, abs=0.02)
+    assert svg_aspect(tmp_path / "eigenvalues_variance.svg") == pytest.approx(11 / 7.5, abs=0.02)
     assert plots_style.variant() == "report"
 
 
-def test_report_scree_is_the_same_after_the_slide_loop(tmp_path, synthetic):
+def test_report_eigenvalues_is_the_same_after_the_slide_loop(tmp_path, synthetic):
     result, z, meta = synthetic
     dec = pca.decision(result, "synthetic")
     first, again = tmp_path / "first", tmp_path / "again"
     first.mkdir()
     again.mkdir()
-    pca.plot_scree(result, dec, "sintetico", first)
+    pca.plot_eigenvalues(result, dec, "sintetico", first)
     for _ in plots_style.iter_variants():
-        pca.plot_scree(result, dec, "sintetico", tmp_path)
-    pca.plot_scree(result, dec, "sintetico", again)
-    assert (first / "scree.svg").read_bytes() == (again / "scree.svg").read_bytes()
-    assert (first / "scree.svg").read_bytes() == (tmp_path / "scree.svg").read_bytes()
+        pca.plot_eigenvalues(result, dec, "sintetico", tmp_path)
+    pca.plot_eigenvalues(result, dec, "sintetico", again)
+    assert (first / "eigenvalues_variance.svg").read_bytes() == (again / "eigenvalues_variance.svg").read_bytes()
+    assert (first / "eigenvalues_variance.svg").read_bytes() == (tmp_path / "eigenvalues_variance.svg").read_bytes()
 
 
 def test_only_the_audited_set_draws_the_slide_variant():

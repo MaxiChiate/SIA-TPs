@@ -1,4 +1,4 @@
-"""PCA of the correlation matrix by eigenvalues, with scree, loadings, biplot and sensitivity (DATA-04, DATA-05).
+"""PCA of the correlation matrix by eigenvalues, with eigenvalues plot, loadings, biplot and sensitivity (DATA-04, DATA-05).
 
 Run from TP4/ with `make pca` (or `.venv/bin/python analysis/pca.py`). It reads the prepared z-scored
 matrices of datos/prepared/ (the same files the C models read) and writes, for the audited 26-variable
@@ -8,8 +8,8 @@ sensitivity.json and sensitivity.md.
 
 The method is the one written in section 5 of deliverables/01-datos-pca.md before this module existed
 (D-12): PCA of the correlation matrix by `np.linalg.eigh`, k = smallest number of components whose
-cumulative variance reaches 80 %, Kaiser (eigenvalue > 1) as a control, and each eigenvector oriented so
-its largest-magnitude coefficient is positive. Phase 3 (Oja) reuses that orientation.
+cumulative variance reaches 80 % (a convention of the team, not a course rule), and each eigenvector oriented
+so its largest-magnitude coefficient is positive. Phase 3 (Oja) reuses that orientation.
 
 numpy and matplotlib only (D-06): no scikit-learn, no scipy, no dataframe library.
 """
@@ -105,11 +105,6 @@ def pca_eigh(z: np.ndarray, features: list[str]) -> PcaResult:
 def k_by_variance(result: PcaResult, threshold: float = VARIANCE_THRESHOLD) -> int:
     """Smallest k whose cumulative explained variance reaches the threshold."""
     return int(np.argmax(result.cumulative >= threshold)) + 1
-
-
-def kaiser_count(result: PcaResult) -> int:
-    """Number of eigenvalues greater than 1 (control criterion, D-12)."""
-    return int(np.sum(result.eigenvalues > 1.0))
 
 
 def scores(result: PcaResult, z: np.ndarray) -> np.ndarray:
@@ -221,7 +216,6 @@ def write_tables(out: Path, result: PcaResult, z: np.ndarray, meta: dict) -> Non
 def decision(result: PcaResult, variant: str) -> dict:
     """The decision.json payload: the section-5 rule applied as written."""
     k80 = k_by_variance(result)
-    kaiser = kaiser_count(result)
     load = loadings(result)
     top = {}
     for c in range(3):
@@ -232,8 +226,6 @@ def decision(result: PcaResult, variant: str) -> dict:
         "n_variables": len(result.features),
         "eigenvalue_sum": float(result.eigenvalues.sum()),
         "k_80": k80,
-        "kaiser": kaiser,
-        "rule_agrees": bool(k80 == kaiser),
         "explained_pc1": float(result.explained[0]),
         "explained_pc2": float(result.explained[1]),
         "cumulative_pc2": float(result.cumulative[1]),
@@ -248,11 +240,11 @@ def decision(result: PcaResult, variant: str) -> dict:
 # ----------------------------------------------------------------------------------------------
 
 
-def plot_scree(result: PcaResult, dec: dict, title: str, out: Path) -> None:
+def plot_eigenvalues(result: PcaResult, dec: dict, title: str, out: Path) -> None:
     """Eigenvalues (top) and cumulative variance (bottom) on a shared component axis.
 
-    Two panels instead of a twin y-axis: each has one scale, and the Kaiser line (eigenvalue 1) and the
-    80 % line each sit on the panel whose unit they use.
+    Two panels instead of a twin y-axis: each has one scale, and the 80 % line sits on the panel
+    whose unit it uses.
     """
     plt = plots_style.apply_style()
     p = len(result.eigenvalues)
@@ -270,20 +262,16 @@ def plot_scree(result: PcaResult, dec: dict, title: str, out: Path) -> None:
 
     colors = [orange if i + 1 == k80 else blue for i in range(p)]
     top.bar(x, result.eigenvalues, color=colors, width=0.7, edgecolor=plots_style.SURFACE, linewidth=1)
-    top.axhline(1.0, color=plots_style.TEXT_SECONDARY, linewidth=1, linestyle="--")
-    top.annotate("Kaiser (autovalor = 1)", (p + 0.4, 1.0), xytext=(0, 4), textcoords="offset points",
-                 va="bottom", ha="right", color=plots_style.TEXT_SECONDARY, fontsize=plots_style.fontsize(9))
     top.set_ylabel("autovalor")
-    agree = "coinciden" if dec["rule_agrees"] else "NO coinciden"
     if slide:  # the slide has its own title: panel titles only, the reading note in two short lines
         top.set_title("Autovalores", fontsize=plots_style.fontsize(12), loc="left")
-        top.text(0.99, 0.93, f"k para 80 % = {k80} (barra naranja)\nKaiser: {dec['kaiser']} ({agree})",
+        top.text(0.99, 0.93, f"k para 80 % = {k80} (barra naranja)",
                  transform=top.transAxes, ha="right", va="top", fontsize=plots_style.fontsize(9),
                  color=plots_style.TEXT_PRIMARY)
     else:
-        top.set_title(f"{title}\nScree: autovalores y varianza acumulada", fontsize=12, loc="left")
+        top.set_title(f"{title}\nAutovalores y varianza acumulada", fontsize=12, loc="left")
         top.text(0.99, 0.93,
-                 f"k para 80 % = {k80} (barra naranja)   |   Kaiser: {dec['kaiser']}   |   {agree}",
+                 f"k para 80 % = {k80} (barra naranja)",
                  transform=top.transAxes, ha="right", va="top", fontsize=9, color=plots_style.TEXT_PRIMARY)
 
     bottom.plot(x, result.cumulative * 100, color=blue, linewidth=2, marker="o", markersize=5,
@@ -311,7 +299,7 @@ def plot_scree(result: PcaResult, dec: dict, title: str, out: Path) -> None:
             ax.set_xticks(x)
             ax.set_xticklabels([str(i) if i % 2 == 1 else "" for i in x], fontsize=plots_style.fontsize(8))
     fig.tight_layout()
-    plots_style.save_figure(fig, out / "scree")
+    plots_style.save_figure(fig, out / "eigenvalues_variance")
 
 
 def plot_loadings(result: PcaResult, dec: dict, title: str, out: Path) -> None:
@@ -450,7 +438,7 @@ def sensitivity(audited: PcaResult, a_scores: np.ndarray, all31: PcaResult, s_sc
 
     def summary(dec: dict) -> dict:
         return {key: dec[key] for key in
-                ("n_variables", "k_80", "kaiser", "explained_pc1", "explained_pc2", "null_eigenvalues")}
+                ("n_variables", "k_80", "explained_pc1", "explained_pc2", "null_eigenvalues")}
 
     return {"common_variables": len(common), "audited": summary(dec_a),
             "all31_sensitivity": summary(dec_s), **out}
@@ -468,7 +456,6 @@ def sensitivity_markdown(comp: dict) -> str:
         f"| Variables | {a['n_variables']} | {s['n_variables']} |",
         f"| Autovalores nulos (abs < {NULL_EIGENVALUE:g}) | {a['null_eigenvalues']} | {s['null_eigenvalues']} |",
         f"| Componentes para el 80 % | {a['k_80']} | {s['k_80']} |",
-        f"| Componentes con autovalor > 1 (Kaiser) | {a['kaiser']} | {s['kaiser']} |",
         f"| % de varianza de PC1 | {a['explained_pc1'] * 100:.2f} | {s['explained_pc1'] * 100:.2f} |",
         f"| % de varianza de PC2 | {a['explained_pc2'] * 100:.2f} | {s['explained_pc2'] * 100:.2f} |",
         "",
@@ -505,7 +492,7 @@ def run_variant(stem: str, folder: str, title: str, out_dir: Path):
     dec = decision(result, str(meta["variant"]))
     write_tables(out, result, z, meta)
     for _ in _figure_variants(folder):
-        plot_scree(result, dec, title, out)
+        plot_eigenvalues(result, dec, title, out)
     plot_loadings(result, dec, title, out)
     for _ in _figure_variants(folder):
         plot_biplot(result, z, meta, title, out)
@@ -526,8 +513,8 @@ def main(argv: list[str] | None = None) -> int:
     for stem, folder, title in VARIANTS:
         result, z, dec, out = run_variant(stem, folder, title, out_dir)
         runs[folder] = (result, z, dec)
-        print(f"{folder}: k_80 = {dec['k_80']}, Kaiser = {dec['kaiser']}, "
-              f"agree = {dec['rule_agrees']}, null eigenvalues = {dec['null_eigenvalues']} -> {out}")
+        print(f"{folder}: k_80 = {dec['k_80']}, "
+              f"null eigenvalues = {dec['null_eigenvalues']} -> {out}")
 
     a_result, a_z, a_dec = runs["audited"]
     s_result, s_z, s_dec = runs["all31_sensitivity"]

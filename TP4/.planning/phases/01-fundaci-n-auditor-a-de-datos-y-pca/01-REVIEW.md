@@ -142,7 +142,7 @@ if (!model->run(&config, &rng, &results)) {
 **Issue:** `strtod` skips leading whitespace, but `separator_ok` requires `*end == ',' ` or `'\0'` with no tolerance for trailing spaces. A row like `1.0, 2.0 ` fails with "expected N numeric columns", which points at the wrong cause. The header is trimmed (`trimmed_copy`) and rows are not, so the two are inconsistent. Python writes no spaces, so nothing breaks today. The Phase 4 QR files may be produced by a different script.
 **Fix:** Skip trailing `isspace` characters after `strtod` before testing the separator, and say "unexpected character '%c' at column %d" in the message.
 
-### IN-05: `plot_scree` reads a private palette slot
+### IN-05: `plot_eigenvalues` reads a private palette slot
 
 **File:** `analysis/pca.py:262`
 **Issue:** `plots_style._SERIES[1]` reaches into a private constant, while the blue is obtained through `palette_for`. The orange will break silently if the palette is reordered.

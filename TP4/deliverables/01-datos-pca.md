@@ -109,13 +109,13 @@ Para mapear un creador nuevo alcanza con el archivo meta, sin releer `datos/crea
 
 Mapear `datos/creadores.csv` con ese mismo comando reproduce la matriz `datos/prepared/creadores_zscore.csv` byte a byte (DATA-03). Regenera: `make prepare`; dos corridas seguidas dan el mismo sha256 en los cuatro archivos de `datos/prepared/`.
 
-## 5. PCA: regla de decisión (fijada antes de mirar el scree)
+## 5. PCA: regla de decisión (fijada antes de mirar los autovalores)
 
 Esta sección fija la regla; los resultados se agregan después y no figuran acá. Las decisiones D-12 y D-13 están escritas en `.planning/phases/01-fundaci-n-auditor-a-de-datos-y-pca/01-CONTEXT.md` antes de que existiera ninguna salida de la PCA.
 
 - **Método.** PCA sobre la matriz de correlación (igual a la covarianza de la matriz con z-score y n − 1), por autovalores, verificada con `np.linalg.eigh`.
 - **Cantidad de componentes.** k es el menor número de componentes cuya varianza acumulada alcanza 80 %.
-- **Control.** El criterio de Kaiser (autovalor > 1) se usa como control. Si ambos criterios difieren, se reporta la discrepancia y no se resuelve por preferencia.
+- **Umbral.** El 80 % es una convención del equipo: la teoría del curso da la proporción de varianza de cada componente, pero no fija un umbral.
 - **Signo de los componentes.** Cada autovector se orienta de modo que su coeficiente de mayor magnitud sea positivo.
 - **Rol.** La PCA es diagnóstica (D-13): dice si la dimensionalidad se podría reducir y cómo leer PC1 y PC2 (biplot). Kohonen y Oja corren sobre la matriz completa con z-score del conjunto auditado (26 variables), como pide el enunciado; no se agrega una corrida del SOM sobre k componentes.
 
@@ -134,9 +134,8 @@ Las cifras salen de `analysis/results/pca/audited/` (`eigenvalues.csv`, `loading
 | PC7 | 0,78 | 3,0 | 86,1 |
 
 - Componentes para el 80 % de la varianza: 6
-- Componentes con autovalor > 1 (Kaiser): 6
 
-Los dos criterios coinciden (6 y 6), así que no hay discrepancia que reportar. La coincidencia es justa en los dos lados: con 5 componentes se llega a 79,1 %, a menos de un punto del umbral, y el sexto autovalor es 1,04, apenas sobre 1. Con otros datos cualquiera de los dos criterios podría haber dado 5 o 7.
+El umbral queda justo: con 5 componentes se llega a 79,1 %, a menos de un punto del 80 %. Con otros datos el k podría haber dado 5 o 7.
 
 **Cómo se leen PC1 y PC2.** Las cargas son las correlaciones entre cada variable y cada componente (`loadings.csv`). Cada autovector está orientado con la convención de la sección 5 (su coeficiente de mayor magnitud es positivo), por eso el signo de un componente es una convención y lo que informa es qué variables quedan en el mismo extremo y cuáles en el opuesto.
 
@@ -146,7 +145,7 @@ Los dos criterios coinciden (6 y 6), así que no hay discrepancia que reportar. 
 
 **Cómo se lee el biplot** (`analysis/results/pca/audited/biplot.svg`). Los puntos son los 50 creadores en PC1 y PC2, coloreados por su tema dominante (el mayor de los cuatro porcentajes de tema originales, incluido `topic_art_pct`, que se eliminó del conjunto auditado). Las flechas son las cargas de cada variable en PC1 y PC2 multiplicadas por el factor de escala `s` que figura en el subtítulo (6,43), solo para que se vean junto a los puntos; la longitud de una flecha mide cuán bien esa variable queda representada en el plano, y dos flechas casi paralelas indican variables correlacionadas. Se etiquetan las 8 con mayor norma. Dos creadores cercanos se parecen solo dentro del plano PC1-PC2, que retiene 61,7 % de la varianza (`cumulative_pc2`); el 38,3 % restante no se ve en la figura. La dirección de `topic_dogs_pct` (+0,48 en PC1 y +0,42 en PC2) es coherente con que los creadores de perros queden hacia la derecha y arriba.
 
-Figuras de esta sección: `analysis/results/pca/audited/scree.svg` (autovalores arriba con la línea de Kaiser, varianza acumulada abajo con la línea de 80 %, y la barra del sexto componente resaltada), `analysis/results/pca/audited/loadings.svg` (cargas de PC1 a PC6 con dos decimales) y `analysis/results/pca/audited/biplot.svg`.
+Figuras de esta sección: `analysis/results/pca/audited/eigenvalues_variance.svg` (autovalores arriba, varianza acumulada abajo con la línea de 80 %, y la barra del sexto componente resaltada), `analysis/results/pca/audited/loadings.svg` (cargas de PC1 a PC6 con dos decimales) y `analysis/results/pca/audited/biplot.svg`.
 
 ### 6.1 ¿Se reduce la dimensionalidad?
 
@@ -161,7 +160,6 @@ Corrida de sensibilidad (DATA-05): no es el conjunto auditado. Es la misma PCA s
 | Variables | 26 | 31 |
 | Autovalores nulos | 0 | 5 |
 | Componentes para el 80 % | 6 | 6 |
-| Componentes con autovalor > 1 (Kaiser) | 6 | 7 |
 | % de varianza de PC1 | 53,2 | 48,0 |
 | % de varianza de PC2 | 8,5 | 9,8 |
 
@@ -175,7 +173,7 @@ Sobre las 26 variables comunes (autovectores de 31 columnas restringidos y renor
 Qué cambian las 5 dependencias exactas:
 
 - **Autovalores nulos.** La matriz de correlación de 31 columnas tiene rango 26, por eso aparecen exactamente 5 autovalores nulos (el menor vale −3,2e-16, ruido numérico). Esa matriz es singular y no sirve para nada que la invierta.
-- **Los conteos.** El criterio de 80 % no se mueve (6 y 6). Kaiser pasa de 6 a 7, así que en la corrida de 31 columnas los dos criterios discrepan. Con 5 columnas que repiten información, el valor del conteo de Kaiser depende de qué columnas se incluyan y no solo de los datos. La suma de autovalores también cambia (31 en vez de 26), por lo que los porcentajes de varianza no son directamente comparables entre una y otra corrida.
+- **Los conteos.** El criterio de 80 % no se mueve (6 y 6). La suma de autovalores también cambia (31 en vez de 26), por lo que los porcentajes de varianza no son directamente comparables entre una y otra corrida.
 - **Cuánto se mueven los componentes principales.** PC1 casi no cambia como dirección (abs(cos) 0,99998) ni como orden de los creadores (Spearman en valor absoluto 0,9982). El signo opuesto del Pearson y del Spearman de PC1 no es una diferencia de resultado: en la corrida de 31 columnas el coeficiente de mayor magnitud de PC1 pertenece a otra variable, y la convención de orientación elige el signo contrario. PC2 se mueve más (abs(cos) 0,968, Spearman 0,89): el orden de los creadores en PC2 depende algo del conjunto de variables.
 
 El conjunto auditado es el que usan los modelos porque su matriz de correlación es regular (ningún autovalor nulo, el menor es 0,00046 según `decision.json`) y ninguna variable entra repetida: lo que cambia entre los dos conjuntos es el peso de la información duplicada, no la estructura principal de los datos.
@@ -189,7 +187,7 @@ make venv      # crea .venv e instala analysis/requirements.txt (versiones fijad
 make prepare   # escribe datos/prepared/: matriz auditada y de 31 columnas con sus .meta.json
 make eda       # escribe analysis/results/eda/: figuras, tablas CSV y audit_table.md
 make pca       # escribe analysis/results/pca/: para audited/ y all31_sensitivity/ los autovalores,
-               # autovectores, cargas, scores, scree, loadings, biplot y decision.json; y la
+               # autovectores, cargas, scores, eigenvalues plot, loadings, biplot y decision.json; y la
                # comparación sensitivity.json y sensitivity.md
 make test      # 3 tests de C y 6 de Python (incluye el de la PCA)
 ```

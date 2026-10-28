@@ -40,6 +40,7 @@ SOURCES: dict[str, tuple[str, str]] = {
     "pca.decision": ("pca/audited/decision.json", "pca"),
     "pca.sensitivity": ("pca/sensitivity.json", "pca"),
     "pca.eigenvalues": ("pca/audited/eigenvalues.csv", "pca"),
+    "prune.sensitivity": ("corr_prune/sensitivity.json", "corr-prune"),
     "som.contrast": ("som/profiles/pca_contrast.json", "som-profiles"),
     "som.selection": ("som/series_som_stage1/selection.json", "som-stage1"),
     "som.robustness": ("som/series_som_stage2/robustness.json", "som-stage2"),
@@ -187,15 +188,28 @@ def _pca_facts(results_dir: Path) -> dict[str, str]:
     return {
         "pca.n_features": integer(decision["n_variables"]),
         "pca.k_80": integer(k_80),
-        "pca.kaiser": integer(decision["kaiser"]),
         "pca.var_pc1": pct(decision["explained_pc1"], 1),
         "pca.var_pc2": pct(decision["explained_pc2"], 1),
         "pca.cum_k80": pct(eigenvalues[k_80 - 1]["cumulative"], 1),
         "pca.min_eigenvalue": dec(decision["min_eigenvalue"], 5),
-        "pca.kaiser_all31": integer(sensitivity["all31_sensitivity"]["kaiser"]),
         "pca.abs_cos_pc1": dec(sensitivity["abs_cos_pc1"], 5),
         "pca.abs_spearman_pc1": dec(abs(sensitivity["spearman_pc1"]), 4),
     }
+
+
+def _prune_facts(results_dir: Path) -> dict[str, str]:
+    """One row per threshold of the correlation-pruning sensitivity table: prune.r<i>.<field> (i from 1)."""
+    table = read_source(results_dir, "prune.sensitivity")
+    values = {"prune.n_audited": integer(table["n_audited"])}
+    for index, row in enumerate(table["rows"], start=1):
+        prefix = f"prune.r{index}"
+        values[f"{prefix}.tau"] = dec(row["tau"], 2)
+        values[f"{prefix}.n"] = integer(row["n_kept"])
+        values[f"{prefix}.k80"] = integer(row["k_80"])
+        values[f"{prefix}.pc1"] = pct(row["explained_pc1"], 1)
+        values[f"{prefix}.lmin"] = dec(row["min_eigenvalue"], 3)
+        values[f"{prefix}.cond"] = integer(round(row["condition_number"]))
+    return values
 
 
 def _number(value: float) -> str:
@@ -483,6 +497,16 @@ def check_claims(results_dir: Path = RESULTS_DIR) -> None:
         if statistics.correlation(diagonal, [float(row[column]) for row in profiles]) <= 0:
             failed.append(f"SOM: «chicos y baratos arriba a la izquierda, grandes y caros abajo a la derecha» "
                           f"({column} does not grow with row + col)")
+    rows = {row["tau"]: row for row in read_source(results_dir, "prune.sensitivity")["rows"]}
+    prune_drops = {tau: {item["dropped"] for item in row["dropped"]} for tau, row in rows.items()}
+    if rows[0.9]["kept"] != rows[0.85]["kept"]:
+        failed.append("PRUNE: «con 0,85 queda el mismo conjunto que con 0,90» (the kept sets differ)")
+    if "price_usd" not in prune_drops[0.8] or "price_usd" in prune_drops[0.85]:
+        failed.append("PRUNE: «con 0,80 sale price_usd y con 0,85 no» (price_usd changed side)")
+    if "followers" not in prune_drops[0.7] or "followers" in prune_drops[0.8]:
+        failed.append("PRUNE: «followers sale recién con 0,70» (followers changed side)")
+    if any(name in rows[0.5]["kept"] for name in ("followers", "estimated_argentina_reach", "comments_per_1000")):
+        failed.append("PRUNE: «con 0,50 no queda tamaño ni engagement por mil» (a size or engagement variable stays)")
     if failed:
         raise SystemExit("a sentence of the slides or the informe no longer holds:\n- " + "\n- ".join(failed))
 
@@ -492,7 +516,7 @@ def load_facts(results_dir: Path = RESULTS_DIR) -> dict[str, str]:
     check_claims(Path(results_dir))
     values: dict[str, str] = {}
     for part in (
-        _pca_facts, _som_facts, _oja_facts, _campaign_facts, _maintenance_facts, _letters_facts, _qr_facts,
+        _pca_facts, _prune_facts, _som_facts, _oja_facts, _campaign_facts, _maintenance_facts, _letters_facts, _qr_facts,
     ):
         values.update(part(Path(results_dir)))
     return values
@@ -519,11 +543,9 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     # 1: datos y PCA
     (1, "El conjunto auditado queda en {pca.n_features} variables"),
     (1, "Componentes para el 80 % de la varianza: {pca.k_80}"),
-    (1, "Componentes con autovalor > 1 (Kaiser): {pca.kaiser}"),
     (1, "La PCA muestra que {pca.k_80} componentes de {pca.n_features} retendrían {pca.cum_k80} de la varianza"),
     (1, "PC1 ({pca.var_pc1})"),
     (1, "PC2 ({pca.var_pc2})"),
-    (1, "Kaiser pasa de {pca.kaiser} a {pca.kaiser_all31}"),
     (1, "(abs(cos) {pca.abs_cos_pc1}) ni como orden de los creadores (Spearman en valor absoluto {pca.abs_spearman_pc1})"),
     (1, "ningún autovalor nulo, el menor es {pca.min_eigenvalue}"),
     # 2: Kohonen

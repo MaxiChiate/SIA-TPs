@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `sweep.py` corre una serie con varias seeds para cualquier modelo y deja un `summary.csv` con las claves de `metrics.json` y las claves variadas; el `.venv` se recrea con dependencias fijadas y `make test` pasa.
   3. El loader falla con un error claro si `creadores.csv` no tiene n=50 filas y 33 columnas; el EDA muestra distribuciones y correlaciones, y la tabla de auditoría documenta las 5 dependencias lineales exactas y la regla escrita de selección de variables.
   4. Existe la matriz z-scored con su scaler guardado (`.meta.json`), y un creador nuevo se puede mapear al mismo espacio usando solo ese archivo.
-  5. La PCA por autovalores muestra scree, loadings y biplot PC1/PC2 con una justificación escrita de si se reduce dimensionalidad y cómo se leen las componentes; la corrida de sensibilidad con las 31 columnas está etiquetada como tal y comparada contra el conjunto auditado.
+  5. La PCA por autovalores muestra eigenvalues plot, loadings y biplot PC1/PC2 con una justificación escrita de si se reduce dimensionalidad y cómo se leen las componentes; la corrida de sensibilidad con las 31 columnas está etiquetada como tal y comparada contra el conjunto auditado.
 
 **Plans:** 8/8 plans complete
 
@@ -47,13 +47,13 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [x] 01-05-PLAN.md — Stubs kohonen y hopfield con claves estrictas por modelo; configs de oja y kohonen sobre `datos/prepared`
-- [x] 01-06-PLAN.md — EDA (distribuciones, correlaciones, dependencias), tabla de auditoría generada, `make prepare`/`make eda` y fragmento escrito con la regla de PCA fijada antes del scree
+- [x] 01-06-PLAN.md — EDA (distribuciones, correlaciones, dependencias), tabla de auditoría generada, `make prepare`/`make eda` y fragmento escrito con la regla de PCA fijada antes del eigenvalue plot
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [x] 01-07-PLAN.md — Una serie por modelo desde la raíz, `make`/`make sweep`/`make clean`, `make test` (3 tests de C + pytest) y `make debug`
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [x] 01-08-PLAN.md — PCA por autovalores (scree, loadings, biplot, decisión 80 %/Kaiser), sensibilidad con 31 columnas e interpretación escrita
+- [x] 01-08-PLAN.md — PCA por autovalores (eigenvalues plot, loadings, biplot, decisión 80 %), sensibilidad con 31 columnas e interpretación escrita
 
 ### Phase 2: Kohonen SOM
 

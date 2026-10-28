@@ -58,7 +58,7 @@ guardas (la regla pre-registrada y el código de selección están commiteados y
 la regla cambió; `make results` no las saltea. Si una guarda se niega, el camino es discutir el cambio de la regla, nunca editar
 la regla en el lugar ni tocar el hash para que corra.
 
-Pasos individuales (cada uno escribe en `analysis/results/`): `make eda`, `make pca`, `make som-stage1`, `make som-stage2`,
+Pasos individuales (cada uno escribe en `analysis/results/`): `make eda`, `make pca`, `make corr-prune`, `make som-stage1`, `make som-stage2`,
 `make som-figures`, `make som-profiles`, `make oja`, `make campaigns`, `make maintenance`, `make letters`,
 `make hopfield-letters`, `make hopfield-figures`, `make qr`, `make hopfield-qr`, `make hopfield-qr-limits` y
 `make hopfield-qr-figures`. Algunos arrastran sus prerrequisitos: `make campaigns` y `make maintenance` vuelven a correr la etapa 1
@@ -74,7 +74,7 @@ comando. Las filas salen del manifiesto `analysis/deliverables_manifest.py` y `m
 |---|---|---|---|---|
 | `analysis/results/eda/distributions.svg` | `01-datos-pca.md` §2 | `make eda` | datos/creadores.csv (analysis/eda.py, sin config) | sin seed (determinista) |
 | `analysis/results/eda/correlation.svg` | `01-datos-pca.md` §2 | `make eda` | datos/creadores.csv (analysis/eda.py, sin config) | sin seed (determinista) |
-| `analysis/results/pca/audited/scree.svg` (y `slide/`) | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
+| `analysis/results/pca/audited/eigenvalues_variance.svg` (y `slide/`) | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
 | `analysis/results/pca/audited/loadings.svg` | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
 | `analysis/results/pca/audited/biplot.svg` (y `slide/`) | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
 | `analysis/results/som/figures/map.svg` (y `slide/`) | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
@@ -111,7 +111,8 @@ Las tablas principales y el comando que las escribe (todas bajo `analysis/result
 | Tabla | Qué es | Comando |
 |---|---|---|
 | `eda/audit_table.md` | Auditoría de las 31 variables: cuáles entran y por qué | `make eda` |
-| `pca/audited/decision.json` | Autovalores, regla de Kaiser y 80 % acumulado, componentes retenidas | `make pca` |
+| `pca/audited/decision.json` | Autovalores, 80 % acumulado, componentes retenidas | `make pca` |
+| `corr_prune/sensitivity.json` | Sensibilidad de la PCA a podar por umbral de |r| (variables que quedan, k, PC1, autovalor mínimo, condición); tabla de la slide `pca-prune` | `make corr-prune` |
 | `som/series_som_stage1/selection.json` | Grilla elegida por la regla fijada de antemano (etapa 1) | `make som-stage1` |
 | `som/series_som_stage2/robustness.json` | Robustez del schedule sobre la grilla elegida (etapa 2) | `make som-stage2` |
 | `campaigns/shortlists.csv` | Lista de creadores por campaña con la regla commiteada | `make campaigns` |
@@ -127,7 +128,7 @@ no se arma si un número citado de los fragmentos cambió.
 
 `make deliverables` deja listo, sin publicar, lo siguiente (no se versiona):
 
-- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 24 slides), los PNG de las figuras
+- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 25 slides), los PNG de las figuras
   (`assets/`) y `notes.md` (el guion). Lo arma `analysis/slides.py`; `make slides` corre solo ese paso.
 - `analysis/results/informe/informe.html`: el informe, una página autocontenida. Lo arma `analysis/informe.py`; `make informe`
   corre solo ese paso.

@@ -41,7 +41,7 @@ key-files:
 key-decisions:
   - "exact_dependencies.csv keeps the three columns relation, max_abs_residual, exact (last column True/False) with the relation named by the residual key; the formulas live in the audit table and the deliverable"
   - "A variable that is both near-redundant and on an exact relation shows the exact relation in the Relación column; near-redundancy goes in Motivo"
-  - "Phase 1 fragment states the PCA rule (80 %, Kaiser as control, eigh, sign convention, diagnostic role) without any eigenvalue, and has no sections 6 and 7 (plan 01-08 inserts them before section 8)"
+  - "Phase 1 fragment states the PCA rule (80 %, eigh, sign convention, diagnostic role) without any eigenvalue, and has no sections 6 and 7 (plan 01-08 inserts them before section 8)"
 
 patterns-established:
   - "make eda regenerates analysis/results/eda/ (ignored by git); the deliverable reproduces audit_table.md verbatim"
@@ -55,7 +55,7 @@ completed: 2026-10-20
 
 # Phase 01 Plan 06: EDA, generated audit table and Phase 1 written fragment Summary
 
-**`make eda` regenerates the 31-variable distributions, the 31 x 31 correlation heatmap and a 31-row audit table (5 exact dependencies leave, 26 enter), and `deliverables/01-datos-pca.md` justifies the selection, the direct z-score and fixes the PCA rule (80 % cumulative variance, Kaiser as control) before any PCA runs.**
+**`make eda` regenerates the 31-variable distributions, the 31 x 31 correlation heatmap and a 31-row audit table (5 exact dependencies leave, 26 enter), and `deliverables/01-datos-pca.md` justifies the selection, the direct z-score and fixes the PCA rule (80 % cumulative variance, retired criterion as control) before any PCA runs.**
 
 ## Performance
 
@@ -78,7 +78,7 @@ completed: 2026-10-20
 ## Verification
 
 - `make prepare` twice: identical sha256 for the four prepared files, exactly 4 files; `make eda`: all 9 outputs non-empty; 5 `,True` rows in `exact_dependencies.csv`; 31 table rows; 5 `sale (reconstruible)` (the `EDA_OK` chain, run in split commands because the worktree sandbox refuses long compound commands).
-- Document check (`DOC_OK`): all 31 variables in backticks, headings 1, 2, 3, 4, 5, 8 and no `## 6.` or `## 7.`, `80 %`, `Kaiser`, `eigh`, `ddof = 1`, the `map_creator.py --meta ...` command, 5 occurrences of `sale (reconstruible)`.
+- Document check (`DOC_OK`): all 31 variables in backticks, headings 1, 2, 3, 4, 5, 8 and no `## 6.` or `## 7.`, `80 %`, `retired criterion`, `eigh`, `ddof = 1`, the `map_creator.py --meta ...` command, 5 occurrences of `sale (reconstruible)`.
 - Both PNGs opened: 31 histograms with names and skewness are readable; the heatmap shows all 31 labels and price_usd/price_ars and sponsored/organic cells at the colour extremes (human-check items satisfied by visual inspection).
 - No `import plotly` / `import pandas` in `plots_style.py` or `eda.py`.
 

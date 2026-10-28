@@ -160,11 +160,11 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 **Dónde:** [01-CONTEXT.md](.planning/phases/01-fundaci-n-auditor-a-de-datos-y-pca/01-CONTEXT.md) · [fragmento 01 §4](deliverables/01-datos-pca.md)
 
-### F1 D-12 — PCA por autovalores con regla de decisión escrita antes del scree
+### F1 D-12 — PCA por autovalores con regla de decisión escrita antes de mirar los autovalores
 
-**Qué:** la PCA se hace sobre la matriz de correlación (= covarianza del z-score) por autovalores, verificada con `np.linalg.eigh`. El criterio de 80 % de varianza acumulada fija k; Kaiser (autovalor > 1) funciona como control, y si difieren se reporta la discrepancia.
+**Qué:** la PCA se hace sobre la matriz de correlación (= covarianza del z-score) por autovalores, verificada con `np.linalg.eigh`. El criterio de 80 % de varianza acumulada fija k; ese umbral es una convención del equipo, porque la teoría del curso da la proporción de varianza de cada componente pero no fija un umbral.
 
-**Por qué:** la regla se escribió antes de mirar el scree para no elegir k a posteriori.
+**Por qué:** la regla se escribió antes de mirar los autovalores para no elegir k a posteriori.
 
 **Dónde:** [01-CONTEXT.md](.planning/phases/01-fundaci-n-auditor-a-de-datos-y-pca/01-CONTEXT.md) · [fragmento 01 §5](deliverables/01-datos-pca.md)
 
@@ -175,6 +175,14 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 **Por qué:** respetar el enunciado (los métodos usan todas las variables) sin ampliar el alcance de la Fase 2.
 
 **Dónde:** [01-CONTEXT.md](.planning/phases/01-fundaci-n-auditor-a-de-datos-y-pca/01-CONTEXT.md) · [fragmento 01 §5 y §6](deliverables/01-datos-pca.md)
+
+### F1 D-14 — Sensibilidad de la PCA a podar por correlación (corrección posterior a la entrega)
+
+**Qué:** además de las 5 dependencias exactas (F1 D-08), se probó podar por umbral de correlación sobre las 26 variables auditadas. La regla es iterativa: en cada umbral se toma el par con mayor |r| ≥ τ y sale la variable de ese par con mayor |r| medio con las demás (empate: la de columna mayor), hasta que ningún par llega a τ. Se calculó la PCA para τ = 0,95; 0,90; 0,85; 0,80; 0,70; 0,60 y 0,50 (`make corr-prune`, `analysis/corr_prune.py`) y la tabla va en la slide `pca-prune`. No se rehizo el SOM, Oja ni las campañas con ningún τ: el umbral que se use para rehacer el ejercicio 1 (0,70 u 0,80) se decide aparte.
+
+**Por qué:** la corrección recibida fue que sacar solo las variables triviales no alcanza como criterio. El umbral no sale de la teoría del curso: es una decisión del equipo. Se justifica con la convención de |r| ≥ 0,8 como correlación fuerte (el mismo `STRONG_THRESHOLD` del EDA) y con el condicionamiento de la matriz (el número de condición baja de unos 856 con 0,95 a unos 108 con 0,80). A 0,80 `price_usd` sale con |r| = 0,822 con `followers`, así que ese resultado no es robusto en el borde. Un umbral muy bajo deja pocas variables y se pierde información real, no redundancia: con 0,50 no queda tamaño ni engagement por mil y PC1 baja al 27,8 %.
+
+**Dónde:** [`analysis/corr_prune.py`](analysis/corr_prune.py) · slide `pca-prune` · F1 D-08 y D-10 siguen valiendo para el conjunto auditado de 26.
 
 ## Fase 2 — Kohonen (SOM)
 

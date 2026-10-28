@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr hopfield-qr-limits hopfield-qr-figures results informe slides deliverables
+.PHONY: all venv prepare eda pca corr-prune som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr hopfield-qr-limits hopfield-qr-figures results informe slides deliverables
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -51,6 +51,11 @@ eda: venv
 # en analysis/results/pca/ (no se versiona). Lee datos/prepared/, por eso depende de prepare.
 pca: prepare
 	$(PY) analysis/pca.py
+
+# Sensibilidad de la PCA a podar variables correlacionadas por umbral de |r| (tabla de la slide pca-prune); solo la PCA,
+# no rehace el SOM ni Oja. Escribe analysis/results/corr_prune/ (no se versiona) y lee datos/prepared/.
+corr-prune: prepare
+	$(PY) analysis/corr_prune.py
 
 # Etapa 1 del SOM (140 corridas, leave-one-out y estabilidad) con la regla de eleccion ya commiteada:
 # se niega a correr si deliverables/02-kohonen.md, analysis/som_select.py o la serie estan sin commitear.
@@ -139,6 +144,7 @@ RESULTS_SENTINELS := \
 	$(PREP)/creadores_zscore.csv \
 	$(RES)/eda/audit_table.md \
 	$(RES)/pca/audited/decision.json \
+	$(RES)/corr_prune/sensitivity.json \
 	$(RES)/som/series_som_stage1/selection.json \
 	$(RES)/som/series_som_stage2/robustness.json \
 	$(RES)/som/figures/map.svg \
@@ -170,6 +176,10 @@ $(RES)/eda/audit_table.md: | .venv/.installed
 # PCA auditada y sensibilidad de 31 columnas; lee datos/prepared/.
 $(RES)/pca/audited/decision.json: | $(PREP)/creadores_zscore.csv
 	$(PY) analysis/pca.py
+
+# Sensibilidad de la PCA al umbral de correlacion; lee datos/prepared/.
+$(RES)/corr_prune/sensitivity.json: | $(PREP)/creadores_zscore.csv
+	$(PY) analysis/corr_prune.py
 
 # Etapa 1 del SOM (140 corridas) con la regla commiteada; si falta el centinela y la regla cambio, el driver se niega.
 $(RES)/som/series_som_stage1/selection.json: | $(PREP)/creadores_zscore.csv

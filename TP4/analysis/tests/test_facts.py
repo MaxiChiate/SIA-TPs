@@ -24,14 +24,28 @@ def write_json(path, payload):
 def write_results(root, *, robust=False):
     """A results tree with minimal versions of every file facts.load_facts reads (values chosen to print round)."""
     write_json(root / "pca/audited/decision.json", {
-        "n_variables": 26, "k_80": 3, "kaiser": 2, "explained_pc1": 0.5322, "explained_pc2": 0.0851,
+        "n_variables": 26, "k_80": 3, "explained_pc1": 0.5322, "explained_pc2": 0.0851,
         "min_eigenvalue": 0.00046018,
     })
     write_json(root / "pca/sensitivity.json", {
-        "all31_sensitivity": {"kaiser": 7}, "abs_cos_pc1": 0.9999752, "spearman_pc1": -0.99817,
+        "all31_sensitivity": {}, "abs_cos_pc1": 0.9999752, "spearman_pc1": -0.99817,
     })
     write_csv(root / "pca/audited/eigenvalues.csv", ["component", "eigenvalue", "explained", "cumulative"],
               [["PC1", 13.8, 0.5322, 0.5322], ["PC2", 2.2, 0.0851, 0.6173], ["PC3", 1.8, 0.0714, 0.8312]])
+    prune_rows = [
+        {"tau": tau, "n_kept": n, "kept": kept, "dropped": [{"dropped": d, "partner": "x", "abs_r": 0.9} for d in dropped],
+         "k_80": k, "explained_pc1": pc1, "min_eigenvalue": lmin, "condition_number": cond}
+        for tau, n, kept, dropped, k, pc1, lmin, cond in (
+            (0.95, 22, ["followers", "estimated_argentina_reach", "comments_per_1000"], [], 6, 0.482, 0.0124, 856.4),
+            (0.9, 20, ["followers", "estimated_argentina_reach", "comments_per_1000"], [], 6, 0.453, 0.0188, 483.0),
+            (0.85, 20, ["followers", "estimated_argentina_reach", "comments_per_1000"], [], 6, 0.453, 0.0188, 483.0),
+            (0.8, 17, ["followers", "estimated_argentina_reach", "comments_per_1000"], ["price_usd"], 7, 0.4, 0.0629, 108.0),
+            (0.7, 15, ["estimated_argentina_reach", "comments_per_1000"], ["price_usd", "followers"], 7, 0.365, 0.1149, 48.0),
+            (0.6, 12, ["comments_per_1000"], ["price_usd", "followers"], 6, 0.304, 0.1347, 27.0),
+            (0.5, 9, ["monthly_posts"], ["price_usd", "followers"], 5, 0.278, 0.2192, 11.0),
+        )
+    ]
+    write_json(root / "corr_prune/sensitivity.json", {"n_audited": 26, "rows": prune_rows})
     write_json(root / "som/profiles/pca_contrast.json", {
         "r2_pc1": 0.9613, "p_r2_pc1": 0.000999, "r2_pc2": 0.0552, "p_r2_pc2": 0.2667,
         "mantel_plane_rho": 0.599, "p_mantel_plane": 0.000999, "mantel_z26_rho": 0.6349,
@@ -230,7 +244,7 @@ def test_load_facts_names_make_results_and_the_step_for_any_missing_file(tmp_pat
 
 def test_load_facts_reads_the_values_of_every_phase(tmp_path):
     values = facts.load_facts(write_results(tmp_path))
-    assert values["pca.k_80"] == "3" and values["pca.kaiser"] == "2" and values["pca.n_features"] == "26"
+    assert values["pca.k_80"] == "3" and values["pca.n_features"] == "26"
     assert values["pca.var_pc1"] == "53,2 %" and values["pca.cum_k80"] == "83,1 %"
     assert values["som.mantel_rho"] == "0,599" and values["som.n_failing_variants"] == "2"
     assert values["oja.corr_followers_pearson"] == "-0,879" and values["oja.corr_followers_spearman"] == "-0,921"

@@ -284,15 +284,14 @@ FINDINGS: tuple[Finding, ...] = (
     Finding(
         "PCA",
         "El conjunto auditado tiene {pca.n_features} variables y {pca.k_80} componentes retendrían {pca.cum_k80} de la "
-        "varianza; el criterio de Kaiser da {pca.kaiser}. PC1 sola explica {pca.var_pc1} y es un eje de tamaño, alcance "
+        "varianza. PC1 sola explica {pca.var_pc1} y es un eje de tamaño, alcance "
         "y precio. La PCA queda como diagnóstico: los modelos corren sobre las {pca.n_features} variables.",
         "f1-s6",
     ),
     Finding(
         "PCA, sensibilidad",
-        "Con todas las columnas originales, que incluyen cinco dependencias lineales exactas, Kaiser pasa de "
-        "{pca.kaiser} a {pca.kaiser_all31} componentes y aparecen autovalores nulos: por eso los modelos usan el "
-        "conjunto auditado.",
+        "Con todas las columnas originales, que incluyen cinco dependencias lineales exactas, aparecen "
+        "autovalores nulos y la matriz de correlación es singular: por eso los modelos usan el conjunto auditado.",
         "f1-s7",
     ),
     Finding(

@@ -237,10 +237,10 @@ FIGURES = (
         slide=False,
     ),
     Figure(
-        key="pca_scree", path="pca/audited/scree.svg", make_target="pca",
+        key="pca_eigenvalues", path="pca/audited/eigenvalues_variance.svg", make_target="pca",
         config=_PCA[0], seed=_PCA[1], fragment=1, anchor="f1-s6",
-        alt="Autovalores con la línea de Kaiser y varianza acumulada con la línea del 80 %",
-        caption="Scree de la PCA de las variables auditadas, con la regla de decisión fijada de antemano.",
+        alt="Autovalores y varianza acumulada con la línea del 80 %",
+        caption="Autovalores y varianza acumulada de la PCA de las variables auditadas, con la regla de decisión fijada de antemano.",
         slide=True,
     ),
     Figure(

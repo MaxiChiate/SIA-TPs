@@ -21,8 +21,8 @@ Missing any of these = the submission fails the stated rubric.
 | EDA: summary stats, distributions, correlation matrix, outliers | Assignment 1: "realizar un EDA" | LOW | Histograms/boxplots of skewed columns (followers, reach, price). Heatmap of correlations. Show the redundant pairs explicitly. |
 | Variable-selection decision, written and justified | Assignment 1: "seleccionar qué variables serán utilizadas" | LOW-MED | Drop exact duplicates (`price_ars`, `organic_posts_pct`). Decide on `estimated_argentina_reach` and `total_engagement_per_1000` (derived). Decide on `creator_id`/`name` (identifiers, excluded). State the rule applied. |
 | Preprocessing: standardization (z-score) before PCA/SOM/Oja, and a decision on log-transform for skewed counts | PCA/SOM/Oja are scale-sensitive; without it followers/price dominate everything | LOW | Document which variables were log-transformed and why. Keep the mean/std so new creators can be projected (needed for the maintenance question). |
-| PCA from scratch: covariance/correlation matrix, eigendecomposition, scree plot, explained-variance and cumulative-variance table | Assignment 1; "sin librerías que lo resuelvan" is a stated constraint | MED | Python/numpy eigendecomposition is acceptable for PCA (course provides the Autovalores doc). Verify against a reference only as a test, not as the deliverable. |
-| Explicit dimensionality-reduction decision with a criterion (Kaiser, cumulative variance threshold, scree elbow) | Assignment: "Justificar si se realiza una reducción de dimensionalidad" | LOW | The answer may be "no, keep all variables for Kohonen, use PCs for interpretation". Either is fine if justified. |
+| PCA from scratch: covariance/correlation matrix, eigendecomposition, eigenvalue plot, explained-variance and cumulative-variance table | Assignment 1; "sin librerías que lo resuelvan" is a stated constraint | MED | Python/numpy eigendecomposition is acceptable for PCA (course provides the Autovalores doc). Verify against a reference only as a test, not as the deliverable. |
+| Explicit dimensionality-reduction decision with a criterion (retired criterion, cumulative variance threshold, elbow of the eigenvalue curve) | Assignment: "Justificar si se realiza una reducción de dimensionalidad" | LOW | The answer may be "no, keep all variables for Kohonen, use PCs for interpretation". Either is fine if justified. |
 | Loadings table and component interpretation (what PC1, PC2 mean in business terms) | Assignment: "cómo se interpretan las componentes" | MED | Name each PC (e.g. "scale/reach" vs "topic/engagement"). Sort loadings by magnitude. |
 | Biplot PC1/PC2 (creators as points, variables as arrows) | Assignment 2 explicitly references the "biplot" | MED | Color points by dominant topic. Label extreme creators. Scale arrows legibly. |
 
@@ -92,7 +92,7 @@ Missing any of these = the submission fails the stated rubric.
 | Preprocessing ablation: raw vs z-score vs log+z-score on PCA/SOM (QE/TE, variance explained) | Justifies preprocessing with evidence, not assertion | MED | One figure. Strong answer to "why these variables". |
 | Handling collinearity with evidence: variance-inflation or correlation clusters, PCA with and without derived columns | The brief explicitly flags the derived variables. Shows the effect (e.g. duplicate columns double-weighting a direction) | MED | Tie to the variable-selection decision. |
 | Correlation circle and per-creator contribution/cos2 on the biplot | Reads the biplot correctly (arrow length only means something if the variable is well represented in PC1-2) | LOW-MED | Cheap once loadings exist. |
-| Parallel analysis or broken-stick for the number of components | A more defensible rule than Kaiser, especially at n=50 | MED | Permutation-based, a few lines. |
+| Parallel analysis or broken-stick for the number of components | A more defensible rule than retired criterion, especially at n=50 | MED | Permutation-based, a few lines. |
 | Oja variants: Sanger/generalized Hebbian for PC2 (and beyond), learning-rate sensitivity, convergence speed | Course docs include "Oja y Sanger". Gives a second PC from the net and a full-biplot comparison | MED | Optional. Only if time remains. A 2-component Sanger comparison is neat but not required. |
 | Oja index sensitivity: with/without centering, with/without log, rank correlation (Spearman/Kendall) with PC1 and with followers | Shows exactly when the "index" is just size | LOW-MED | Feeds directly into the "is max always right?" answer. |
 | Topic-conditioned index / campaign-specific scoring (e.g. Oja or PC applied to the subset of relevant variables, or weighted by topic) | A defensible alternative to "just take the max index" | MED | A short, honest contrast: the global index does not know the campaign. Keep it small, do not build a recommender. |
@@ -136,7 +136,7 @@ Missing any of these = the submission fails the stated rubric.
 ```
 Variable selection + preprocessing (z-score, log decision, saved scaler)
     ├──requires──> EDA (distributions, correlations, duplicates)
-    ├──enables──> PCA (eigendecomposition, scree, loadings)
+    ├──enables──> PCA (eigendecomposition, eigenvalues plot, loadings)
     │                 ├──enables──> Biplot ──enables──> SOM-vs-PC1/PC2 contrast
     │                 └──enables──> Oja-vs-PC1 comparison (the reference direction)
     ├──enables──> Kohonen C core
@@ -180,7 +180,7 @@ All figures ──feed──> Slides + Artifact report
 ### Launch With (v1: covers every assignment bullet)
 
 - [ ] EDA, variable-selection rule, preprocessing (z-score, log decision) with saved scaler
-- [ ] PCA with scree, cumulative variance, loadings, interpreted components, biplot
+- [ ] PCA with eigenvalue plot, cumulative variance, loadings, interpreted components, biplot
 - [ ] Kohonen C core, multi-seed hyperparameter sweep with QE and TE, final-choice table
 - [ ] Hit map, U-matrix, component planes (needed to give region profiles), region profiles, SOM-vs-PC1/PC2 contrast
 - [ ] Oja C core with convergence log, index and ranking, interpretation, answer to "is the max always right?", Oja-vs-PC1 comparison (cosine and rank correlation)
@@ -215,7 +215,7 @@ All figures ──feed──> Slides + Artifact report
 | Feature | Grading/Insight Value | Implementation Cost | Priority |
 |---------|-----------------------|---------------------|----------|
 | EDA + variable selection + preprocessing | HIGH | LOW | P1 |
-| PCA scree/loadings/biplot | HIGH | MEDIUM | P1 |
+| PCA eigenvalue plot/loadings/biplot | HIGH | MEDIUM | P1 |
 | Kohonen core + QE/TE sweep | HIGH | HIGH | P1 |
 | Hit map + U-matrix + component planes + region profiles | HIGH | MEDIUM | P1 |
 | SOM-vs-PC contrast | HIGH | MEDIUM | P1 |
@@ -245,7 +245,7 @@ All figures ──feed──> Slides + Artifact report
 | Aspect | Typical submission | Strong submission | Our approach |
 |--------|--------------------|-------------------|--------------|
 | SOM evaluation | One map, qualitative description | QE and TE vs hyperparameters, multi-seed, hit map, U-matrix, component planes | QE/TE sweep over several seeds plus utilization and stability |
-| PCA | Scree and a 2D scatter | Loadings, named components, biplot with arrows and contributions, preprocessing justified | Loadings-first interpretation and an explicit reduction decision |
+| PCA | Eigenvalue plot and a 2D scatter | Loadings, named components, biplot with arrows and contributions, preprocessing justified | Loadings-first interpretation and an explicit reduction decision |
 | Oja | Weights printed, "it works" | Convergence vs PC1 (cosine), norm to 1, centered input, rank comparison | Convergence log and quantified Oja-vs-PC1 agreement |
 | Index interpretation | "Highest is best" | Explains that PC1 is not campaign-specific and shows a counterexample | Counterexample from the data, campaign-conditioned shortlist |
 | Hopfield letters | Recovers a letter | Overlap matrix, capacity theory vs empirical, identified spurious state with a fixed-point check | Same, plus a small spurious-state catalogue |

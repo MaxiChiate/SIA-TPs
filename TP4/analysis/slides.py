@@ -81,7 +81,7 @@ CHAR_WIDTH = 0.6  # the probe's rule: a character is about 0.6 x the font size w
 # A title wraps at spaces into lines of about TEXT_W / (0.6 x TITLE_PX) characters; two lines at 90 % fill leave room
 # for a long word that moves to the next line, so the figure area below it stays at least MIN_FIGURE_H.
 MAX_TITLE_CHARS = int(2 * int(TEXT_W / (CHAR_WIDTH * TITLE_PX)) * 0.9)
-MAX_BODY_LINES, MAX_TABLE_COLUMNS, MAX_TABLE_ROWS = 3, 4, 5
+MAX_BODY_LINES, MAX_TABLE_COLUMNS, MAX_TABLE_ROWS = 3, 6, 7
 
 
 def _key(path: str) -> str:
@@ -133,13 +133,13 @@ OUTLINE: tuple[Slide, ...] = (
         "Por eso los resultados poco favorables se muestran tal cual salieron, cada uno con su slide.",
     ),
     Slide(
-        "pca-scree", 1, "{pca.k_80} componentes retienen {pca.cum_k80} de la varianza, pero no reducimos la dimensión",
+        "pca-eigenvalues", 1, "{pca.k_80} componentes retienen {pca.cum_k80} de la varianza, pero no reducimos la dimensión",
         None, ("Q1.1", "Q1.2"),
-        ("Los dos criterios coinciden: Kaiser también da {pca.kaiser} componentes",), None, _key("pca/audited/scree.svg"),
+        (), None, _key("pca/audited/eigenvalues_variance.svg"),
         "El conjunto auditado queda en {pca.n_features} variables y la regla de decisión se fijó antes de mirar el "
-        "scree: el menor k que pasa el umbral de varianza es {pca.k_80} ({pca.cum_k80}) y Kaiser también da {pca.kaiser}. "
-        "Con las columnas originales Kaiser pasa a {pca.kaiser_all31} y aparecen autovalores nulos, por eso se usa el "
-        "conjunto auditado. "
+        "gráfico: el menor k que pasa el umbral de varianza acumulada es {pca.k_80} ({pca.cum_k80}), y ese umbral es una "
+        "convención del equipo. "
+        "Con las columnas originales aparecen autovalores nulos, por eso se usa el conjunto auditado. "
         "La PCA es diagnóstica: el SOM y Oja corren sobre las {pca.n_features} variables con z-score, como pide el enunciado.",
     ),
     Slide(
@@ -150,6 +150,43 @@ OUTLINE: tuple[Slide, ...] = (
         "tutoriales y respuesta que se guarda o se comenta. "
         "PC2 se apoya en la audiencia argentina y en el tema perros. "
         "Los temas de fútbol y maquillaje aparecen recién en PC3 y PC4, fuera de este plano.",
+    ),
+    Slide(
+        "pca-prune", 1,
+        "Podar con |r| ≥ {prune.r4.tau} deja {prune.r4.n} de {prune.n_audited} variables y PC1 baja a {prune.r4.pc1}",
+        None, ("Q1.1",),
+        ("No rehicimos el ejercicio con cada umbral: el elegido, {prune.r5.tau} o {prune.r4.tau}, se decide aparte",),
+        (
+            ("|r| ≥", "Quedan", "Comp.", "PC1", "Cond.", "Qué pasa"),
+            (
+                ("{prune.r1.tau}", "{prune.r1.n}", "{prune.r1.k80}", "{prune.r1.pc1}", "{prune.r1.cond}",
+             "Salen duplicados de alcance y formato"),
+                ("{prune.r2.tau}", "{prune.r2.n}", "{prune.r2.k80}", "{prune.r2.pc1}", "{prune.r2.cond}",
+             "Sale también el alcance promedio"),
+                ("{prune.r3.tau}", "{prune.r3.n}", "{prune.r3.k80}", "{prune.r3.pc1}", "{prune.r3.cond}",
+             "Mismo conjunto que con el umbral anterior"),
+                ("{prune.r4.tau}", "{prune.r4.n}", "{prune.r4.k80}", "{prune.r4.pc1}", "{prune.r4.cond}",
+             "Sale price_usd, justo en el borde"),
+                ("{prune.r5.tau}", "{prune.r5.n}", "{prune.r5.k80}", "{prune.r5.pc1}", "{prune.r5.cond}",
+             "Sale followers: queda el alcance estimado"),
+                ("{prune.r6.tau}", "{prune.r6.n}", "{prune.r6.k80}", "{prune.r6.pc1}", "{prune.r6.cond}",
+             "Se achica el engagement por mil"),
+                ("{prune.r7.tau}", "{prune.r7.n}", "{prune.r7.k80}", "{prune.r7.pc1}", "{prune.r7.cond}",
+             "Sin tamaño ni engagement por mil")
+            ),
+        ),
+        None,
+        "Además de las dependencias exactas probamos podar por correlación sobre las {prune.n_audited} variables auditadas: "
+        "en cada umbral sale, del par más correlacionado en valor absoluto, la variable con mayor correlación media con las "
+        "demás, hasta que ningún par llega al umbral, y después se repite la PCA. "
+        "Cuanto más bajo el umbral, menos variables, menos varianza en PC1 y una matriz más estable: el número de condición "
+        "baja de {prune.r1.cond} con {prune.r1.tau} a {prune.r7.cond} con {prune.r7.tau}, y el menor autovalor sube de "
+        "{prune.r1.lmin} a {prune.r7.lmin}. "
+        "Con {prune.r4.tau} quedan {prune.r4.n} variables, PC1 explica {prune.r4.pc1} y hacen falta {prune.r4.k80} "
+        "componentes para el umbral de varianza (columna Comp.); con {prune.r5.tau} sale followers y el tamaño queda solo en el alcance "
+        "estimado en Argentina, y con {prune.r7.tau} no queda ni tamaño ni engagement por mil. "
+        "El umbral es una decisión del equipo y no sale de la teoría del curso, price_usd sale con {prune.r4.tau} justo sobre el "
+        "borde, y solo la PCA se calculó con cada umbral: el SOM, Oja y las campañas se rehacen únicamente con el elegido.",
     ),
     Slide(
         "som-rule", 1,

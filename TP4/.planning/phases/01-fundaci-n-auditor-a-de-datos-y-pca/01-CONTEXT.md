@@ -29,7 +29,7 @@ Dejar lista la base técnica compartida (un binario C que despacha por `model`, 
 
 ### Transformaciones y PCA
 - **D-11:** Z-score directo, sin log ni winsorizar (sesgo máximo ≈ 2 en `estimated_argentina_reach`; followers/reach/precio ≈ 1). Se documenta el sesgo en el EDA; el log queda como sensibilidad opcional, no como camino principal. Scaler (media, desvío) guardado en `.meta.json`.
-- **D-12:** PCA sobre matriz de correlación (= covarianza del z-score) por autovalores, verificada con `np.linalg.eigh`. Regla de decisión escrita antes de mirar el scree: el criterio de 80% de varianza acumulada fija k; Kaiser (autovalor >1) funciona como control; si difieren, se reporta la discrepancia.
+- **D-12:** PCA sobre matriz de correlación (= covarianza del z-score) por autovalores, verificada con `np.linalg.eigh`. Regla de decisión escrita antes de mirar los autovalores: el criterio de 80% de varianza acumulada fija k; retired criterion (autovalor >1) funciona como control; si difieren, se reporta la discrepancia.
 - **D-13:** La PCA es diagnóstica: justifica por escrito si se podría reducir y cómo leer PC1/PC2 (biplot), pero Kohonen y Oja corren sobre la matriz z-scored completa del conjunto auditado, como pide el enunciado. No se agrega una corrida del SOM sobre k PCs.
 
 ### Claude's Discretion

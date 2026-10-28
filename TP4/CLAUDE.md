@@ -39,9 +39,10 @@ analysis/                        # README.md explica las series y los drivers
   hopfield_qr.py, hopfield_qr_limits.py, hopfield_qr_select.py, hopfield_qr_figures.py   # Hopfield sobre los 5 QR
   plots_style.py                 # estilo común y variantes de figura (informe y slide)
   deliverables_manifest.py       # fuente única: 31 figuras, 25 preguntas del enunciado, fragmentos
-  facts.py                       # los números del texto salen de los JSON/CSV; `facts.py check` fija 69 frases de los fragmentos
+  facts.py                       # los números del texto salen de los JSON/CSV; `facts.py check` fija 67 frases de los fragmentos
   informe.py                     # arma analysis/results/informe/informe.html
-  slides.py                      # arma analysis/results/slides/ (24 slides, PNG y guion)
+  corr_prune.py                  # sensibilidad de la PCA a podar por umbral de |r| (tabla de la slide pca-prune; no rehace SOM ni Oja)
+  slides.py                      # arma analysis/results/slides/ (25 slides, PNG y guion)
   tests/                         # pytest; incluye test_repro_docs.py, que cuida README.md, CLAUDE.md y DECISIONS.md
 deliverables/                    # un fragmento por fase (01 a 05): lo que se entrega por escrito, congelado por guardas sha256
 DECISIONS.md                     # decisiones para la defensa y fuente del glosario del informe
@@ -93,10 +94,10 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Entrega
 
-- **Slides**: 24 slides armadas por `make deliverables` en `analysis/results/slides/` y publicadas como Artifact tipo Slides.
+- **Slides**: 25 slides armadas por `make deliverables` en `analysis/results/slides/`; publicadas como Artifact tipo Slides (republicado el 2026-10-28 con la slide `pca-prune`).
 - **Informe**: `analysis/results/informe/informe.html`, publicado como Artifact HTML (D-15).
-- Slides: https://claude.ai/artifact/9YjSxsDcVYSwvnXaD5JVy1
-- Informe: https://claude.ai/artifact/32SjYXD12gS2Lh6vY22jyM
+- Slides: https://claude.ai/artifact/CxnuCZKwF55r2tUMPWXBSN (las URLs `9YjSx…` y `32SjY…` de antes ya no existen; el 2026-10-28 se reemplazó el contenido de este deck por las 25 slides del repo)
+- Informe: https://claude.ai/artifact/ScERzQ4wTc8TrCNfuw2kKq (republicado el 2026-10-28 con el guion de las 25 slides en el anexo; está compartido por link)
 - Los dos Artifacts son privados; el deck se entrega como su PDF exportado (D-14: queda fuera del repo, ni en `docs/` ni en `deliverables/`), y compartir el link del informe lo decide la persona dueña desde el menú Share.
 - El informe lleva el guion de la presentación como anexo (`id="guion"`, decisión del usuario en el checkpoint de 06-12): `make deliverables` pasa `INFORME_FLAGS := --notes analysis/results/slides/notes.md`; el guion viaja además como notas del orador en cada slide.
 - Cualquier cambio de resultados: regenerar con `make deliverables`, actualizar `DECISIONS.md` y este archivo, y republicar a la
