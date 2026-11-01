@@ -2,7 +2,7 @@
 
 ## 1. Algoritmo y salidas
 
-El modelo es un mapa autoorganizado de Kohonen con grilla rectangular de k × k neuronas. Cada neurona tiene un vector de pesos en las 26 variables auditadas con z-score (`datos/prepared/creadores_zscore.csv`, sección 4 de `deliverables/01-datos-pca.md`), y la distancia entre un creador y una neurona es la euclídea en ese espacio (D-05). La distancia en la grilla entre dos neuronas es la euclídea entre sus posiciones (fila, columna). El código está en C (`neuron/models/kohonen.c`), sin librerías de aprendizaje automático, y lo corre `neuron/build/neuron` con una config estricta de siete claves: `grid_k`, `neighborhood`, `radius0`, `radius_final`, `eta0`, `eta_final` y `epochs`.
+El modelo es un mapa autoorganizado de Kohonen con grilla rectangular de k × k neuronas. Cada neurona tiene un vector de pesos en las 7 primeras componentes principales de la PCA de las 17 variables que quedan con el umbral de correlación (sección 6.2 de `deliverables/01-datos-pca.md`): los scores sin reescalar, en `datos/prepared/creadores_pca_scores.csv`, que escribe `make pca`. La distancia entre un creador y una neurona es la euclídea en ese espacio (D-05). La distancia en la grilla entre dos neuronas es la euclídea entre sus posiciones (fila, columna). El código está en C (`neuron/models/kohonen.c`), sin librerías de aprendizaje automático, y lo corre `neuron/build/neuron` con una config estricta de siete claves: `grid_k`, `neighborhood`, `radius0`, `radius_final`, `eta0`, `eta_final` y `epochs`.
 
 **Inicialización.** Los pesos de cada neurona arrancan como una copia de un creador elegido al azar del conjunto de entrenamiento, que es la recomendación de las slides para evitar unidades muertas (D-05). Con k² mayor que 50 creadores (k = 8 tiene 64 neuronas) el orden de creadores se vuelve a barajar cada vez que se agota.
 
@@ -19,7 +19,7 @@ El modelo es un mapa autoorganizado de Kohonen con grilla rectangular de k × k 
 
 **Salidas de cada corrida.**
 
-- **QE** (error de cuantización): distancia euclídea media de cada creador a su neurona ganadora (BMU), en unidades z.
+- **QE** (error de cuantización): distancia euclídea media de cada creador a su neurona ganadora (BMU), en unidades de score (las de las componentes principales).
 - **TE** (error topográfico): fracción de creadores cuya primera y segunda BMU no son vecinas de 4 (D-04). Una diagonal cuenta como error, por lo que en una grilla de 2 × 2 el TE puede ser mayor que 0.
 - **Ocupación por neurona** (`occupancy.csv`): cantidad de creadores que caen en cada neurona, con fila y columna. De ahí salen las neuronas ocupadas, la fracción de neuronas vacías, los creadores por neurona ocupada y las neuronas con un solo creador.
 - **Traza por época** (`trace.csv`): η, R, QE y TE al final de cada época, para ver si el entrenamiento se aplanó.
@@ -48,6 +48,13 @@ Esta sección fija la regla; los resultados se agregan después y no figuran ac�
 - **Criterio de robustez.** La elección es robusta si la k elegida pasa los mismos filtros en cada variante de la etapa 2. La etapa 2 nunca vuelve a elegir k. Si en la etapa 1 se quitó el filtro de TE, la robustez revisa solo los filtros de ocupación.
 - **Control.** `analysis/som_stage.py` se niega a correr mientras este archivo, `analysis/som_select.py` (la regla como código: umbrales, filtros, `select_grid` y escaleras) o el archivo de la serie estén sin trackear o con cambios sin commitear. `selection.json` registra el hash del commit y el sha256 del texto entre los marcadores, más el hash del commit y el sha256 de `analysis/som_select.py`, y los pasos posteriores se niegan a correr si cambia cualquiera de los dos sha256.
 <!-- regla:fin -->
+
+### 2.1 Reaplicación de la regla sobre las componentes principales
+
+El 2026-11-01 el mapa se volvió a entrenar sobre los scores de las 7 primeras componentes de la PCA de las 17 variables que quedan con |r| < 0,8 (sección 6.2 de `deliverables/01-datos-pca.md`), que juntan el 83,4 % de la varianza, en lugar de las 26 variables con z-score. La regla de la sección 2 no cambió: el texto entre los marcadores y `analysis/som_select.py` son los mismos, con los mismos umbrales, filtros, desempate y escaleras de la etapa 2. Lo único que cambia es el dato de entrada, que quedó escrito en el archivo de la serie (`analysis/series_som_stage1.json`, clave `input`) y en el config base, y se commiteó antes de correr las etapas.
+
+Los scores no se reescalan: la distancia entre dos creadores en esas 7 columnas es la del espacio de las 17 variables proyectado sobre las 7 componentes, de modo que PC1 pesa más que PC7 en proporción a su varianza (sus autovalores). La advertencia del QE-LOO de la sección 2 se agranda: tanto el z-score como la PCA y el umbral de correlación se ajustaron con los 50 creadores, el excluido incluido, y cada fold del leave-one-out no los reajusta. Es una fuga leve, declarada y no corregida, y los QE-LOO nuevos no son comparables con los del mapa de 26 variables (la unidad cambió).
+
 
 
 ## 3. Etapa 1: resultados y grilla elegida
