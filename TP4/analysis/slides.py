@@ -195,7 +195,9 @@ OUTLINE: tuple[Slide, ...] = (
         ("Inicializamos los pesos de las neuronas con muestras elegidas al azar de los datos de entrenamiento porque, "
          "con valores aleatorios, algunas neuronas quedan lejos de los datos, nunca ganan y quedan muertas.",
          "Descartamos las grillas con más de {som.empty_max} de neuronas vacías o con menos de {som.creators_min} "
-         "creadores por neurona ocupada (en promedio entre las seeds)."),
+         "creadores por neurona ocupada (en promedio entre las seeds).",
+         "En cada iteración t el radio y la tasa bajan de forma exponencial: R(t) = R0 · ({som.base_radius_final} / R0)"
+         "^(t / (T − 1)) y η(t) = η0 · ({som.base_eta_final} / η0)^(t / (T − 1)), con T los pasos de entrenamiento."),
         (
             ("Hiperparámetro", "Valor", "Por qué"),
             (
@@ -203,10 +205,8 @@ OUTLINE: tuple[Slide, ...] = (
                  "La eligió la regla fijada de antemano: es la más grande entre las grillas que cumplen la ocupación"),
                 ("Radio inicial R0", "{som.base_radius0}",
                  "Baseline fijado de antemano (la mitad de k); con otros valores la elección no cambia"),
-                ("Radio final", "{som.base_radius_final}",
-                 "Actualiza la ganadora y sus 4 vecinas pegadas, la adyacencia del TE y de la matriz U"),
-                ("Tasa η", "{som.base_eta0} a {som.base_eta_final}",
-                 "Decae exponencialmente con η0 menor que 1: suave y fácil de explicar"),
+                ("Tasa de aprendizaje inicial η0", "{som.base_eta0}",
+                 "Menor que 1, como pide el curso; con η0 entre {som.eta_lo} y {som.eta_hi} la elección no cambia"),
                 ("Épocas", "{som.base_epochs}",
                  "Baseline fijado de antemano; con 50 a 1040 épocas la ocupación no se degrada"),
             ),
@@ -218,9 +218,13 @@ OUTLINE: tuple[Slide, ...] = (
         "La grilla la eligió la regla fijada de antemano, que descarta las grillas con más de {som.empty_max} de "
         "neuronas vacías o con menos de {som.creators_min} creadores por neurona ocupada y se queda con la más "
         "grande, y el resto del schedule es el baseline de la serie, también fijado antes de correr. "
+        "El radio y la tasa los actualizamos en cada iteración con una bajada exponencial hasta R = "
+        "{som.base_radius_final} y η = {som.base_eta_final}: la teoría pide que R tienda a 1 y como entrenamos un "
+        "número finito de pasos llega a 1 en el último, y por eso el radio final y η final no son hiperparámetros "
+        "sino el punto de llegada de la bajada. "
         "Después de elegir la grilla movimos una cosa a la vez (R0, η0 y épocas) con 10 seeds cada una, y en todas las "
-        "variantes la ocupación pasa los filtros, así que la elección es robusta. "
-        "El mapa se entrena con los scores de las {pca17.k_80} primeras componentes de la PCA.",
+        "variantes la ocupación pasa los filtros, así que la elección es robusta, y el mapa se entrena con los "
+        "scores de las {pca17.k_80} primeras componentes de la PCA.",
     ),
     Slide(
         "som-k", 1, "k = {som.chosen_k} es la grilla más grande que cumple los dos límites de ocupación",
