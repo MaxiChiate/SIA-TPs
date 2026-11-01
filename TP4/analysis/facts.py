@@ -665,6 +665,9 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (5, "{qr.hamming_at_0_45} contra {qr.pinv_at_0_45} en el nivel 0,45, y {qr.hamming_at_0_50} contra {qr.pinv_at_0_50} en el nivel 0,50"),
     (5, "la distancia de Hamming de la consulta a la fuente ya es {qr.shift1_query_hamming} de {qr.n_pixels}"),
     (5, "queda a {qr.shift1_recovered_hamming} píxeles"),
+    (5, "(producto escalar normalizado medio {qr.mean_abs_overlap} y máximo {qr.max_abs_overlap}; el {qr.identical_fraction} de los píxeles es igual en los {qr.n_qr})"),
+    (5, "la mayoría píxel a píxel, a entre {qr.majority_hamming_min} y {qr.majority_hamming_max} píxeles de cada QR"),
+    (5, "recupera el QR consultado en el {qr.pinv_exact_noise0} de los casos hasta ruido {qr.pinv_last_full_noise}"),
 )
 
 

@@ -109,6 +109,12 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Pendientes
 
+- **Conclusión de QR reescrita (2026-10-31)**: el informe explica el 0 % de Hebb como el caso de falla de la teoría (QR
+  demasiado parecidos → crosstalk → atractor espurio que combina los cinco) y presenta la pseudo-inversa como los pesos que
+  sí recuperan (`FINDINGS` de `informe.py` y párrafo "Conclusión" al inicio de la §6 del fragmento 05, fuera del bloque
+  congelado). Además, "solapamiento" pasó a "producto escalar" y "término de cruce" a "crosstalk". Sin números nuevos. El
+  informe local está armado; falta republicarlo a la misma url y copiar a mano al Google Slides los cambios de vocabulario.
+
 - **Revisión del deck contra el enunciado (F6 D-16, 2026-10-27)**: 3 slides nuevas (`eda`, `som-zonas`, `letras-capacidad`) y 4
   reescritas (`som-not-robust`, `camp-futbol`, `ej1-conclusiones`, `qr-energia`). El deck que se presenta ahora es un Google
   Slides (convertido del Artifact): los cambios se copiaron a mano ahí, y las 3 figuras nuevas se suben a mano. El informe
