@@ -348,6 +348,8 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
         "som.k_last": integer(last["k"]),
         "som.k_first_dist": dec(first["qe_mean"], 2),
         "som.k_last_dist": dec(last["qe_mean"], 2),
+        "som.chosen_neurons": integer(selection["chosen_k"] ** 2),
+        "som.k_next_neurons": integer(following["k"] ** 2),
         "som.k_next": integer(following["k"]),
         "som.k_next_empty": pct(following["empty_fraction_mean"], 1),
         "som.k_next_creators": dec(following["creators_per_occupied_mean"], 2),

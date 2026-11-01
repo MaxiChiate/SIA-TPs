@@ -388,8 +388,11 @@ def plot_te_by_k(step_rows: list[dict], chosen_k: int, thresholds: dict, out_ste
     ax.set_ylabel("error topográfico")
     handles = [plt.Rectangle((0, 0), 1, 1, color=colors["cumple la ocupación"]),
                plt.Rectangle((0, 0), 1, 1, color=plots_style.TEXT_SECONDARY)]
-    ax.legend(handles, ["cumple la ocupación", "no cumple la ocupación"], frameon=False,
-              fontsize=plots_style.fontsize(9), loc="upper right")
+    empty_limit = f"{thresholds['empty_max'] * 100:.0f} %"
+    ax.legend(handles, ["cumple los límites de ocupación",
+                        f"no cumple: más de {empty_limit} de vacías o menos de {thresholds['creators_min']:g} "
+                        "creadores por neurona"],
+              frameon=False, fontsize=plots_style.fontsize(9), loc="upper right")
     ax.grid(True, axis="y")
     fig.tight_layout(rect=plots_style.rect((0, 0, 1, 1)))
     plots_style.save_figure(fig, out_stem)

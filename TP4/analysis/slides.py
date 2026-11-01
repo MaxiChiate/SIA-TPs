@@ -268,16 +268,18 @@ OUTLINE: tuple[Slide, ...] = (
         None, ("Q1.3",), (), None, _key("som/figures/te_by_k.svg"),
         "El error topográfico es la fracción de creadores cuya neurona más cercana y segunda más cercana no son "
         "vecinas en la grilla (una diagonal cuenta como error), y mide si el mapa conserva la vecindad, que es lo que "
-        "busca Kohonen. "
-        "Cada barra es la media de 10 entrenamientos con distinta seed, las líneas negras son el desvío entre ellas, "
-        "la línea punteada es el límite de {som.te_max} y las barras grises son las grillas que no cumplen la "
-        "ocupación. "
-        "Las grillas más grandes tienen menos error que k = {som.chosen_k} ({som.chosen_te}), pero dejan demasiadas "
-        "neuronas vacías (con k = {som.k_next} ya son {som.k_next_empty}) y menos de {som.creators_min} creadores "
-        "por neurona ocupada, así que bajan el error pero no agrupan lo suficiente. "
-        "Entre las grillas que sí cumplen la ocupación, k = {som.chosen_k} es la de menor error topográfico y la más "
-        "grande, y como ninguna cumplió el límite de {som.te_max}, la regla quitó ese límite y eligió k = "
-        "{som.chosen_k}.",
+        "busca Kohonen; cada barra es la media de 10 entrenamientos con distinta seed, las líneas negras son el "
+        "desvío entre ellas y la línea punteada es el límite de {som.te_max}. "
+        "Los límites de ocupación son dos, fijados de antemano: como máximo {som.empty_max} de neuronas vacías y al "
+        "menos {som.creators_min} creadores por neurona ocupada en promedio, o sea una neurona cada dos creadores "
+        "como mucho; con k = {som.chosen_k} hay {som.chosen_neurons} neuronas para {oja.n_creators} creadores, y con "
+        "k = {som.k_next} ya son {som.k_next_neurons}, con {som.k_next_empty} vacías y {som.k_next_creators} "
+        "creadores por neurona ocupada. "
+        "Las grillas más grandes tienen menos error que k = {som.chosen_k} ({som.chosen_te}), pero a costa de "
+        "neuronas vacías y de creadores casi solos en su neurona, y por eso están en gris. "
+        "Entre las grillas que cumplen los límites de ocupación, k = {som.chosen_k} es la de menor error topográfico "
+        "y la más grande, y como ninguna cumplió el límite de {som.te_max}, la regla quitó ese límite y eligió "
+        "k = {som.chosen_k}.",
     ),
     Slide(
         "som-robust", 1,
