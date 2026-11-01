@@ -386,6 +386,17 @@ FINDINGS: tuple[Finding, ...] = (
         "f5-s5",
     ),
     Finding(
+        "QR, Hebb con máscara",
+        "En un experimento posterior, no preregistrado, la red guarda solo los {qrm.n_varying} píxeles que cambian entre "
+        "los QR (los {qrm.n_common} comunes se completan desde la plantilla) y solo el trío menos parecido "
+        "({qrm.chosen_names}). Así los {qrm.n_chosen} QR son puntos fijos de Hebb y la recuperación exacta es "
+        "{qrm.hebb_exact_noise0} hasta ruido {qrm.hebb_last_full_noise} y {qrm.hebb_at_0_40} en {qrm.noise_mid}. Hace falta todo junto: con "
+        "los 5 QR enmascarados son punto fijo {qrm.fixed_masked_all}, y con los 3 completos {qrm.fixed_full_subset}. "
+        "Achica el problema, no lo resuelve para los 5 QR, y un lookup de Hamming sobre los mismos patrones sigue por "
+        "encima ({qrm.hamming_at_0_40} en {qrm.noise_mid}).",
+        "f5-s7",
+    ),
+    Finding(
         "QR, límites",
         "Una tabla de búsqueda por distancia de Hamming, sin dinámica, queda en {qr.hamming_at_high} con ruido "
         "{qr.noise_high}: iguala o supera a la red en todo el rango evaluado. Un corrimiento de un píxel ya deja la "

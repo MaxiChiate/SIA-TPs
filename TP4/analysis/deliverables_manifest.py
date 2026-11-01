@@ -6,7 +6,7 @@ No I/O at import: informe.py reads these tables and checks them against the real
 - `QUESTIONS`: the 25 literal questions of the enunciado with the anchors that answer them. An anchor is
   `f<n>-s<a>-<b>` for the heading "<a>.<b> ..." of fragment n (informe.make_slugify).
 - `FIGURES`: every report figure of the fragments, with the make target that regenerates it, its config and
-  its seed. `path` is relative to analysis/results; `slide` marks the 23 figures that also have a slide
+  its seed. `path` is relative to analysis/results; `slide` marks the 25 figures that also have a slide
   variant (`slide_path`, written by plots_style next to the report figure).
 
 CLI: `python analysis/deliverables_manifest.py questions` prints the review sheet a human compares with the
@@ -173,7 +173,7 @@ QUESTIONS = (
         "Q2.3",
         "Analizar la alteración de los códigos QR mediante la adición de ruido aleatorio con distintos niveles "
         "de ruido, simulando el deterioro de los mismos.",
-        "2.1", 5, ("f5-s4", "f5-s5"),
+        "2.1", 5, ("f5-s4", "f5-s5", "f5-s7"),
     ),
     Question(
         "Q2.4",
@@ -220,6 +220,9 @@ _QR_SEEDS = (_QR[0], "1-10")
 _QR_ENERGY = (_QR[0], "1 (ENERGY_TRACE_SEED de analysis/hopfield_qr.py)")
 _QR_SHIFT = (_QR[0], "1 (SHIFT_SEED de analysis/hopfield_qr_limits.py)")
 _QR_MAJORITY = (_QR[0], "sin seed (atractor mayoría determinista)")
+_QR_MASKED = ("analysis/hopfield_qr_masked.py (experimento posterior, KD-9; no preregistrado)",
+              "sin seed (máscara y trío por regla fija)")
+_QR_MASKED_SEEDS = (_QR_MASKED[0], "1-10")
 
 FIGURES = (
     Figure(
@@ -445,6 +448,22 @@ FIGURES = (
         config=_QR_SHIFT[0], seed=_QR_SHIFT[1], fragment=5, anchor="f5-s6",
         alt="Recuperación de un QR desplazado uno y dos píxeles bajo la pseudo-inversa",
         caption="Sensibilidad de la pseudo-inversa a corrimientos de un QR.",
+        slide=True,
+    ),
+    Figure(
+        key="qr_masked_patterns", path="hopfield/qr_masked/figures/masked_patterns.svg",
+        make_target="hopfield-qr-masked-figures",
+        config=_QR_MASKED[0], seed=_QR_MASKED[1], fragment=5, anchor="f5-s7",
+        alt="La máscara de píxeles que cambian entre los cinco QR y los tres QR elegidos sobre esa máscara",
+        caption="Los píxeles que la red guarda en el experimento con máscara.",
+        slide=True,
+    ),
+    Figure(
+        key="qr_masked_recovery", path="hopfield/qr_masked/figures/masked_recovery.svg",
+        make_target="hopfield-qr-masked-figures",
+        config=_QR_MASKED_SEEDS[0], seed=_QR_MASKED_SEEDS[1], fragment=5, anchor="f5-s7",
+        alt="Recuperación exacta de Hebb sobre la parte variable de tres QR frente al ruido, y la ablación a ruido cero",
+        caption="Hebb con máscara y tres QR: recuperación por nivel de ruido y qué paso hace falta.",
         slide=True,
     ),
 )

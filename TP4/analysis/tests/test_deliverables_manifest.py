@@ -74,8 +74,8 @@ def test_figure_make_targets_are_makefile_targets():
 
 def test_figure_keys_are_unique_and_counts_match():
     keys = [item.key for item in manifest.FIGURES]
-    assert len(keys) == len(set(keys)) == 32
-    assert sum(item.slide for item in manifest.FIGURES) == 23
+    assert len(keys) == len(set(keys)) == 34
+    assert sum(item.slide for item in manifest.FIGURES) == 25
 
 
 def test_figure_paths_are_svg_inside_result_folders():

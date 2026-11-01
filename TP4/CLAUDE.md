@@ -37,11 +37,12 @@ analysis/                        # README.md explica las series y los drivers
   oja.py, campaigns.py, campaigns_select.py, maintenance_demo.py   # Oja vs PC1, listas por campaña, demo de mantenimiento
   hopfield.py, hopfield_letters.py, hopfield_select.py, hopfield_figures.py     # Hopfield sobre las letras
   hopfield_qr.py, hopfield_qr_limits.py, hopfield_qr_select.py, hopfield_qr_figures.py   # Hopfield sobre los 5 QR
+  hopfield_qr_masked.py, hopfield_qr_masked_figures.py   # experimento posterior: Hebb sobre la parte variable de 3 QR (KD-9)
   plots_style.py                 # estilo común y variantes de figura (informe y slide)
-  deliverables_manifest.py       # fuente única: 32 figuras, 25 preguntas del enunciado, fragmentos
-  facts.py                       # los números del texto salen de los JSON/CSV; `facts.py check` fija 69 frases de los fragmentos
+  deliverables_manifest.py       # fuente única: 34 figuras, 25 preguntas del enunciado, fragmentos
+  facts.py                       # los números del texto salen de los JSON/CSV; `facts.py check` fija 81 frases de los fragmentos
   informe.py                     # arma analysis/results/informe/informe.html
-  slides.py                      # arma analysis/results/slides/ (27 slides, PNG y guion)
+  slides.py                      # arma analysis/results/slides/ (28 slides, PNG y guion)
   tests/                         # pytest; incluye test_repro_docs.py, que cuida README.md, CLAUDE.md y DECISIONS.md
 deliverables/                    # un fragmento por fase (01 a 05): lo que se entrega por escrito, congelado por guardas sha256
 DECISIONS.md                     # decisiones para la defensa y fuente del glosario del informe
@@ -95,7 +96,7 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Entrega
 
-- **Slides**: 27 slides armadas por `make deliverables` en `analysis/results/slides/` y publicadas como Artifact tipo Slides.
+- **Slides**: 28 slides armadas por `make deliverables` en `analysis/results/slides/` y publicadas como Artifact tipo Slides.
 - **Informe**: `analysis/results/informe/informe.html`, publicado como Artifact HTML (D-15).
 - Slides: https://claude.ai/artifact/9YjSxsDcVYSwvnXaD5JVy1
 - Informe: https://claude.ai/artifact/32SjYXD12gS2Lh6vY22jyM
@@ -110,6 +111,11 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
   nota en el anexo del guion ("Generado desde commit d4d145e.").
 
 ## Pendientes
+
+- **Experimento posterior de QR con máscara (2026-11-01, KD-9)**: Hebb sobre los 414 píxeles que cambian entre los 5 QR y
+  solo el trío menos parecido (beverages, dessert, wine), rotulado como no preregistrado. Nuevo §7 del fragmento 05 (Cómo
+  reproducir pasó a §8), slide `qr-mascara` (el deck pasa a 28), hallazgo en el informe y 2 figuras. El informe y las slides
+  locales están armados; falta republicar los dos a la misma url y copiar la slide nueva a mano al Google Slides.
 
 - **Hopfield solo síncrono (2026-10-31, KD-8)**: se quitó la actualización asíncrona del código, de los protocolos (re-registrados,
   declarado en los fragmentos 04 y 05) y de los textos; todo Hopfield se volvió a correr. Cambian números del fragmento 04

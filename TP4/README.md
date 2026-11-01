@@ -60,13 +60,13 @@ la regla en el lugar ni tocar el hash para que corra.
 
 Pasos individuales (cada uno escribe en `analysis/results/`): `make eda`, `make pca`, `make som-stage1`, `make som-stage2`,
 `make som-figures`, `make som-profiles`, `make oja`, `make campaigns`, `make maintenance`, `make letters`,
-`make hopfield-letters`, `make hopfield-figures`, `make qr`, `make hopfield-qr`, `make hopfield-qr-limits` y
-`make hopfield-qr-figures`. Algunos arrastran sus prerrequisitos: `make campaigns` y `make maintenance` vuelven a correr la etapa 1
+`make hopfield-letters`, `make hopfield-figures`, `make qr`, `make hopfield-qr`, `make hopfield-qr-limits`,
+`make hopfield-qr-figures`, `make hopfield-qr-masked` y `make hopfield-qr-masked-figures`. Algunos arrastran sus prerrequisitos: `make campaigns` y `make maintenance` vuelven a correr la etapa 1
 del SOM, que es lenta.
 
 ## Figuras
 
-Una fila por cada figura que muestran el informe y las slides (31). Todas son deterministas dada su seed y su config. Las filas
+Una fila por cada figura que muestran el informe y las slides (33). Todas son deterministas dada su seed y su config. Las filas
 marcadas con `slide/` tienen además una variante para las slides, en la carpeta `slide/` junto a la figura; la dibuja el mismo
 comando. Las filas salen del manifiesto `analysis/deliverables_manifest.py` y `make test` verifica que sigan en sync.
 
@@ -104,6 +104,8 @@ comando. Las filas salen del manifiesto `analysis/deliverables_manifest.py` y `m
 | `analysis/results/hopfield/qr/figures/recovery.svg` (y `slide/`) | `05-hopfield-qr.md` §5 | `make hopfield-qr-figures` | deliverables/05-hopfield-qr.md sección 3 (analysis/hopfield_qr_select.py) | 1-10 |
 | `analysis/results/hopfield/qr/figures/majority.svg` (y `slide/`) | `05-hopfield-qr.md` §6 | `make hopfield-qr-figures` | deliverables/05-hopfield-qr.md sección 3 (analysis/hopfield_qr_select.py) | sin seed (atractor mayoría determinista) |
 | `analysis/results/hopfield/qr/figures/shift.svg` (y `slide/`) | `05-hopfield-qr.md` §6 | `make hopfield-qr-figures` | deliverables/05-hopfield-qr.md sección 3 (analysis/hopfield_qr_select.py) | 1 (SHIFT_SEED de analysis/hopfield_qr_limits.py) |
+| `analysis/results/hopfield/qr_masked/figures/masked_patterns.svg` (y `slide/`) | `05-hopfield-qr.md` §7 | `make hopfield-qr-masked-figures` | analysis/hopfield_qr_masked.py (experimento posterior, KD-9; no preregistrado) | sin seed (máscara y trío por regla fija) |
+| `analysis/results/hopfield/qr_masked/figures/masked_recovery.svg` (y `slide/`) | `05-hopfield-qr.md` §7 | `make hopfield-qr-masked-figures` | analysis/hopfield_qr_masked.py (experimento posterior, KD-9; no preregistrado) | 1-10 |
 
 ## Tablas
 
@@ -120,6 +122,8 @@ Las tablas principales y el comando que las escribe (todas bajo `analysis/result
 | `hopfield/letters/recall.csv` | Recuperación de las letras por nivel de ruido, 10 seeds | `make hopfield-letters` |
 | `hopfield/qr/recovery_table.csv` | Recuperación exacta de los 5 QR por regla (Hebb, pseudo-inversa, Hamming) y nivel de ruido | `make hopfield-qr` |
 | `hopfield/qr/verdict.json` | Veredicto del protocolo pre-registrado: Hebb falla, pseudo-inversa funciona | `make hopfield-qr` |
+| `hopfield/qr_masked/recovery_table.csv` | Experimento posterior (KD-9): recuperación exacta de Hebb y Hamming sobre la parte variable de 3 QR | `make hopfield-qr-masked` |
+| `hopfield/qr_masked/ablation.json` | QR que son punto fijo de Hebb sin ruido: completos o con máscara, 5 QR o el trío | `make hopfield-qr-masked` |
 
 Los números del texto de las slides y del informe no se tipean: salen de estos JSON y CSV (`analysis/facts.py`), y el informe
 no se arma si un número citado de los fragmentos cambió.
@@ -128,7 +132,7 @@ no se arma si un número citado de los fragmentos cambió.
 
 `make deliverables` deja listo, sin publicar, lo siguiente (no se versiona):
 
-- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 27 slides), los PNG de las figuras
+- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 28 slides), los PNG de las figuras
   (`assets/`) y `notes.md` (el guion). Lo arma `analysis/slides.py`; `make slides` corre solo ese paso.
 - `analysis/results/informe/informe.html`: el informe, una página autocontenida. Lo arma `analysis/informe.py`; `make informe`
   corre solo ese paso.

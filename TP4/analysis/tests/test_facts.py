@@ -147,6 +147,20 @@ def write_results(root, *, robust=False):
     write_json(root / "hopfield/qr_limits/shift.json", {"shifts": [
         {"shift": 1, "query_hamming": 741, "recovered_hamming": 1034}, {"shift": 2, "query_hamming": 699, "recovered_hamming": 1198},
     ]})
+    write_json(root / "hopfield/qr_masked/selection.json", {
+        "n_pixels": 1369, "n_varying": 414, "n_common": 955, "chosen": [0, 1, 4],
+        "chosen_names": ["beverages", "dessert", "wine"], "masked_all_max_abs_overlap": 0.536,
+        "ranking": [{"subset": [0, 1, 4], "max_abs_overlap": 0.757, "mean_abs_overlap": 0.637}],
+    })
+    write_json(root / "hopfield/qr_masked/overlaps.json", {"max_abs_overlap": 0.401, "mean_abs_overlap": 0.333})
+    write_json(root / "hopfield/qr_masked/ablation.json", {
+        "full_all": {"stored_fixed": 0, "n_patterns": 5}, "masked_all": {"stored_fixed": 0, "n_patterns": 5},
+        "full_subset": {"stored_fixed": 0, "n_patterns": 3}, "masked_subset": {"stored_fixed": 3, "n_patterns": 3},
+    })
+    write_csv(root / "hopfield/qr_masked/recovery_table.csv", ["level", "hebb", "hamming"], [
+        [0.0, 1.0, 1.0], [0.15, 1.0, 1.0], [0.3, 0.951, 1.0], [0.4, 0.769, 1.0], [0.45, 0.592, 0.962],
+        [0.5, 0.019, 0.233],
+    ])
     return root
 
 
@@ -390,6 +404,19 @@ def _pinv_above_hamming(root):
     ])
 
 
+def _masked_hebb_above_hamming(root):
+    write_csv(root / "hopfield/qr_masked/recovery_table.csv", ["level", "hebb", "hamming"], [
+        [0.0, 1.0, 1.0], [0.3, 1.0, 0.9], [0.4, 0.769, 1.0], [0.45, 0.592, 0.962], [0.5, 0.019, 0.233],
+    ])
+
+
+def _masked_five_also_fixed(root):
+    write_json(root / "hopfield/qr_masked/ablation.json", {
+        "full_all": {"stored_fixed": 0, "n_patterns": 5}, "masked_all": {"stored_fixed": 5, "n_patterns": 5},
+        "full_subset": {"stored_fixed": 0, "n_patterns": 3}, "masked_subset": {"stored_fixed": 3, "n_patterns": 3},
+    })
+
+
 def _occupancy_fails(root):
     write_csv(root / "som/series_som_stage2/robustness.csv",
               ["label", "radius0", "eta0", "epochs", "te_mean", "passes_empty", "passes_creators"],
@@ -414,6 +441,7 @@ def _price_falls_towards_the_bottom_right(root):
 
 @pytest.mark.parametrize("damage, sentence", [
     (_pinv_above_hamming, "lookup de Hamming"), (_occupancy_fails, "ocupación"),
+    (_masked_hebb_above_hamming, "sigue por encima"), (_masked_five_also_fixed, "los dos pasos"),
     (_decided_by_another_measure, "QE-LOO"), (_high_walls_between_full_neurons, "un solo creador"),
     (_price_falls_towards_the_bottom_right, "price_usd"),
 ])

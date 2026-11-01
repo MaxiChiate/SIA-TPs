@@ -78,6 +78,14 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 **Dónde:** [PROJECT.md](.planning/PROJECT.md) (tabla Key Decisions) · [fragmento 04 §1, §3 y §5](deliverables/04-hopfield-letras.md) · [fragmento 05 §1, §3 y §4](deliverables/05-hopfield-qr.md)
 
+### KD-9 — Experimento posterior: Hebb sobre la parte variable de los 3 QR menos parecidos
+
+**Qué:** después de ver el 0 % de Hebb sobre los 5 QR se agregó un segundo experimento, rotulado como posterior y fuera del protocolo preregistrado (no cambia ningún veredicto de `verdict.json`). La red guarda solo los 414 píxeles que no son iguales en los 5 QR (los 955 comunes se completan desde la plantilla) y solo el trío de menor |producto escalar normalizado| máximo entre pares sobre el QR completo (beverages, dessert y wine; desempate por la media). Corre en el binario de C con Hebb y la misma grilla, ensayos y seeds del protocolo (`make hopfield-qr-masked`, `analysis/hopfield_qr_masked.py`), con la línea base de Hamming sobre los mismos patrones y una ablación a ruido 0. Resultado: solo con los dos pasos juntos los QR son puntos fijos (3 de 3; 0 de 5 con máscara sola y 0 de 3 con el trío solo); Hebb recupera el 100 % hasta ruido 0,15 y 76,9 % en 0,40, y Hamming sigue por encima.
+
+**Por qué:** muestra que el fallo de Hebb es del crosstalk y no de la dinámica: bajando la correlación, la misma regla recupera. Se declara posterior porque la máscara y el criterio del trío se eligieron después de ver el resultado y de una exploración previa; achica el problema (menos QR, plantilla común conocida) y no lo resuelve para los 5.
+
+**Dónde:** [fragmento 05 §7](deliverables/05-hopfield-qr.md) · `analysis/results/hopfield/qr_masked/` (decisión del usuario del 2026-11-01)
+
 ## Fase 1 — Datos, auditoría de variables y PCA
 
 ### F1 D-01 — Parser JSON: cJSON v1.7.19 vendored

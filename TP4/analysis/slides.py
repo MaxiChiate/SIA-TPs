@@ -521,6 +521,20 @@ OUTLINE: tuple[Slide, ...] = (
         "{qr.shift1_recovered_hamming}.",
     ),
     Slide(
+        "qr-mascara", 2, "Hebb recupera QR si guarda solo la parte variable de {qrm.n_chosen} QR poco parecidos",
+        None, ("Q2.3",),
+        ("Experimento posterior al protocolo. Sin ruido son punto fijo {qrm.fixed_masked_subset}; con ruido {qrm.noise_mid}: Hebb {qrm.hebb_at_0_40}, Hamming {qrm.hamming_at_0_40}",),
+        None, _key("hopfield/qr_masked/figures/masked_recovery.svg"),
+        "Después de ver el cero por ciento de Hebb diseñamos un experimento aparte, fuera del protocolo: la red guarda "
+        "solo los {qrm.n_varying} píxeles que cambian entre los cinco QR, completa los {qrm.n_common} comunes desde la "
+        "plantilla y se queda con el trío menos parecido, {qrm.chosen_names}. "
+        "Hace falta todo junto: con los cinco QR enmascarados son punto fijo {qrm.fixed_masked_all} y con los tres "
+        "completos {qrm.fixed_full_subset}. "
+        "Así Hebb recupera el {qrm.hebb_exact_noise0} hasta ruido {qrm.hebb_last_full_noise} y {qrm.hebb_at_0_40} en "
+        "{qrm.noise_mid}, pero un lookup de Hamming sobre los mismos patrones sigue por encima. "
+        "Achica el problema, no lo resuelve para los cinco QR.",
+    ),
+    Slide(
         "ej2-conclusiones", 2, "Hopfield para QR: la correlación rompe Hebb y un lookup resuelve el mismo problema",
         None, ("Q2.5",),
         (
@@ -551,6 +565,8 @@ UNPLACED_SLIDE_FIGURES: dict[str, str] = {
         "y se nombra en las notas de esa slide",
     _key("hopfield/qr/figures/overlaps.svg"):
         "la slide qr-correlados muestra los QR y da los productos escalares como números de facts",
+    _key("hopfield/qr_masked/figures/masked_patterns.svg"):
+        "la slide qr-mascara muestra la recuperación; la máscara y los tres QR quedan en el fragmento 05",
     _key("hopfield/qr/figures/shift.svg"):
         "la limitación del corrimiento se nombra en las notas de qr-energia y ej2-conclusiones; la figura queda en el fragmento 05",
 }

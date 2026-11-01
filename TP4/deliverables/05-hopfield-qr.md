@@ -93,7 +93,17 @@ Las cuatro facetas de HOP-07, con evidencia medida y nunca forzada por la corrid
 
 **Fuera de alcance.** El daño estructurado (oclusión de bloque, rayón, manchas) no se corrió como experimento en esta fase (D-04): el modelo de ruido es solo flips i.i.d. de píxeles (sección 3) y el corrimiento de (b); el daño estructurado queda nombrado aquí como una limitación más del caso de uso, no medida.
 
-## 7. Cómo reproducir
+## 7. Experimento posterior: Hebb sobre la parte variable de 3 QR
+
+**Qué es y qué no es.** Este experimento se diseñó **después** de ver el 0 % de Hebb de la sección 4 y **no forma parte del protocolo preregistrado** de la sección 3: no cambia ninguno de sus veredictos (`verdict.json` sigue en `hebb_fails = true`). La pregunta es si se puede bajar el crosstalk lo suficiente para que la regla de Hebb, sin cambiar la dinámica, recupere QR. Lo corre `make hopfield-qr-masked` (`analysis/hopfield_qr_masked.py`, el mismo binario de C con la regla `hebb`, actualización síncrona y control de `analysis/hopfield.py`), con la misma grilla de 11 niveles, 30 ensayos por QR y nivel y seeds 1 a 10; escribe `analysis/results/hopfield/qr_masked/` (decisión KD-9).
+
+**Dos pasos, cada uno con una regla fija.** (1) **Máscara**: se guardan en la red solo los píxeles que no son iguales en los 5 QR; quedan 414 de 1369, y los 955 comunes (los patrones de localización y toda la zona que codifica lo común de las URL, `masked_patterns.svg`) se completan después desde esa plantilla común, así que un estado exacto en la parte variable es el QR completo exacto (`selection.json`, `reconstruction_exact = true`). (2) **Subconjunto**: de los 10 tríos de QR se queda el de menor |producto escalar normalizado| máximo entre pares sobre los 1369 píxeles (desempate por la media y después por el índice): beverages, dessert y wine, con máximo 0,76 y media 0,64 sobre el QR completo. Sobre la parte variable ese trío baja a máximo 0,40 y media 0,33. El ruido invierte k = lround(nivel × 414) píxeles de la parte variable: el nivel se mide sobre esos 414 píxeles, no sobre 1369.
+
+**Hacen falta los dos pasos (`ablation.json`, C, ruido 0).** Con los 5 QR completos son punto fijo de Hebb 0 de 5; con los 5 QR en la parte variable, 0 de 5 (el producto escalar máximo sigue en 0,54, el par food–wine); con los 3 QR completos, 0 de 3; con los 3 QR en la parte variable, 3 de 3. Sacar los píxeles comunes baja el producto escalar medio, pero con 5 patrones en 414 píxeles algunos pares siguen demasiado correlacionados (también cuenta un producto escalar negativo fuerte: el crosstalk depende de |m|); quedarse con 3 QR completos no alcanza porque el 69,8 % de píxeles iguales en los 5 domina igual.
+
+**Recuperación (`masked_recovery.svg`, `qr_masked/recovery_table.csv`).** Con la máscara y el trío, Hebb recupera el 100 % hasta el nivel 0,15, 95,1 % en 0,30, 76,9 % en 0,40, 59,2 % en 0,45 y 1,9 % en 0,50. Converge en unos 2 pasos y la energía no subió en ninguna corrida (control de `analysis/hopfield.py`). La línea base de Hamming 1-NN sobre los mismos patrones enmascarados sigue por encima: 100 % hasta 0,40, 96,2 % en 0,45 y 23,3 % en 0,50. La conclusión de la sección 6 no cambia: Hebb funciona cuando los patrones guardados son casi ortogonales, y acá eso se consigue achicando el problema (menos QR y solo la parte que los distingue, con la plantilla común conocida de antemano), no resolviéndolo para los 5 QR; y un lookup sigue igualando o superando a la red.
+
+## 8. Cómo reproducir
 
 Desde `TP4/`, en un clone nuevo:
 
@@ -103,6 +113,8 @@ make qr
 make hopfield-qr
 make hopfield-qr-limits
 make hopfield-qr-figures
+make hopfield-qr-masked
+make hopfield-qr-masked-figures
 make test
 ```
 
@@ -111,7 +123,9 @@ make test
 - **`make hopfield-qr`.** Corre Hebb y pseudo-inversa sobre los 5 QR fijados en la sección 3 (HOP-05, HOP-06); escribe `analysis/results/hopfield/qr/`. Se niega a correr si el protocolo, `scripts/qr.py` o los 5 PNG no están commiteados o cambiaron (D-01).
 - **`make hopfield-qr-limits`.** Atractor mayoría de Hebb y sensibilidad a corrimientos de 1-2 píxeles bajo pinv (HOP-07, sección 6); escribe `analysis/results/hopfield/qr_limits/`, un directorio que `make hopfield-qr` nunca borra. Se niega a correr si el protocolo cambió.
 - **`make hopfield-qr-figures`.** Seis figuras SVG y PNG (`qr`, `overlaps`, `recovery`, `energy_trace`, `shift`, `majority`); escribe `analysis/results/hopfield/qr/figures/`. Se niega a dibujar si el protocolo, el código de la red o el código de las limitaciones (`LIMITS_CODE_FILES`) cambiaron desde la corrida.
-- **`make test`.** Tests de C (ASan/UBSan) y de Python (incluye los de Hopfield sobre QR, `analysis/tests/test_hopfield_qr.py`).
+- **`make hopfield-qr-masked`.** El experimento posterior de la sección 7 (KD-9, no preregistrado): Hebb sobre la parte variable de los 3 QR elegidos, la ablación a ruido 0 y la línea base de Hamming sobre los mismos patrones; escribe `analysis/results/hopfield/qr_masked/`. Se niega a correr si el protocolo cambió.
+- **`make hopfield-qr-masked-figures`.** Dos figuras (`masked_patterns`, `masked_recovery`) en `analysis/results/hopfield/qr_masked/figures/`; se niega a dibujar si el código del experimento cambió desde la corrida.
+- **`make test`.** Tests de C (ASan/UBSan) y de Python (incluye los de Hopfield sobre QR, `analysis/tests/test_hopfield_qr.py` y `analysis/tests/test_hopfield_qr_masked.py`).
 
 `analysis/results/` no se versiona: cada número y cada figura de este fragmento se regenera con estos comandos, y cada corrida, CSV, JSON y SVG es idéntico byte a byte en una reejecución para sus seeds. La verificación de que el protocolo de la sección 3 no cambió es `.venv/bin/python analysis/hopfield_qr_select.py identity`, que termina con código 0 mientras el texto entre los marcadores, `scripts/qr.py`, `analysis/hopfield_qr_select.py` y los 5 PNG sean los del commit de la regla.
 
