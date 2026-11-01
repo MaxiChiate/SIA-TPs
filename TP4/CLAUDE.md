@@ -6,6 +6,32 @@ el chat sin perder lo decidido.
 Materia: Sistemas de Inteligencia Artificial (ITBA), 2° cuatrimestre 2026, Grupo 9.
 Enunciado: `docs/Archivo SIATP 42026.pdf`.
 
+## Dónde estamos hoy (leer primero)
+
+**El ejercicio 1 se está rehaciendo con las variables que quedan después de podar por correlación.** Orden de lo hecho (2026-10-28 a 11-02):
+
+1. **Variables**: se sacan las 5 triviales (combinación lineal exacta de otras) y, con el umbral **|r| ≥ 0,8**, 9 más por correlación (en cada
+   par sale la de mayor |r| medio con las demás, `analysis/corr_prune.py`, `make corr-prune`). Quedan **17 de 31** (F1 D-14). La tabla de
+   otros umbrales (0,95 a 0,50) es solo sensibilidad (slide `pca-prune`).
+2. **PCA de las 17** (`analysis/results/pca/pruned/`, `make pca`): 7 componentes llegan al 83,4 %; PC1 40,0 % y PC2 11,7 %. La PCA de las 26
+   (`pca/audited/`) sigue existiendo para el informe y la sensibilidad.
+3. **SOM sobre los scores de PC1 a PC7, sin reescalar** (`datos/prepared/creadores_pca_scores.csv`, lo escribe `make pca`; F2 D-16). La regla
+   de grilla no cambió. Resultado: k = 5 (ninguna grilla cumple el TE máximo, se aplica F2 D-14), etapa 2 robusta, una sola región, el
+   mapa sigue a PC1 (R² 0,938) y a PC2 (R² 0,439), que son entradas suyas.
+4. **Todavía con las 26 variables (falta rehacer)**: **Oja**, las **campañas**, `ej1-conclusiones` (dice que los temas aparecen en PC3 y PC4,
+   cierto solo para la PCA de 26) y el informe en lo que hable de PCA.
+
+## Reglas de trabajo que dio el usuario
+
+- **Solo se usa lo visto en clase** (la teoría está en `docs/`). Se sacaron del trabajo y no pueden volver, ni en el repo ni en las slides ni
+  en el informe: el **criterio de Kaiser**, el **scree plot** (el gráfico se llama "autovalores y varianza acumulada", archivo
+  `eigenvalues_variance`), la **correlación de Spearman** (en el SOM se usa Pearson) y el **número de condición**. El 80 % de varianza
+  acumulada y el umbral |r| ≥ 0,8 se presentan como **convenciones del equipo**, no como reglas del curso. Antes de proponer un método o
+  una medida nueva, comprobar que esté en `docs/`.
+- **Sin GSD**: no correr comandos `/gsd-*`; se edita el repo directo. Los archivos de `.planning/` son historial y no se actualizan.
+- **Commits locales sí, push solo si lo pide**. Reglas pre-registradas (sha256): se re-fijan con un commit antes de volver a correr.
+- Pedir confirmación antes de publicar el informe (está compartido por link); el deck es privado.
+
 ## Estado técnico (código)
 
 **Las seis fases están hechas y verificadas (UAT completo en todas, 2026-10-26), y las slides y el informe están publicados.** El núcleo de los tres
@@ -94,10 +120,11 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Entrega
 
-- **Slides**: 28 slides armadas por `make deliverables` en `analysis/results/slides/` (sin la slide de método, y el deck arranca con la portada y el EDA); el Artifact tipo Slides publicado se republicó el 2026-10-30 con estas 27 y el 2026-11-01 con las slides del SOM nuevo (`som-rule`, `som-robust`, `som-map`, `som-one-region`, `som-zonas`, `som-pc` y `ej1-conclusiones`); además tiene slides que armó la persona dueña a mano y que no están en el repo (`289f728e`, `0732067f`, `bc794b98`, `oja-intro`, `pca-eigenvalue-table`).
+- **Slides**: 28 slides armadas por `make deliverables` en `analysis/results/slides/` (el repo no tiene la slide de método; el deck empieza con portada y EDA). El Artifact publicado tiene además slides que armó la persona dueña a mano o yo directo en el Artifact y que **no están en el repo**: `289f728e` ("Ejercicio 1"), `0732067f` (EDA: z-score, 5 triviales, umbral), `bc794b98` ("Kohonen"), `oja-intro` ("Regla de Oja") y `pca-eigenvalue-table` (tabla de los 17 autovalores). El orden del deck publicado manda: `project/deck.json` del Artifact no se pisa con el que arma el repo.
+- **Cómo se publica el deck** (a mano, con la herramienta Artifact): (1) subir como asset los PNG que cambiaron (`analysis/results/slides/assets/`) y anotar sus `/_blob/…`; (2) armar `slides.py --out <carpeta> --asset-map <json>` con esas URLs; (3) **leer del Artifact** `project/deck.json` y las slides que se van a pisar (la persona dueña edita desde la página y las versiones cambian solas); (4) publicar **solo las slides que cambiaron** (y `deck.json` solo si cambia el orden, editando la copia leída). Nunca mandar el `deck.json` que arma el repo.
 - **Informe**: `analysis/results/informe/informe.html`, publicado como Artifact HTML (D-15).
-- Slides: https://claude.ai/artifact/CxnuCZKwF55r2tUMPWXBSN (las URLs `9YjSx…` y `32SjY…` de antes ya no existen; el 2026-10-28 se reemplazó el contenido de este deck por las 25 slides del repo)
-- Informe: https://claude.ai/artifact/ScERzQ4wTc8TrCNfuw2kKq (republicado el 2026-10-28 con el guion anterior en el anexo: todavía sin republicar tras sacar la slide de método y rehacer el SOM; está compartido por link)
+- Slides: https://claude.ai/artifact/CxnuCZKwF55r2tUMPWXBSN (las URLs `9YjSx…` y `32SjY…` de antes ya no existen; el 2026-10-28 se reemplazó el contenido de este deck por las slides del repo)
+- Informe: https://claude.ai/artifact/ScERzQ4wTc8TrCNfuw2kKq (republicado el 2026-11-02 con el SOM sobre las 7 componentes y sin Kaiser, scree ni Spearman; está compartido por link; no lleva las slides armadas a mano porque salen del repo)
 - Los dos Artifacts son privados; el deck se entrega como su PDF exportado (D-14: queda fuera del repo, ni en `docs/` ni en `deliverables/`), y compartir el link del informe lo decide la persona dueña desde el menú Share.
 - El informe lleva el guion de la presentación como anexo (`id="guion"`, decisión del usuario en el checkpoint de 06-12): `make deliverables` pasa `INFORME_FLAGS := --notes analysis/results/slides/notes.md`; el guion viaja además como notas del orador en cada slide.
 - Cualquier cambio de resultados: regenerar con `make deliverables`, actualizar `DECISIONS.md` y este archivo, y republicar a la
@@ -110,13 +137,15 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Pendientes
 
+- **Rehacer Oja y las campañas con las 17 variables** y reescribir `ej1-conclusiones`; después regenerar fragmentos 03, slides e informe y republicar.
+- **Push**: los commits posteriores a `a0cb312` (sacar Spearman, hiperparámetros del SOM) están solo locales.
+- **Volver a exportar el PDF del deck** desde su Artifact (lo hace la persona dueña): el exportado antes no tiene los cambios de esta tanda.
+
 - **Revisión del deck contra el enunciado (F6 D-16, 2026-10-27)**: 3 slides nuevas (`eda`, `som-zonas`, `letras-capacidad`) y 4
   reescritas (`som-not-robust`, `camp-futbol`, `ej1-conclusiones`, `qr-energia`). El deck que se presenta ahora es un Google
   Slides (convertido del Artifact): los cambios se copiaron a mano ahí, y las 3 figuras nuevas se suben a mano. El informe
   publicado no se republicó todavía.
 - **La etapa 2 del SOM puede no ser idéntica entre máquinas** (otra versión de gcc o de glibc): una corrida anterior del mapa de 26 variables, regenerada en otra máquina, cambió cuántas variantes fallaban el TE. Las cifras del deck y del informe son las de la corrida del 2026-11-01 en esta máquina, con el SOM entrenado sobre los scores de las 7 componentes (F2 D-16); la elección de k y la robustez (ocupación) no deberían moverse.
-- **Volver a exportar el PDF del deck** desde su Artifact (lo hace la persona dueña): el deck se republicó el 2026-10-26 y el PDF
-  exportado antes no tiene la slide `som-rule` corregida.
 - **Cerrar el milestone** con `/gsd-complete-milestone`: las seis fases están completas en `ROADMAP.md`.
 - **Hallazgos de code review abiertos** (`NN-REVIEW-DISPOSITION.md` de las fases 2 a 6): los de la Fase 2 son 11, los de la Fase 3,
   14 (WR-01 a WR-05 e IN-01 a IN-09), y los de la Fase 6, IN-01 a IN-06 (WR-01 a WR-08 quedaron en `fixed` el 2026-10-26).
