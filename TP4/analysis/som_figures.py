@@ -315,6 +315,15 @@ def effect_rows(stage2_rows: list[dict], vary: str) -> list[dict]:
     return sorted(chosen, key=lambda r: float(r[vary]))
 
 
+def _seeds_note(fig, rows: list[dict], what: str) -> None:
+    """What every point or bar is: the mean over the seeds of the series and the sd between them."""
+    seeds = rows[0].get("n_seeds") if rows else None
+    runs = f"{int(seeds)} entrenamientos" if seeds not in (None, "") else "varios entrenamientos"
+    lines = "las líneas negras" if what == "barra" else "las barras"
+    fig.text(0.995, 0.005, f"Cada {what} es la media de {runs} con distinta seed; {lines} son el desvío entre seeds",
+             ha="right", va="bottom", fontsize=plots_style.fontsize(8), color=plots_style.TEXT_SECONDARY)
+
+
 def plot_effect(rows: list[dict], x_key: str, x_label: str, base_x: float, thresholds: dict, out_stem,
                 measures: tuple[str, ...] = ("te", "empty_fraction", "creators_per_occupied")) -> None:
     """Panels (topographic error, empty neurons, creators per neuron) against one hyperparameter, escalón only;
@@ -343,7 +352,8 @@ def plot_effect(rows: list[dict], x_key: str, x_label: str, base_x: float, thres
         ax.set_xticks(xs)
         ax.set_xticklabels([_fmt_tick(x) for x in xs])
         ax.grid(True, axis="y")
-    fig.tight_layout(rect=plots_style.rect((0, 0, 1, 1)))
+    _seeds_note(fig, rows, "punto")
+    fig.tight_layout(rect=(0, 0.045, 1, 1))
     plots_style.save_figure(fig, out_stem)
 
 
@@ -399,7 +409,8 @@ def plot_te_by_k(step_rows: list[dict], chosen_k: int, thresholds: dict, out_ste
                         "creadores por neurona"],
               frameon=False, fontsize=plots_style.fontsize(9), loc="upper right")
     ax.grid(True, axis="y")
-    fig.tight_layout(rect=plots_style.rect((0, 0, 1, 1)))
+    _seeds_note(fig, rows, "barra")
+    fig.tight_layout(rect=(0, 0.045, 1, 1))
     plots_style.save_figure(fig, out_stem)
 
 

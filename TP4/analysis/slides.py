@@ -238,7 +238,8 @@ OUTLINE: tuple[Slide, ...] = (
     Slide(
         "som-eta0", 1, "Con η0 entre {som.eta_lo} y {som.eta_hi} el mapa casi no cambia",
         None, ("Q1.3",), (), None, _key("som/figures/effect_eta0.svg"),
-        "Probamos η0 = {som.eta_values}, con k = {som.chosen_k} y el resto igual; η0 es cuánto se mueve la neurona "
+        "Probamos η0 = {som.eta_values}, con k = {som.chosen_k} y el resto igual, y cada punto es la media de 10 "
+        "entrenamientos con distinta seed y las barras son el desvío entre ellas; η0 es cuánto se mueve la neurona "
         "ganadora hacia el creador en los primeros pasos y después decae hasta {som.base_eta_final}. "
         "La distancia de cada creador a su neurona ganadora queda entre {som.eta_dist_min} y {som.eta_dist_max} y la "
         "U media, que es el promedio de la matriz U (la distancia entre neuronas vecinas), entre {som.eta_u_min} y "
@@ -253,7 +254,8 @@ OUTLINE: tuple[Slide, ...] = (
     Slide(
         "som-r0", 1, "Con R0 entre {som.r0_lo} y {som.r0_hi} el mapa casi no cambia",
         None, ("Q1.3",), (), None, _key("som/figures/effect_radius0.svg"),
-        "Probamos R0 = {som.r0_values}, con k = {som.chosen_k} y el resto igual; R0 es cuántas neuronas vecinas se "
+        "Probamos R0 = {som.r0_values}, con k = {som.chosen_k} y el resto igual, y cada punto es la media de 10 "
+        "entrenamientos con distinta seed y las barras son el desvío entre ellas; R0 es cuántas neuronas vecinas se "
         "mueven junto con la ganadora al principio del entrenamiento y después el radio baja hasta "
         "{som.base_radius_final}. "
         "La distancia de cada creador a su neurona ganadora queda entre {som.r0_dist_min} y {som.r0_dist_max} y la "
