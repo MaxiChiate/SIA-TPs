@@ -296,7 +296,7 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 **Qué:** si ninguna k pasa los filtros, se quita solo el filtro de TE, se aplica el resto de la regla sin cambios y el informe dice explícitamente que ninguna grilla cumplió TE ≤ 0,05. La ocupación no se relaja nunca.
 
-**Por qué:** dejar escrito de antemano qué se hace cuando la regla no encuentra ganadora, sin retocarla después. Es lo que pasó: etapa 2 no robusta y una sola región.
+**Por qué:** dejar escrito de antemano qué se hace cuando la regla no encuentra ganadora, sin retocarla después. Es lo que pasó al reaplicar la regla sobre los scores de las 7 componentes (F2 D-16): ninguna k pasó los tres filtros, se quitó el de TE y quedó k = 5 con TE medio 0,064; y una sola región.
 
 **Dónde:** [02-CONTEXT.md](.planning/phases/02-kohonen-som/02-CONTEXT.md) · [fragmento 02 §2 y §3](deliverables/02-kohonen.md)
 
@@ -307,6 +307,14 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 **Por qué:** "elegir la grilla del SOM por menor QE" está fuera de alcance en REQUIREMENTS: premia la grilla más grande.
 
 **Dónde:** [02-CONTEXT.md](.planning/phases/02-kohonen-som/02-CONTEXT.md) · [fragmento 02 §2, §3 y §5](deliverables/02-kohonen.md)
+
+### F2 D-16 — El SOM se vuelve a entrenar con los scores de las 7 componentes de la PCA
+
+**Qué:** el 2026-11-01 se rehízo el ejercicio de Kohonen usando como entrada solo las componentes principales que juntan el 83,4 % de la varianza en la PCA de las 17 variables que quedan con |r| < 0,8 (F1 D-14): los scores de PC1 a PC7 sin reescalar, en `datos/prepared/creadores_pca_scores.csv` (los escribe `make pca`). La regla de elección de grilla no cambió (mismo texto entre marcadores, mismo `analysis/som_select.py`, mismos umbrales); cambió el dato de entrada, que quedó en `analysis/series_som_stage1.json` (clave `input`) y en el config base, y se commiteó antes de correr (commit `6d5e454`). Salió k = 5 otra vez, pero ninguna grilla cumplió el TE máximo, así que se aplicó F2 D-14; la etapa 2 da robusta (las 10 variantes pasan los filtros de ocupación); sigue habiendo una sola región; y el mapa sigue a PC1 (R² 0,938) y a PC2 (R² 0,439).
+
+**Por qué:** pedido del equipo. Los scores sin reescalar mantienen la geometría de la PCA: la distancia entre dos creadores es la del espacio de las 17 variables proyectado sobre las 7 componentes. Que el mapa siga a PC1 y PC2 no es una validación independiente porque son dos de sus entradas, y el QE y el QE-LOO nuevos no son comparables con los del mapa de 26 variables (la unidad cambió). La fuga del QE-LOO se agranda: el z-score, la PCA y el umbral se ajustaron con los 50 creadores.
+
+**Dónde:** [fragmento 02 §2.1 y §3 a §6](deliverables/02-kohonen.md) · `analysis/pca.py` (`som_input`, `write_som_input`) · `analysis/som_figures.py` y `analysis/som_profiles.py` (los planos de variables son medias crudas y las aristas de la matriz U se llevan al espacio de las variables con los autovectores)
 
 ## Fase 3 — Oja y decisiones de campaña
 

@@ -107,8 +107,6 @@ class Slide:
     notes: str
 
 
-_FAIL_ROWS = tuple((f"{{som.fail_{n}.variant}}", f"{{som.fail_{n}.te}}") for n in range(1, 6))
-
 OUTLINE: tuple[Slide, ...] = (
     Slide(
         "portada", 0, "TP4 SIA — Grupo 9", None, (),
@@ -193,41 +191,48 @@ OUTLINE: tuple[Slide, ...] = (
     ),
     Slide(
         "som-rule", 1,
-        "La regla fijada elige k = {som.chosen_k}; el menor QE de entrenamiento daría k = {som.qe_train_argmin_k}",
+        "Ninguna grilla cumple el TE máximo: sin ese filtro la regla elige k = {som.chosen_k}",
         "Regla fijada de antemano", ("Q1.3",), (), None, _key("som/figures/stage1_curves.svg"),
-        "La regla descarta las grillas que no pasan los filtros de error topográfico, neuronas vacías y creadores por "
-        "neurona ocupada, y entre las que pasan gana el menor QE-LOO: el error de cuantización medido sobre cada creador "
-        "con un mapa entrenado sin él (leave-one-out). "
+        "La regla descarta las grillas que no pasan los filtros de error topográfico (TE), neuronas vacías y creadores "
+        "por neurona ocupada, y entre las que pasan gana el menor QE-LOO: el error de cuantización medido sobre cada "
+        "creador con un mapa entrenado sin él (leave-one-out). "
+        "Ninguna grilla pasó los tres filtros: con k = {som.chosen_k} el TE medio es {som.chosen_te} frente a un máximo "
+        "de {som.te_max}, y las grillas más grandes tienen demasiadas neuronas vacías, así que la regla quita el filtro "
+        "de TE, como dice de antemano, y elige entre las que cumplen los otros dos. "
         "El QE de entrenamiento no decide porque baja siempre al agrandar la grilla: elegiría k = "
-        "{som.qe_train_argmin_k}, con muchas neuronas vacías, y la regla eligió k = {som.chosen_k}. "
-        "Todas las curvas son media entre seeds y no una corrida.",
+        "{som.qe_train_argmin_k}, con muchas neuronas vacías. "
+        "Todas las curvas son media entre seeds y no una corrida, y la estabilidad entre seeds de k = {som.chosen_k} "
+        "es {som.chosen_stability}.",
     ),
     Slide(
-        "som-not-robust", 1,
-        "La etapa 2 no es robusta: {som.n_failing_variants} de {som.n_stage2_variants} variantes del schedule rompen "
-        "el filtro de TE",
+        "som-robust", 1,
+        "La elección es robusta: las {som.n_stage2_variants} variantes del schedule pasan los filtros",
         "Regla fijada de antemano", ("Q1.3",),
         (
-            "Base: R0 = {som.base_radius0}, η0 = {som.base_eta0}, {som.base_epochs} épocas, TE {som.base_te}; "
-            "pasan {som.passing_variants}",
-            "k = {som.chosen_k} se mantiene; lo que cambia es cuánto cumple el TE al mover el schedule",
+            "Neuronas vacías entre {som.s2_empty_min} y {som.s2_empty_max} (máximo {som.empty_max}); creadores por "
+            "neurona ocupada entre {som.s2_creators_min} y {som.s2_creators_max} (mínimo {som.creators_min})",
+            "El TE medio queda entre {som.s2_te_min} y {som.s2_te_max}, sobre el máximo de {som.te_max}: ese filtro ya "
+            "se había quitado en la etapa 1",
         ),
-        (("Variante del schedule", "TE medio"), _FAIL_ROWS), None,
-        "Sobre k = {som.chosen_k} se movió una cosa a la vez: el radio inicial, la tasa η0 y las épocas. "
-        "En {som.n_failing_variants} de las {som.n_stage2_variants} variantes el error topográfico medio queda apenas "
-        "sobre el máximo de la regla, en las otras pasa, y la ocupación de las neuronas pasa en todas. "
-        "La conclusión es que el TE de esta grilla depende del schedule y no que la ocupación se degrade, y por eso el "
-        "veredicto de robustez es «no robusta».",
+        None, None,
+        "Sobre k = {som.chosen_k} se movió una cosa a la vez: el radio inicial, la tasa η0 y las épocas, con 10 seeds por "
+        "variante. "
+        "En todas las variantes la ocupación de las neuronas pasa los filtros, así que la elección es robusta según el "
+        "criterio fijado de antemano. "
+        "El filtro de TE no se revisa porque en la etapa 1 ninguna grilla lo cumplía, y el TE medio de la grilla elegida "
+        "va de {som.s2_te_min} a {som.s2_te_max} según el schedule. "
+        "La etapa 2 nunca vuelve a elegir k.",
     ),
     Slide(
-        "som-map", 1, "Las paredes altas de la matriz U separan perfiles distintos, sobre todo tamaño y precio",
+        "som-map", 1, "Las paredes altas de la matriz U separan perfiles por patrocinio, engagement y alcance",
         None, ("Q1.4", "Q1.7"), (), None, _key("som/figures/map.svg"),
         "El mapa de {som.chosen_k} por {som.chosen_k} muestra los creadores por neurona y, a la derecha, la matriz U: "
-        "una distancia alta entre vecinas es un límite entre perfiles lejanos en las variables en z. "
-        "Las paredes más altas entre neuronas ocupadas separan sobre todo por tamaño y precio, el eje de PC1, y una por "
-        "tipo de contenido. "
-        "En las tres hay una neurona con un solo creador, así que cada salto puede ser un caso suelto, y una pared junto "
-        "a una neurona vacía es interpolación y no un límite entre grupos.",
+        "una distancia alta entre vecinas es un límite entre perfiles lejanos. "
+        "La pared más alta, entre {som.wall_1.cells}, se debe sobre todo a {som.wall_1.vars}; la segunda, entre "
+        "{som.wall_2.cells}, a {som.wall_2.vars}, y la tercera, entre {som.wall_3.cells}, a {som.wall_3.vars}, y "
+        "ninguna se debe a followers ni al precio. "
+        "En {som.n_walls_single} de las tres paredes hay una neurona con un solo creador, así que ese salto puede ser un "
+        "caso suelto, y una pared junto a una neurona vacía es interpolación y no un límite entre grupos.",
     ),
     Slide(
         "som-one-region", 1, "Con la regla fijada el mapa da una sola región: no se parte en grupos de creadores",
@@ -239,13 +244,13 @@ OUTLINE: tuple[Slide, ...] = (
         "Con esos cortes las neuronas ocupadas siguen conectadas, así que sale una sola región con los "
         "{oja.n_creators} creadores. "
         "Cambiar el percentil para obtener más regiones sería elegir la regla mirando el mapa, y por eso se informa como salió. "
-        "La lectura útil es la de un continuo: creadores chicos y baratos arriba a la izquierda y grandes y caros abajo a la derecha.",
+        "La lectura útil es la de un continuo: creadores chicos y baratos abajo a la izquierda y grandes y caros arriba a la derecha.",
     ),
     Slide(
         "som-zonas", 1, "Dentro de la única región, el mapa ordena por tamaño y agrupa los temas en zonas",
         None, ("Q1.5",),
-        ("Perros chicos arriba a la izquierda, arte abajo a la izquierda, maquillaje a la derecha y fútbol en una "
-         "zona de creadores chicos y otra de grandes",),
+        ("Perros abajo, arte en el centro, fútbol arriba y maquillaje a la derecha, con fútbol tanto entre creadores "
+         "chicos como entre grandes",),
         None, _key("som/profiles/zones.svg"),
         "Cada neurona ocupada toma el color del tema dominante más frecuente entre sus creadores y muestra la mediana "
         "de followers y de precio por post. "
@@ -253,20 +258,22 @@ OUTLINE: tuple[Slide, ...] = (
         "{som.zone_small.topic} con una mediana de {som.zone_small.followers} followers y USD {som.zone_small.price}, y "
         "en {som.zone_large.cell} hay {som.zone_large.n} de {som.zone_large.topic} con {som.zone_large.followers} "
         "followers y USD {som.zone_large.price}. "
-        "Dentro de ese eje los temas forman zonas: perros arriba a la izquierda, arte abajo a la izquierda, maquillaje "
-        "en la columna derecha y fútbol repartido entre creadores chicos y grandes. "
-        "Los temas son entradas del mapa, así que describen dónde cae cada perfil y no validan grupos, y por eso la "
-        "regla de regiones sigue dando una sola.",
+        "Dentro de ese eje los temas forman zonas: perros abajo, arte en el centro, fútbol arriba y maquillaje en la "
+        "columna derecha, con fútbol tanto entre creadores chicos como entre grandes. "
+        "Los temas son parte de lo que pesa en las componentes con las que se entrena el mapa, así que describen dónde cae "
+        "cada perfil y no validan grupos, y por eso la regla de regiones sigue dando una sola.",
     ),
     Slide(
-        "som-pc", 1, "El mapa coincide con PC1 (R² {som.r2_pc1}, p = {som.p_r2_pc1}) pero no con PC2 (R² {som.r2_pc2})",
+        "som-pc", 1, "El mapa sigue a PC1 (R² {som.r2_pc1}) y a PC2 (R² {som.r2_pc2}), que son sus propias entradas",
         "Regla fijada de antemano", ("Q1.6",), (), None, _key("som/profiles/pc_planes.svg"),
         "La posición de la neurona ganadora explica el {som.r2_pc1_pct} de la variación de PC1, y ninguna de las "
         "{som.n_permutations} permutaciones lo alcanza (p = {som.p_r2_pc1}). "
-        "Con PC2 el R² es {som.r2_pc2} y p = {som.p_r2_pc2}: una variación así de chica es habitual si se reparten al "
-        "azar las posiciones. "
-        "En conjunto, el orden de las distancias de la grilla coincide moderadamente con el del plano PC1-PC2 "
-        "(Mantel rho {som.mantel_rho}), casi tanto como con las {pca.n_features} variables ({som.mantel_z26_rho}).",
+        "Con PC2 el R² es {som.r2_pc2} y p = {som.p_r2_pc2}: el mapa también la sigue. "
+        "Como el mapa se entrena con los scores de las componentes, que siga a PC1 y PC2 es esperable y no una validación "
+        "independiente. "
+        "En conjunto, el orden de las distancias de la grilla coincide con el del plano PC1-PC2 (Mantel rho "
+        "{som.mantel_rho}), casi igual que con las {som.n_vars} variables ({som.mantel_vars_rho}), y las paredes altas "
+        "de la matriz U no coinciden con saltos de PC1 ni de PC2 (rho {som.edge_rho_pc1} y {som.edge_rho_pc2}).",
     ),
     Slide(
         "oja-pc1", 1, "Oja aprendió PC1: su índice y el score de PC1 ordenan igual a los creadores",
@@ -400,7 +407,7 @@ OUTLINE: tuple[Slide, ...] = (
             "Por eso el top {camp.k} por followers tiene {camp.futbol.followers_global_topic_share}, "
             "{camp.perros.followers_global_topic_share}, {camp.maquillaje.followers_global_topic_share} y "
             "{camp.arte.followers_global_topic_share} del tema de fútbol, perros, maquillaje y arte",
-            "SOM y Oja confirman ese eje (R² {som.r2_pc1}; Spearman {oja.corr_followers_spearman} con followers): "
+            "El SOM sigue ese eje (R² {som.r2_pc1}) y Oja lo aprende (Spearman {oja.corr_followers_spearman} con followers): "
             "la regla filtra por tema y ordena por objetivo",
         ),
         None, None,
@@ -411,7 +418,7 @@ OUTLINE: tuple[Slide, ...] = (
         "{camp.perros.followers_global_topic_share}, {camp.maquillaje.followers_global_topic_share} y "
         "{camp.arte.followers_global_topic_share} de sus creadores tienen como tema dominante el de fútbol, perros, "
         "maquillaje y arte. "
-        "El SOM reproduce ese eje (R² {som.r2_pc1} con PC1) y agrupa los temas en zonas que sirven para ubicar "
+        "El SOM, entrenado con las componentes, sigue ese eje (R² {som.r2_pc1} con PC1) y agrupa los temas en zonas que sirven para ubicar "
         "creadores nuevos y buscar sustitutos, y el índice de Oja es casi el inverso de followers (Spearman "
         "{oja.corr_followers_spearman}), así que elegir su máximo tampoco resuelve. "
         "Por eso cada campaña primero filtra por su tema y después ordena por su propio objetivo, con reglas fijadas "

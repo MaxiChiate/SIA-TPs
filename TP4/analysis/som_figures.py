@@ -45,7 +45,8 @@ EXTRA_RAW = ("topic_art_pct", "content_showcase_pct")
 class Plane:
     name: str
     values: np.ndarray  # k x k
-    kind: str  # "z" (prototype value in z units) or "raw" (mean of the creators of each neuron)
+    kind: str  # "z" (prototype value in z units), "pc" (prototype weight on a component, own scale centred on 0)
+    #           or "raw" (mean of the creators of each neuron)
     unit: str
 
 
@@ -175,6 +176,13 @@ def plot_planes(planes: list[Plane], k: int, hits, title: str, caption: str, out
         if plane.kind == "z":
             cmap = plt.get_cmap(plots_style.DIVERGING).with_extremes(bad=plots_style.SURFACE)
             z_image = ax.imshow(values, cmap=cmap, vmin=-limit, vmax=limit, aspect="equal")
+        elif plane.kind == "pc":
+            own_limit = float(np.nanmax(np.abs(plane.values))) or 1.0
+            cmap = plt.get_cmap(plots_style.DIVERGING).with_extremes(bad=plots_style.SURFACE)
+            image = ax.imshow(values, cmap=cmap, vmin=-own_limit, vmax=own_limit, aspect="equal")
+            inset = ax.inset_axes([1.05, 0.0, 0.06, 1.0])
+            bar = fig.colorbar(image, cax=inset)
+            bar.ax.tick_params(labelsize=plots_style.fontsize(6))
         else:
             cmap = plt.get_cmap("YlGnBu").with_extremes(bad=plots_style.SURFACE)
             image = ax.imshow(values, cmap=cmap, aspect="equal")
@@ -187,6 +195,8 @@ def plot_planes(planes: list[Plane], k: int, hits, title: str, caption: str, out
         _grid_axes(ax, k, fontsize=7)
         if plane.kind == "z":
             ax.set_title(plane.name, fontsize=plots_style.fontsize(8), loc="left")
+        elif plane.kind == "pc":
+            ax.set_title(f"{plane.name}\n(peso del prototipo)", fontsize=plots_style.fontsize(8), loc="left")
         else:
             unit = f", {plane.unit}" if plane.unit else ""
             ax.set_title(f"{plane.name}\n(media cruda{unit})", fontsize=plots_style.fontsize(8), loc="left")
@@ -347,10 +357,11 @@ def main(argv: list[str] | None = None) -> int:
     run = som.read_run(TP_DIR / selection["figure_run"])
     if run.k != k:
         raise SystemExit(f"figure run has grid_k {run.k}, selection.json chose k = {k}")
-    features, z, meta = pca.read_prepared("creadores_zscore")
-    if list(run.features) != list(features):
-        raise SystemExit("figure run features differ from the prepared z-scored columns")
-    loads = pca.loadings(pca.pca_eigh(z, features))
+    data = pca.som_input()
+    features, meta = list(data["names"]), data["meta"]
+    if list(run.features) != features:
+        raise SystemExit("figure run features differ from the PCA score columns the map is trained on (run `make pca`)")
+    loads = pca.loadings(data["result"])
     raw = load_creadores()
     column = {name: i for i, name in enumerate(raw.columns)}
 
@@ -374,28 +385,29 @@ def main(argv: list[str] | None = None) -> int:
     # component planes
     prototypes = run.prototypes.reshape(k, k, -1)
 
-    def z_plane(name: str) -> Plane:
-        return Plane(name, prototypes[:, :, features.index(name)], "z", "z")
+    def pc_plane(name: str) -> Plane:
+        return Plane(name, prototypes[:, :, features.index(name)], "pc", "peso")
 
     def raw_plane(name: str, unit: str) -> Plane:
         return Plane(name, neuron_raw_means(run.bmu, k, raw.values[:, column[name]]), "raw", unit)
 
-    names = main_planes(loads, features)
-    main_set = [z_plane(name) for name in names] + [raw_plane(name, "%") for name in EXTRA_RAW]
+    names = main_planes(loads, data["variables"])
+    main_set = [raw_plane(name, _unit(name)) for name in names] + [raw_plane(name, "%") for name in EXTRA_RAW]
     plot_planes(main_set, k, run.hits,
-                f"Planos de componentes de SOM {k} x {k}: variables principales de PC1 y PC2",
-                f"{ident}. Primeras 4 variables: mayor |carga| en PC1; las siguientes 4: mayor |carga| en PC2 "
-                "(orientación de la Fase 1). Los planos z comparten una escala centrada en 0; los planos crudos "
-                "son la media de los creadores asignados a cada neurona y quedan en blanco si la neurona está "
-                "vacía. La orientación del mapa es arbitraria.", out / "planes_main", ncols=4)
-    dropped = [d["name"] for d in meta["dropped"]]
-    appendix = [z_plane(name) for name in features] + [raw_plane(name, _unit(name)) for name in dropped]
+                f"Planos de SOM {k} x {k}: variables principales de PC1 y PC2 (media cruda de cada neurona)",
+                f"{ident}. Primeras 4 variables: mayor |carga| en PC1 de la PCA de las {len(data['variables'])} variables; "
+                "las siguientes 4: mayor |carga| en PC2 (orientación de la Fase 1). El mapa se entrena con los scores "
+                "de las componentes, no con las variables: cada plano es la media cruda de los creadores asignados a "
+                "cada neurona y queda en blanco si la neurona está vacía. Las dos últimas son las variables que "
+                "salieron por ser combinación exacta de otras. La orientación del mapa es arbitraria.",
+                out / "planes_main", ncols=4)
+    appendix = [pc_plane(name) for name in features] + [raw_plane(name, _unit(name)) for name in raw.columns]
     plot_planes(appendix, k, run.hits,
-                f"Planos de componentes de SOM {k} x {k}: las {len(features)} variables entrenadas y las "
-                f"{len(dropped)} excluidas",
-                f"{ident}. Las variables entrenadas se muestran como valor del prototipo en unidades z (escala "
-                "común centrada en 0); las excluidas, como media cruda de los creadores de cada neurona. "
-                "Celdas rayadas: neuronas vacías. La orientación del mapa es arbitraria.",
+                f"Planos de SOM {k} x {k}: las {len(features)} componentes entrenadas y las {len(raw.columns)} "
+                "variables originales",
+                f"{ident}. Las componentes se muestran como el peso del prototipo (cada una con su escala centrada en "
+                "0); las variables originales, como media cruda de los creadores de cada neurona. Celdas rayadas: "
+                "neuronas vacías. La orientación del mapa es arbitraria.",
                 out / "planes_appendix", ncols=6)
 
     # stage-1 curves and trace

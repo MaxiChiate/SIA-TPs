@@ -81,7 +81,7 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 - **Reglas pre-registradas y commiteadas antes de ver resultados**, con guarda sha256 en cada driver: la regla de elección de
   grilla del SOM (commit `ea7a0b1`), la de las campañas (`a6212e8`), la de las letras (`23c3563`) y el protocolo de los 5 QR. No se
   editan en el lugar: un cambio pasa por discusión.
-- **Los resultados se reportan como salieron**, incluso los desfavorables: una sola región en el mapa del SOM, etapa 2 "no robusta",
+- **Los resultados se reportan como salieron**, incluso los desfavorables: una sola región en el mapa del SOM, ninguna grilla que cumpla el TE máximo,
   Hebb con 0 % de recuperación exacta aun sin ruido en los QR, y el lookup de Hamming que iguala o supera a la pseudo-inversa con
   ruido alto.
 - **Oja**: el índice no se llama "mejor" y la respuesta a "¿elegir el máximo para cualquier campaña?" es no. El signo se orienta en
@@ -114,9 +114,7 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
   reescritas (`som-not-robust`, `camp-futbol`, `ej1-conclusiones`, `qr-energia`). El deck que se presenta ahora es un Google
   Slides (convertido del Artifact): los cambios se copiaron a mano ahí, y las 3 figuras nuevas se suben a mano. El informe
   publicado no se republicó todavía.
-- **La etapa 2 del SOM no es idéntica entre máquinas**: regenerada el 2026-10-27 en otra máquina (gcc 13.3, glibc 2.39), da 4
-  variantes que fallan TE en vez de 5 (`radius0-5` 0,052 y `eta0-0.9` 0,050, contra 0,056 y 0,052 publicados). La etapa 1 y la k
-  elegida no cambian; el veredicto «no robusta» tampoco. El deck y el informe publicados usan los números de la corrida original.
+- **La etapa 2 del SOM puede no ser idéntica entre máquinas** (otra versión de gcc o de glibc): una corrida anterior del mapa de 26 variables, regenerada en otra máquina, cambió cuántas variantes fallaban el TE. Las cifras del deck y del informe son las de la corrida del 2026-11-01 en esta máquina, con el SOM entrenado sobre los scores de las 7 componentes (F2 D-16); la elección de k y la robustez (ocupación) no deberían moverse.
 - **Volver a exportar el PDF del deck** desde su Artifact (lo hace la persona dueña): el deck se republicó el 2026-10-26 y el PDF
   exportado antes no tiene la slide `som-rule` corregida.
 - **Cerrar el milestone** con `/gsd-complete-milestone`: las seis fases están completas en `ROADMAP.md`.

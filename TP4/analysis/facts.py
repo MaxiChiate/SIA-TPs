@@ -293,7 +293,8 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
         "som.p_r2_pc2": dec(contrast["p_r2_pc2"], 3),
         "som.mantel_rho": dec(contrast["mantel_plane_rho"], 3),
         "som.p_mantel": dec(contrast["p_mantel_plane"], 3),
-        "som.mantel_z26_rho": dec(contrast["mantel_z26_rho"], 3),
+        "som.mantel_vars_rho": dec(contrast["mantel_vars_rho"], 3),
+        "som.n_vars": integer(contrast["n_variables"]),
         "som.edge_rho_pc1": dec(contrast["edge_rho_pc1"], 3),
         "som.edge_rho_pc2": dec(contrast["edge_rho_pc2"], 3),
         "som.n_edges": integer(contrast["n_edges"]),
@@ -313,6 +314,43 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
             raise SystemExit(f"stage-2 variant {label!r} is not in robustness.csv; run `make results` (step som-stage2)")
         values[f"som.fail_{position}.variant"] = _variant_label(table[label], table["base"])
         values[f"som.fail_{position}.te"] = dec(table[label]["te_mean"], 3)
+    thresholds = selection["thresholds"]
+    chosen = next(row for row in selection["per_k"] if row["k"] == selection["chosen_k"])
+    stage2 = list(table.values())
+    values.update({
+        "som.te_max": dec(thresholds["te_max"], 2),
+        "som.empty_max": pct(thresholds["empty_max"], 0),
+        "som.creators_min": integer(thresholds["creators_min"]),
+        "som.te_filter_dropped": "sí" if selection["te_filter_dropped"] else "no",
+        "som.n_pass_all": integer(sum(1 for row in selection["per_k"]
+                                      if row["passes_te"] and row["passes_empty"] and row["passes_creators"])),
+        "som.chosen_te": dec(chosen["te_mean"], 3),
+        "som.chosen_empty": pct(chosen["empty_fraction_mean"], 1),
+        "som.chosen_creators": dec(chosen["creators_per_occupied_mean"], 2),
+        "som.chosen_qe_loo": dec(chosen["qe_loo_mean"], 3),
+        "som.chosen_stability": dec(chosen["stability"], 3),
+        "som.s2_te_min": dec(min(float(r["te_mean"]) for r in stage2), 3),
+        "som.s2_te_max": dec(max(float(r["te_mean"]) for r in stage2), 3),
+        "som.s2_empty_min": pct(min(float(r["empty_fraction_mean"]) for r in stage2), 1),
+        "som.s2_empty_max": pct(max(float(r["empty_fraction_mean"]) for r in stage2), 1),
+        "som.s2_creators_min": dec(min(float(r["creators_per_occupied_mean"]) for r in stage2), 2),
+        "som.s2_creators_max": dec(max(float(r["creators_per_occupied_mean"]) for r in stage2), 2),
+    })
+    # The three highest walls of the U matrix: the neurons they join, the variables that differ most and whether one
+    # of the two neurons holds a single creator.
+    hits = {int(row["neuron"]): int(row["hits"]) for row in read_csv_source(results_dir, "som.hits")}
+    wall_rows = read_csv_source(results_dir, "som.high_u_edges")
+    k = int(selection["chosen_k"])
+    single = 0
+    for rank in (1, 2, 3):
+        rows = [row for row in wall_rows if int(row["edge_rank"]) == rank]
+        a, b = int(rows[0]["neuron_a"]), int(rows[0]["neuron_b"])
+        alone = min(hits[a], hits[b]) == 1
+        single += int(alone)
+        values[f"som.wall_{rank}.cells"] = f"({a // k},{a % k}) y ({b // k},{b % k})"
+        values[f"som.wall_{rank}.vars"] = ", ".join(row["variable"] for row in rows)
+        values[f"som.wall_{rank}.single"] = "sí" if alone else "no"
+    values["som.n_walls_single"] = str(single)
     base = table["base"]
     variants = [label for label in table if label != "base"]
     passing = [label for label in variants if label not in robustness["failing_variants"]]
@@ -581,19 +619,38 @@ def check_claims(results_dir: Path = RESULTS_DIR) -> None:
     if selection.get("decided_by") != "qe_loo":
         failed.append("SOM: «entre las grillas que pasan gana el menor QE-LOO» (selection.json decided_by is not qe_loo)")
     hits = {int(row["neuron"]): int(row["hits"]) for row in read_csv_source(results_dir, "som.hits")}
-    edges = {
-        int(row["edge_rank"]): (int(row["neuron_a"]), int(row["neuron_b"]))
-        for row in read_csv_source(results_dir, "som.high_u_edges")
-    }
-    if any(rank not in edges or min(hits[n] for n in edges[rank]) != 1 for rank in (1, 2, 3)):
-        failed.append("SOM: «en las tres paredes más altas hay una neurona con un solo creador»")
+    wall_rows = read_csv_source(results_dir, "som.high_u_edges")
+    if selection.get("te_filter_dropped") is not True or any(
+            row["passes_te"] and row["passes_empty"] and row["passes_creators"] for row in selection["per_k"]):
+        failed.append("SOM: «ninguna grilla cumple los tres filtros y la regla quita el de TE» "
+                      "(a grid passes all three, or the TE filter was not dropped)")
+    wall_vars = {row["variable"] for row in wall_rows}
+    if not ("sponsored_posts_pct" in wall_vars and "non_follower_reach_pct" in wall_vars
+            and any(name.endswith("_per_1000") for name in wall_vars)):
+        failed.append("SOM: «las paredes altas separan por patrocinio, engagement y alcance» "
+                      "(sponsored_posts_pct, a *_per_1000 and non_follower_reach_pct are not all among the wall variables)")
+    if wall_vars & {"followers", "price_usd"}:
+        failed.append("SOM: «las paredes más altas de la matriz U no se deben a followers ni a precio» "
+                      f"(they do: {sorted(wall_vars & {'followers', 'price_usd'})})")
     k = int(selection["chosen_k"])
     profiles = read_csv_source(results_dir, "som.neuron_profiles")
-    diagonal = [int(row["group"]) // k + int(row["group"]) % k for row in profiles]
+    diagonal = [int(row["group"]) % k - int(row["group"]) // k for row in profiles]
     for column in ("price_usd", "followers"):
         if statistics.correlation(diagonal, [float(row[column]) for row in profiles]) <= 0:
-            failed.append(f"SOM: «chicos y baratos arriba a la izquierda, grandes y caros abajo a la derecha» "
-                          f"({column} does not grow with row + col)")
+            failed.append(f"SOM: «chicos y baratos abajo a la izquierda, grandes y caros arriba a la derecha» "
+                          f"({column} does not grow with col - row)")
+    zones = [row for row in read_csv_source(results_dir, "som.zones") if int(row["n"]) >= 2]
+    by_topic: dict[str, list[float]] = {}
+    for row in zones:
+        by_topic.setdefault(row["topic"], []).append(float(row["median_followers"]))
+    if max(by_topic.get("perros", [float("inf")])) >= 100_000:
+        failed.append("SOM: «las zonas de perros son de creadores chicos» (a dogs zone has 100 mil followers or more)")
+    football = by_topic.get("fútbol", [])
+    if not football or min(football) >= 100_000 or max(football) <= 300_000:
+        failed.append("SOM: «fútbol aparece entre creadores chicos y entre grandes» (its zones do not span 100 mil to 300 mil)")
+    makeup = by_topic.get("maquillaje", [])
+    if not makeup or min(makeup) <= 300_000:
+        failed.append("SOM: «las zonas de maquillaje son de creadores grandes» (a makeup zone has 300 mil followers or fewer)")
     rows = {row["tau"]: row for row in read_source(results_dir, "prune.sensitivity")["rows"]}
     prune_drops = {tau: {item["dropped"] for item in row["dropped"]} for tau, row in rows.items()}
     if rows[0.9]["kept"] != rows[0.85]["kept"]:
@@ -653,7 +710,7 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (2, "R² de PC1 sobre la grilla: {som.r2_pc1} (p = {som.p_r2_pc1})"),
     (2, "R² de PC2 sobre la grilla: {som.r2_pc2} (p = {som.p_r2_pc2})"),
     (2, "Mantel grilla vs plano PC1-PC2: rho = {som.mantel_rho} (p = {som.p_mantel})"),
-    (2, "Mantel grilla vs distancia en las 26 variables (referencia): rho = {som.mantel_z26_rho}"),
+    (2, "Mantel grilla vs distancia en las {som.n_vars} variables (referencia): rho = {som.mantel_vars_rho}"),
     (2, "explica el {som.r2_pc1_pct} de la variación de PC1"),
     (2, "con seed {som.figure_seed}, que es el medoide de estabilidad"),
     (2, "rho de Spearman {som.edge_rho_pc1} y con la de PC2 con {som.edge_rho_pc2} ({som.n_edges} aristas; las otras {som.n_excluded_edges} tocan"),

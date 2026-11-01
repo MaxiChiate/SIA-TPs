@@ -532,7 +532,7 @@ def som_input(prepared_dir: Path = PREPARED_DIR) -> dict:
         "name": list(meta["name"]),
     }
     return {"result": result, "z": z_kept, "variables": kept, "scores": matrix, "names": names, "meta": saved,
-            "z_meta": kept_meta}
+            "z_meta": meta}
 
 
 def corr_prune_threshold() -> float:

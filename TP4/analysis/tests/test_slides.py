@@ -83,12 +83,12 @@ def test_outline_has_no_agenda_and_no_general_closing():
 
 def test_unfavorable_and_campaign_slides_exist_with_their_own_ids():
     ids = {slide.id for slide in slides.OUTLINE}
-    assert {"som-not-robust", "som-one-region", "qr-hebb-falla", "qr-lookup"} <= ids
+    assert {"som-robust", "som-one-region", "qr-hebb-falla", "qr-lookup"} <= ids
     assert {"camp-futbol", "camp-table", "camp-followers", "camp-maintenance"} <= ids
 
 
 def test_unfavorable_titles_say_the_result_plainly():
-    assert "no es robusta" in by_id("som-not-robust").title
+    assert "es robusta" in by_id("som-robust").title
     assert "una sola región" in by_id("som-one-region").title
     assert "Hebb" in by_id("qr-hebb-falla").title and "{qr.hebb_exact_noise0}" in by_id("qr-hebb-falla").title
     assert "Hamming" in by_id("qr-lookup").title and "pseudo-inversa" in by_id("qr-lookup").title
@@ -136,7 +136,7 @@ def test_slide_figure_is_none_or_a_single_string():
 
 
 def test_text_only_slides_name_no_figure():
-    for slide_id in ("portada", "som-not-robust", "oja-max", "camp-table", "camp-followers",
+    for slide_id in ("portada", "som-robust", "oja-max", "camp-table", "camp-followers",
                      "camp-maintenance", "ej1-conclusiones", "ej2-conclusiones"):
         assert by_id(slide_id).figure is None
 

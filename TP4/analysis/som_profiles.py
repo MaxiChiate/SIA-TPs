@@ -453,15 +453,22 @@ def main(argv: list[str] | None = None) -> int:
     run = som.read_run(TP_DIR / selection["figure_run"])
     if run.k != k:
         raise SystemExit(f"figure run has grid_k {run.k}, selection.json chose k = {k}")
-    features, z, meta = pca.read_prepared("creadores_zscore")
-    if list(run.features) != list(features):
-        raise SystemExit("figure run features differ from the prepared z-scored columns")
+    data = pca.som_input()
+    features, meta = list(data["names"]), data["meta"]
+    if list(run.features) != features:
+        raise SystemExit("figure run features differ from the PCA score columns the map is trained on (run `make pca`)")
     raw = load_creadores()
     if list(raw.ids) != list(meta["creator_id"]):
-        raise SystemExit("datos/creadores.csv and the prepared z-scored matrix list different creators")
+        raise SystemExit("datos/creadores.csv and the PCA score matrix list different creators")
     names = list(meta["name"])
-    std = scaler_from_meta(meta).std
-    pc = pca.scores(pca.pca_eigh(z, features), z)[:, :2]
+    # the map is trained on scores: its prototypes are brought back to the z space of the variables that stay by the
+    # eigenvectors of the retained components (orthonormal columns, so the distances between prototypes do not change)
+    z = data["z"]
+    variables = list(data["variables"])
+    scaler = scaler_from_meta(data["z_meta"])
+    std = np.array([scaler.std[scaler.features.index(name)] for name in variables])
+    prototypes_z = run.prototypes @ data["result"].eigenvectors[:, : len(features)].T
+    pc = data["scores"][:, :2]
     bmu = run.bmu
     rows_, cols_ = bmu // k, bmu % k
 
@@ -477,7 +484,7 @@ def main(argv: list[str] | None = None) -> int:
     grid_vector = som.grid_distance_vector(bmu, k)
     mantel_plane = som.spearman_ties(grid_vector, plane_distance_vector(pc))
     p_mantel = permutation_pvalue(mantel_plane, mantel_null(bmu, k, pc, rng))
-    mantel_z26 = som.spearman_ties(grid_vector, plane_distance_vector(z))
+    mantel_vars = som.spearman_ties(grid_vector, plane_distance_vector(z))
     edges = edge_contrast(run.prototypes, run.hits, bmu, k, pc)
 
     out.mkdir(parents=True, exist_ok=True)
@@ -509,7 +516,8 @@ def main(argv: list[str] | None = None) -> int:
 
     contrast = {
         "r2_pc1": r2[0], "p_r2_pc1": p_r2[0], "r2_pc2": r2[1], "p_r2_pc2": p_r2[1],
-        "mantel_plane_rho": mantel_plane, "p_mantel_plane": p_mantel, "mantel_z26_rho": mantel_z26,
+        "mantel_plane_rho": mantel_plane, "p_mantel_plane": p_mantel, "mantel_vars_rho": mantel_vars,
+        "n_variables": len(variables),
         "edge_rho_pc1": edges["rho_pc1"], "edge_rho_pc2": edges["rho_pc2"],
         "n_edges": edges["n_edges"], "n_excluded_edges": edges["n_excluded"],
         "threshold": result.threshold, "n_regions": int(len(result.sizes)),
@@ -520,7 +528,7 @@ def main(argv: list[str] | None = None) -> int:
     (out / "pca_contrast.json").write_text(json.dumps(contrast, indent=2) + "\n", encoding="utf-8")
 
     # high-U edges
-    top = high_u_edges(run.prototypes, run.hits, k, features, std)
+    top = high_u_edges(prototypes_z, run.hits, k, variables, std)
     _write_csv(out / "high_u_edges.csv",
                ["edge_rank", "neuron_a", "neuron_b", "distance", "variable", "delta_z", "delta_raw"],
                [[e["rank"], e["neuron_a"], e["neuron_b"], e["distance"], v["variable"], v["delta_z"], v["delta_raw"]]

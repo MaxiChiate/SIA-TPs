@@ -296,15 +296,25 @@ FINDINGS: tuple[Finding, ...] = (
     ),
     Finding(
         "SOM, grilla",
-        "La regla de elección de la grilla, fijada y commiteada antes de ver resultados, eligió k = {som.chosen_k}; "
-        "por error de cuantización de entrenamiento solo se habría elegido k = {som.qe_train_argmin_k}, que deja casi "
-        "la mitad de las neuronas vacías.",
+        "El mapa se entrena con los scores de las {pca17.k_80} primeras componentes de la PCA de las "
+        "{pca17.n_features} variables que quedan con el umbral de correlación. La regla de elección de la grilla, "
+        "fijada y commiteada antes de ver resultados, eligió k = {som.chosen_k}; por error de cuantización de "
+        "entrenamiento solo se habría elegido k = {som.qe_train_argmin_k}, que deja casi la mitad de las neuronas vacías.",
         "f2-s3",
     ),
     Finding(
+        "SOM, TE",
+        "Ninguna grilla cumplió el error topográfico máximo de {som.te_max} y la regla quitó ese filtro, como fija de "
+        "antemano: con k = {som.chosen_k} el TE medio es {som.chosen_te}, y las grillas más grandes tienen demasiadas "
+        "neuronas vacías. Detalle: la sección de la etapa 1.",
+        "f2-s3",
+        True,
+    ),
+    Finding(
         "SOM frente a PCA",
-        "El mapa de {som.chosen_k}×{som.chosen_k} sigue a PC1 (R² {som.r2_pc1}, p = {som.p_r2_pc1}) y no a PC2 "
-        "(R² {som.r2_pc2}, p = {som.p_r2_pc2}); los p salen de {som.n_permutations} permutaciones.",
+        "El mapa de {som.chosen_k}×{som.chosen_k} sigue a PC1 (R² {som.r2_pc1}, p = {som.p_r2_pc1}) y a PC2 "
+        "(R² {som.r2_pc2}, p = {som.p_r2_pc2}); los p salen de {som.n_permutations} permutaciones. Como PC1 y PC2 son "
+        "dos de las entradas del mapa, no es una validación independiente.",
         "f2-s6-4",
     ),
     Finding(
@@ -317,11 +327,10 @@ FINDINGS: tuple[Finding, ...] = (
     ),
     Finding(
         "SOM, robustez",
-        "Robustez de la grilla elegida frente al schedule de entrenamiento: {som.robust}. En {som.n_failing_variants} "
-        "variantes de radio, tasa o épocas el error topográfico medio queda apenas sobre el máximo fijado; la "
-        "ocupación de las neuronas no se degrada.",
+        "Robustez de la grilla elegida frente al schedule de entrenamiento: {som.robust}. Las {som.n_stage2_variants} "
+        "variantes de radio, tasa o épocas pasan los filtros de ocupación, con entre {som.s2_empty_min} y "
+        "{som.s2_empty_max} de neuronas vacías.",
         "f2-s4",
-        True,
     ),
     Finding(
         "Oja",
