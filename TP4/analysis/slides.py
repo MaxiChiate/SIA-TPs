@@ -193,7 +193,9 @@ OUTLINE: tuple[Slide, ...] = (
         "som-hyperparams", 1, "Hiperparámetros del SOM y por qué los elegimos",
         None, ("Q1.3",),
         ("Inicializamos los pesos de las neuronas con muestras elegidas al azar de los datos de entrenamiento porque, "
-         "con valores aleatorios, algunas neuronas quedan lejos de los datos, nunca ganan y quedan muertas.",),
+         "con valores aleatorios, algunas neuronas quedan lejos de los datos, nunca ganan y quedan muertas.",
+         "Descartamos las grillas con más de {som.empty_max} de neuronas vacías o con menos de {som.creators_min} "
+         "creadores por neurona ocupada (en promedio entre las seeds)."),
         (
             ("Hiperparámetro", "Valor", "Por qué"),
             (
@@ -214,8 +216,9 @@ OUTLINE: tuple[Slide, ...] = (
         "Estos son los hiperparámetros del mapa que usamos en todo el ejercicio, y los pesos de cada neurona arrancan en "
         "un creador elegido al azar del conjunto de entrenamiento: con valores aleatorios hay neuronas que quedan lejos "
         "de los datos, nunca ganan y quedan muertas. "
-        "La grilla la eligió la regla fijada de antemano, y el resto del schedule es el baseline de la serie, también "
-        "fijado antes de correr. "
+        "La grilla la eligió la regla fijada de antemano, que descarta las grillas con más de {som.empty_max} de "
+        "neuronas vacías o con menos de {som.creators_min} creadores por neurona ocupada y se queda con la más "
+        "grande, y el resto del schedule es el baseline de la serie, también fijado antes de correr. "
         "Después de elegir la grilla movimos una cosa a la vez (R0, η0 y épocas) con 10 seeds cada una, y en todas las "
         "variantes la ocupación pasa los filtros, así que la elección es robusta. "
         "El mapa se entrena con los scores de las {pca17.k_80} primeras componentes de la PCA.",
