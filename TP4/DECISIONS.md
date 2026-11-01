@@ -70,6 +70,14 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 **Dónde:** [PROJECT.md](.planning/PROJECT.md) (tabla Key Decisions) · [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) (F5 D-01 y D-02) · [fragmento 05 §3](deliverables/05-hopfield-qr.md)
 
+### KD-8 — Hopfield solo con la actualización síncrona de la teórica, re-registrado después de los resultados
+
+**Qué:** la dinámica de Hopfield es solo la actualización síncrona de la teórica (diapositiva 23), S_i(t+1) = sign(Σ_j w_ij S_j(t)), con detección de ciclos de período 2; se quitó la asincrónica (una neurona por vez), que era la referencia de los protocolos de letras y QR. Los dos protocolos se re-registraron el 2026-10-31 (texto entre marcadores y módulo de la regla en el mismo commit, `6a4bbd2`) y todo Hopfield se volvió a correr. El cambio se hizo después de ver los resultados de los dos modos (informe del 2026-10-26; código anterior en el commit `0e72a77`), y los fragmentos lo declaran. Resultado: con letras la recuperación exacta del set separado es 1,000, 0,904 y 0,336 con 3, 6 y 9 píxeles invertidos, y aparecen ciclos desde 4; con los QR, Hebb sigue en 0 % y la pseudo-inversa en 100 % hasta ruido 0,30. En estas corridas la energía no subió nunca, aunque en síncrono la teoría no lo garantiza.
+
+**Por qué:** es la única dinámica que da la teórica; para el modo de actualización la regla deja de ser anterior a los resultados, y eso queda escrito en vez de ocultarse.
+
+**Dónde:** [PROJECT.md](.planning/PROJECT.md) (tabla Key Decisions) · [fragmento 04 §1, §3 y §5](deliverables/04-hopfield-letras.md) · [fragmento 05 §1, §3 y §4](deliverables/05-hopfield-qr.md)
+
 ## Fase 1 — Datos, auditoría de variables y PCA
 
 ### F1 D-01 — Parser JSON: cJSON v1.7.19 vendored

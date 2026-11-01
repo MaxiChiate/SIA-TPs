@@ -462,7 +462,8 @@ OUTLINE: tuple[Slide, ...] = (
         "{letters.n_pixels}), {letters.spur_total} de "
         "{letters.spur_trials} ensayos ({letters.spur_total_pct}) terminan en un estado que no es una letra almacenada. "
         "Las clases son inverso ({letters.spur_inverse_pct}), mezcla ({letters.spur_mixture_pct}) y otro "
-        "({letters.spur_other_pct}), y la más frecuente es la del {letters.spurious_class}. "
+        "({letters.spur_other_pct}), y la más frecuente es la del {letters.spurious_class}; el otro incluye los ensayos "
+        "que caen en un ciclo de período 2, que nunca cuentan como convergidos. "
         "Un inverso tiene la misma energía que su letra, porque la energía no cambia al invertir todo el patrón, mientras "
         "que la mezcla y el otro quedan en mínimos locales más altos; son tres ejemplos fijados y no una ley sobre la "
         "energía de los estados espurios.",
@@ -505,16 +506,17 @@ OUTLINE: tuple[Slide, ...] = (
     Slide(
         "qr-energia", 2, "Con Hebb la red converge al estado común; con la pseudo-inversa, al QR consultado",
         None, ("Q2.4", "Q2.5"),
-        ("Ensayos fijos por QR y nivel de ruido: la energía asíncrona nunca sube",),
+        ("Ensayos fijos por QR y nivel de ruido, con la actualización síncrona: la energía baja hasta quedar plana",),
         None, _key("hopfield/qr/figures/energy_trace.svg"),
-        "La figura traza la energía asíncrona, paso a paso, de un ensayo fijo por QR y nivel de ruido, arriba con Hebb "
-        "y abajo con la pseudo-inversa, y en ningún ensayo trazado la energía sube. "
+        "La figura traza la energía después de cada paso síncrono de un ensayo fijo por QR y nivel de ruido, arriba con "
+        "Hebb y abajo con la pseudo-inversa; en síncrono la teoría no garantiza que la energía no suba, pero en estas "
+        "corridas no subió nunca. "
         "Con Hebb cada corrida converge al estado común y no al QR consultado; con la pseudo-inversa converge al QR "
         "consultado hasta el nivel {qr.pinv_last_full_noise}, y cada QR guardado queda en la energía mínima, −N/2 = "
         "{qr.pinv_stored_energy}. "
         "Las escalas no se comparan: Hebb suma los productos de los patrones sin dividir por N y su energía es del "
         "orden de millones. "
-        "El número de barridos crece poco con el ruido, y con un solo píxel de corrimiento la consulta ya está a "
+        "El número de pasos crece poco con el ruido, y con un solo píxel de corrimiento la consulta ya está a "
         "{qr.shift1_query_hamming} de {qr.n_pixels} píxeles de la fuente y la pseudo-inversa la deja a "
         "{qr.shift1_recovered_hamming}.",
     ),

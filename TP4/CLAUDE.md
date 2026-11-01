@@ -79,7 +79,9 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 - **Reglas pre-registradas y commiteadas antes de ver resultados**, con guarda sha256 en cada driver: la regla de elección de
   grilla del SOM (commit `ea7a0b1`), la de las campañas (`a6212e8`), la de las letras (`23c3563`) y el protocolo de los 5 QR. No se
-  editan en el lugar: un cambio pasa por discusión.
+  editan en el lugar: un cambio pasa por discusión. Las letras y los QR se re-registraron juntos el 2026-10-31 (commit `6a4bbd2`,
+  KD-8) para quedarse solo con la actualización síncrona; la guarda acepta un re-registro solo si el módulo de la regla y el texto
+  entre marcadores cambian en el mismo commit.
 - **Los resultados se reportan como salieron**, incluso los desfavorables: una sola región en el mapa del SOM, etapa 2 "no robusta",
   Hebb con 0 % de recuperación exacta aun sin ruido en los QR, y el lookup de Hamming que iguala o supera a la pseudo-inversa con
   ruido alto.
@@ -108,6 +110,13 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
   nota en el anexo del guion ("Generado desde commit d4d145e.").
 
 ## Pendientes
+
+- **Hopfield solo síncrono (2026-10-31, KD-8)**: se quitó la actualización asíncrona del código, de los protocolos (re-registrados,
+  declarado en los fragmentos 04 y 05) y de los textos; todo Hopfield se volvió a correr. Cambian números del fragmento 04
+  (recuperación, capacidad por recuperación, estado espurio: ahora el más común es el otro, con 318 ciclos de 1200) y del 05
+  (pinv 99,8 / 96,1 / 61 % en 0,35 / 0,40 / 0,45). La energía no subió en ninguna corrida. El informe local está armado; falta
+  republicarlo y el deck a la misma url, copiar a mano al Google Slides los cambios (slides `letras-ruido`, `espurio`,
+  `qr-energia`, `qr-hamming` y las figuras de Hopfield) y volver a exportar el PDF.
 
 - **Conclusión de QR reescrita (2026-10-31)**: el informe explica el 0 % de Hebb como el caso de falla de la teoría (QR
   demasiado parecidos → crosstalk → atractor espurio que combina los cinco) y presenta la pseudo-inversa como los pesos que

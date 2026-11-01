@@ -646,7 +646,7 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (4, "Hay {letters.p4_stable_0}, {letters.p4_stable_1}, {letters.p4_stable_2}, {letters.p4_stable_3} y {letters.p4_stable_4} subconjuntos con 0, 1, 2, 3 y 4 letras estables"),
     (4, "{letters.p4_stable_4} ({letters.p4_all_stable_fraction}) las tienen todas estables y la fracción estable media es {letters.p4_mean_stable_fraction}"),
     (4, "almacenado {letters.spur_stored} ({letters.spur_stored_pct}), inverso {letters.spur_inverse} ({letters.spur_inverse_pct}), mezcla {letters.spur_mixture} ({letters.spur_mixture_pct}) y otro {letters.spur_other} ({letters.spur_other_pct})"),
-    (4, "seguida por el {letters.spurious_class}, la mezcla y el otro"),
+    (4, "la clase más común es la del {letters.spurious_class}"),
     (4, "({letters.spur_total} de {letters.spur_trials}, {letters.spur_total_pct})"),
     (4, "{letters.draft_matching_glyphs} de sus {letters.alphabet_size} glifos coinciden con los del borrador"),
     # 5: Hopfield, QR
