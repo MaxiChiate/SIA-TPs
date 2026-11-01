@@ -406,7 +406,7 @@ OUTLINE: tuple[Slide, ...] = (
         "separado ({letters.separated_set}) y el más correlacionado ({letters.correlated_set}) entre todos los "
         "subconjuntos de cuatro letras. "
         "Con N = {letters.n_pixels} el producto escalar es siempre impar, así que ningún par es exactamente ortogonal: el "
-        "máximo solapamiento es {letters.separated_max_overlap} en el primero y {letters.correlated_max_overlap} en el segundo. "
+        "máximo producto escalar normalizado es {letters.separated_max_overlap} en el primero y {letters.correlated_max_overlap} en el segundo. "
         "Una divulgación: {letters.draft_matching_glyphs} de los {letters.alphabet_size} glifos coinciden con un "
         "borrador que se usó en un prototipo, y el desempate del set "
         "correlacionado no es independiente de él.",
@@ -435,7 +435,7 @@ OUTLINE: tuple[Slide, ...] = (
         (
             "Fracción de letras estables: {letters.stable_p3} con p = 3, {letters.stable_p4} con p = 4 y "
             "{letters.stable_p6} con p = 6",
-            "Con p = 4 manda el solapamiento: {letters.p4_all_stable_fraction} de los subconjuntos tienen las cuatro "
+            "Con p = 4 manda el producto escalar normalizado: {letters.p4_all_stable_fraction} de los subconjuntos tienen las cuatro "
             "letras estables",
         ),
         None, _key("hopfield/figures/capacity_by_p.svg"),
@@ -446,10 +446,10 @@ OUTLINE: tuple[Slide, ...] = (
         "con p = 3 a {letters.stable_p4} con p = 4 y {letters.stable_p6} con p = 6, y con p = "
         "{letters.capacity_last_p} todavía vale {letters.stable_last_p}, así que no hay un quiebre en "
         "{letters.course_capacity}. "
-        "Lo que decide es el solapamiento: con p = 4 solo {letters.p4_all_stable_fraction} de los subconjuntos tienen "
-        "las cuatro letras estables, porque el término de cruce de las letras parecidas le gana al de la propia letra. "
+        "Lo que decide es el producto escalar normalizado: con p = 4 solo {letters.p4_all_stable_fraction} de los subconjuntos tienen "
+        "las cuatro letras estables, porque el crosstalk de las letras parecidas le gana al de la propia letra. "
         "En los QR la misma referencia da {qr.course_capacity} patrones para {qr.n_pixels} píxeles, muy por encima de "
-        "{qr.n_qr}: ahí Hebb no falla por capacidad sino por ese término de cruce, que solo se anula con patrones "
+        "{qr.n_qr}: ahí Hebb no falla por capacidad sino por ese crosstalk, que solo se anula con patrones "
         "ortogonales.",
     ),
     Slide(
@@ -470,13 +470,13 @@ OUTLINE: tuple[Slide, ...] = (
     Slide(
         "qr-correlados", 2, "Los QR son idénticos en {qr.identical_fraction} de sus píxeles: están muy correlacionados",
         None, ("Q2.1", "Q2.2"),
-        ("Matrices binarias de 37×37 ({qr.n_pixels} píxeles); solapamiento máximo {qr.max_abs_overlap}, medio {qr.mean_abs_overlap}",),
+        ("Matrices binarias de 37×37 ({qr.n_pixels} píxeles); producto escalar normalizado máximo {qr.max_abs_overlap}, medio {qr.mean_abs_overlap}",),
         None, _key("hopfield/qr/figures/qr.svg"),
         "Cada QR es una matriz binaria de 37×37 de módulos oscuros y claros, como pide la pregunta, y son {qr.n_qr} "
         "almacenados en una sola red. "
         "Como codificación de este trabajo, y no como parte del enunciado, la red guarda cada matriz como un vector de "
         "{qr.n_pixels} valores ±1, con la polaridad oscuro = +1 y claro = −1. "
-        "El {qr.identical_fraction} de los {qr.n_pixels} píxeles es idéntico en los {qr.n_qr} a la vez y el solapamiento "
+        "El {qr.identical_fraction} de los {qr.n_pixels} píxeles es idéntico en los {qr.n_qr} a la vez y el producto escalar normalizado "
         "entre pares es {qr.max_abs_overlap} como máximo y {qr.mean_abs_overlap} en promedio, lejos de la ortogonalidad.",
     ),
     Slide(
@@ -486,7 +486,7 @@ OUTLINE: tuple[Slide, ...] = (
         None, _key("hopfield/qr/figures/majority.svg"),
         "Con el protocolo fijado de antemano la tasa de recuperación exacta de Hebb es {qr.hebb_exact_noise0} en todos los "
         "niveles de ruido, el nivel cero incluido: los {qr.n_qr} QR no son puntos fijos de la regla de Hebb. "
-        "La causa es la correlación entre los QR, con solapamiento medio {qr.mean_abs_overlap}: la red converge a un único "
+        "La causa es la correlación entre los QR, con producto escalar normalizado medio {qr.mean_abs_overlap}: la red converge a un único "
         "estado, la mayoría píxel a píxel de los cinco, que difiere de cada QR por entre {qr.majority_hamming_min} y "
         "{qr.majority_hamming_max} píxeles de {qr.n_pixels}. "
         "Es el resultado de la regla tal como se fijó y se informa así.",
@@ -527,7 +527,7 @@ OUTLINE: tuple[Slide, ...] = (
             "No verificamos que un QR recuperado se decodifique",
         ),
         None, None,
-        "Las limitaciones medidas son tres: la correlación entre los QR ({qr.mean_abs_overlap} de solapamiento medio) rompe "
+        "Las limitaciones medidas son tres: la correlación entre los QR ({qr.mean_abs_overlap} de producto escalar normalizado medio) rompe "
         "a Hebb, un corrimiento de un solo píxel ya mueve la consulta a {qr.shift1_query_hamming} de {qr.n_pixels} píxeles, "
         "y la matriz de pesos tiene {qr.n_pixels} por {qr.n_pixels} entradas para solo {qr.n_qr} patrones. "
         "Un lookup de Hamming resuelve el mismo problema cerrado con igual o más acierto y sin dinámica ni energía. "
@@ -548,7 +548,7 @@ UNPLACED_SLIDE_FIGURES: dict[str, str] = {
         "la slide letras-ruido muestra la recuperación frente al ruido; la capacidad con p = 4 queda en el fragmento 04 "
         "y se nombra en las notas de esa slide",
     _key("hopfield/qr/figures/overlaps.svg"):
-        "la slide qr-correlados muestra los QR y da los solapamientos como números de facts",
+        "la slide qr-correlados muestra los QR y da los productos escalares como números de facts",
     _key("hopfield/qr/figures/shift.svg"):
         "la limitación del corrimiento se nombra en las notas de qr-energia y ej2-conclusiones; la figura queda en el fragmento 05",
 }

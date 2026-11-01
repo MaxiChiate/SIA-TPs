@@ -170,11 +170,11 @@ def plot_overlaps(orthogonality: dict, out_stem) -> None:
         bar = fig.colorbar(image, cax=fig.add_axes([0.9, 0.1, 0.015, 0.74]))
     else:
         bar = fig.colorbar(image, ax=list(axes), fraction=0.035, pad=0.03)
-    bar.set_label("solapamiento d / N")
-    plots_style.suptitle(fig, "Solapamientos entre las letras de cada set", fontsize=12, x=0.01, ha="left")
+    bar.set_label("producto escalar normalizado d / N")
+    plots_style.suptitle(fig, "Productos escalares entre las letras de cada set", fontsize=12, x=0.01, ha="left")
     if plots_style.variant() != "slide":
         fig.subplots_adjust(left=0.05, right=0.86, top=0.88, bottom=0.2)
-    _caption(fig, f"En cada celda, el producto escalar entero d y el solapamiento d / {n}. Con N = {n} píxeles d es "
+    _caption(fig, f"En cada celda, el producto escalar entero d y el producto escalar normalizado d / {n}. Con N = {n} píxeles d es "
                   "impar, así que ningún par es exactamente ortogonal; la diagonal vale 1 por definición. Las dos "
                   "matrices comparten la escala de -1 a 1.")
     plots_style.save_figure(fig, out_stem)
@@ -204,10 +204,10 @@ def plot_max_overlap_hist(selection: dict, out_stem) -> None:
     ax.set_xticks(overlaps)
     ax.set_xticklabels([f"{_fmt(entry['max_abs_overlap'])}\nd = {entry['max_abs_dot']}" for entry in histogram],
                        fontsize=8)
-    ax.set_xlabel("máximo |solapamiento| entre los pares del subconjunto (d / N)")
+    ax.set_xlabel("máximo |producto escalar normalizado| entre los pares del subconjunto (d / N)")
     ax.set_ylabel("subconjuntos")
     ax.set_ylim(0, max(counts) * 1.2)
-    plots_style.suptitle(fig, f"Máximo |solapamiento| de los {total} subconjuntos de {size} letras", fontsize=12, x=0.01,
+    plots_style.suptitle(fig, f"Máximo |producto escalar normalizado| de los {total} subconjuntos de {size} letras", fontsize=12, x=0.01,
                  ha="left")
     fig.tight_layout(rect=(0, 0.1, 1, 0.95))
     _caption(fig, f"Cada barra cuenta los subconjuntos de {size} letras cuyo par más parecido tiene ese |d|; d es "
@@ -252,9 +252,9 @@ def plot_cross_terms(orthogonality: dict, out_stem) -> None:
     fig.subplots_adjust(left=0.05, right=0.88, top=0.89, bottom=0.17, hspace=0.3)
     cax = fig.add_axes([0.91, 0.22, 0.015, 0.62])
     bar = fig.colorbar(image, cax=cax)
-    bar.set_label("margen ξ_i h_i = (N − p) + término de cruce")
+    bar.set_label("margen ξ_i h_i = (N − p) + crosstalk")
     plots_style.suptitle(fig, "Margen de estabilidad de cada píxel de cada letra", fontsize=12, x=0.01, ha="left")
-    _caption(fig, f"Margen de cada píxel cuando la letra misma es la consulta: ξ_i h_i = (N − p) + término de cruce, "
+    _caption(fig, f"Margen de cada píxel cuando la letra misma es la consulta: ξ_i h_i = (N − p) + crosstalk, "
                   f"con N − p = {n - p}. Los píxeles con margen negativo (recuadro negro) se invierten al primer "
                   "paso, de modo que esa letra no es un punto fijo. Escala simétrica compartida.")
     plots_style.save_figure(fig, out_stem)
@@ -478,8 +478,8 @@ def plot_capacity_p4(rows: list[dict], selection: dict, out_stem) -> None:
     left.set_xticks(x)
     left.set_xticklabels([_fmt(b) for b in buckets], fontsize=plots_style.fontsize(7), rotation=90)
     left.set_ylim(0, 1.0)
-    left.set_xlabel("máx |solapamiento| (d / N); arriba, cantidad" if slide
-                    else "máximo |solapamiento| del subconjunto (d / N); arriba, cantidad de subconjuntos")
+    left.set_xlabel("máx |d| / N; arriba, cantidad" if slide
+                    else "máximo |producto escalar normalizado| del subconjunto (d / N); arriba, cantidad de subconjuntos")
     left.set_ylabel("proporción de subconjuntos")
     if slide:  # the set markers are explained once, by the legend of the right panel
         handles, labels = left.get_legend_handles_labels()
@@ -497,19 +497,19 @@ def plot_capacity_p4(rows: list[dict], selection: dict, out_stem) -> None:
     low = np.array([np.percentile(recall[keys == b], 10) for b in buckets])
     high = np.array([np.percentile(recall[keys == b], 90) for b in buckets])
     right.fill_between(buckets, low, high, color=NEUTRAL_BAR, alpha=0.5, linewidth=0,
-                       label="percentiles 10-90" if slide else "percentiles 10 a 90 (máx |solap.|)")
+                       label="percentiles 10-90" if slide else "percentiles 10 a 90 (máx |d| / N)")
     right.plot(buckets, mean_rate, "-", marker="o", markersize=3.5, color=plots_style.TEXT_PRIMARY,
-               label="media por máx |solap.|" if slide else "media por máx |solapamiento|")
+               label="media por máx |d| / N" if slide else "media por máx |producto escalar normalizado|")
     mean_keys = np.round(mean_ov / MEAN_OVERLAP_STEP) * MEAN_OVERLAP_STEP
     mean_buckets = sorted({round(float(v), 4) for v in mean_keys})
     right.plot(mean_buckets, [recall[np.isclose(mean_keys, b)].mean() for b in mean_buckets], "--", marker="s",
                markersize=3.5, color=plots_style.TEXT_SECONDARY,
-               label="media por |solap.| medio" if slide else "media por |solapamiento| medio (paso 0,04)")
+               label="media por |d| / N medio" if slide else "media por |producto escalar normalizado| medio (paso 0,04)")
     for name, row in marks:
         right.plot([float(row["max_abs_overlap"])], [float(row["recall_rate_mean"])], marker="^", markersize=10,
                    linestyle="none", color=colors[name], label=f"set {SET_LABELS[name]} {row['letters']}")
     right.set_ylim(0, 1.02)
-    right.set_xlabel("|solapamiento| (d / N)")
+    right.set_xlabel("|d| / N (producto escalar normalizado)")
     right.set_ylabel("recuperación (ruido 0,12)" if slide else "tasa de recuperación con ruido 0,12")
     if slide:
         right.legend(fontsize=plots_style.fontsize(7), frameon=False, loc="upper center",
@@ -665,8 +665,8 @@ def plot_spurious(spurious: dict, out_stem) -> None:
         ax_o.set_xticks(range(len(overlaps)))
         ax_o.set_xticklabels(stored[:len(overlaps)] or [str(i) for i in range(len(overlaps))])
         if not slide_layout:
-            ax_o.set_ylabel("solapamiento m")
-        ax_o.set_title("solapamiento con las letras" if slide else "solapamiento con las letras almacenadas",
+            ax_o.set_ylabel("producto escalar m")
+        ax_o.set_title("producto escalar con las letras" if slide else "producto escalar normalizado con las letras almacenadas",
                        fontsize=plots_style.fontsize(9), loc="left")
         if ax_e is None:
             continue

@@ -352,21 +352,21 @@ FIGURES = (
     Figure(
         key="letters_overlaps", path="hopfield/figures/overlaps.svg", make_target="hopfield-figures",
         config=_LETTERS[0], seed=_LETTERS[1], fragment=4, anchor="f4-s4",
-        alt="Dos matrices de solapamiento entre las cuatro letras de cada set",
-        caption="Solapamientos entre pares de letras del set separado y del set correlacionado.",
+        alt="Dos matrices de productos escalares entre las cuatro letras de cada set",
+        caption="Productos escalares entre pares de letras del set separado y del set correlacionado.",
         slide=True,
     ),
     Figure(
         key="letters_max_overlap_hist", path="hopfield/figures/max_overlap_hist.svg", make_target="hopfield-figures",
         config=_LETTERS[0], seed=_LETTERS[1], fragment=4, anchor="f4-s4",
-        alt="Histograma del máximo solapamiento entre los subconjuntos de cuatro letras",
+        alt="Histograma del máximo producto escalar normalizado entre los subconjuntos de cuatro letras",
         caption="Dónde caen los dos sets entre todos los subconjuntos de cuatro letras.",
         slide=False,
     ),
     Figure(
         key="letters_cross_terms", path="hopfield/figures/cross_terms.svg", make_target="hopfield-figures",
         config=_LETTERS[0], seed=_LETTERS[1], fragment=4, anchor="f4-s4",
-        alt="Mapas de 5×5 del margen de cada píxel con el término de cruce de cada letra",
+        alt="Mapas de 5×5 del margen de cada píxel con el crosstalk de cada letra",
         caption="Margen de cada píxel de cada letra, con una sola escala de color.",
         slide=False,
     ),
@@ -387,8 +387,8 @@ FIGURES = (
     Figure(
         key="letters_capacity_p4", path="hopfield/figures/capacity_p4.svg", make_target="hopfield-figures",
         config=_LETTERS_SEEDS[0], seed=_LETTERS_SEEDS[1], fragment=4, anchor="f4-s6",
-        alt="Los subconjuntos de cuatro letras repartidos según su máximo solapamiento y su estabilidad",
-        caption="Capacidad con cuatro patrones: los subconjuntos posibles frente a su máximo solapamiento.",
+        alt="Los subconjuntos de cuatro letras repartidos según su máximo producto escalar normalizado y su estabilidad",
+        caption="Capacidad con cuatro patrones: los subconjuntos posibles frente a su máximo producto escalar normalizado.",
         slide=True,
     ),
     Figure(
@@ -401,7 +401,7 @@ FIGURES = (
     Figure(
         key="letters_spurious", path="hopfield/figures/spurious.svg", make_target="hopfield-figures",
         config=_LETTERS_SEEDS[0], seed=_LETTERS_SEEDS[1], fragment=4, anchor="f4-s7",
-        alt="Tres ejemplos de consulta muy ruidosa con su estado final y sus solapamientos con las cuatro letras",
+        alt="Tres ejemplos de consulta muy ruidosa con su estado final y sus productos escalares con las cuatro letras",
         caption="Los tres ejemplos fijados de estado espurio.",
         slide=True,
     ),
@@ -415,8 +415,8 @@ FIGURES = (
     Figure(
         key="qr_overlaps", path="hopfield/qr/figures/overlaps.svg", make_target="hopfield-qr-figures",
         config=_QR[0], seed=_QR[1], fragment=5, anchor="f5-s2",
-        alt="Matriz de solapamientos de 5×5 entre los cinco QR",
-        caption="Solapamiento entre cada par de QR.",
+        alt="Matriz de productos escalares de 5×5 entre los cinco QR",
+        caption="Producto escalar normalizado entre cada par de QR.",
         slide=True,
     ),
     Figure(

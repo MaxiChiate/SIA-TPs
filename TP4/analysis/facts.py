@@ -650,7 +650,7 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (4, "({letters.spur_total} de {letters.spur_trials}, {letters.spur_total_pct})"),
     (4, "{letters.draft_matching_glyphs} de sus {letters.alphabet_size} glifos coinciden con los del borrador"),
     # 5: Hopfield, QR
-    (5, "el máximo |solapamiento| entre pares es {qr.max_abs_overlap}"),
+    (5, "el máximo |producto escalar normalizado| entre pares es {qr.max_abs_overlap}"),
     (5, "y la media es {qr.mean_abs_overlap}; todos"),
     (5, "el {qr.identical_fraction} de los {qr.n_pixels} píxeles es idéntico en los {qr.n_qr} QR a la vez"),
     (5, "la distancia de Hamming mínima entre un par es {qr.min_pair_hamming}"),

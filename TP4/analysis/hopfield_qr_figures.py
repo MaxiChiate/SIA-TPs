@@ -144,16 +144,16 @@ def plot_overlaps(overlaps: dict, out_stem) -> None:
     if slide:  # square matrix at the left, its numbers read off at the right
         fig.subplots_adjust(left=0.25, right=0.5344, top=0.95, bottom=0.2)
         bar = fig.colorbar(image, cax=fig.add_axes([0.56, 0.2, 0.015, 0.75]))
-        fig.text(0.68, 0.58, f"max |solapamiento| = {_fmt(overlaps['max_abs_overlap'])}\n"
+        fig.text(0.68, 0.58, f"máx |d| / N = {_fmt(overlaps['max_abs_overlap'])}\n"
                              f"media = {_fmt(overlaps['mean_abs_overlap'])}", ha="left", va="center",
                  fontsize=plots_style.fontsize(10), color=plots_style.TEXT_PRIMARY)
     else:
         bar = fig.colorbar(image, ax=ax, fraction=0.045, pad=0.03)
-    bar.set_label("solapamiento d / N")
-    plots_style.suptitle(fig, "Solapamientos entre los 5 QR almacenados", fontsize=12, x=0.01, ha="left")
+    bar.set_label("producto escalar normalizado d / N")
+    plots_style.suptitle(fig, "Productos escalares entre los 5 QR almacenados", fontsize=12, x=0.01, ha="left")
     if not slide:
         fig.subplots_adjust(left=0.18, right=0.86, top=0.88, bottom=0.2)
-    _caption(fig, f"En cada celda, el producto escalar entero d y el solapamiento d / {n}. max|solapamiento| = "
+    _caption(fig, f"En cada celda, el producto escalar entero d y el producto escalar normalizado d / {n}. Máximo |d| / N = "
                   f"{_fmt(overlaps['max_abs_overlap'])}, media = {_fmt(overlaps['mean_abs_overlap'])}: los 5 QR "
                   "estan lejos de ser ortogonales entre si, la causa raiz del fallo de Hebb (HOP-04, D-11a).")
     plots_style.save_figure(fig, out_stem)
@@ -236,7 +236,7 @@ def plot_recovery(rows: list[dict], out_stem) -> None:
 
     overlap_ax.set_ylim(0, 1.02)
     overlap_ax.set_xlabel("nivel de ruido")
-    overlap_ax.set_ylabel("|solapamiento final| medio" if slide else "|solapamiento final| medio con el objetivo")
+    overlap_ax.set_ylabel("|m| final medio" if slide else "|producto escalar normalizado final| medio con el objetivo")
     if not slide:
         overlap_ax.legend(fontsize=6.5, frameon=False, loc="lower left")
     overlap_ax.set_title("Cercania continua" if slide else "Cercania continua, 3 reglas (|m|, D-03)",

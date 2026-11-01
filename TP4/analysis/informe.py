@@ -352,7 +352,7 @@ FINDINGS: tuple[Finding, ...] = (
     ),
     Finding(
         "Letras",
-        "En letras de {letters.n_pixels} píxeles, el set separado {letters.separated_set} tiene máximo |solapamiento| "
+        "En letras de {letters.n_pixels} píxeles, el set separado {letters.separated_set} tiene máximo |producto escalar normalizado| "
         "{letters.separated_max_overlap} y margen mínimo {letters.separated_min_margin}; el correlacionado "
         "{letters.correlated_set} llega a {letters.correlated_max_overlap}. Entre todos los subconjuntos de cuatro "
         "letras, {letters.p4_stable_4} ({letters.p4_all_stable_fraction}) tienen las cuatro estables.",
@@ -369,7 +369,7 @@ FINDINGS: tuple[Finding, ...] = (
         "Con la regla de Hebb la recuperación exacta de los {qr.n_qr} QR es {qr.hebb_exact_noise0} incluso sin ruido: no "
         "son puntos fijos de la red. Siempre cae al mismo atractor, la mayoría píxel a píxel de los QR, a entre "
         "{qr.majority_hamming_min} y {qr.majority_hamming_max} píxeles de cada uno (de {qr.n_pixels}); la causa es la "
-        "correlación entre los QR (máximo |solapamiento| {qr.max_abs_overlap}).",
+        "correlación entre los QR (máximo |producto escalar normalizado| {qr.max_abs_overlap}).",
         "f5-s4",
         True,
     ),
