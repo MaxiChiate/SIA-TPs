@@ -182,6 +182,8 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 **Por qué:** la corrección recibida fue que sacar solo las variables triviales no alcanza como criterio. El umbral no sale de la teoría del curso: es una decisión del equipo. Se justifica con la convención de |r| ≥ 0,8 como correlación fuerte (el mismo `STRONG_THRESHOLD` del EDA) y con el condicionamiento de la matriz (el número de condición baja de unos 856 con 0,95 a unos 108 con 0,80). A 0,80 `price_usd` sale con |r| = 0,822 con `followers`, así que ese resultado no es robusto en el borde. Un umbral muy bajo deja pocas variables y se pierde información real, no redundancia: con 0,50 no queda tamaño ni engagement por mil y PC1 baja al 27,8 %.
 
+**Umbral elegido (2026-10-30):** |r| ≥ 0,80. Con él salen 14 de las 31 variables (las 5 exactas y 9 por correlación) y quedan 17; la slide `eda` muestra la matriz de correlación como números, el umbral y las variables que salen. Todavía no se rehízo la PCA, el SOM, Oja ni las campañas con esas 17: hasta entonces el resto del deck usa el conjunto auditado de 26.
+
 **Dónde:** [`analysis/corr_prune.py`](analysis/corr_prune.py) · slide `pca-prune` · F1 D-08 y D-10 siguen valiendo para el conjunto auditado de 26.
 
 ## Fase 2 — Kohonen (SOM)

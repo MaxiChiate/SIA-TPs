@@ -77,6 +77,8 @@ comando. Las filas salen del manifiesto `analysis/deliverables_manifest.py` y `m
 | `analysis/results/pca/audited/eigenvalues_variance.svg` (y `slide/`) | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
 | `analysis/results/pca/audited/loadings.svg` | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
 | `analysis/results/pca/audited/biplot.svg` (y `slide/`) | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
+| `analysis/results/pca/pruned/eigenvalues_variance.svg` (y `slide/`) | `01-datos-pca.md` §6.2 | `make pca` | datos/prepared/creadores_zscore.csv sin las variables que salen con \|r\| ≥ 0,80 (make prepare, analysis/corr_prune.py) | sin seed (determinista) |
+| `analysis/results/pca/pruned/biplot.svg` (y `slide/`) | `01-datos-pca.md` §6.2 | `make pca` | datos/prepared/creadores_zscore.csv sin las variables que salen con \|r\| ≥ 0,80 (make prepare, analysis/corr_prune.py) | sin seed (determinista) |
 | `analysis/results/som/figures/map.svg` (y `slide/`) | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
 | `analysis/results/som/figures/planes_main.svg` | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
 | `analysis/results/som/figures/planes_appendix.svg` | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
@@ -129,7 +131,7 @@ no se arma si un número citado de los fragmentos cambió.
 
 `make deliverables` deja listo, sin publicar, lo siguiente (no se versiona):
 
-- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 28 slides), los PNG de las figuras
+- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 27 slides), los PNG de las figuras
   (`assets/`) y `notes.md` (el guion). Lo arma `analysis/slides.py`; `make slides` corre solo ese paso.
 - `analysis/results/informe/informe.html`: el informe, una página autocontenida. Lo arma `analysis/informe.py`; `make informe`
   corre solo ese paso.

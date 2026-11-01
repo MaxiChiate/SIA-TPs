@@ -50,6 +50,11 @@ VARIANTS = (
     ),
 )
 
+# The audited set after dropping the variables that leave by correlation at the team's threshold (analysis/corr_prune.py):
+# not a prepared file, its z-score columns are those of the audited matrix. Folder and label of its figure titles.
+PRUNED_FOLDER = "pruned"
+PRUNED_LABEL = "Sin redundantes por correlación (|r| ≥ 0,80)"
+
 # Raw topic shares that colour the biplot (all four, including the dropped topic_art_pct).
 TOPICS = (
     ("topic_football_pct", "fútbol"),
@@ -481,11 +486,78 @@ def sensitivity_markdown(comp: dict) -> str:
 def _figure_variants(folder: str):
     """The figure variants to draw for a data set (D-08): report then slide for the audited set, report only
     for the all-31 sensitivity set. Not this module's VARIANTS, which are the data sets."""
-    return plots_style.iter_variants() if folder == "audited" else ["report"]
+    return plots_style.iter_variants() if folder in ("audited", PRUNED_FOLDER) else ["report"]
+
+
+def pruned_data(features: list[str], z: np.ndarray, meta: dict):
+    """The audited z-score matrix restricted to the variables that stay after the correlation pruning."""
+    import corr_prune  # here and not at the top: corr_prune imports this module
+
+    keep, _ = corr_prune.prune(z, corr_prune.CHOSEN_THRESHOLD)
+    kept = [features[i] for i in keep]
+    return kept, z[:, keep], {**meta, "features": kept, "variant": PRUNED_FOLDER}
+
+
+SOM_INPUT_STEM = "creadores_pca_scores"
+
+
+def som_input(prepared_dir: Path = PREPARED_DIR) -> dict:
+    """What the Kohonen map is trained on: the scores, not rescaled, on the first k components (k = the smallest
+    number reaching VARIANCE_THRESHOLD) of the PCA of the variables that stay after the correlation pruning.
+
+    Not rescaled on purpose: the Euclidean distance between two creators in these k columns is the one of the
+    pruned z-score space projected on the k components, so the map keeps the geometry of the PCA.
+    Returns the pruned PCA and the matrix; `meta` is what write_som_input saves next to the CSV."""
+    features, z, meta = read_prepared("creadores_zscore", prepared_dir)
+    kept, z_kept, kept_meta = pruned_data(features, z, meta)
+    result = pca_eigh(z_kept, kept)
+    k = k_by_variance(result)
+    matrix = scores(result, z_kept)[:, :k]
+    names = _component_names(len(kept))[:k]
+    saved = {
+        "variant": "pca_scores",
+        "note": f"Scores sin reescalar de las primeras {k} componentes principales ({result.cumulative[k - 1]:.4f} "
+                f"de la varianza) de la PCA de las {len(kept)} variables que quedan con |r| < "
+                f"{corr_prune_threshold():.2f}: entrada del SOM de Kohonen",
+        "source": "datos/prepared/creadores_zscore.csv",
+        "n_rows": int(matrix.shape[0]),
+        "features": names,
+        "scaled": False,
+        "k": int(k),
+        "variance_threshold": VARIANCE_THRESHOLD,
+        "pca_variables": kept,
+        "eigenvalues": [float(v) for v in result.eigenvalues],
+        "cumulative": [float(v) for v in result.cumulative],
+        "creator_id": list(meta["creator_id"]),
+        "name": list(meta["name"]),
+    }
+    return {"result": result, "z": z_kept, "variables": kept, "scores": matrix, "names": names, "meta": saved,
+            "z_meta": kept_meta}
+
+
+def corr_prune_threshold() -> float:
+    import corr_prune  # lazy: corr_prune imports this module
+
+    return corr_prune.CHOSEN_THRESHOLD
+
+
+def write_som_input(prepared_dir: Path = PREPARED_DIR) -> tuple[Path, Path]:
+    """Write {SOM_INPUT_STEM}.csv (header = PC names, repr floats like the other prepared matrices) and .meta.json."""
+    data = som_input(prepared_dir)
+    prepared_dir = Path(prepared_dir)
+    csv_path = prepared_dir / f"{SOM_INPUT_STEM}.csv"
+    meta_path = prepared_dir / f"{SOM_INPUT_STEM}.meta.json"
+    lines = [",".join(data["names"])]
+    lines += [",".join(repr(float(v)) for v in row) for row in data["scores"]]
+    csv_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    meta_path.write_text(json.dumps(data["meta"], indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return csv_path, meta_path
 
 
 def run_variant(stem: str, folder: str, title: str, out_dir: Path):
     features, z, meta = read_prepared(stem)
+    if folder == PRUNED_FOLDER:
+        features, z, meta = pruned_data(features, z, meta)
     result = pca_eigh(z, features)
     out = out_dir / folder
     out.mkdir(parents=True, exist_ok=True)
@@ -505,12 +577,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Correlation PCA by eigenvalues and 31-column sensitivity.")
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR,
                         help="output folder (default: analysis/results/pca)")
+    parser.add_argument("--prepared-dir", type=Path, default=PREPARED_DIR,
+                        help="where the SOM input (PCA scores) is written (default: datos/prepared)")
     args = parser.parse_args(argv)
     out_dir: Path = args.out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
 
     runs = {}
-    for stem, folder, title in VARIANTS:
+    for stem, folder, title in (*VARIANTS, ("creadores_zscore", PRUNED_FOLDER, PRUNED_LABEL)):
         result, z, dec, out = run_variant(stem, folder, title, out_dir)
         runs[folder] = (result, z, dec)
         print(f"{folder}: k_80 = {dec['k_80']}, "
@@ -523,6 +597,8 @@ def main(argv: list[str] | None = None) -> int:
                                               encoding="utf-8")
     (out_dir / "sensitivity.md").write_text(sensitivity_markdown(comp), encoding="utf-8")
     print(f"sensitivity -> {out_dir / 'sensitivity.json'}, {out_dir / 'sensitivity.md'}")
+    csv_path, _ = write_som_input(args.prepared_dir)
+    print(f"som input -> {csv_path}")
     return 0
 
 

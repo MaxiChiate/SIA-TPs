@@ -60,6 +60,11 @@ def write_results(root, *, robust=False):
             (0.5, 9, ["monthly_posts"], ["price_usd", "followers"], 5, 0.278, 0.2192, 11.0),
         )
     ]
+    write_json(root / "pca/pruned/decision.json", {
+        "n_variables": 17, "k_80": 7, "explained_pc1": 0.4004, "explained_pc2": 0.1167, "cumulative_pc2": 0.5171,
+    })
+    write_csv(root / "pca/pruned/eigenvalues.csv", ["component", "eigenvalue", "explained", "cumulative"],
+              [[f"PC{i + 1}", 1.0, 0.1, 0.1 * (i + 1) + 0.134] for i in range(8)])
     write_json(root / "corr_prune/sensitivity.json", {"n_audited": 26, "rows": prune_rows})
     write_json(root / "som/profiles/pca_contrast.json", {
         "r2_pc1": 0.9613, "p_r2_pc1": 0.000999, "r2_pc2": 0.0552, "p_r2_pc2": 0.2667,

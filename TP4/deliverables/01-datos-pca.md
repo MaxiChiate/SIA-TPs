@@ -151,6 +151,12 @@ Figuras de esta sección: `analysis/results/pca/audited/eigenvalues_variance.svg
 
 La PCA muestra que 6 componentes de 26 retendrían 83,1 % de la varianza (el menor k que supera 80 %), de modo que para describir los datos una reducción sería posible. Pero la PCA es diagnóstica (D-13): Kohonen (Fase 2) y Oja (Fase 3) corren sobre las 26 variables auditadas con z-score, como pide el enunciado, y no sobre los 6 componentes. PC1 y PC2 sirven para leer el mapa de Kohonen y como referencia de Oja, con la misma convención de signo de la sección 5.
 
+### 6.2 PCA sin las variables redundantes por correlación
+
+Con el umbral de correlación |r| ≥ 0,80 (decisión del equipo, F1 D-14) salen 9 variables más y quedan 17 (`make pca`, carpeta `analysis/results/pca/pruned/`). La PCA de esas 17 variables necesita 7 componentes para pasar el 80 % (83,4 %); PC1 explica 40,0 % y PC2 11,7 %, frente a 53,2 % y 8,5 % con las 26. PC1 opone `followers`, `likes_per_1000` y `non_follower_reach_pct` a `saves_per_1000`, `profile_visits_per_1000`, `comments_per_1000` y `content_tutorial_pct`. PC2 opone `sponsored_posts_pct` y `topic_football_pct` a `argentina_audience_pct` y `topic_dogs_pct`. Con las 26 variables PC1 era un eje de tamaño y precio; sin `price_usd` ni las variables de alcance y de formato queda un eje de tamaño y reacciones rápidas frente a guardados, comentarios y visitas al perfil. La PCA sigue siendo diagnóstica y el SOM, Oja y las campañas todavía no se rehicieron con este conjunto.
+
+Figuras de esta subsección: `analysis/results/pca/pruned/eigenvalues_variance.svg` y `analysis/results/pca/pruned/biplot.svg`.
+
 ## 7. Sensibilidad: las 31 columnas
 
 Corrida de sensibilidad (DATA-05): no es el conjunto auditado. Es la misma PCA sobre las 31 columnas con z-score (`datos/prepared/creadores_zscore_all31.csv`), que incluyen las 5 dependencias lineales exactas. Los números salen de `analysis/results/pca/sensitivity.json` y se repiten en `analysis/results/pca/sensitivity.md`; las figuras están en `analysis/results/pca/all31_sensitivity/` y llevan en el título la leyenda SENSIBILIDAD.

@@ -30,6 +30,7 @@ from pca import k_by_variance, pca_eigh, read_prepared  # noqa: E402
 
 DEFAULT_OUT_DIR = TP_DIR / "analysis" / "results" / "corr_prune"
 THRESHOLDS = (0.95, 0.90, 0.85, 0.80, 0.70, 0.60, 0.50)
+CHOSEN_THRESHOLD = 0.80  # the redundancy threshold the team uses (a team decision, not course theory)
 PREPARED_STEM = "creadores_zscore"
 
 

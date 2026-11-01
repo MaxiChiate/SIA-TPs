@@ -119,63 +119,48 @@ OUTLINE: tuple[Slide, ...] = (
         "El detalle completo está en el informe.",
     ),
     Slide(
-        "metodo", 0, "Fijamos cada regla antes de ver los resultados y los informamos como salieron", None, (),
-        (
-            "Reglas escritas y commiteadas antes de correr, con guardia sha256 sobre su texto",
-            "{qr.n_seeds} seeds por configuración: media y desvío, nunca una sola corrida",
-            "Nulos por permutación ({som.n_permutations}) para contrastar el mapa con PC1 y PC2",
-        ),
-        None, None,
-        "Cada regla de decisión (variables, grilla del SOM, listas de campaña, letras y protocolo de los QR) está "
-        "escrita y commiteada antes de ver el resultado, y un hash sha256 de su texto impide correrla si cambió. "
-        "Las seeds van de 1 a {qr.n_seeds} y se reporta la media y el desvío entre ellas, no una corrida. "
-        "El SOM se contrasta con {som.n_permutations} permutaciones. "
-        "Por eso los resultados poco favorables se muestran tal cual salieron, cada uno con su slide.",
+        "eda", 1,
+        "Salen {prune.r4.n_out_total} variables ({eda.n_dropped} triviales y {prune.r4.n_out} con |r| ≥ {prune.r4.tau}) y quedan {prune.r4.n}",
+        None, (), (), None, _key("eda/correlation.svg"),
+        "Primero salen {eda.n_dropped} variables triviales, que son combinación exacta de otras (precio en pesos, "
+        "publicaciones orgánicas, engagement total y el tema y el tipo de contenido que completan su grupo), porque "
+        "vuelven singular la matriz de correlación. "
+        "La matriz muestra las {prune.n_audited} variables restantes: en negrita los pares con correlación en valor absoluto "
+        "de al menos {prune.r4.tau}, que es el umbral con el que consideramos redundantes a dos variables, y en rojo las "
+        "{prune.r4.n_out} que salen, la de mayor correlación media con las demás en cada par. "
+        "El umbral lo fijamos como equipo y no sale de la teoría del curso. "
+        "Quedan {prune.r4.n} variables estandarizadas con z-score, y followers y el alcance estimado en Argentina se "
+        "conservan las dos porque quedan apenas por debajo del umbral.",
     ),
     Slide(
-        "eda", 1, "EDA: un bloque de tamaño muy correlacionado y {eda.n_dropped} columnas redundantes que salen",
-        None, ("Q1.1",),
-        (
-            "Tamaño (followers, alcance, impresiones y vistas): r entre {eda.size_r_min} y {eda.size_r_max}",
-            "Salen {eda.n_dropped} de {eda.n_columns} columnas por ser combinación exacta de otras; quedan {pca.n_features}, con z-score",
-        ),
-        None, _key("eda/correlation.svg"),
-        "Las {eda.n_columns} variables tienen escalas muy distintas y varias son asimétricas, con un máximo de "
-        "{eda.max_skew} en {eda.max_skew_variable}: muchos creadores chicos y pocos grandes. "
-        "Las variables de tamaño se mueven juntas (r entre {eda.size_r_min} y {eda.size_r_max}), el precio va con ellas "
-        "y los epígrafes largos van en contra, que es lo que después ordena PC1. "
-        "Salen {eda.n_dropped} columnas que son combinación exacta de otras (precio en pesos, publicaciones orgánicas, "
-        "engagement total y el tema y el tipo de contenido que completan su grupo), porque vuelven singular la matriz "
-        "de correlación y repiten información. "
-        "Quedan {pca.n_features} variables estandarizadas con z-score y sin logaritmo: con una asimetría de ese orden y "
-        "{oja.n_creators} creadores preferimos no deformar la escala.",
-    ),
-    Slide(
-        "pca-eigenvalues", 1, "{pca.k_80} componentes retienen {pca.cum_k80} de la varianza, pero no reducimos la dimensión",
+        "pca-eigenvalues", 1, "{pca17.k_80} componentes retienen {pca17.cum_k80} de la varianza, pero no reducimos la dimensión",
         None, ("Q1.1", "Q1.2"),
-        (), None, _key("pca/audited/eigenvalues_variance.svg"),
-        "El conjunto auditado queda en {pca.n_features} variables y la regla de decisión se fijó antes de mirar el "
-        "gráfico: el menor k que pasa el umbral de varianza acumulada es {pca.k_80} ({pca.cum_k80}), y ese umbral es una "
+        (), None, _key("pca/pruned/eigenvalues_variance.svg"),
+        "Sin las variables redundantes quedan {pca17.n_features} y la regla de decisión se fijó antes de mirar el "
+        "gráfico: el menor k que pasa el umbral de varianza acumulada es {pca17.k_80} ({pca17.cum_k80}), y ese umbral es una "
         "convención del equipo. "
-        "Con las columnas originales aparecen autovalores nulos, por eso se usa el conjunto auditado. "
-        "La PCA es diagnóstica: el SOM y Oja corren sobre las {pca.n_features} variables con z-score, como pide el enunciado.",
+        "Con las 26 variables de antes eran {pca.k_80} componentes y {pca.cum_k80}, así que quitar las redundantes no cambia la "
+        "conclusión de no reducir. "
+        "La PCA es diagnóstica: el SOM y Oja se rehacen sobre estas {pca17.n_features} variables con z-score, como pide el enunciado.",
     ),
     Slide(
         "pca-biplot", 1,
-        "PC1 ({pca.var_pc1}) es un eje de tamaño y precio; PC2 ({pca.var_pc2}) sigue la audiencia argentina",
-        None, ("Q1.2",), (), None, _key("pca/audited/biplot.svg"),
-        "PC1 opone creadores grandes y caros, con más alcance y video corto, a creadores chicos con epígrafes largos, "
-        "tutoriales y respuesta que se guarda o se comenta. "
-        "PC2 se apoya en la audiencia argentina y en el tema perros. "
-        "Los temas de fútbol y maquillaje aparecen recién en PC3 y PC4, fuera de este plano.",
+        "PC1 ({pca17.var_pc1}) opone tamaño a guardados y comentarios; PC2 ({pca17.var_pc2}) sigue el patrocinio",
+        None, ("Q1.2",), (), None, _key("pca/pruned/biplot.svg"),
+        "PC1 opone creadores con muchos followers, likes y alcance a no seguidores a creadores con respuesta que se guarda, "
+        "se comenta o lleva al perfil, y con más contenido tutorial. "
+        "PC2 opone el patrocinio y el tema fútbol a la audiencia argentina y al tema perros. "
+        "Sin precio ni las variables de alcance y de formato, que salieron por redundantes, PC1 ya no es un eje de tamaño y "
+        "precio. "
+        "Con {pca17.n_features} variables, PC1 y PC2 retienen {pca17.cum_pc2} de la varianza.",
     ),
     Slide(
         "pca-prune", 1,
         "Podar con |r| ≥ {prune.r4.tau} deja {prune.r4.n} de {prune.n_audited} variables y PC1 baja a {prune.r4.pc1}",
         None, ("Q1.1",),
-        ("No rehicimos el ejercicio con cada umbral: el elegido, {prune.r5.tau} o {prune.r4.tau}, se decide aparte",),
+        ("Elegimos {prune.r4.tau}; el SOM, Oja y las campañas todavía no se rehicieron con ese conjunto",),
         (
-            ("|r| ≥", "Quedan", "Comp.", "PC1", "Cond.", "Qué pasa"),
+            ("Umbral de |r|", "Variables que quedan", "Componentes para el {prune.variance_threshold}", "Varianza de PC1", "Número de condición", "Qué pasa"),
             (
                 ("{prune.r1.tau}", "{prune.r1.n}", "{prune.r1.k80}", "{prune.r1.pc1}", "{prune.r1.cond}",
              "Salen duplicados de alcance y formato"),
@@ -201,7 +186,7 @@ OUTLINE: tuple[Slide, ...] = (
         "baja de {prune.r1.cond} con {prune.r1.tau} a {prune.r7.cond} con {prune.r7.tau}, y el menor autovalor sube de "
         "{prune.r1.lmin} a {prune.r7.lmin}. "
         "Con {prune.r4.tau} quedan {prune.r4.n} variables, PC1 explica {prune.r4.pc1} y hacen falta {prune.r4.k80} "
-        "componentes para el umbral de varianza (columna Comp.); con {prune.r5.tau} sale followers y el tamaño queda solo en el alcance "
+        "componentes para el umbral de varianza (columna «Componentes para el {prune.variance_threshold}»); con {prune.r5.tau} sale followers y el tamaño queda solo en el alcance "
         "estimado en Argentina, y con {prune.r7.tau} no queda ni tamaño ni engagement por mil. "
         "El umbral es una decisión del equipo y no sale de la teoría del curso, price_usd sale con {prune.r4.tau} justo sobre el "
         "borde, y solo la PCA se calculó con cada umbral: el SOM, Oja y las campañas se rehacen únicamente con el elegido.",
@@ -786,7 +771,7 @@ def _check_text(text: str, where: str) -> None:
 
 def _sections(deck: list[dict]) -> dict:
     names = {
-        0: ("inicio", "Portada y método"),
+        0: ("inicio", "Portada"),
         1: ("ejercicio-1", "Ejercicio 1: PCA, SOM, Oja y campañas"),
         2: ("ejercicio-2", "Ejercicio 2: Hopfield con letras y QR"),
     }

@@ -76,7 +76,7 @@ QUESTIONS = (
     Question(
         "Q1.2",
         "Justificar si se realiza una reducción de dimensionalidad y cómo se interpretan las componentes.",
-        "1.1", 1, ("f1-s5", "f1-s6", "f1-s6-1", "f1-s7"),
+        "1.1", 1, ("f1-s5", "f1-s6", "f1-s6-1", "f1-s6-2", "f1-s7"),
     ),
     Question(
         "Q1.3",
@@ -232,7 +232,7 @@ FIGURES = (
     Figure(
         key="eda_correlation", path="eda/correlation.svg", make_target="eda",
         config=_EDA[0], seed=_EDA[1], fragment=1, anchor="f1-s2",
-        alt="Matriz de correlación de Pearson entre las 31 variables",
+        alt="Matriz de correlación de Pearson entre las variables del conjunto de datos",
         caption="Correlación de Pearson entre todas las variables del conjunto de datos.",
         slide=True,
     ),
@@ -241,6 +241,13 @@ FIGURES = (
         config=_PCA[0], seed=_PCA[1], fragment=1, anchor="f1-s6",
         alt="Autovalores y varianza acumulada con la línea del 80 %",
         caption="Autovalores y varianza acumulada de la PCA de las variables auditadas, con la regla de decisión fijada de antemano.",
+        slide=False,
+    ),
+    Figure(
+        key="pca17_eigenvalues", path="pca/pruned/eigenvalues_variance.svg", make_target="pca",
+        config=_PCA[0], seed=_PCA[1], fragment=1, anchor="f1-s6-2",
+        alt="Autovalores y varianza acumulada de la PCA sin las variables redundantes por correlación",
+        caption="Autovalores y varianza acumulada de la PCA de las variables que quedan con el umbral de correlación.",
         slide=True,
     ),
     Figure(
@@ -255,6 +262,13 @@ FIGURES = (
         config=_PCA[0], seed=_PCA[1], fragment=1, anchor="f1-s6",
         alt="Biplot de PC1 y PC2 con los creadores coloreados por su tema dominante",
         caption="Los creadores en PC1 y PC2, coloreados por tema, con las cargas de las variables.",
+        slide=False,
+    ),
+    Figure(
+        key="pca17_biplot", path="pca/pruned/biplot.svg", make_target="pca",
+        config=_PCA[0], seed=_PCA[1], fragment=1, anchor="f1-s6-2",
+        alt="Biplot de PC1 y PC2 sin las variables redundantes por correlación, con los creadores coloreados por tema",
+        caption="Los creadores en PC1 y PC2 de la PCA sin redundantes, coloreados por tema, con las cargas de las variables.",
         slide=True,
     ),
     Figure(

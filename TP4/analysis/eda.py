@@ -23,6 +23,7 @@ TP_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(TP_DIR / "scripts"))
 sys.path.insert(0, str(TP_DIR / "analysis"))
 
+import corr_prune  # noqa: E402
 import plots_style  # noqa: E402
 from creadores import (  # noqa: E402
     EXACT_TOLERANCE,
@@ -266,61 +267,65 @@ def plot_distributions(data: Creadores, stats: list[dict], out_dir: Path) -> Non
     plots_style.save_figure(fig, out_dir / "distributions")
 
 
-# Variables whose histogram the slide variant shows next to the correlations: the size block, price, the most
-# skewed variable and the one that runs against size (fixed by name, not picked by how they look).
-SLIDE_HISTOGRAMS = ("followers", "price_usd", "estimated_argentina_reach", "average_caption_words")
+def _decimal(value: float, threshold: float | None = None) -> str:
+    """Two decimals with a comma; a value that rounds up to the threshold without reaching it gets three, so the
+    cell does not read as a pair at the threshold when it is just below."""
+    digits = 2
+    if threshold is not None and abs(value) < threshold <= round(abs(value), 2):
+        digits = 3
+    text = f"{value:.{digits}f}".replace(".", ",")
+    return text[1:] if text.startswith("-") and float(text.replace(",", ".")) == 0 else text
 
 
-def plot_correlation_slide(data: Creadores, stats: list[dict], dropped: list[str], out_dir: Path) -> None:
-    """Slide variant of the EDA: the 31 x 31 correlations ordered by variable group (the variables that leave the
-    audited set marked with ×) and four histograms with their skewness."""
-    from matplotlib.gridspec import GridSpec
-
+def plot_correlation_slide(data: Creadores, audit: Audit, out_dir: Path) -> None:
+    """Slide variant of the EDA: the correlations of the audited variables as a plain numeric matrix (no heat map),
+    ordered by variable group. Bold cells on a pale fill are the pairs at or above the chosen threshold, and a name in
+    red is a variable that leaves by correlation. The slide carries only its title above the matrix."""
     plt = plots_style.apply_style()
-    order = list(VARIABLE_GROUPS)
-    index = [data.columns.index(name) for name in order]
-    corr = correlation_matrix(data)[np.ix_(index, index)]
-    fig = plt.figure(figsize=plots_style.figsize((12.8, 4.85)))
-    grid = GridSpec(2, 3, figure=fig, width_ratios=[1.55, 1.0, 1.0], wspace=0.35, hspace=0.75,
-                    left=0.17, right=0.99, top=0.87, bottom=0.08)
-    ax = fig.add_subplot(grid[:, 0])
-    image = ax.imshow(corr, cmap=plots_style.DIVERGING, vmin=-1, vmax=1)
-    labels = [f"× {name}" if name in dropped else name for name in order]
-    ax.set_xticks(range(len(order)))
-    ax.set_yticks(range(len(order)))
-    ax.set_xticklabels([])
-    ax.set_yticklabels(labels, fontsize=6.2)
-    for tick, name in zip(ax.get_yticklabels(), order):
-        if name in dropped:
-            tick.set_color(plots_style._SERIES[7])
-    ax.tick_params(length=0)
+    kept = list(audit.kept)
+    values = np.column_stack([_column(data, name) for name in kept])
+    corr = np.corrcoef(values, rowvar=False)
+    strong = np.abs(corr) >= corr_prune.CHOSEN_THRESHOLD
+    np.fill_diagonal(strong, False)
+    _, drops = corr_prune.prune(values, corr_prune.CHOSEN_THRESHOLD)
+    out_by_corr = {kept[item["dropped"]] for item in drops}
+    order = [name for name in VARIABLE_GROUPS if name in kept]
+    index = [kept.index(name) for name in order]
+    matrix = corr[np.ix_(index, index)]
+    flag = strong[np.ix_(index, index)]
+    n = len(order)
     groups = [VARIABLE_GROUPS[name] for name in order]
-    for position in range(1, len(order)):
+
+    fig = plt.figure(figsize=plots_style.figsize((12.8, 5.05)))
+    ax = fig.add_axes((0.2, 0.0, 0.795, 0.955))
+    ax.set_xlim(0, n)
+    ax.set_ylim(n, -1)
+    ax.axis("off")
+    size = plots_style.fontsize(5.6)
+    for row in range(n):
+        for col in range(n):
+            if flag[row, col]:
+                ax.add_patch(plt.Rectangle((col, row), 1, 1, color="#e8f1fb", linewidth=0))
+            text = "—" if row == col else _decimal(matrix[row, col], corr_prune.CHOSEN_THRESHOLD)
+            ax.text(col + 0.5, row + 0.5, text, ha="center", va="center", fontsize=size,
+                    fontweight="bold" if flag[row, col] else "normal",
+                    color=plots_style.TEXT_PRIMARY if flag[row, col] or row == col else plots_style.TEXT_SECONDARY)
+    for position in range(1, n):
         if groups[position] != groups[position - 1]:
-            ax.axhline(position - 0.5, color=plots_style.SURFACE, linewidth=1.2)
-            ax.axvline(position - 0.5, color=plots_style.SURFACE, linewidth=1.2)
-    for spine in ax.spines.values():
-        spine.set_visible(False)
-    colorbar = fig.colorbar(image, ax=ax, fraction=0.045, pad=0.02)
-    colorbar.ax.tick_params(labelsize=8)
-    ax.set_title("correlación de Pearson (× sale del conjunto)", fontsize=9.5)
-    skew = {row["variable"]: row["skewness"] for row in stats}
-    color = plots_style.palette_for(["x"])["x"]
-    for slot, name in enumerate(SLIDE_HISTOGRAMS):
-        hist_ax = fig.add_subplot(grid[slot // 2, 1 + slot % 2])
-        hist_ax.hist(_column(data, name), bins=12, color=color, edgecolor=plots_style.SURFACE, linewidth=0.5)
-        hist_ax.set_title(f"{name}\nasimetría {skew[name]:.2f}".replace(".", ","), fontsize=9.5)
-        hist_ax.tick_params(labelsize=8)
-        hist_ax.ticklabel_format(axis="x", style="plain")
-        hist_ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        hist_ax.set_ylabel("creadores", fontsize=8.5)
+            ax.axhline(position, color=plots_style.GRID, linewidth=1)
+            ax.axvline(position, color=plots_style.GRID, linewidth=1)
+    for col in range(n):
+        ax.text(col + 0.5, -0.5, str(col + 1), ha="center", va="center", fontsize=size, fontweight="bold",
+                color=plots_style.TEXT_SECONDARY)
+    for row, name in enumerate(order):
+        ax.text(-0.15, row + 0.5, f"{row + 1}  {name}", ha="right", va="center", fontsize=size,
+                color=plots_style._SERIES[7] if name in out_by_corr else plots_style.TEXT_PRIMARY)
     plots_style.save_figure(fig, out_dir / "correlation")
 
 
-def plot_correlation(data: Creadores, out_dir: Path, stats: list[dict] | None = None,
-                     dropped: list[str] | None = None) -> None:
+def plot_correlation(data: Creadores, out_dir: Path, audit: Audit) -> None:
     if plots_style.variant() == "slide":
-        plot_correlation_slide(data, stats or summary_statistics(data), dropped or [], out_dir)
+        plot_correlation_slide(data, audit, out_dir)
         return
     plt = plots_style.apply_style()
     corr = correlation_matrix(data)
@@ -390,7 +395,7 @@ def main(argv: list[str] | None = None) -> int:
 
     plot_distributions(data, stats, out_dir)
     for _ in plots_style.iter_variants():  # report, then the slide variant of the EDA slide
-        plot_correlation(data, out_dir, stats, [item.name for item in audit.dropped])
+        plot_correlation(data, out_dir, audit)
 
     print("Residuos máximos de las 5 dependencias exactas:")
     for name, value in residuals.items():

@@ -36,6 +36,8 @@ sys.path.insert(0, str(TP_DIR / "analysis"))
 RESULTS_DIR = TP_DIR / "analysis" / "results"
 
 # source name -> (path relative to the results directory, make step that writes it)
+VARIANCE_THRESHOLD = 0.80  # cumulative variance that fixes k (a team convention); the same value as pca.VARIANCE_THRESHOLD
+
 SOURCES: dict[str, tuple[str, str]] = {
     "eda.summary": ("eda/summary_stats.csv", "eda"),
     "eda.strong": ("eda/strong_correlations.csv", "eda"),
@@ -43,6 +45,8 @@ SOURCES: dict[str, tuple[str, str]] = {
     "pca.decision": ("pca/audited/decision.json", "pca"),
     "pca.sensitivity": ("pca/sensitivity.json", "pca"),
     "pca.eigenvalues": ("pca/audited/eigenvalues.csv", "pca"),
+    "pca17.decision": ("pca/pruned/decision.json", "pca"),
+    "pca17.eigenvalues": ("pca/pruned/eigenvalues.csv", "pca"),
     "prune.sensitivity": ("corr_prune/sensitivity.json", "corr-prune"),
     "som.contrast": ("som/profiles/pca_contrast.json", "som-profiles"),
     "som.selection": ("som/series_som_stage1/selection.json", "som-stage1"),
@@ -228,14 +232,32 @@ def _pca_facts(results_dir: Path) -> dict[str, str]:
     }
 
 
+def _pca17_facts(results_dir: Path) -> dict[str, str]:
+    """The PCA of the variables that stay after the correlation pruning (pca/pruned/): pca17.<field>."""
+    decision = read_source(results_dir, "pca17.decision")
+    eigenvalues = read_csv_source(results_dir, "pca17.eigenvalues")
+    k_80 = int(decision["k_80"])
+    return {
+        "pca17.n_features": integer(decision["n_variables"]),
+        "pca17.k_80": integer(k_80),
+        "pca17.var_pc1": pct(decision["explained_pc1"], 1),
+        "pca17.var_pc2": pct(decision["explained_pc2"], 1),
+        "pca17.cum_pc2": pct(decision["cumulative_pc2"], 1),
+        "pca17.cum_k80": pct(eigenvalues[k_80 - 1]["cumulative"], 1),
+    }
+
+
 def _prune_facts(results_dir: Path) -> dict[str, str]:
     """One row per threshold of the correlation-pruning sensitivity table: prune.r<i>.<field> (i from 1)."""
     table = read_source(results_dir, "prune.sensitivity")
-    values = {"prune.n_audited": integer(table["n_audited"])}
+    n_columns = len(read_csv_source(results_dir, "eda.summary"))
+    values = {"prune.n_audited": integer(table["n_audited"]), "prune.variance_threshold": pct(VARIANCE_THRESHOLD, 0)}
     for index, row in enumerate(table["rows"], start=1):
         prefix = f"prune.r{index}"
         values[f"{prefix}.tau"] = dec(row["tau"], 2)
         values[f"{prefix}.n"] = integer(row["n_kept"])
+        values[f"{prefix}.n_out"] = integer(len(row["dropped"]))
+        values[f"{prefix}.n_out_total"] = integer(n_columns - row["n_kept"])
         values[f"{prefix}.k80"] = integer(row["k_80"])
         values[f"{prefix}.pc1"] = pct(row["explained_pc1"], 1)
         values[f"{prefix}.lmin"] = dec(row["min_eigenvalue"], 3)
@@ -580,6 +602,8 @@ def check_claims(results_dir: Path = RESULTS_DIR) -> None:
         failed.append("PRUNE: «con 0,80 sale price_usd y con 0,85 no» (price_usd changed side)")
     if "followers" not in prune_drops[0.7] or "followers" in prune_drops[0.8]:
         failed.append("PRUNE: «followers sale recién con 0,70» (followers changed side)")
+    if not {"followers", "estimated_argentina_reach"} <= set(rows[0.8]["kept"]):
+        failed.append("PRUNE: «followers y el alcance estimado quedan apenas por debajo del umbral» (one of them leaves with 0,80)")
     if any(name in rows[0.5]["kept"] for name in ("followers", "estimated_argentina_reach", "comments_per_1000")):
         failed.append("PRUNE: «con 0,50 no queda tamaño ni engagement por mil» (a size or engagement variable stays)")
     if failed:
@@ -591,7 +615,7 @@ def load_facts(results_dir: Path = RESULTS_DIR) -> dict[str, str]:
     check_claims(Path(results_dir))
     values: dict[str, str] = {}
     for part in (
-        _eda_facts, _pca_facts, _prune_facts, _som_facts, _oja_facts, _campaign_facts, _maintenance_facts, _letters_facts, _qr_facts,
+        _eda_facts, _pca_facts, _pca17_facts, _prune_facts, _som_facts, _oja_facts, _campaign_facts, _maintenance_facts, _letters_facts, _qr_facts,
     ):
         values.update(part(Path(results_dir)))
     return values
@@ -619,6 +643,7 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (1, "El conjunto auditado queda en {pca.n_features} variables"),
     (1, "Componentes para el 80 % de la varianza: {pca.k_80}"),
     (1, "La PCA muestra que {pca.k_80} componentes de {pca.n_features} retendrían {pca.cum_k80} de la varianza"),
+    (1, "La PCA de esas {pca17.n_features} variables necesita {pca17.k_80} componentes para pasar el 80 % ({pca17.cum_k80}); PC1 explica {pca17.var_pc1} y PC2 {pca17.var_pc2}, frente a {pca.var_pc1} y {pca.var_pc2} con las {pca.n_features}"),
     (1, "PC1 ({pca.var_pc1})"),
     (1, "PC2 ({pca.var_pc2})"),
     (1, "(abs(cos) {pca.abs_cos_pc1}) ni como orden de los creadores (Spearman en valor absoluto {pca.abs_spearman_pc1})"),
