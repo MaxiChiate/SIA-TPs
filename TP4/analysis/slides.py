@@ -49,7 +49,7 @@ import deliverables_manifest  # noqa: E402
 import facts  # noqa: E402
 
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "slides"
-MAX_SLIDES = 30  # D-01 said 20 to 25; three slides added after the review of the enunciado (EDA, zones, capacity)
+MAX_SLIDES = 31  # D-01 said 20 to 25; three slides added after the review of the enunciado (EDA, zones, capacity)
 HOME_PATH = re.compile(r"/Users/|/home/|[A-Za-z]:\\Users\\")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}")
 SLIDE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -260,6 +260,21 @@ OUTLINE: tuple[Slide, ...] = (
         "Los ejes son los mismos que en las dos slides anteriores, así que se compara a la misma escala. "
         "Usamos R0 = {som.base_radius0}, la mitad de k, fijado de antemano, y con los otros valores la elección de "
         "k no cambia.",
+    ),
+    Slide(
+        "som-te", 1, "El error topográfico de k = {som.chosen_k} es {som.chosen_te} y no depende del schedule",
+        None, ("Q1.3",), (), None, _key("som/figures/te_explained.svg"),
+        "El error topográfico se calcula, para cada creador, buscando la neurona más cercana y la segunda más cercana, "
+        "y cuenta como error si no son vecinas en la grilla (arriba, abajo, izquierda o derecha; una diagonal cuenta "
+        "como error). "
+        "El resultado es la fracción de los creadores que cuentan como error, y mide si el mapa conserva la vecindad, "
+        "que es lo que busca Kohonen: neuronas parecidas deberían quedar pegadas en la grilla. "
+        "Cada barra es la media de 10 entrenamientos con distinta seed, las líneas negras son el desvío entre ellas y "
+        "la línea punteada es el límite de {som.te_max} de la regla: con k = {som.chosen_k} da {som.chosen_te} y con "
+        "las variantes de η0, R0 y épocas queda entre {som.s2_te_min} y {som.s2_te_max}, así que no depende del "
+        "schedule. "
+        "Los desvíos son del tamaño de las diferencias entre barras, así que estas diferencias no sirven para ordenar "
+        "las variantes; lo que sí muestra es que con k = {som.chosen_k} ninguna cumple el límite.",
     ),
     Slide(
         "som-robust", 1,

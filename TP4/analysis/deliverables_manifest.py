@@ -332,6 +332,14 @@ FIGURES = (
         slide=True,
     ),
     Figure(
+        key="som_te_explained", path="som/figures/te_explained.svg", make_target="som-figures",
+        config=_SOM[0], seed="1-10 (las seeds de las series; la media y el desvío entre ellas)",
+        fragment=2, anchor="f2-s3",
+        alt="Dos casos de una grilla de 3 por 3, con neuronas vecinas y no vecinas, y el error topográfico de cada combinación de k, tasa de aprendizaje, radio inicial y épocas contra el límite de la regla",
+        caption="Qué cuenta el error topográfico y cuánto dio en cada combinación probada.",
+        slide=True,
+    ),
+    Figure(
         key="som_regions", path="som/profiles/regions.svg", make_target="som-profiles",
         config=_SOM[0], seed=_SOM[1], fragment=2, anchor="f2-s6-1",
         alt="Mapa de Kohonen con las regiones que resultan de la regla fijada de antemano",

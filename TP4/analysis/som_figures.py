@@ -334,6 +334,87 @@ def plot_effect(rows: list[dict], x_key: str, x_label: str, base_x: float, thres
     plots_style.save_figure(fig, out_stem)
 
 
+def te_configurations(stage1_rows: list[dict], stage2_rows: list[dict]) -> list[tuple[str, str, float, float]]:
+    """(group, label, mean, sd) of the topographic error of every configuration tried: k (step, stage 1), then the
+    stage-2 variants that move eta0, R0 or the epochs from the base (k = 5 is the base)."""
+    out = []
+    for r in sorted((r for r in stage1_rows if r["neighborhood"] == "step"), key=lambda r: int(r["grid_k"])):
+        out.append(("k", f"k = {int(r['grid_k'])}", float(r["te_mean"]), float(r["te_sd"])))
+    for group, prefix, name in (("η0", "eta0-", "η0"), ("R0", "radius0-", "R0"), ("épocas", "epochs-", "")):
+        moved = sorted((r for r in stage2_rows if r["label"].startswith(prefix)),
+                       key=lambda r: float(r[{"η0": "eta0", "R0": "radius0", "épocas": "epochs"}[group]]))
+        for r in moved:
+            value = float(r[{"η0": "eta0", "R0": "radius0", "épocas": "epochs"}[group]])
+            label = f"{name} = {_fmt_tick(value)}" if name else f"{_fmt_tick(value)} épocas"
+            out.append((group, label, float(r["te_mean"]), float(r["te_sd"])))
+    return out
+
+
+def _draw_te_case(ax, first: tuple[int, int], second: tuple[int, int], verdict: str, color: str) -> None:
+    """A 3 x 3 grid with the winner (filled) and the runner-up (ring) of one creator and what it counts as."""
+    for row in range(3):
+        for col in range(3):
+            ax.add_patch(plt_rectangle((col, 2 - row), 1, 1, fill=False, edgecolor=plots_style.TEXT_SECONDARY,
+                                       linewidth=1))
+    for (row, col), filled in ((first, True), (second, False)):
+        ax.add_patch(plt_circle((col + 0.5, 2 - row + 0.5), 0.3, facecolor=color if filled else "none",
+                                edgecolor=color, linewidth=2))
+    ax.set_xlim(-0.1, 3.1)
+    ax.set_ylim(-0.1, 3.1)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    ax.set_title(verdict, fontsize=plots_style.fontsize(9), loc="center")
+
+
+def plt_rectangle(*args, **kwargs):
+    from matplotlib.patches import Rectangle
+    return Rectangle(*args, **kwargs)
+
+
+def plt_circle(*args, **kwargs):
+    from matplotlib.patches import Circle
+    return Circle(*args, **kwargs)
+
+
+def plot_te_explained(configs: list[tuple[str, str, float, float]], te_max: float, out_stem) -> None:
+    """Left, what the topographic error counts (two cases on a 3 x 3 grid); right, its value in every configuration
+    tried (mean +/- sd over the 10 seeds) against the limit of the rule."""
+    plt = plots_style.apply_style()
+    groups = ["k", "η0", "R0", "épocas"]
+    colors = plots_style.palette_for(groups)
+    fig = plt.figure(figsize=plots_style.figsize((11.5, 4.2)))
+    grid = fig.add_gridspec(2, 3, width_ratios=[1, 1, 3.4])
+    ok_ax, bad_ax = fig.add_subplot(grid[0, 0]), fig.add_subplot(grid[0, 1])
+    _draw_te_case(ok_ax, (1, 1), (1, 2), "vecinas: no es error", plots_style.TEXT_PRIMARY)
+    _draw_te_case(bad_ax, (0, 0), (2, 2), "no vecinas: error", plots_style.TEXT_PRIMARY)
+    legend_ax = fig.add_subplot(grid[1, 0:2])
+    legend_ax.axis("off")
+    ink = plots_style.TEXT_PRIMARY
+    legend_ax.set_xlim(0, 1)
+    legend_ax.set_ylim(0, 1)
+    legend_ax.plot([0.03], [0.82], marker="o", markersize=9, color=ink, linestyle="none")
+    legend_ax.text(0.09, 0.82, "neurona más cercana", fontsize=plots_style.fontsize(9), va="center")
+    legend_ax.plot([0.03], [0.52], marker="o", markersize=9, markerfacecolor="none", markeredgecolor=ink,
+                   markeredgewidth=2, linestyle="none")
+    legend_ax.text(0.09, 0.52, "segunda más cercana", fontsize=plots_style.fontsize(9), va="center")
+    legend_ax.text(0.0, 0.2, "error = creadores con error / total de creadores", fontsize=plots_style.fontsize(9),
+                   va="center")
+    ax = fig.add_subplot(grid[:, 2])
+    xs = list(range(len(configs)))
+    for x, (group, label, mean, sd) in zip(xs, configs):
+        ax.bar(x, mean, yerr=sd, color=colors[group], capsize=3, width=0.7)
+    ax.axhline(te_max, color=plots_style.TEXT_SECONDARY, linestyle="--", linewidth=1)
+    ax.set_xticks(xs)
+    ax.set_xticklabels([c[1] for c in configs], rotation=60, ha="right", fontsize=plots_style.fontsize(8))
+    ax.set_ylabel("error topográfico")
+    ax.grid(True, axis="y")
+    handles = [plt.Rectangle((0, 0), 1, 1, color=colors[g]) for g in groups]
+    ax.legend(handles, ["k", "η0 (k = 5)", "R0 (k = 5)", "épocas (k = 5)"], frameon=False,
+              fontsize=plots_style.fontsize(8), loc="upper right")
+    fig.tight_layout(rect=plots_style.rect((0, 0, 1, 1)))
+    plots_style.save_figure(fig, out_stem)
+
+
 def _fmt_tick(value: float) -> str:
     return f"{value:g}".replace(".", ",")
 
@@ -481,6 +562,9 @@ def main(argv: list[str] | None = None) -> int:
                     selection["thresholds"], out / "effect_eta0")
         plot_effect(effect_rows(stage2_rows, "radius0"), "radius0", "radio inicial R0", float(base["radius0"]),
                     selection["thresholds"], out / "effect_radius0")
+    for _ in plots_style.iter_variants():
+        plot_te_explained(te_configurations(step_rows, stage2_rows), selection["thresholds"]["te_max"],
+                          out / "te_explained")
     plot_trace(run.trace, f"Traza del entrenamiento de la corrida dibujada: k = {k}, seed {seed}", out / "trace")
 
     # who is in each neuron
