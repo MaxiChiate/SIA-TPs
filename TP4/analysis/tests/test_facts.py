@@ -96,8 +96,9 @@ def write_results(root, *, robust=False):
         ["b", 2.5, 0.25, 260, 0.06, 0.076, 2.17, True, True, 2.35],
         ["c", 2.5, 0.5, 50, 0.052, 0.108, 2.25, True, True, 2.36],
     ])
-    write_csv(root / "som/series_som_stage2/aggregate.csv", ["label", "neighborhood", "radius_final", "eta_final"],
-              [["base", "step", 1.0, 0.01], ["a", "step", 1.0, 0.01]])
+    write_csv(root / "som/series_som_stage2/aggregate.csv", ["label", "neighborhood", "radius_final", "eta_final", "qe_mean"],
+              [["base", "step", 1.0, 0.01, 1.90], ["a", "step", 1.0, 0.01, 1.92], ["b", "step", 1.0, 0.01, 1.91],
+               ["c", "step", 1.0, 0.01, 1.92]])
     # 5 x 5 map: the three highest walls each touch a neuron with one creator, and size and price grow towards the
     # top right (the sentences check_claims guards)
     write_csv(root / "som/figures/hits_members.csv", ["neuron", "row", "col", "hits", "creators"],

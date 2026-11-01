@@ -240,11 +240,12 @@ OUTLINE: tuple[Slide, ...] = (
         None, ("Q1.3",), (), None, _key("som/figures/effect_eta0.svg"),
         "Probamos η0 = {som.eta_values}, con k = {som.chosen_k} y el resto igual; η0 es cuánto se mueve la neurona "
         "ganadora hacia el creador en los primeros pasos y después decae hasta {som.base_eta_final}. "
-        "Las neuronas vacías quedan entre {som.eta_empty_min} y {som.eta_empty_max}, siempre dentro del límite, y la "
-        "U media, que es el promedio de la matriz U (la distancia entre neuronas vecinas), queda entre "
-        "{som.eta_u_min} y {som.eta_u_max}. "
-        "Los ejes de las neuronas vacías son los mismos que en la slide de k para que se vea que, al lado de cambiar "
-        "la grilla, cambiar η0 mueve muy poco. "
+        "La distancia de cada creador a su neurona ganadora queda entre {som.eta_dist_min} y {som.eta_dist_max} y la "
+        "U media, que es el promedio de la matriz U (la distancia entre neuronas vecinas), entre {som.eta_u_min} y "
+        "{som.eta_u_max}. "
+        "Los ejes arrancan en cero para no exagerar las diferencias: al lado de cambiar la grilla, que lleva la "
+        "distancia a la neurona ganadora de {som.k_first_dist} con k = {som.k_first} a {som.k_last_dist} con "
+        "k = {som.k_last}, cambiar η0 mueve muy poco. "
         "Usamos η0 = {som.base_eta0}, un valor medio fijado de antemano, y con los otros valores la elección de k "
         "no cambia.",
     ),
@@ -254,11 +255,11 @@ OUTLINE: tuple[Slide, ...] = (
         "Probamos R0 = {som.r0_values}, con k = {som.chosen_k} y el resto igual; R0 es cuántas neuronas vecinas se "
         "mueven junto con la ganadora al principio del entrenamiento y después el radio baja hasta "
         "{som.base_radius_final}. "
-        "Las neuronas vacías quedan entre {som.r0_empty_min} y {som.r0_empty_max}, siempre dentro del límite, y la "
-        "U media, que es el promedio de la matriz U (la distancia entre neuronas vecinas), queda entre "
-        "{som.r0_u_min} y {som.r0_u_max}. "
-        "Los ejes de las neuronas vacías son los mismos que en las slides anteriores, así que se compara a la misma "
-        "escala. "
+        "La distancia de cada creador a su neurona ganadora queda entre {som.r0_dist_min} y {som.r0_dist_max} y la "
+        "U media, que es el promedio de la matriz U (la distancia entre neuronas vecinas), entre {som.r0_u_min} y "
+        "{som.r0_u_max}. "
+        "Los ejes son los mismos que en la slide de η0, así que se compara a la misma escala, y un radio inicial "
+        "más chico acerca un poco los creadores a sus neuronas, pero no cambia la elección de k. "
         "Usamos R0 = {som.base_radius0}, la mitad de k, fijado de antemano, y con los otros valores la elección de "
         "k no cambia.",
     ),

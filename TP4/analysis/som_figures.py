@@ -294,13 +294,15 @@ EFFECT_PANELS = (
     ("te", "Error topográfico", "límite: 0,05", 1.0),
     ("empty_fraction", "% de neuronas vacías", "límite: 20 %", 100.0),
     ("creators_per_occupied", "Creadores por neurona ocupada", "mínimo: 2", 1.0),
+    ("qe", "Distancia a la neurona ganadora", "media de los creadores", 1.0),
     ("u_mean", "U media", "distancia entre neuronas vecinas", 1.0),
 )
-# eta0 and R0 slides: the occupancy that decides k does not move, and the U matrix is the other thing a schedule could change
-OCCUPANCY_MEASURES = ("empty_fraction", "u_mean")
+# eta0 and R0 slides: how far a creator is from its winning neuron and the mean of the U matrix, the two things a
+# schedule could move; the occupancy that decides k stays on the slide of k
+SCHEDULE_MEASURES = ("qe", "u_mean")
 # The same y range in the three figures, so a change of eta0 or R0 is read on the scale of the change of k.
 EFFECT_YLIM = {"te": (-0.01, 0.22), "empty_fraction": (-2.0, 50.0), "creators_per_occupied": (0.0, 13.0),
-               "u_mean": (0.0, 2.5)}
+               "u_mean": (0.0, 2.5), "qe": (0.0, 3.2)}
 
 
 def effect_rows(stage2_rows: list[dict], vary: str) -> list[dict]:
@@ -539,9 +541,9 @@ def main(argv: list[str] | None = None) -> int:
         plot_effect(step_rows, "grid_k", "k" if plots_style.variant() == "slide" else "k (lado de la grilla)", k, selection["thresholds"], out / "effect_k")
         # the topographic error only justifies k: the eta0 and R0 figures show the occupancy
         plot_effect(effect_rows(stage2_rows, "eta0"), "eta0", "tasa de aprendizaje inicial η0", float(base["eta0"]),
-                    selection["thresholds"], out / "effect_eta0", measures=OCCUPANCY_MEASURES)
+                    selection["thresholds"], out / "effect_eta0", measures=SCHEDULE_MEASURES)
         plot_effect(effect_rows(stage2_rows, "radius0"), "radius0", "radio inicial R0", float(base["radius0"]),
-                    selection["thresholds"], out / "effect_radius0", measures=OCCUPANCY_MEASURES)
+                    selection["thresholds"], out / "effect_radius0", measures=SCHEDULE_MEASURES)
     for _ in plots_style.iter_variants():
         plot_te_by_k(step_rows, k, selection["thresholds"], out / "te_by_k")
     plot_trace(run.trace, f"Traza del entrenamiento de la corrida dibujada: k = {k}, seed {seed}", out / "trace")
