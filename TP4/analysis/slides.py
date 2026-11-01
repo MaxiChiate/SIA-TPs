@@ -225,7 +225,7 @@ OUTLINE: tuple[Slide, ...] = (
         None, ("Q1.3",), (), None, _key("som/figures/effect_k.svg"),
         "Cada punto es la media de 10 entrenamientos con distinta seed y las barras son el desvío entre ellas; la "
         "distancia es qué tan lejos queda un creador de su neurona cuando el mapa se entrenó sin ese creador (el "
-        "QE-LOO), y cuanto menor es, mejor representado está el creador, así que mide si el mapa generaliza y no solo "
+        "QE-LOO), y cuanto menor es, más cerca de su neurona queda el creador, así que mide si el mapa generaliza y no solo "
         "si memoriza. "
         "La distancia baja siempre al agrandar la grilla, de {som.k_first_dist} con k = {som.k_first} a "
         "{som.k_last_dist} con k = {som.k_last}, pero las neuronas quedan casi individuales. "
