@@ -191,7 +191,9 @@ OUTLINE: tuple[Slide, ...] = (
     ),
     Slide(
         "som-hyperparams", 1, "Hiperparámetros del SOM y por qué los elegimos",
-        None, ("Q1.3",), (),
+        None, ("Q1.3",),
+        ("Inicializamos los pesos de las neuronas con muestras elegidas al azar de los datos de entrenamiento porque, "
+         "con valores aleatorios, algunas neuronas quedan lejos de los datos, nunca ganan y quedan muertas.",),
         (
             ("Hiperparámetro", "Valor", "Por qué"),
             (
@@ -209,7 +211,9 @@ OUTLINE: tuple[Slide, ...] = (
             ),
         ),
         None,
-        "Estos son los hiperparámetros del mapa que usamos en todo el ejercicio. "
+        "Estos son los hiperparámetros del mapa que usamos en todo el ejercicio, y los pesos de cada neurona arrancan en "
+        "un creador elegido al azar del conjunto de entrenamiento: con valores aleatorios hay neuronas que quedan lejos "
+        "de los datos, nunca ganan y quedan muertas. "
         "La grilla la eligió la regla fijada de antemano, y el resto del schedule es el baseline de la serie, también "
         "fijado antes de correr. "
         "Después de elegir la grilla movimos una cosa a la vez (R0, η0 y épocas) con 10 seeds cada una, y en todas las "

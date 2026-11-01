@@ -222,7 +222,7 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 ### F2 D-05 — Inicialización con muestras del conjunto de entrenamiento
 
-**Qué:** los prototipos arrancan en muestras del conjunto de entrenamiento (SOM-01). La distancia es euclídea sobre las 26 variables auditadas con z-score.
+**Qué:** los prototipos arrancan en muestras del conjunto de entrenamiento (SOM-01): cada neurona toma un creador al azar, sin repetir mientras alcancen. La distancia es euclídea sobre los scores de PC1 a PC7 de la PCA de las 17 variables, sin reescalar (F2 D-16).
 
 **Por qué:** es la recomendación de las slides para evitar unidades muertas.
 
