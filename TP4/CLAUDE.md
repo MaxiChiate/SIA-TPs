@@ -94,10 +94,10 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Entrega
 
-- **Slides**: 27 slides armadas por `make deliverables` en `analysis/results/slides/` (sin la slide de método, y el deck arranca con la portada y el EDA); el Artifact tipo Slides publicado se republicó el 2026-10-30 con estas 27.
+- **Slides**: 27 slides armadas por `make deliverables` en `analysis/results/slides/` (sin la slide de método, y el deck arranca con la portada y el EDA); el Artifact tipo Slides publicado se republicó el 2026-10-30 con estas 27 y el 2026-11-01 con las slides del SOM nuevo (`som-rule`, `som-robust`, `som-map`, `som-one-region`, `som-zonas`, `som-pc` y `ej1-conclusiones`); además tiene slides que armó la persona dueña a mano y que no están en el repo (`289f728e`, `0732067f`, `bc794b98`, `oja-intro`, `pca-eigenvalue-table`).
 - **Informe**: `analysis/results/informe/informe.html`, publicado como Artifact HTML (D-15).
 - Slides: https://claude.ai/artifact/CxnuCZKwF55r2tUMPWXBSN (las URLs `9YjSx…` y `32SjY…` de antes ya no existen; el 2026-10-28 se reemplazó el contenido de este deck por las 25 slides del repo)
-- Informe: https://claude.ai/artifact/ScERzQ4wTc8TrCNfuw2kKq (republicado el 2026-10-28 con el guion de las 28 slides en el anexo (todavía sin republicar tras sacar la slide de método); está compartido por link)
+- Informe: https://claude.ai/artifact/ScERzQ4wTc8TrCNfuw2kKq (republicado el 2026-10-28 con el guion anterior en el anexo: todavía sin republicar tras sacar la slide de método y rehacer el SOM; está compartido por link)
 - Los dos Artifacts son privados; el deck se entrega como su PDF exportado (D-14: queda fuera del repo, ni en `docs/` ni en `deliverables/`), y compartir el link del informe lo decide la persona dueña desde el menú Share.
 - El informe lleva el guion de la presentación como anexo (`id="guion"`, decisión del usuario en el checkpoint de 06-12): `make deliverables` pasa `INFORME_FLAGS := --notes analysis/results/slides/notes.md`; el guion viaja además como notas del orador en cada slide.
 - Cualquier cambio de resultados: regenerar con `make deliverables`, actualizar `DECISIONS.md` y este archivo, y republicar a la
