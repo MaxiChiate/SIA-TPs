@@ -284,9 +284,9 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 **Dónde:** [02-CONTEXT.md](.planning/phases/02-kohonen-som/02-CONTEXT.md) · [fragmento 02 §2](deliverables/02-kohonen.md)
 
-### F2 D-13 — Estabilidad entre seeds por Spearman de distancias en la grilla
+### F2 D-13 — Estabilidad entre seeds por correlación de Pearson de distancias en la grilla
 
-**Qué:** para cada seed se arma la matriz de 50×50 de distancias en la grilla entre las BMU de cada par de creadores; la estabilidad es el promedio del Spearman entre las matrices de todos los pares de seeds (45 pares con 10 seeds).
+**Qué:** para cada seed se arma la matriz de 50×50 de distancias en la grilla entre las BMU de cada par de creadores; la estabilidad es el promedio de la correlación de Pearson entre las matrices de todos los pares de seeds (45 pares con 10 seeds). Desde el 2026-11-01 se usa la correlación de Pearson, que sí se vio en clase (ver F2 D-17).
 
 **Por qué:** es invariante a rotación y reflexión del mapa y comparable entre k.
 
@@ -315,6 +315,14 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 **Por qué:** pedido del equipo. Los scores sin reescalar mantienen la geometría de la PCA: la distancia entre dos creadores es la del espacio de las 17 variables proyectado sobre las 7 componentes. Que el mapa siga a PC1 y PC2 no es una validación independiente porque son dos de sus entradas, y el QE y el QE-LOO nuevos no son comparables con los del mapa de 26 variables (la unidad cambió). La fuga del QE-LOO se agranda: el z-score, la PCA y el umbral se ajustaron con los 50 creadores.
 
 **Dónde:** [fragmento 02 §2.1 y §3 a §6](deliverables/02-kohonen.md) · `analysis/pca.py` (`som_input`, `write_som_input`) · `analysis/som_figures.py` y `analysis/som_profiles.py` (los planos de variables son medias crudas y las aristas de la matriz U se llevan al espacio de las variables con los autovectores)
+
+### F2 D-17 — La estabilidad y los contrastes del SOM usan la correlación de Pearson
+
+**Qué:** el 2026-11-01 se sacó del trabajo la correlación de rangos que se usaba en tres lugares del SOM: la estabilidad entre seeds (F2 D-13), el contraste de Mantel entre las distancias de la grilla y las del plano PC1-PC2 y el contraste por aristas de la matriz U. Los tres pasan a la correlación de Pearson. En Oja y en la sensibilidad de la PCA ese estadístico era solo un número extra y se sacó sin reemplazo (queda Pearson). El texto de la regla de la sección 2 de `deliverables/02-kohonen.md` cambió solo en la definición de esos estadísticos; se commiteó antes de volver a correr las etapas 1 y 2, las figuras y los perfiles.
+
+**Por qué:** el estadístico sacado no se vio en clase y no se puede usar sin justificarlo muy bien. La correlación de Pearson es la de la matriz de correlación de la PCA y es el estadístico habitual de Mantel. La elección de k no depende de este estadístico (la deciden los filtros de ocupación y el QE-LOO), así que no cambia la grilla elegida; cambian los valores de estabilidad, el medoide de las figuras puede cambiar de seed y los contrastes de Mantel y por aristas dan otros números.
+
+**Dónde:** [fragmento 02 §2, §2.1 y §3 a §6](deliverables/02-kohonen.md) · `analysis/som.py` (`pearson_corr`, `seed_correlation_matrix`)
 
 ## Fase 3 — Oja y decisiones de campaña
 
@@ -352,7 +360,7 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 ### F3 D-05 — La comparación Oja vs PC1 se calcula en Python
 
-**Qué:** Python lee `weights.csv`, `index.csv` y las cargas y scores de `analysis/results/pca/audited/` y reporta |cos| y cos con signo entre w y v1, Pearson y Spearman entre el índice y el score de PC1, y overlap@5 y overlap@10. Un pytest exige |cos(w, v1)| > 0,99 en la corrida smoke. No hay eigen-solver en C.
+**Qué:** Python lee `weights.csv`, `index.csv` y las cargas y scores de `analysis/results/pca/audited/` y reporta |cos| y cos con signo entre w y v1, Pearson entre el índice y el score de PC1, y overlap@5 y overlap@10. Un pytest exige |cos(w, v1)| > 0,99 en la corrida smoke. No hay eigen-solver en C.
 
 **Por qué:** la validación contra la PCA por autovalores queda independiente de la implementación de Oja.
 

@@ -228,7 +228,7 @@ def _pca_facts(results_dir: Path) -> dict[str, str]:
         "pca.cum_k80": pct(eigenvalues[k_80 - 1]["cumulative"], 1),
         "pca.min_eigenvalue": dec(decision["min_eigenvalue"], 5),
         "pca.abs_cos_pc1": dec(sensitivity["abs_cos_pc1"], 5),
-        "pca.abs_spearman_pc1": dec(abs(sensitivity["spearman_pc1"]), 4),
+        "pca.abs_pearson_pc1": dec(abs(sensitivity["pearson_pc1"]), 4),
     }
 
 
@@ -398,7 +398,6 @@ def _oja_facts(results_dir: Path) -> dict[str, str]:
         "oja.pivot_margin": dec(dispersion["pivot_margin"]["margin"], 5),
         "oja.max_abs_diff": dec(comparison["max_abs_diff"], 4),
         "oja.corr_followers_pearson": dec(followers["pearson"], 3),
-        "oja.corr_followers_spearman": dec(followers["spearman"], 3),
         "oja.max_id": str(top["creator_id"]),
         "oja.max_name": str(top["name"]),
         "oja.max_topic": str(top["dominant_topic"]),
@@ -703,7 +702,7 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (1, "La PCA de esas {pca17.n_features} variables necesita {pca17.k_80} componentes para pasar el 80 % ({pca17.cum_k80}); PC1 explica {pca17.var_pc1} y PC2 {pca17.var_pc2}, frente a {pca.var_pc1} y {pca.var_pc2} con las {pca.n_features}"),
     (1, "PC1 ({pca.var_pc1})"),
     (1, "PC2 ({pca.var_pc2})"),
-    (1, "(abs(cos) {pca.abs_cos_pc1}) ni como orden de los creadores (Spearman en valor absoluto {pca.abs_spearman_pc1})"),
+    (1, "(abs(cos) {pca.abs_cos_pc1}) ni como proyección de los creadores (|Pearson| de los scores {pca.abs_pearson_pc1})"),
     (1, "ningún autovalor nulo, el menor es {pca.min_eigenvalue}"),
     # 2: Kohonen
     (2, "- Grilla elegida: k = {som.chosen_k}"),
@@ -713,11 +712,11 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (2, "Mantel grilla vs distancia en las {som.n_vars} variables (referencia): rho = {som.mantel_vars_rho}"),
     (2, "explica el {som.r2_pc1_pct} de la variación de PC1"),
     (2, "con seed {som.figure_seed}, que es el medoide de estabilidad"),
-    (2, "rho de Spearman {som.edge_rho_pc1} y con la de PC2 con {som.edge_rho_pc2} ({som.n_edges} aristas; las otras {som.n_excluded_edges} tocan"),
+    (2, "rho de Pearson {som.edge_rho_pc1} y con la de PC2 con {som.edge_rho_pc2} ({som.n_edges} aristas; las otras {som.n_excluded_edges} tocan"),
     (2, "con {som.n_permutations} permutaciones de un generador sembrado con 2026"),
     # 3: Oja y campañas
-    (3, "Pearson {oja.corr_followers_pearson} y Spearman {oja.corr_followers_spearman} con `followers`"),
-    (3, "(Spearman de {oja.corr_followers_spearman} con `followers` con el signo de D-02)"),
+    (3, "Pearson {oja.corr_followers_pearson} con `followers`"),
+    (3, "(Pearson de {oja.corr_followers_pearson} con `followers` con el signo de D-02)"),
     (3, "Seeds con abs(cos(w, v1)) > 0,99: {oja.n_abs_cos_above} de {oja.n_seeds}."),
     (3, "abs(cos) entre pares de seeds: mínimo {oja.abs_cos_min}, media {oja.abs_cos_mean}."),
     (3, "pivote de todas: {oja.pivot}."),

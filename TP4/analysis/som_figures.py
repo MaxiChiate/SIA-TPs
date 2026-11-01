@@ -223,7 +223,7 @@ CURVE_PANELS = (
     ("te", "Error topográfico (TE)", 1.0),
     ("empty_fraction", "% de neuronas vacías", 100.0),
     ("creators_per_occupied", "Creadores por neurona ocupada", 1.0),
-    ("stability", "Estabilidad entre seeds (Spearman)", 1.0),
+    ("stability", "Estabilidad entre seeds (correlación)", 1.0),
 )
 
 
@@ -315,11 +315,11 @@ def _read_csv(path: Path) -> list[dict]:
 
 
 def _stability_sd(stage1: Path) -> dict[str, float]:
-    """SD (ddof 1) of the pairwise Spearman values of every configuration (stability.csv)."""
+    """SD (ddof 1) of the pairwise correlation values of every configuration (stability.csv)."""
     values: dict[str, list[float]] = {}
     for row in _read_csv(stage1 / "stability.csv"):
-        if row["spearman"] not in ("", "nan", "NaN"):
-            values.setdefault(row["label"], []).append(float(row["spearman"]))
+        if row["correlation"] not in ("", "nan", "NaN"):
+            values.setdefault(row["label"], []).append(float(row["correlation"]))
     return {label: float(np.std(v, ddof=1)) if len(v) > 1 else 0.0 for label, v in values.items()}
 
 

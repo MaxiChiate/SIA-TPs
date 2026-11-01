@@ -44,7 +44,7 @@ def write_results(root, *, robust=False):
         "min_eigenvalue": 0.00046018,
     })
     write_json(root / "pca/sensitivity.json", {
-        "all31_sensitivity": {}, "abs_cos_pc1": 0.9999752, "spearman_pc1": -0.99817,
+        "all31_sensitivity": {}, "abs_cos_pc1": 0.9999752, "pearson_pc1": -0.99917,
     })
     write_csv(root / "pca/audited/eigenvalues.csv", ["component", "eigenvalue", "explained", "cumulative"],
               [["PC1", 13.8, 0.5322, 0.5322], ["PC2", 2.2, 0.0851, 0.6173], ["PC3", 1.8, 0.0714, 0.8312]])
@@ -113,8 +113,8 @@ def write_results(root, *, robust=False):
         "+1": {"creator_id": "INF031", "name": "@mundo", "dominant_topic": "perros", "followers": 17062, "index": 6.703},
         "-1": {"creator_id": "INF045", "name": "@futbol", "dominant_topic": "fútbol", "followers": 493194, "index": 6.26},
     }})
-    write_csv(root / "oja/evidence_correlations.csv", ["target", "sign", "pearson", "spearman"],
-              [["followers", "+1", -0.87868, -0.92105], ["followers", "-1", 0.87868, 0.92105]])
+    write_csv(root / "oja/evidence_correlations.csv", ["target", "sign", "pearson"],
+              [["followers", "+1", -0.87868], ["followers", "-1", 0.87868]])
     write_csv(root / "oja/index.csv", ["creator_id", "name", "oja_index"], [["INF001", "@a", 1.0], ["INF002", "@b", 2.0]])
     write_json(root / "campaigns/selection_identity.json", {
         "rule_commit": "a6212e89cdc654021cfda02d9d16237c8c21c332", "k": 5,
@@ -285,7 +285,7 @@ def test_load_facts_reads_the_values_of_every_phase(tmp_path):
     assert values["pca.k_80"] == "3" and values["pca.n_features"] == "26"
     assert values["pca.var_pc1"] == "53,2 %" and values["pca.cum_k80"] == "83,1 %"
     assert values["som.mantel_rho"] == "0,599" and values["som.n_failing_variants"] == "2"
-    assert values["oja.corr_followers_pearson"] == "-0,879" and values["oja.corr_followers_spearman"] == "-0,921"
+    assert values["oja.corr_followers_pearson"] == "-0,879"
     assert values["oja.max_id"] == "INF031" and values["oja.max_followers"] == "17062"
     assert values["camp.rule_commit"] == "a6212e8" and values["camp.k"] == "5"
     assert values["maint.bmu"] == "(fila 3, col 1)" and values["maint.retrain"] == "no hace falta re-entrenar"
@@ -377,8 +377,8 @@ def test_recovery_table_that_does_not_end_at_the_last_named_level_stops(tmp_path
 
 
 def _drop_followers_row(root):
-    write_csv(root / "oja/evidence_correlations.csv", ["target", "sign", "pearson", "spearman"],
-              [["followers", "-1", 0.87868, 0.92105]])
+    write_csv(root / "oja/evidence_correlations.csv", ["target", "sign", "pearson"],
+              [["followers", "-1", 0.87868]])
 
 
 def _drop_followers_global_rows(root):

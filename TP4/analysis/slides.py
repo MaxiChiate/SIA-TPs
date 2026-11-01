@@ -289,7 +289,7 @@ OUTLINE: tuple[Slide, ...] = (
     Slide(
         "oja-max", 1, "Elegir el máximo del índice no es correcto: cambia con el signo y no mira el tema",
         None, ("Q1.9", "Q1.10"),
-        ("Correlación del índice con followers: Pearson {oja.corr_followers_pearson}, Spearman {oja.corr_followers_spearman}",),
+        ("Correlación del índice con followers: Pearson {oja.corr_followers_pearson}",),
         (
             ("Signo del índice", "Creador con el máximo", "Tema dominante", "Followers"),
             (
@@ -303,7 +303,7 @@ OUTLINE: tuple[Slide, ...] = (
         "es un creador chico, y dar vuelta el signo da el extremo opuesto. "
         "El máximo bajo cada signo es otro creador, de otro tema y de otro tamaño: {oja.max_name} con {oja.max_followers} "
         "followers contra {oja.max_opposite_name} con {oja.max_opposite_followers}. "
-        "Con followers el índice tiene Pearson {oja.corr_followers_pearson} y Spearman {oja.corr_followers_spearman}, "
+        "Con followers el índice tiene Pearson {oja.corr_followers_pearson}, "
         "porque en esencia ordena por tamaño y no conoce el tema de la campaña. "
         "Una campaña debe filtrar primero por su tema y ordenar por su propio objetivo.",
     ),
@@ -407,7 +407,7 @@ OUTLINE: tuple[Slide, ...] = (
             "Por eso el top {camp.k} por followers tiene {camp.futbol.followers_global_topic_share}, "
             "{camp.perros.followers_global_topic_share}, {camp.maquillaje.followers_global_topic_share} y "
             "{camp.arte.followers_global_topic_share} del tema de fútbol, perros, maquillaje y arte",
-            "El SOM sigue ese eje (R² {som.r2_pc1}) y Oja lo aprende (Spearman {oja.corr_followers_spearman} con followers): "
+            "El SOM sigue ese eje (R² {som.r2_pc1}) y Oja lo aprende (Pearson {oja.corr_followers_pearson} con followers): "
             "la regla filtra por tema y ordena por objetivo",
         ),
         None, None,
@@ -419,8 +419,8 @@ OUTLINE: tuple[Slide, ...] = (
         "{camp.arte.followers_global_topic_share} de sus creadores tienen como tema dominante el de fútbol, perros, "
         "maquillaje y arte. "
         "El SOM, entrenado con las componentes, sigue ese eje (R² {som.r2_pc1} con PC1) y agrupa los temas en zonas que sirven para ubicar "
-        "creadores nuevos y buscar sustitutos, y el índice de Oja es casi el inverso de followers (Spearman "
-        "{oja.corr_followers_spearman}), así que elegir su máximo tampoco resuelve. "
+        "creadores nuevos y buscar sustitutos, y el índice de Oja es casi el inverso de followers (Pearson "
+        "{oja.corr_followers_pearson}), así que elegir su máximo tampoco resuelve. "
         "Por eso cada campaña primero filtra por su tema y después ordena por su propio objetivo, con reglas fijadas "
         "antes de ver las listas.",
     ),

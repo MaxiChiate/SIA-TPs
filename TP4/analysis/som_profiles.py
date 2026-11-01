@@ -7,8 +7,8 @@ The region rule and the contrast statistics are the ones committed in section 2 
 (**Regiones.** and **Contraste con PC1/PC2.**) before any result was looked at: regions are the 4-adjacency
 connected components of the occupied neurons after cutting every adjacent pair whose prototype distance exceeds
 the 75th percentile of all adjacent-pair distances; a region with fewer than 2 creators is "no interpretable".
-The contrast is R^2 of PC1 and PC2 on the BMU (row, col), a tie-aware Mantel-type Spearman between grid distances
-and PC1-PC2 plane distances (the 26-D z distance as reference), and the edge-wise Spearman between U-matrix edges
+The contrast is R^2 of PC1 and PC2 on the BMU (row, col), a Mantel-type Pearson correlation between grid distances
+and PC1-PC2 plane distances (the 26-D z distance as reference), and the edge-wise Pearson correlation between U-matrix edges
 and the PC1 and PC2 gaps, with 1 000 permutations from a generator seeded with 2026. Only the grid chosen by
 the rule is profiled (D-14), and main refuses to start when the rule sha256 differs from the one stage 1 recorded.
 numpy, matplotlib (through plots_style) and the standard library only (Phase 1 D-06).
@@ -156,7 +156,7 @@ def plane_distance_vector(points) -> np.ndarray:
 
 def mantel_null(bmu, k: int, plane_points, rng, n: int = N_PERMUTATIONS) -> np.ndarray:
     """Mantel-type null: the grid-distance vector stays fixed, the creator order of plane_points is permuted and
-    the tie-aware Spearman between the two distance vectors is recomputed."""
+    the Pearson correlation between the two distance vectors is recomputed."""
     plane_points = np.asarray(plane_points, dtype=np.float64)
     grid = som.grid_distance_vector(bmu, k)
     full = np.sqrt(np.sum((plane_points[:, None, :] - plane_points[None, :, :]) ** 2, axis=2))
@@ -164,7 +164,7 @@ def mantel_null(bmu, k: int, plane_points, rng, n: int = N_PERMUTATIONS) -> np.n
     out = np.empty(n, dtype=np.float64)
     for index in range(n):
         order = rng.permutation(len(plane_points))
-        out[index] = som.spearman_ties(grid, full[order][:, order][i, j])
+        out[index] = som.pearson_corr(grid, full[order][:, order][i, j])
     return out
 
 
@@ -179,7 +179,7 @@ def _neuron_means(hits, bmu, values) -> np.ndarray:
 
 
 def edge_contrast(protos, hits, bmu, k: int, pc) -> dict:
-    """Edge-wise Spearman between the prototype distance of every adjacent pair of occupied neurons and the gap
+    """Edge-wise Pearson correlation between the prototype distance of every adjacent pair of occupied neurons and the gap
     of the neuron-mean PC1, and of PC2, between its two neurons. Pairs touching an empty neuron are excluded
     and counted."""
     hits = np.asarray(hits)
@@ -191,7 +191,7 @@ def edge_contrast(protos, hits, bmu, k: int, pc) -> dict:
     result = {"n_edges": len(keep), "n_excluded": len(pairs) - len(keep)}
     for name, neuron_mean in zip(("rho_pc1", "rho_pc2"), means):
         gaps = [abs(neuron_mean[pairs[i][0]] - neuron_mean[pairs[i][1]]) for i in keep]
-        result[name] = som.spearman_ties(distances[keep], gaps)
+        result[name] = som.pearson_corr(distances[keep], gaps)
     return result
 
 
@@ -482,9 +482,9 @@ def main(argv: list[str] | None = None) -> int:
     for c in (0, 1):
         p_r2.append(permutation_pvalue(r2[c], r2_null(pc[:, c], rows_, cols_, rng)))
     grid_vector = som.grid_distance_vector(bmu, k)
-    mantel_plane = som.spearman_ties(grid_vector, plane_distance_vector(pc))
+    mantel_plane = som.pearson_corr(grid_vector, plane_distance_vector(pc))
     p_mantel = permutation_pvalue(mantel_plane, mantel_null(bmu, k, pc, rng))
-    mantel_vars = som.spearman_ties(grid_vector, plane_distance_vector(z))
+    mantel_vars = som.pearson_corr(grid_vector, plane_distance_vector(z))
     edges = edge_contrast(run.prototypes, run.hits, bmu, k, pc)
 
     out.mkdir(parents=True, exist_ok=True)

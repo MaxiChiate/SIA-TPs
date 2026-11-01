@@ -335,7 +335,7 @@ FINDINGS: tuple[Finding, ...] = (
     Finding(
         "Oja",
         "La regla de Oja converge a PC1 en las {oja.n_seeds} seeds (abs(cos) mínimo entre pares de seeds "
-        "{oja.abs_cos_min}), así que el índice es en lo esencial un orden por tamaño (Spearman {oja.corr_followers_spearman} "
+        "{oja.abs_cos_min}), así que el índice es en lo esencial un orden por tamaño (Pearson {oja.corr_followers_pearson} "
         "con followers con el signo fijado). Elegir automáticamente al creador con el índice más alto no es correcto "
         "para cualquier campaña: con un signo sale {oja.max_name} (tema {oja.max_topic}, {oja.max_followers} followers) y "
         "con el signo opuesto {oja.max_opposite_name} ({oja.max_opposite_followers} followers).",

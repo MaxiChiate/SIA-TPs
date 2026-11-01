@@ -32,7 +32,6 @@ El índice de Oja de un creador es la proyección de su vector z sobre `w`; el s
 | abs(cos(w, v1)) | 1,000000 |
 | cos(w, v1) con la convención de signo | 1,000000 |
 | Pearson índice vs score de PC1 | 1,0000 |
-| Spearman índice vs score de PC1 | 1,0000 |
 | overlap@5 | 5 de 5 |
 | overlap@10 | 10 de 10 |
 | mayor abs(índice − score PC1) | 2,0e-03 |
@@ -42,7 +41,7 @@ El índice de Oja de un creador es la proyección de su vector z sobre `w`; el s
 - abs(cos) entre pares de seeds: mínimo 0,9999993, media 0,9999998.
 - Rango del índice por creador entre seeds: máximo 3,1e-03, media 1,5e-03.
 
-**Cómo leerlo.** abs(cos) mide el ángulo entre las dos direcciones sin mirar el signo; el `cos` con signo, positivo, dice que las dos tienen además la misma orientación. Las dos columnas valen 1,000000 porque la tabla redondea a 6 decimales: el valor es 0,9999998 (la peor seed, la 6, queda a 2,5e-07 de 1, sección 1). El Pearson y el Spearman entre el índice y el score de PC1 miden si los dos ordenan a los creadores igual, y valen 1,0000 con 4 decimales; que el overlap@5 y el overlap@10 sean completos (5 de 5 y 10 de 10) dice que los mismos 5 y los mismos 10 creadores encabezan las dos listas. La mayor diferencia entre el índice y el score de un mismo creador es 2,0e-03, contra scores que van de unos -6 a unos +7. En conjunto: Oja aprendió PC1, y el índice y el score ordenan a los creadores del mismo modo, salvo por el error de convergencia; el índice no agrega información que PC1 no tenga.
+**Cómo leerlo.** abs(cos) mide el ángulo entre las dos direcciones sin mirar el signo; el `cos` con signo, positivo, dice que las dos tienen además la misma orientación. Las dos columnas valen 1,000000 porque la tabla redondea a 6 decimales: el valor es 0,9999998 (la peor seed, la 6, queda a 2,5e-07 de 1, sección 1). El Pearson entre el índice y el score de PC1 mide si los dos ordenan a los creadores igual, y vale 1,0000 con 4 decimales; que el overlap@5 y el overlap@10 sean completos (5 de 5 y 10 de 10) dice que los mismos 5 y los mismos 10 creadores encabezan las dos listas. La mayor diferencia entre el índice y el score de un mismo creador es 2,0e-03, contra scores que van de unos -6 a unos +7. En conjunto: Oja aprendió PC1, y el índice y el score ordenan a los creadores del mismo modo, salvo por el error de convergencia; el índice no agrega información que PC1 no tenga.
 
 **Entre seeds.** Las 10 seeds terminan con abs(cos) mayor que 0,99 respecto de PC1, la orientación de PCA y el mismo pivote, y entre sí con abs(cos) de al menos 0,9999993. El índice de un creador cambia entre seeds en 3,1e-03 como máximo, un orden parecido a la diferencia con PC1 (2,0e-03), de modo que elegir otra seed no cambia la lectura del índice.
 
@@ -83,15 +82,15 @@ El índice de Oja de un creador es la proyección de su vector z sobre `w`; el s
 | argentina_audience_pct | +0,0247 |
 | sponsored_posts_pct | -0,0140 |
 
-**Con qué se correlaciona.** Las correlaciones son entre el índice (con cada signo) y los valores crudos de `datos/creadores.csv`: `followers` y los cuatro porcentajes de tema, `topic_art_pct` incluido aunque quedó fuera del entrenamiento en la Fase 1. Con el signo de D-02 el índice baja casi en bloque con el tamaño (Pearson -0,879 y Spearman -0,921 con `followers`); con el signo opuesto sube con él. Los temas tienen una relación mucho más débil y despareja: perros es la única que pasa de 0,4 en valor absoluto (+0,480 con el signo de D-02; su coeficiente en `w`, +0,1290, es también el mayor de los tres temas del entrenamiento), fútbol y maquillaje rondan 0,23 de Pearson y arte es prácticamente nula.
+**Con qué se correlaciona.** Las correlaciones son entre el índice (con cada signo) y los valores crudos de `datos/creadores.csv`: `followers` y los cuatro porcentajes de tema, `topic_art_pct` incluido aunque quedó fuera del entrenamiento en la Fase 1. Con el signo de D-02 el índice baja casi en bloque con el tamaño (Pearson -0,879 con `followers`); con el signo opuesto sube con él. Los temas tienen una relación mucho más débil y despareja: perros es la única que pasa de 0,4 en valor absoluto (+0,480 con el signo de D-02; su coeficiente en `w`, +0,1290, es también el mayor de los tres temas del entrenamiento), fútbol y maquillaje rondan 0,23 de Pearson y arte es prácticamente nula.
 
-| Variable cruda | Pearson (D-02) | Spearman (D-02) | Pearson (signo opuesto) | Spearman (signo opuesto) |
-|---|---|---|---|---|
-| followers | -0,879 | -0,921 | +0,879 | +0,921 |
-| topic_football_pct | -0,239 | -0,229 | +0,239 | +0,229 |
-| topic_makeup_pct | -0,234 | -0,122 | +0,234 | +0,122 |
-| topic_dogs_pct | +0,480 | +0,483 | -0,480 | -0,483 |
-| topic_art_pct | -0,029 | +0,022 | +0,029 | -0,022 |
+| Variable cruda | Pearson (D-02) | Pearson (signo opuesto) |
+|---|---|---|
+| followers | -0,879 | +0,879 |
+| topic_football_pct | -0,239 | +0,239 |
+| topic_makeup_pct | -0,234 | +0,234 |
+| topic_dogs_pct | +0,480 | -0,480 |
+| topic_art_pct | -0,029 | +0,029 |
 
 **Los diez primeros según el índice.** Hay dos maneras de preguntar si el top 10 del índice coincide con "los top 10 de cada tema dominante", y se muestran las dos con ambos signos. La primera es el solapamiento del top 10 del índice con el top 10 de cada porcentaje de tema crudo (los empates de la frontera se resuelven por orden de fila). La segunda es la composición del top 10 del índice: cuántos de sus diez creadores tienen cada tema como dominante. Con el signo de D-02, siete de los diez primeros son de perros y ninguno es de arte; con el opuesto, cinco son de fútbol, tres de maquillaje, y de perros solo uno. El índice favorece un tema en cada extremo, y el arte queda casi afuera en ambos.
 
@@ -107,7 +106,7 @@ El índice de Oja de un creador es la proyección de su vector z sobre `w`; el s
 - Máximo con el signo de D-02: INF031 (@mundoanimal.ar), tema dominante perros, 17062 followers, índice +6,70.
 - Máximo con el signo opuesto: INF045 (@futbolsinvueltas), tema dominante fútbol, 493194 followers, índice +6,26.
 
-**Conclusión.** Elegir automáticamente al creador con el valor más alto del índice no es correcto para cualquier campaña, por tres razones que salen de las tablas de arriba. Primero, "el máximo" depende de una convención: la de D-02 fija el signo para que `w` sea reproducible (sección 1), y dar vuelta el signo da el creador del extremo opuesto; el margen que la sostiene es de apenas 0,00275 (sección 1), así que con otros datos la convención podría elegir la otra variable y también invertir el índice. Segundo, ninguno de los dos máximos es neutral: bajo D-02 sale un creador de perros de 17 mil followers, y bajo el signo opuesto uno de fútbol de casi 500 mil, y en el top 10 de cada signo un tema domina y arte casi no aparece. Tercero, el índice es en lo esencial una forma de ordenar por tamaño (|Spearman| de 0,921 con `followers`) y no sabe cuál es el tema de la campaña ni qué se busca con ella: ni alcance masivo, ni descubrimiento, ni costo por mil, ni profundidad. Una campaña debe entonces filtrar primero por su tema y ordenar por su propio objetivo, que es la regla de la sección 4; el índice de Oja queda como descripción de cada lista y como desempate de empates exactos, sin decidir quién entra.
+**Conclusión.** Elegir automáticamente al creador con el valor más alto del índice no es correcto para cualquier campaña, por tres razones que salen de las tablas de arriba. Primero, "el máximo" depende de una convención: la de D-02 fija el signo para que `w` sea reproducible (sección 1), y dar vuelta el signo da el creador del extremo opuesto; el margen que la sostiene es de apenas 0,00275 (sección 1), así que con otros datos la convención podría elegir la otra variable y también invertir el índice. Segundo, ninguno de los dos máximos es neutral: bajo D-02 sale un creador de perros de 17 mil followers, y bajo el signo opuesto uno de fútbol de casi 500 mil, y en el top 10 de cada signo un tema domina y arte casi no aparece. Tercero, el índice es en lo esencial una forma de ordenar por tamaño (|Pearson| de 0,879 con `followers`) y no sabe cuál es el tema de la campaña ni qué se busca con ella: ni alcance masivo, ni descubrimiento, ni costo por mil, ni profundidad. Una campaña debe entonces filtrar primero por su tema y ordenar por su propio objetivo, que es la regla de la sección 4; el índice de Oja queda como descripción de cada lista y como desempate de empates exactos, sin decidir quién entra.
 
 ## 4. Regla de selección por campaña (fijada antes de calcular las listas)
 
@@ -265,7 +264,7 @@ Las dos líneas base usan k = 5 igual que las listas propias (D-16): la global e
 - **Costo por mil argentinos.** La línea base global es la más barata por mil en cinco de las seis comparaciones (USD 25,71); solo en perros la lista propia la supera (USD 17,94). Contra la línea base dentro del tema, la lista propia es más barata en cuatro (alcance, perros, maquillaje y arte) y más cara en dos (descubrimiento, USD 42,35 contra 41,01, y profundidad, USD 47,35 contra 41,01).
 - **Métrica objetivo.** En cada objetivo la lista propia supera a las dos líneas base en la media de su criterio (en perros, con el valor más bajo, porque el costo por mil se ordena de menor a mayor), salvo alcance masivo contra la línea base global, que alcanza más porque sus cinco creadores son los más grandes de los 50 (media de alcance argentino de 176272 contra 109038).
 
-**Ventajas de elegir solo por followers.** Es simple (ordenar una columna), se supone estable de un mes al otro porque el número de seguidores cambia despacio (los datos son de un solo corte y esto no se puede comprobar con ellos), no hay un modelo que mantener ni una regla que recalibrar, y está correlacionado con el alcance: la línea base global tiene el mayor alcance argentino total de la tabla (881361) y, frente a las listas propias, el menor costo por mil en cinco de las seis. La evidencia de la sección 3 muestra cuánto ya recoge `followers`: el índice de Oja, que es la proyección sobre PC1, la dirección de mayor varianza de las 26 variables (sección 2), se ordena casi como el tamaño (Spearman de -0,921 con `followers` con el signo de D-02).
+**Ventajas de elegir solo por followers.** Es simple (ordenar una columna), se supone estable de un mes al otro porque el número de seguidores cambia despacio (los datos son de un solo corte y esto no se puede comprobar con ellos), no hay un modelo que mantener ni una regla que recalibrar, y está correlacionado con el alcance: la línea base global tiene el mayor alcance argentino total de la tabla (881361) y, frente a las listas propias, el menor costo por mil en cinco de las seis. La evidencia de la sección 3 muestra cuánto ya recoge `followers`: el índice de Oja, que es la proyección sobre PC1, la dirección de mayor varianza de las 26 variables (sección 2), se ordena casi como el tamaño (Pearson de -0,879 con `followers` con el signo de D-02).
 
 **Desventajas.** La línea base global es la misma para las cuatro campañas e ignora el tema (20,0 %, 20,0 %, 60,0 % y 0,0 % de la lista con el tema de la campaña), e ignora el objetivo: en profundidad su contenido tutorial medio es 13,482 contra 40,764 de la lista propia de fútbol, en descubrimiento su alcance de no seguidores medio es 66,820 contra 79,658, y concentra el presupuesto en los creadores más grandes (USD 22657 por los cinco contra USD 1367 a USD 14803 de las listas propias de fútbol). Dentro del tema, elegir por followers es una línea base razonable si lo que se busca es volumen (en alcance, y en maquillaje por el alcance que consigue), pero queda lejos en profundidad (8,080 de tutorial medio en fútbol contra 40,764) y no mira el costo por mil.
 

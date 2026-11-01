@@ -171,16 +171,16 @@ Corrida de sensibilidad (DATA-05): no es el conjunto auditado. Es la misma PCA s
 
 Sobre las 26 variables comunes (autovectores de 31 columnas restringidos y renormalizados):
 
-| Componente | abs(cos) de los autovectores | Pearson de scores | Spearman de scores |
-|---|---|---|---|
-| PC1 | 0,99998 | −0,9992 | −0,9982 |
-| PC2 | 0,9680 | 0,9217 | 0,8925 |
+| Componente | abs(cos) de los autovectores | Pearson de scores |
+|---|---|---|
+| PC1 | 0,99998 | −0,9992 |
+| PC2 | 0,9680 | 0,9217 |
 
 Qué cambian las 5 dependencias exactas:
 
 - **Autovalores nulos.** La matriz de correlación de 31 columnas tiene rango 26, por eso aparecen exactamente 5 autovalores nulos (el menor vale −3,2e-16, ruido numérico). Esa matriz es singular y no sirve para nada que la invierta.
 - **Los conteos.** El criterio de 80 % no se mueve (6 y 6). La suma de autovalores también cambia (31 en vez de 26), por lo que los porcentajes de varianza no son directamente comparables entre una y otra corrida.
-- **Cuánto se mueven los componentes principales.** PC1 casi no cambia como dirección (abs(cos) 0,99998) ni como orden de los creadores (Spearman en valor absoluto 0,9982). El signo opuesto del Pearson y del Spearman de PC1 no es una diferencia de resultado: en la corrida de 31 columnas el coeficiente de mayor magnitud de PC1 pertenece a otra variable, y la convención de orientación elige el signo contrario. PC2 se mueve más (abs(cos) 0,968, Spearman 0,89): el orden de los creadores en PC2 depende algo del conjunto de variables.
+- **Cuánto se mueven los componentes principales.** PC1 casi no cambia como dirección (abs(cos) 0,99998) ni como proyección de los creadores (|Pearson| de los scores 0,9992). El signo opuesto del Pearson de PC1 no es una diferencia de resultado: en la corrida de 31 columnas el coeficiente de mayor magnitud de PC1 pertenece a otra variable, y la convención de orientación elige el signo contrario. PC2 se mueve más (abs(cos) 0,968, Pearson de los scores 0,92): la proyección de los creadores en PC2 depende algo del conjunto de variables.
 
 El conjunto auditado es el que usan los modelos porque su matriz de correlación es regular (ningún autovalor nulo, el menor es 0,00046 según `decision.json`) y ninguna variable entra repetida: lo que cambia entre los dos conjuntos es el peso de la información duplicada, no la estructura principal de los datos.
 

@@ -154,19 +154,10 @@ def read_prepared(stem: str, prepared_dir: Path = PREPARED_DIR):
     return list(header), z, meta
 
 
-def _ranks(values: np.ndarray) -> np.ndarray:
-    return np.argsort(np.argsort(values)).astype(np.float64)
-
-
 def _pearson(a: np.ndarray, b: np.ndarray) -> float:
     a = a - a.mean()
     b = b - b.mean()
     return float(a @ b / np.sqrt((a @ a) * (b @ b)))
-
-
-def spearman(a: np.ndarray, b: np.ndarray) -> float:
-    """Pearson correlation of the ranks (argsort of argsort; no ties expected)."""
-    return _pearson(_ranks(np.asarray(a, dtype=np.float64)), _ranks(np.asarray(b, dtype=np.float64)))
 
 
 # ----------------------------------------------------------------------------------------------
@@ -439,7 +430,6 @@ def sensitivity(audited: PcaResult, a_scores: np.ndarray, all31: PcaResult, s_sc
         out[f"abs_cos_pc{c + 1}"] = float(abs(audited.eigenvectors[:, c] @ sub))
     for c in (0, 1):
         out[f"pearson_pc{c + 1}"] = _pearson(a_scores[:, c], s_scores[:, c])
-        out[f"spearman_pc{c + 1}"] = spearman(a_scores[:, c], s_scores[:, c])
 
     def summary(dec: dict) -> dict:
         return {key: dec[key] for key in
@@ -467,13 +457,12 @@ def sensitivity_markdown(comp: dict) -> str:
         f"Comparación sobre las {comp['common_variables']} variables comunes "
         "(autovectores de 31 columnas restringidos y renormalizados):",
         "",
-        "| Componente | abs(cos) entre autovectores | Pearson de scores | Spearman de scores |",
-        "|---|---|---|---|",
+        "| Componente | abs(cos) entre autovectores | Pearson de scores |",
+        "|---|---|---|",
     ]
     for c in (1, 2):
         lines.append(
-            f"| PC{c} | {comp[f'abs_cos_pc{c}']:.6f} | {comp[f'pearson_pc{c}']:.6f} | "
-            f"{comp[f'spearman_pc{c}']:.6f} |"
+            f"| PC{c} | {comp[f'abs_cos_pc{c}']:.6f} | {comp[f'pearson_pc{c}']:.6f} |"
         )
     return "\n".join(lines) + "\n"
 

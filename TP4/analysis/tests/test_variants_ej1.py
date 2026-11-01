@@ -87,7 +87,7 @@ def test_oja_vs_pc1_in_both_variants(tmp_path):
     index = pc1 + rng.normal(scale=0.01, size=12)
     topics = [label for _, label in pca.TOPICS]
     labels = [topics[i % 4] for i in range(12)]
-    comparison = {"abs_cos": 0.9999998, "pearson": 0.9999, "spearman": 1.0}
+    comparison = {"abs_cos": 0.9999998, "pearson": 0.9999}
     for _ in plots_style.iter_variants():
         oja.plot_oja_vs_pc1(index, pc1, labels, comparison, tmp_path / "oja_vs_pc1")
     assert (tmp_path / "oja_vs_pc1.svg").stat().st_size > 0

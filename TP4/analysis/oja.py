@@ -3,7 +3,7 @@
 Run from TP4/ with `make oja` (or `.venv/bin/python analysis/oja.py`). It runs analysis/series_oja.json (the
 example config of neuron/, seeds 1 to 10) through the C binary with sweep.py, reads every run as C wrote it,
 and writes under analysis/results/oja/ (not versioned) the comparison of the figure seed with the first
-principal component of `make pca`: abs(cos) between the vectors, Pearson and tie-aware Spearman between the
+principal component of `make pca`: abs(cos) between the vectors and the Pearson correlation between the
 Oja index and the PC1 score, and the overlap of the top 5 and the top 10.
 
 The comparison with PC1 happens here and never in C (D-05): the neuron only learns, orients (D-02) and
@@ -31,7 +31,6 @@ sys.path.insert(0, str(TP_DIR / "scripts"))
 sys.path.insert(0, str(TP_DIR / "analysis"))
 
 import plots_style  # noqa: E402
-import som  # noqa: E402
 import sweep  # noqa: E402
 from creadores import load_creadores  # noqa: E402
 from pca import TOPICS, _pearson, dominant_topics  # noqa: E402
@@ -197,7 +196,6 @@ def compare(w, index, v1, pc1) -> dict:
         "abs_cos": abs_cos(w, v1),
         "cos": _signed_cos(w, v1),
         "pearson": _pearson(index, pc1),
-        "spearman": som.spearman_ties(index, pc1),
     }
     for k in TOP_KS:
         result[f"overlap_at_{k}"] = overlap(top_k(index, k), top_k(pc1, k))
@@ -357,8 +355,7 @@ def plot_oja_vs_pc1(index, pc1, topic_labels, comparison, out_stem) -> None:
     if not slide:  # the slide has its own title
         ax.set_title(f"Índice de Oja contra la proyección sobre PC1 ({len(index)} creadores)", fontsize=11,
                      loc="left")
-    stats = (f"|cos(w, v1)| = {_decimal(comparison['abs_cos'], 7)}\nPearson = {_decimal(comparison['pearson'], 4)}\n"
-             f"Spearman = {_decimal(comparison['spearman'], 4)}")
+    stats = (f"|cos(w, v1)| = {_decimal(comparison['abs_cos'], 7)}\nPearson = {_decimal(comparison['pearson'], 4)}")
     box = {"facecolor": plots_style.SURFACE, "edgecolor": plots_style.GRID, "boxstyle": "round,pad=0.4"}
     if slide:  # square plot on the left; legend and agreement statistics in the free space on its right
         ax.text(1.04, 0.0, stats, transform=ax.transAxes, ha="left", va="bottom",
@@ -467,7 +464,6 @@ def comparison_table(comp: dict) -> list[str]:
         f"| abs(cos(w, v1)) | {_decimal(comp['abs_cos'], 6)} |",
         f"| cos(w, v1) con la convención de signo | {_decimal(comp['cos'], 6)} |",
         f"| Pearson índice vs score de PC1 | {_decimal(comp['pearson'], 4)} |",
-        f"| Spearman índice vs score de PC1 | {_decimal(comp['spearman'], 4)} |",
         f"| overlap@5 | {comp['overlap_at_5']} de 5 |",
         f"| overlap@10 | {comp['overlap_at_10']} de 10 |",
         f"| mayor abs(índice − score PC1) | {_scientific(comp['max_abs_diff'])} |",
@@ -534,7 +530,7 @@ EVIDENCE_TARGETS = ("followers", *(name for name, _ in TOPICS))
 SIGNS = (1, -1)  # +1 is the D-02 convention, -1 the opposite one
 SIGN_LABELS = {1: "de D-02", -1: "opuesto"}
 EVIDENCE_WEIGHT_COLUMNS = ["variable", "w"]
-EVIDENCE_CORR_COLUMNS = ["target", "sign", "pearson", "spearman"]
+EVIDENCE_CORR_COLUMNS = ["target", "sign", "pearson"]
 EVIDENCE_TOP_COLUMNS = ["sign", "topic", "overlap_top10_by_share", "dominant_in_index_top10"]
 
 
@@ -559,8 +555,7 @@ def evidence(w, features, index, data, ids) -> dict:
     for target in EVIDENCE_TARGETS:
         for sign in SIGNS:
             signed = sign * index
-            correlations.append({"target": target, "sign": sign, "pearson": _pearson(signed, raw[target]),
-                                 "spearman": som.spearman_ties(signed, raw[target])})
+            correlations.append({"target": target, "sign": sign, "pearson": _pearson(signed, raw[target])})
     for sign in SIGNS:
         signed = sign * index
         top_index = top_k(signed, EVIDENCE_TOP)
@@ -581,12 +576,11 @@ def evidence_lines(ev: dict) -> list[str]:
     lines = ["| Variable | w (convención D-02) |", "|---|---|"]
     lines += [f"| {row['variable']} | {_signed(row['w'], 4)} |" for row in ev["weights"]]
     corr = {(row["target"], row["sign"]): row for row in ev["correlations"]}
-    lines += ["| Variable cruda | Pearson (D-02) | Spearman (D-02) | Pearson (signo opuesto) | "
-              "Spearman (signo opuesto) |",
-              "|---|---|---|---|---|"]
+    lines += ["| Variable cruda | Pearson (D-02) | Pearson (signo opuesto) |",
+              "|---|---|---|"]
     for target in EVIDENCE_TARGETS:
-        cells = [_signed(corr[(target, sign)][kind], 3) for sign in SIGNS for kind in ("pearson", "spearman")]
-        lines.append(f"| {target} | {cells[0]} | {cells[1]} | {cells[2]} | {cells[3]} |")
+        cells = [_signed(corr[(target, sign)]["pearson"], 3) for sign in SIGNS]
+        lines.append(f"| {target} | {cells[0]} | {cells[1]} |")
     top = {(row["sign"], row["topic"]): row for row in ev["top10"]}
     lines += ["| Tema | Top 10 por porcentaje en común con el top 10 del índice (D-02) | "
               "Top 10 por porcentaje en común con el top 10 del índice (signo opuesto) | "
@@ -675,7 +669,7 @@ def main(argv: list[str] | None = None) -> int:
     _write_table(out / "evidence_weights.csv", EVIDENCE_WEIGHT_COLUMNS,
                  [[row["variable"], _fmt(row["w"])] for row in ev["weights"]])
     _write_table(out / "evidence_correlations.csv", EVIDENCE_CORR_COLUMNS,
-                 [[row["target"], f"{row['sign']:+d}", _fmt(row["pearson"]), _fmt(row["spearman"])]
+                 [[row["target"], f"{row['sign']:+d}", _fmt(row["pearson"])]
                   for row in ev["correlations"]])
     _write_table(out / "evidence_top10.csv", EVIDENCE_TOP_COLUMNS,
                  [[f"{row['sign']:+d}", row["topic"], row["overlap_top10_by_share"], row["dominant_in_index_top10"]]
