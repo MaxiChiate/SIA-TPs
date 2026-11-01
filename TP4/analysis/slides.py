@@ -198,7 +198,7 @@ OUTLINE: tuple[Slide, ...] = (
             ("Hiperparámetro", "Valor", "Por qué"),
             (
                 ("Grilla", "{som.chosen_k} × {som.chosen_k}",
-                 "La eligió la regla fijada de antemano: gana el menor QE-LOO entre las grillas que cumplen la ocupación"),
+                 "La eligió la regla fijada de antemano: es la más grande entre las grillas que cumplen la ocupación"),
                 ("Vecindad", "{som.neighborhood}", "Es la del curso; la gaussiana se corrió solo como comparación"),
                 ("Radio inicial R0", "{som.base_radius0}",
                  "Baseline fijado de antemano (la mitad de k); con otros valores la elección no cambia"),
@@ -223,31 +223,30 @@ OUTLINE: tuple[Slide, ...] = (
     Slide(
         "som-k", 1, "k = {som.chosen_k} es la grilla más grande que cumple los dos límites de ocupación",
         None, ("Q1.3",), (), None, _key("som/figures/effect_k.svg"),
-        "Cada punto es la media de 10 entrenamientos con distinta seed y las barras son el desvío entre ellas; la "
-        "distancia es qué tan lejos queda un creador de su neurona cuando el mapa se entrenó sin ese creador (el "
-        "QE-LOO), y cuanto menor es, más cerca de su neurona queda el creador, así que mide si el mapa generaliza y no solo "
-        "si memoriza. "
-        "La distancia baja siempre al agrandar la grilla, de {som.k_first_dist} con k = {som.k_first} a "
-        "{som.k_last_dist} con k = {som.k_last}, pero las neuronas quedan casi individuales. "
+        "Cada punto es la media de 10 entrenamientos con distinta seed y las barras son el desvío entre ellas; el error "
+        "topográfico es la fracción de creadores cuya neurona más cercana y la segunda más cercana no son vecinas en "
+        "la grilla, así que mide si el mapa conserva la vecindad, que es justamente lo que busca Kohonen. "
+        "Con k = {som.chosen_k} el error topográfico es {som.chosen_te}, sobre el límite de {som.te_max}, y ninguna "
+        "grilla cumplió a la vez los tres límites: las que cumplen el error topográfico tienen demasiadas neuronas "
+        "vacías, así que la regla quitó ese límite como decía de antemano. "
         "Con k = {som.chosen_k} hay {som.chosen_empty} de neuronas vacías (límite {som.empty_max}, la línea punteada) y "
-        "{som.chosen_creators} creadores por neurona ocupada (mínimo {som.creators_min}, también punteada), y con k = {som.k_next} ya "
-        "son {som.k_next_empty} y {som.k_next_creators}, así que la regla fijada de antemano elige k = "
-        "{som.chosen_k}, la de menor distancia entre las que pasan los dos límites. "
-        "Había un tercer filtro, el error topográfico, que ninguna grilla cumplió, así que la regla lo quitó como "
-        "decía de antemano.",
+        "{som.chosen_creators} creadores por neurona ocupada (mínimo {som.creators_min}, también punteada), y con "
+        "k = {som.k_next} ya son {som.k_next_empty} y {som.k_next_creators}. "
+        "Entre las grillas que cumplen los límites de ocupación, k = {som.chosen_k} es la más grande, y esa es la que "
+        "usamos.",
     ),
     Slide(
         "som-eta0", 1, "Con η0 entre {som.eta_lo} y {som.eta_hi} el mapa casi no cambia",
         None, ("Q1.3",), (), None, _key("som/figures/effect_eta0.svg"),
         "Probamos η0 = {som.eta_values}, con k = {som.chosen_k} y el resto igual; η0 es cuánto se mueve la neurona "
         "ganadora hacia el creador en los primeros pasos y después decae hasta {som.base_eta_final}. "
-        "La distancia queda entre {som.eta_dist_min} y {som.eta_dist_max}, las neuronas vacías entre "
+        "El error topográfico queda entre {som.eta_te_min} y {som.eta_te_max}, las neuronas vacías entre "
         "{som.eta_empty_min} y {som.eta_empty_max} y los creadores por neurona entre {som.eta_creators_min} y "
-        "{som.eta_creators_max}, siempre dentro de los límites. "
+        "{som.eta_creators_max}, con la ocupación siempre dentro de los límites. "
         "Los ejes son los mismos que en la slide de k para que se vea que, al lado de cambiar la grilla, cambiar "
         "η0 mueve muy poco. "
-        "Usamos η0 = {som.base_eta0}, un valor medio fijado de antemano, y ninguna de las otras tres da una "
-        "distancia menor.",
+        "Usamos η0 = {som.base_eta0}, un valor medio fijado de antemano, y con los otros valores la elección de k "
+        "no cambia.",
     ),
     Slide(
         "som-r0", 1, "Con R0 entre {som.r0_lo} y {som.r0_hi} el mapa casi no cambia",
@@ -255,12 +254,12 @@ OUTLINE: tuple[Slide, ...] = (
         "Probamos R0 = {som.r0_values}, con k = {som.chosen_k} y el resto igual; R0 es cuántas neuronas vecinas se "
         "mueven junto con la ganadora al principio del entrenamiento y después el radio baja hasta "
         "{som.base_radius_final}. "
-        "La distancia queda entre {som.r0_dist_min} y {som.r0_dist_max}, las neuronas vacías entre "
+        "El error topográfico queda entre {som.r0_te_min} y {som.r0_te_max}, las neuronas vacías entre "
         "{som.r0_empty_min} y {som.r0_empty_max} y los creadores por neurona entre {som.r0_creators_min} y "
-        "{som.r0_creators_max}, siempre dentro de los límites. "
+        "{som.r0_creators_max}, con la ocupación siempre dentro de los límites. "
         "Los ejes son los mismos que en las dos slides anteriores, así que se compara a la misma escala. "
-        "Usamos R0 = {som.base_radius0}, la mitad de k, fijado de antemano, y con los otros valores la elección no "
-        "cambia.",
+        "Usamos R0 = {som.base_radius0}, la mitad de k, fijado de antemano, y con los otros valores la elección de "
+        "k no cambia.",
     ),
     Slide(
         "som-robust", 1,

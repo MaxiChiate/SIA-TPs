@@ -28,6 +28,7 @@ Enunciado: `docs/Archivo SIATP 42026.pdf`.
   `eigenvalues_variance`), la **correlación de Spearman** (en el SOM se usa Pearson) y el **número de condición**. El 80 % de varianza
   acumulada y el umbral |r| ≥ 0,8 se presentan como **convenciones del equipo**, no como reglas del curso. Antes de proponer un método o
   una medida nueva, comprobar que esté en `docs/`.
+- **Qué no se muestra del SOM (2026-11-02)**: el **QE**, el **QE-LOO** y la **estabilidad entre seeds** no se vieron en clase y no van en las slides ni en los MD (informe y fragmentos). Siguen en el código, que no se toca por pedido del usuario, y en el texto de la regla pre-registrada (entre `<!-- regla:inicio -->` y `<!-- regla:fin -->` de `deliverables/02-kohonen.md`), que no se edita: su sha256 lo comprueban los pasos del SOM. El **error topográfico (TE)** se queda, con su justificación en las notas de la slide `som-k`: mide si el mapa conserva la vecindad, que es lo que busca Kohonen. Tampoco están en `docs/` la correlación tipo Mantel, las permutaciones con p-valor, la pseudo-inversa ni el lookup de Hamming; decidir con el usuario antes de sacarlos.
 - **Sin GSD**: no correr comandos `/gsd-*`; se edita el repo directo. Los archivos de `.planning/` son historial y no se actualizan.
 - **Commits locales sí, push solo si lo pide**. Reglas pre-registradas (sha256): se re-fijan con un commit antes de volver a correr.
 - Pedir confirmación antes de publicar el informe (está compartido por link); el deck es privado.
@@ -64,11 +65,11 @@ analysis/                        # README.md explica las series y los drivers
   hopfield.py, hopfield_letters.py, hopfield_select.py, hopfield_figures.py     # Hopfield sobre las letras
   hopfield_qr.py, hopfield_qr_limits.py, hopfield_qr_select.py, hopfield_qr_figures.py   # Hopfield sobre los 5 QR
   plots_style.py                 # estilo común y variantes de figura (informe y slide)
-  deliverables_manifest.py       # fuente única: 34 figuras, 25 preguntas del enunciado, fragmentos
+  deliverables_manifest.py       # fuente única: 37 figuras, 25 preguntas del enunciado, fragmentos
   facts.py                       # los números del texto salen de los JSON/CSV; `facts.py check` fija 68 frases de los fragmentos
   informe.py                     # arma analysis/results/informe/informe.html
   corr_prune.py                  # sensibilidad de la PCA a podar por umbral de |r| (tabla de la slide pca-prune; no rehace SOM ni Oja)
-  slides.py                      # arma analysis/results/slides/ (28 slides, PNG y guion)
+  slides.py                      # arma analysis/results/slides/ (30 slides, PNG y guion)
   tests/                         # pytest; incluye test_repro_docs.py, que cuida README.md, CLAUDE.md y DECISIONS.md
 deliverables/                    # un fragmento por fase (01 a 05): lo que se entrega por escrito, congelado por guardas sha256
 DECISIONS.md                     # decisiones para la defensa y fuente del glosario del informe
@@ -120,7 +121,7 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Entrega
 
-- **Slides**: 28 slides armadas por `make deliverables` en `analysis/results/slides/` (el repo no tiene la slide de método; el deck empieza con portada y EDA). El Artifact publicado tiene además slides que armó la persona dueña a mano o yo directo en el Artifact y que **no están en el repo**: `289f728e` ("Ejercicio 1"), `0732067f` (EDA: z-score, 5 triviales, umbral), `bc794b98` ("Kohonen"), `oja-intro` ("Regla de Oja") y `pca-eigenvalue-table` (tabla de los 17 autovalores). El orden del deck publicado manda: `project/deck.json` del Artifact no se pisa con el que arma el repo.
+- **Slides**: 30 slides armadas por `make deliverables` en `analysis/results/slides/` (el repo no tiene la slide de método; el deck empieza con portada y EDA). El Artifact publicado tiene además slides que armó la persona dueña a mano o yo directo en el Artifact y que **no están en el repo**: `289f728e` ("Ejercicio 1"), `0732067f` (EDA: z-score, 5 triviales, umbral), `bc794b98` ("Kohonen"), `oja-intro` ("Regla de Oja") y `pca-eigenvalue-table` (tabla de los 17 autovalores). El orden del deck publicado manda: `project/deck.json` del Artifact no se pisa con el que arma el repo.
 - **Cómo se publica el deck** (a mano, con la herramienta Artifact): (1) subir como asset los PNG que cambiaron (`analysis/results/slides/assets/`) y anotar sus `/_blob/…`; (2) armar `slides.py --out <carpeta> --asset-map <json>` con esas URLs; (3) **leer del Artifact** `project/deck.json` y las slides que se van a pisar (la persona dueña edita desde la página y las versiones cambian solas); (4) publicar **solo las slides que cambiaron** (y `deck.json` solo si cambia el orden, editando la copia leída). Nunca mandar el `deck.json` que arma el repo.
 - **Informe**: `analysis/results/informe/informe.html`, publicado como Artifact HTML (D-15).
 - Slides: https://claude.ai/artifact/CxnuCZKwF55r2tUMPWXBSN (las URLs `9YjSx…` y `32SjY…` de antes ya no existen; el 2026-10-28 se reemplazó el contenido de este deck por las slides del repo)

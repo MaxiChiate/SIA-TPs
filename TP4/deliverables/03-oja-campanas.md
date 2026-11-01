@@ -307,7 +307,7 @@ Cuatro preguntas del enunciado (qué pasa con una campaña nueva, con creadores 
 
 - El creador sintético (SYN001, @sintetico_demo) se arma con las medianas de las 31 columnas de datos/creadores.csv; no es un creador real y no está en ninguna lista.
 - Su neurona ganadora en el mapa k5-step (seed 10) es (fila 2, col 2) a distancia 1,093 de su vector.
-- Distancias de entrenamiento al BMU: QE media 1,933, máximo 2,969, percentil 95 2,631; el 4,0 % de esas distancias es menor o igual que la del creador sintético.
+- Distancias de entrenamiento al BMU: distancia media 1,933, máximo 2,969, percentil 95 2,631; el 4,0 % de esas distancias es menor o igual que la del creador sintético.
 - Veredicto de deriva: no hace falta re-entrenar (la distancia del creador sintético no supera el máximo de entrenamiento).
 - El creador sintético tiene índice de Oja 0,249 con el w guardado y ocuparía el lugar 24 entre los 50 creadores (1 = índice más alto, 51 = más bajo que los 50).
 

@@ -19,10 +19,9 @@ El modelo es un mapa autoorganizado de Kohonen con grilla rectangular de k × k 
 
 **Salidas de cada corrida.**
 
-- **QE** (error de cuantización): distancia euclídea media de cada creador a su neurona ganadora (BMU), en unidades de score (las de las componentes principales).
-- **TE** (error topográfico): fracción de creadores cuya primera y segunda BMU no son vecinas de 4 (D-04). Una diagonal cuenta como error, por lo que en una grilla de 2 × 2 el TE puede ser mayor que 0.
+- **TE** (error topográfico): fracción de creadores cuya primera y segunda neurona más cercanas (BMU) no son vecinas de 4 (D-04). Mide si el mapa conserva la vecindad, que es lo que busca Kohonen: dos neuronas parecidas deberían quedar pegadas en la grilla. Una diagonal cuenta como error, por lo que en una grilla de 2 × 2 el TE puede ser mayor que 0.
 - **Ocupación por neurona** (`occupancy.csv`): cantidad de creadores que caen en cada neurona, con fila y columna. De ahí salen las neuronas ocupadas, la fracción de neuronas vacías, los creadores por neurona ocupada y las neuronas con un solo creador.
-- **Traza por época** (`trace.csv`): η, R, QE y TE al final de cada época, para ver si el entrenamiento se aplanó.
+- **Traza por época** (`trace.csv`): η, R y TE al final de cada época, para ver si el entrenamiento se aplanó.
 - Además, `prototypes.csv` (pesos de cada neurona), `assignments.csv` (BMU y segunda BMU de cada creador, con su distancia) y `metrics.json`.
 
 ## 2. Regla de elección de grilla (fijada antes de mirar resultados)
@@ -53,67 +52,64 @@ Esta sección fija la regla; los resultados se agregan después y no figuran ac�
 
 El 2026-11-01 el mapa se volvió a entrenar sobre los scores de las 7 primeras componentes de la PCA de las 17 variables que quedan con |r| < 0,8 (sección 6.2 de `deliverables/01-datos-pca.md`), que juntan el 83,4 % de la varianza, en lugar de las 26 variables con z-score. La regla de la sección 2 no cambió: el texto entre los marcadores y `analysis/som_select.py` son los mismos, con los mismos umbrales, filtros, desempate y escaleras de la etapa 2. Lo único que cambia es el dato de entrada, que quedó escrito en el archivo de la serie (`analysis/series_som_stage1.json`, clave `input`) y en el config base, y se commiteó antes de correr las etapas.
 
-Un segundo cambio de ese día: la estabilidad entre seeds y los contrastes con PC1 y PC2 de la sección 2 se calculaban con una medida de correlación que no se vio en clase, y se pasaron a la correlación de Pearson. El texto de la regla cambió solo en ese punto (la definición del estadístico), se commiteó antes de volver a correr las etapas, y la elección de la grilla (los filtros y el QE-LOO) no depende de ese estadístico.
+Un segundo cambio de ese día: los contrastes con PC1 y PC2 de la sección 2 se calculaban con una medida de correlación que no se vio en clase, y se pasaron a la correlación de Pearson. El texto de la regla cambió solo en ese punto (la definición del estadístico) y se commiteó antes de volver a correr las etapas.
 
-Los scores no se reescalan: la distancia entre dos creadores en esas 7 columnas es la del espacio de las 17 variables proyectado sobre las 7 componentes, de modo que PC1 pesa más que PC7 en proporción a su varianza (sus autovalores). La advertencia del QE-LOO de la sección 2 se agranda: tanto el z-score como la PCA y el umbral de correlación se ajustaron con los 50 creadores, el excluido incluido, y cada fold del leave-one-out no los reajusta. Es una fuga leve, declarada y no corregida, y los QE-LOO nuevos no son comparables con los del mapa de 26 variables (la unidad cambió).
+Los scores no se reescalan: la distancia entre dos creadores en esas 7 columnas es la del espacio de las 17 variables proyectado sobre las 7 componentes, de modo que PC1 pesa más que PC7 en proporción a su varianza (sus autovalores).
 
 
 
 ## 3. Etapa 1: resultados y grilla elegida
 
-Las cifras salen de `analysis/results/som/series_som_stage1/` (`aggregate.csv`, `selection.json`), que escribe `make som-stage1`. La regla de la sección 2 se aplicó sin cambios sobre los scores de las 7 componentes (sección 2.1): el comando se negaría a correr con el texto de la regla, `analysis/som_select.py` o la serie de la etapa 1 sin commitear, y `selection.json` guarda el commit que agregó la regla y el sha256 de su texto y de su código. Son 14 configuraciones × 10 seeds = 140 corridas y 7 000 entrenamientos de leave-one-out (50 por corrida); ninguno falló. Todas las cifras son media ± desvío (ddof 1) sobre las 10 seeds, nunca una seed sola (D-08); la estabilidad es un promedio sobre pares de seeds. QE y QE-LOO están en unidades de score (las de las componentes principales), así que no se comparan con los del mapa de las 26 variables.
+Las cifras salen de `analysis/results/som/series_som_stage1/` (`aggregate.csv`, `selection.json`), que escribe `make som-stage1`. La regla de la sección 2 se aplicó sin cambios sobre los scores de las 7 componentes (sección 2.1): el comando se negaría a correr con el texto de la regla, `analysis/som_select.py` o la serie de la etapa 1 sin commitear, y `selection.json` guarda el commit que agregó la regla y el sha256 de su texto y de su código. Son 14 configuraciones × 10 seeds = 140 corridas; ninguna falló. Todas las cifras son media ± desvío (ddof 1) sobre las 10 seeds, nunca una seed sola (D-08).
 
 **Escalón (camino de la elección).** La columna "filtros" dice cuáles de los tres filtros de la sección 2 (TE ≤ 0,05, vacías ≤ 20 %, creadores por neurona ocupada ≥ 2) pasa la media de cada k.
 
-| k | QE | QE-LOO | TE | % de neuronas vacías | creadores por neurona ocupada | estabilidad | filtros |
-|---|---|---|---|---|---|---|---|
-| 2 | 2,904 ± 0,002 | 3,012 ± 0,003 | 0,180 ± 0,000 | 0,0 ± 0,0 | 12,50 ± 0,00 | 0,983 | falla TE |
-| 3 | 2,496 ± 0,006 | 2,709 ± 0,015 | 0,164 ± 0,013 | 0,0 ± 0,0 | 5,56 ± 0,00 | 0,927 | falla TE |
-| 4 | 2,146 ± 0,012 | 2,483 ± 0,020 | 0,070 ± 0,038 | 0,0 ± 0,0 | 3,12 ± 0,00 | 0,745 | falla TE |
-| 5 | 1,904 ± 0,031 | 2,341 ± 0,028 | 0,064 ± 0,040 | 7,2 ± 1,7 | 2,16 ± 0,04 | 0,655 | falla TE |
-| 6 | 1,679 ± 0,030 | 2,294 ± 0,028 | 0,026 ± 0,030 | 21,7 ± 3,9 | 1,78 ± 0,09 | 0,708 | falla vacías y creadores |
-| 7 | 1,448 ± 0,051 | 2,213 ± 0,030 | 0,050 ± 0,027 | 33,9 ± 6,5 | 1,56 ± 0,15 | 0,584 | falla vacías y creadores |
-| 8 | 1,252 ± 0,053 | 2,162 ± 0,027 | 0,010 ± 0,011 | 43,8 ± 5,0 | 1,40 ± 0,12 | 0,522 | falla vacías y creadores |
+| k | TE | % de neuronas vacías | creadores por neurona ocupada | filtros |
+| --- | --- | --- | --- | --- |
+| 2 | 0,180 ± 0,000 | 0,0 ± 0,0 | 12,50 ± 0,00 | falla TE |
+| 3 | 0,164 ± 0,013 | 0,0 ± 0,0 | 5,56 ± 0,00 | falla TE |
+| 4 | 0,070 ± 0,038 | 0,0 ± 0,0 | 3,12 ± 0,00 | falla TE |
+| 5 | 0,064 ± 0,040 | 7,2 ± 1,7 | 2,16 ± 0,04 | falla TE |
+| 6 | 0,026 ± 0,030 | 21,7 ± 3,9 | 1,78 ± 0,09 | falla vacías y creadores |
+| 7 | 0,050 ± 0,027 | 33,9 ± 6,5 | 1,56 ± 0,15 | falla vacías y creadores |
+| 8 | 0,010 ± 0,011 | 43,8 ± 5,0 | 1,40 ± 0,12 | falla vacías y creadores |
 
 **Gaussiana (comparación, no entra en la elección, D-11).** Mismo R0 = σ0, mismo piso y mismas seeds. La columna "filtros" es solo informativa: la regla no la usa.
 
-| k | QE | QE-LOO | TE | % de neuronas vacías | creadores por neurona ocupada | estabilidad | filtros |
-|---|---|---|---|---|---|---|---|
-| 2 | 3,092 ± 0,001 | 3,190 ± 0,001 | 0,110 ± 0,011 | 0,0 ± 0,0 | 12,50 ± 0,00 | 1,000 | falla TE |
-| 3 | 2,608 ± 0,002 | 2,811 ± 0,004 | 0,106 ± 0,010 | 5,6 ± 5,9 | 5,90 ± 0,37 | 0,931 | falla TE |
-| 4 | 2,339 ± 0,012 | 2,609 ± 0,004 | 0,084 ± 0,013 | 4,4 ± 3,0 | 3,27 ± 0,10 | 0,921 | falla TE |
-| 5 | 2,095 ± 0,012 | 2,469 ± 0,012 | 0,072 ± 0,029 | 15,2 ± 4,1 | 2,36 ± 0,11 | 0,832 | falla TE |
-| 6 | 1,921 ± 0,010 | 2,368 ± 0,013 | 0,022 ± 0,022 | 30,3 ± 2,0 | 1,99 ± 0,06 | 0,965 | falla vacías y creadores |
-| 7 | 1,784 ± 0,007 | 2,287 ± 0,019 | 0,040 ± 0,028 | 39,2 ± 3,6 | 1,68 ± 0,10 | 0,849 | falla vacías y creadores |
-| 8 | 1,672 ± 0,014 | 2,250 ± 0,016 | 0,024 ± 0,013 | 48,9 ± 2,4 | 1,53 ± 0,08 | 0,882 | falla vacías y creadores |
+| k | TE | % de neuronas vacías | creadores por neurona ocupada | filtros |
+| --- | --- | --- | --- | --- |
+| 2 | 0,110 ± 0,011 | 0,0 ± 0,0 | 12,50 ± 0,00 | falla TE |
+| 3 | 0,106 ± 0,010 | 5,6 ± 5,9 | 5,90 ± 0,37 | falla TE |
+| 4 | 0,084 ± 0,013 | 4,4 ± 3,0 | 3,27 ± 0,10 | falla TE |
+| 5 | 0,072 ± 0,029 | 15,2 ± 4,1 | 2,36 ± 0,11 | falla TE |
+| 6 | 0,022 ± 0,022 | 30,3 ± 2,0 | 1,99 ± 0,06 | falla vacías y creadores |
+| 7 | 0,040 ± 0,028 | 39,2 ± 3,6 | 1,68 ± 0,10 | falla vacías y creadores |
+| 8 | 0,024 ± 0,013 | 48,9 ± 2,4 | 1,53 ± 0,08 | falla vacías y creadores |
 
-**Cómo siguió la regla.** Con el escalón, **ninguna k pasa los tres filtros**. k = 2, 3, 4 y 5 ocupan bien sus neuronas (como máximo 7,2 % de vacías y al menos 2,16 creadores por neurona ocupada) pero quedan fuera por TE (0,180, 0,164, 0,070 y 0,064, contra el máximo de 0,05); k = 6, 7 y 8 pasan TE pero quedan fuera por la ocupación (21,7 %, 33,9 % y 43,8 % de neuronas vacías, y 1,78, 1,56 y 1,40 creadores por neurona ocupada). Como no sobrevivió ninguna, se aplicó el paso de D-14: la regla quita solo el filtro de TE, aplica el resto sin cambios y el informe dice que **ninguna grilla cumplió TE ≤ 0,05**. Sin el filtro de TE sobreviven k = 2, 3, 4 y 5 por ocupación, y entre ellas gana la de menor QE-LOO medio, k = 5 (2,341 contra 2,483 de k = 4). La banda de desempate es la ganadora más toda k sobreviviente a menos de un desvío del QE-LOO por seed de la ganadora (0,028): k = 4 está a 0,142, más de cinco desvíos, así que la banda tiene solo a k = 5 y decide el QE-LOO, sin pasar por la estabilidad. La estabilidad de k = 5 (0,655) es menor que la de k = 4 (0,745), la de k = 3 (0,927) y la de k = 2 (0,983); la regla fijada antes de mirar no la usa fuera de la banda, y se informa como una limitación de la elegida. Otra limitación: k = 5 no cumple el TE (0,064, con 6 de las 10 seeds por encima de 0,05) y pasa por poco el mínimo de creadores por neurona ocupada (2,16 contra 2). La etapa 2 mide cuánto de esto depende del schedule.
+**Cómo siguió la regla.** Con el escalón, **ninguna k pasa los tres filtros**. k = 2, 3, 4 y 5 ocupan bien sus neuronas (como máximo 7,2 % de vacías y al menos 2,16 creadores por neurona ocupada) pero quedan fuera por TE (0,180, 0,164, 0,070 y 0,064, contra el máximo de 0,05); k = 6, 7 y 8 pasan TE pero quedan fuera por la ocupación (21,7 %, 33,9 % y 43,8 % de neuronas vacías, y 1,78, 1,56 y 1,40 creadores por neurona ocupada). Como no sobrevivió ninguna, se aplicó el paso de D-14: la regla quita solo el filtro de TE, aplica el resto sin cambios y el informe dice que **ninguna grilla cumplió TE ≤ 0,05**. Sin el filtro de TE sobreviven k = 2, 3, 4 y 5 por ocupación, y entre ellas la regla elige la más grande, k = 5. Una limitación: k = 5 no cumple el TE (0,064, con 6 de las 10 seeds por encima de 0,05) y pasa por poco el mínimo de creadores por neurona ocupada (2,16 contra 2). La etapa 2 mide cuánto de esto depende del schedule.
 
 - Grilla elegida: k = 5
 - Commit de la regla: ea7a0b11202d
-- Por QE de entrenamiento solo se elegiría: k = 8
 - Semilla de las figuras: 10
 
-El QE de entrenamiento no decide (D-15): baja siempre al agrandar la grilla y por sí solo elegiría k = 8, que deja 43,8 % de neuronas vacías y 1,40 creadores por neurona ocupada. La semilla de las figuras es el medoide de estabilidad de k = 5 (sección 2), y la orientación del mapa es arbitraria.
+Con k = 8 quedan 43,8 % de neuronas vacías y 1,40 creadores por neurona ocupada: una grilla más grande reparte los 50 creadores en neuronas casi individuales. La orientación del mapa es arbitraria.
 
 ## 4. Etapa 2: robustez del schedule
 
-Las cifras salen de `analysis/results/som/series_som_stage2/` (`aggregate.csv`, `robustness.csv`, `robustness.json`), que escribe `make som-stage2` sobre `analysis/series_som_stage2.json`. Ese archivo lo generó `analysis/som_stage.py write-stage2` a partir de la k elegida (k = 5) y de las escaleras de la sección 2, y se commiteó antes de correr: sale idéntico al de la corrida anterior porque la k elegida es la misma. Sobre k = 5 con el escalón se cambia una cosa a la vez respecto del baseline (R0 = 2,5; η0 = 0,5; 260 épocas): R0 en {1,25; 5}, η0 en {0,1; 0,25; 0,9} y épocas en {50; 130; 520; 1040}, con 10 seeds cada variante (10 variantes × 10 seeds = 100 corridas y 5 000 entrenamientos de leave-one-out; ninguno falló, D-06). Todas las cifras son media ± desvío (ddof 1) sobre las 10 seeds. La fila `base` repite la fila k = 5 de la sección 3. Como en la etapa 1 se quitó el filtro de TE, la robustez revisa solo los filtros de ocupación (sección 2, **Criterio de robustez.**); el TE se informa pero no decide.
+Las cifras salen de `analysis/results/som/series_som_stage2/` (`aggregate.csv`, `robustness.csv`, `robustness.json`), que escribe `make som-stage2` sobre `analysis/series_som_stage2.json`. Ese archivo lo generó `analysis/som_stage.py write-stage2` a partir de la k elegida (k = 5) y de las escaleras de la sección 2, y se commiteó antes de correr: sale idéntico al de la corrida anterior porque la k elegida es la misma. Sobre k = 5 con el escalón se cambia una cosa a la vez respecto del baseline (R0 = 2,5; η0 = 0,5; 260 épocas): R0 en {1,25; 5}, η0 en {0,1; 0,25; 0,9} y épocas en {50; 130; 520; 1040}, con 10 seeds cada variante (10 variantes × 10 seeds = 100 corridas; ninguna falló, D-06). Todas las cifras son media ± desvío (ddof 1) sobre las 10 seeds. La fila `base` repite la fila k = 5 de la sección 3. Como en la etapa 1 se quitó el filtro de TE, la robustez revisa solo los filtros de ocupación (sección 2, **Criterio de robustez.**); el TE se informa pero no decide.
 
-| variante | R0 | η0 | épocas | TE | % de neuronas vacías | creadores por neurona ocupada | pasa los filtros de ocupación | QE-LOO | estabilidad |
-|---|---|---|---|---|---|---|---|---|---|
-| base | 2,5 | 0,5 | 260 | 0,064 ± 0,040 | 7,2 ± 1,7 | 2,16 ± 0,04 | sí | 2,341 ± 0,028 | 0,655 |
-| radius0-1.25 | 1,25 | 0,5 | 260 | 0,056 ± 0,018 | 4,4 ± 4,0 | 2,10 ± 0,09 | sí | 2,334 ± 0,024 | 0,544 |
-| radius0-5 | 5 | 0,5 | 260 | 0,070 ± 0,019 | 8,4 ± 2,3 | 2,18 ± 0,05 | sí | 2,348 ± 0,019 | 0,839 |
-| eta0-0.1 | 2,5 | 0,1 | 260 | 0,068 ± 0,021 | 8,8 ± 4,5 | 2,20 ± 0,11 | sí | 2,372 ± 0,035 | 0,690 |
-| eta0-0.25 | 2,5 | 0,25 | 260 | 0,056 ± 0,034 | 7,6 ± 4,0 | 2,17 ± 0,10 | sí | 2,346 ± 0,025 | 0,601 |
-| eta0-0.9 | 2,5 | 0,9 | 260 | 0,066 ± 0,027 | 7,2 ± 4,1 | 2,16 ± 0,10 | sí | 2,352 ± 0,039 | 0,669 |
-| epochs-50 | 2,5 | 0,5 | 50 | 0,066 ± 0,040 | 10,8 ± 4,6 | 2,25 ± 0,12 | sí | 2,356 ± 0,027 | 0,594 |
-| epochs-130 | 2,5 | 0,5 | 130 | 0,062 ± 0,033 | 8,8 ± 2,5 | 2,19 ± 0,06 | sí | 2,353 ± 0,030 | 0,646 |
-| epochs-520 | 2,5 | 0,5 | 520 | 0,074 ± 0,027 | 8,0 ± 3,3 | 2,18 ± 0,08 | sí | 2,356 ± 0,018 | 0,639 |
-| epochs-1040 | 2,5 | 0,5 | 1040 | 0,068 ± 0,023 | 8,0 ± 1,9 | 2,17 ± 0,04 | sí | 2,340 ± 0,026 | 0,717 |
-
-**Cómo se mueven QE-LOO y estabilidad.** El QE-LOO casi no se mueve: va de 2,334 (radius0-1.25) a 2,372 (eta0-0.1), una franja de 0,038, del orden de dos desvíos del baseline (0,028). La estabilidad se mueve más, entre 0,544 (radius0-1.25) y 0,839 (radius0-5), con un baseline de 0,655; con una dispersión entre pares de seeds de ese tamaño, esas diferencias no sostienen ordenar los schedules.
+| variante | R0 | η0 | épocas | TE | % de neuronas vacías | creadores por neurona ocupada | pasa los filtros de ocupación |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| base | 2,5 | 0,5 | 260 | 0,064 ± 0,040 | 7,2 ± 1,7 | 2,16 ± 0,04 | sí |
+| radius0-1.25 | 1,25 | 0,5 | 260 | 0,056 ± 0,018 | 4,4 ± 4,0 | 2,10 ± 0,09 | sí |
+| radius0-5 | 5 | 0,5 | 260 | 0,070 ± 0,019 | 8,4 ± 2,3 | 2,18 ± 0,05 | sí |
+| eta0-0.1 | 2,5 | 0,1 | 260 | 0,068 ± 0,021 | 8,8 ± 4,5 | 2,20 ± 0,11 | sí |
+| eta0-0.25 | 2,5 | 0,25 | 260 | 0,056 ± 0,034 | 7,6 ± 4,0 | 2,17 ± 0,10 | sí |
+| eta0-0.9 | 2,5 | 0,9 | 260 | 0,066 ± 0,027 | 7,2 ± 4,1 | 2,16 ± 0,10 | sí |
+| epochs-50 | 2,5 | 0,5 | 50 | 0,066 ± 0,040 | 10,8 ± 4,6 | 2,25 ± 0,12 | sí |
+| epochs-130 | 2,5 | 0,5 | 130 | 0,062 ± 0,033 | 8,8 ± 2,5 | 2,19 ± 0,06 | sí |
+| epochs-520 | 2,5 | 0,5 | 520 | 0,074 ± 0,027 | 8,0 ± 3,3 | 2,18 ± 0,08 | sí |
+| epochs-1040 | 2,5 | 0,5 | 1040 | 0,068 ± 0,023 | 8,0 ± 1,9 | 2,17 ± 0,04 | sí |
 
 **Qué pasa con los filtros.** Los dos filtros de ocupación pasan en las 10 variantes: neuronas vacías entre 4,4 % y 10,8 % (máximo 20 %) y creadores por neurona ocupada entre 2,10 y 2,25 (mínimo 2). El TE medio queda entre 0,056 y 0,074 en las 10, siempre sobre el máximo de 0,05, que es lo mismo que mostró la etapa 1 para k = 5 (0,064): no depende del schedule, es una propiedad de esta grilla con estos datos.
 
@@ -131,9 +127,9 @@ Las figuras salen de `analysis/results/som/figures/`, que escribe `make som-figu
 
 **`planes_appendix.svg`: planos de todas las componentes y las variables.** Las 7 componentes con las que se entrenó el mapa, como peso del prototipo (cada una con su escala centrada en 0), y las 31 variables de `datos/creadores.csv` como media cruda de los creadores de cada neurona. Sirve para buscar una variable que no entró en el plano principal; no se eligió ninguna por cómo se ve, y qué regiones se forman y cómo se parecen a PC1 y PC2 es la sección 6, no esta.
 
-**`stage1_curves.svg`: por qué el QE solo no decide.** Seis paneles contra k (2 a 8), media ± desvío entre las 10 seeds, escalón y gaussiana: QE de entrenamiento, QE-LOO, TE, % de neuronas vacías, creadores por neurona ocupada y estabilidad, con los umbrales de la regla (TE 0,05; 20 % de vacías; 2 creadores por neurona ocupada), la k elegida marcada y el mínimo del QE de entrenamiento anotado. El QE de entrenamiento del escalón baja sin parar con k, de 2,904 (k = 2) a 1,252 (k = 8), y por sí solo elegiría k = 8 (D-07, D-15); en el mismo tramo las neuronas vacías suben de 0 % a 43,8 % y los creadores por neurona ocupada bajan de 12,5 a 1,40, o sea que la grilla grande baja el error repartiendo los 50 creadores en neuronas casi individuales. El QE-LOO baja mucho menos de k = 5 en adelante (2,341 en k = 5; 2,294 en k = 6) y la estabilidad cae con k. Los umbrales de la regla valen para el escalón; la gaussiana se muestra como comparación. La elección sale de los filtros de ocupación más el QE-LOO (el TE se quitó porque ninguna grilla lo cumple), no de esta curva.
+**`stage1_curves.svg`: medidas de la etapa 1 contra k.** Paneles contra k (2 a 8), media ± desvío entre las 10 seeds, escalón y gaussiana. Los que usa la regla son el TE, el % de neuronas vacías y los creadores por neurona ocupada, con sus umbrales (TE 0,05; 20 % de vacías; 2 creadores por neurona ocupada) y la k elegida marcada; los demás paneles son medidas que el trabajo dejó de usar y no entran en la elección ni en el análisis. Las neuronas vacías suben de 0 % a 43,8 % y los creadores por neurona ocupada bajan de 12,5 a 1,40 entre k = 2 y k = 8, o sea que la grilla grande reparte los 50 creadores en neuronas casi individuales. Los umbrales valen para el escalón; la gaussiana se muestra como comparación.
 
-**`trace.svg`: entrenamiento de la corrida dibujada.** QE (eje izquierdo) y TE (eje derecho) en cada una de las 260 épocas. En la primera época el TE vale 0,90 y el QE 1,33; en la última valen 0,10 y 1,93. En las primeras 60 épocas el TE tiene un máximo de 0,90, y en el último 10 % de las épocas el QE varía entre 1,9326 y 1,9361 y el TE entre 0,10 y 0,12, o sea que las dos medidas quedan casi planas. QE y TE finales de la corrida dibujada (1,933 y 0,10) se comparan con lo que muestran las 10 seeds de la sección 3 (QE de entrenamiento medio 1,904; TE medio 0,064): el TE de esta seed supera el máximo de 0,05, como el promedio.
+**`trace.svg`: entrenamiento de la corrida dibujada.** El TE en cada una de las 260 épocas (la figura trae además otra curva que no se usa). En la primera época el TE vale 0,90 y en la última 0,10; en el último 10 % de las épocas varía entre 0,10 y 0,12, o sea que queda casi plano. El TE final de la corrida dibujada (0,10) se compara con el de las 10 seeds de la sección 3 (TE medio 0,064): supera el máximo de 0,05, como el promedio.
 
 ## 6. Regiones, perfiles y contraste con PC1/PC2
 
@@ -219,7 +215,7 @@ Desde `TP4/`, en un clone nuevo:
 make venv         # crea .venv e instala analysis/requirements.txt (versiones fijadas); sin uv: python3.12 -m venv .venv,
                   # .venv/bin/pip install -r analysis/requirements.txt y touch .venv/.installed
 make prepare      # escribe datos/prepared/: matriz auditada de 26 variables y de 31 columnas con sus .meta.json
-make som-stage1   # 140 corridas, QE-LOO y estabilidad; escribe analysis/results/som/series_som_stage1/ con selection.json
+make som-stage1   # 140 corridas; escribe analysis/results/som/series_som_stage1/ con selection.json
                   # (se niega a correr si la regla de la sección 2 no está commiteada y sin cambios)
 make som-stage2   # robustez del schedule sobre la k elegida; escribe analysis/results/som/series_som_stage2/
 make som-figures  # mapa de hits y matriz U, planos de componentes, curvas de la etapa 1 y traza; escribe analysis/results/som/figures/

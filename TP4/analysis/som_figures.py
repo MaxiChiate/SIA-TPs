@@ -288,15 +288,15 @@ def plot_stage1_curves(rows: list[dict], selection: dict, out_stem) -> None:
 
 # ---------- effect of one hyperparameter ----------
 
-# The three measures a person without the SOM vocabulary can read: how far a creator is from its neuron (QE-LOO, with
-# the map trained without that creator), how many neurons are empty and how many creators share an occupied one.
+# The three measures of the rule: the topographic error (do neighbouring neurons stay neighbours on the grid), how many
+# neurons are empty and how many creators share an occupied one.
 EFFECT_PANELS = (
-    ("qe_loo", "Distancia del creador a su neurona", "menor es mejor", 1.0),
+    ("te", "Error topográfico", "límite: 0,05", 1.0),
     ("empty_fraction", "% de neuronas vacías", "límite: 20 %", 100.0),
     ("creators_per_occupied", "Creadores por neurona ocupada", "mínimo: 2", 1.0),
 )
 # The same y range in the three figures, so a change of eta0 or R0 is read on the scale of the change of k.
-EFFECT_YLIM = {"qe_loo": (2.1, 3.05), "empty_fraction": (-2.0, 50.0), "creators_per_occupied": (0.0, 13.0)}
+EFFECT_YLIM = {"te": (-0.01, 0.22), "empty_fraction": (-2.0, 50.0), "creators_per_occupied": (0.0, 13.0)}
 
 
 def effect_rows(stage2_rows: list[dict], vary: str) -> list[dict]:
@@ -307,11 +307,12 @@ def effect_rows(stage2_rows: list[dict], vary: str) -> list[dict]:
 
 
 def plot_effect(rows: list[dict], x_key: str, x_label: str, base_x: float, thresholds: dict, out_stem) -> None:
-    """Three panels (distance, empty neurons, creators per neuron) against one hyperparameter, escalón only;
+    """Three panels (topographic error, empty neurons, creators per neuron) against one hyperparameter, escalón only;
     mean +/- sd over the 10 seeds, the dashed line is the limit of the rule, the vertical one the value we use."""
     plt = plots_style.apply_style()
     color = plots_style.palette_for(["escalón"])["escalón"]
-    limits = {"empty_fraction": thresholds["empty_max"] * 100.0, "creators_per_occupied": thresholds["creators_min"]}
+    limits = {"te": thresholds["te_max"], "empty_fraction": thresholds["empty_max"] * 100.0,
+              "creators_per_occupied": thresholds["creators_min"]}
     fig, axes = plt.subplots(1, 3, figsize=plots_style.figsize((11.5, 3.9), (12.8, 5.0)))
     xs = [float(r[x_key]) for r in rows]
     for ax, (measure, label, hint, scale) in zip(axes, EFFECT_PANELS):

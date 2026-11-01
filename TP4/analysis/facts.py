@@ -337,16 +337,11 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
         "som.s2_creators_min": dec(min(float(r["creators_per_occupied_mean"]) for r in stage2), 2),
         "som.s2_creators_max": dec(max(float(r["creators_per_occupied_mean"]) for r in stage2), 2),
     })
-    # The slides of the effect of k, eta0 and R0: the distance of a creator to its neuron (QE-LOO), the empty neurons and
-    # the creators per occupied neuron, read from the same tables as the figures.
+    # The slides of the effect of k, eta0 and R0: the topographic error, the empty neurons and the creators per
+    # occupied neuron, read from the same tables as the figures.
     per_k = sorted(selection["per_k"], key=lambda row: row["k"])
-    first, last = per_k[0], per_k[-1]
     following = next(row for row in per_k if row["k"] == selection["chosen_k"] + 1)
     values.update({
-        "som.k_first": integer(first["k"]),
-        "som.k_last": integer(last["k"]),
-        "som.k_first_dist": dec(first["qe_loo_mean"], 2),
-        "som.k_last_dist": dec(last["qe_loo_mean"], 2),
         "som.k_next": integer(following["k"]),
         "som.k_next_empty": pct(following["empty_fraction_mean"], 1),
         "som.k_next_creators": dec(following["creators_per_occupied_mean"], 2),
@@ -357,15 +352,15 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
                         if float(r[other]) == float(table["base"][other])
                         and float(r["epochs"]) == float(table["base"]["epochs"])),
                        key=lambda r: float(r[vary]))
-        dist = [float(r["qe_loo_mean"]) for r in moved]
+        te = [float(r["te_mean"]) for r in moved]
         empty = [float(r["empty_fraction_mean"]) for r in moved]
         creators = [float(r["creators_per_occupied_mean"]) for r in moved]
         values.update({
             f"som.{name}_lo": _number(float(moved[0][vary])),
             f"som.{name}_hi": _number(float(moved[-1][vary])),
             f"som.{name}_values": "; ".join(_number(float(r[vary])) for r in moved),
-            f"som.{name}_dist_min": dec(min(dist), 2),
-            f"som.{name}_dist_max": dec(max(dist), 2),
+            f"som.{name}_te_min": dec(min(te), 3),
+            f"som.{name}_te_max": dec(max(te), 3),
             f"som.{name}_empty_min": pct(min(empty), 1),
             f"som.{name}_empty_max": pct(max(empty), 1),
             f"som.{name}_creators_min": dec(min(creators), 2),
