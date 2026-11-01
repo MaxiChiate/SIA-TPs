@@ -312,7 +312,7 @@ def plot_effect(rows: list[dict], x_key: str, x_label: str, base_x: float, thres
     plt = plots_style.apply_style()
     color = plots_style.palette_for(["escalón"])["escalón"]
     limits = {"empty_fraction": thresholds["empty_max"] * 100.0, "creators_per_occupied": thresholds["creators_min"]}
-    fig, axes = plt.subplots(1, 3, figsize=plots_style.figsize((11.5, 3.9)))
+    fig, axes = plt.subplots(1, 3, figsize=plots_style.figsize((11.5, 3.9), (12.8, 5.0)))
     xs = [float(r[x_key]) for r in rows]
     for ax, (measure, label, hint, scale) in zip(axes, EFFECT_PANELS):
         mean = [float(r[f"{measure}_mean"]) * scale for r in rows]
