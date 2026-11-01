@@ -122,10 +122,9 @@ def test_plot_regions_slide_with_more_regions_than_palette_slots(tmp_path):
     assert plots_style.variant() == "report"
 
 
-def test_plot_te_explained_in_both_variants(tmp_path):
-    configs = [("k", f"k = {k}", 0.2 / k, 0.01) for k in (2, 3, 4)]
-    configs += [("η0", "η0 = 0,1", 0.06, 0.02), ("R0", "R0 = 5", 0.07, 0.02), ("épocas", "50 épocas", 0.06, 0.03)]
+def test_plot_te_by_k_in_both_variants(tmp_path):
+    rows = [{"grid_k": str(k), "te_mean": str(0.2 / k), "te_sd": "0.01"} for k in (2, 3, 4, 5)]
     for _ in plots_style.iter_variants():
-        som_figures.plot_te_explained(configs, 0.05, tmp_path / "te_explained")
-    assert_both_variants(tmp_path, "te_explained")
+        som_figures.plot_te_by_k(rows, 4, 0.05, tmp_path / "te_by_k")
+    assert_both_variants(tmp_path, "te_by_k")
     assert plots_style.variant() == "report"

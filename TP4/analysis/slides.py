@@ -240,9 +240,8 @@ OUTLINE: tuple[Slide, ...] = (
         None, ("Q1.3",), (), None, _key("som/figures/effect_eta0.svg"),
         "Probamos η0 = {som.eta_values}, con k = {som.chosen_k} y el resto igual; η0 es cuánto se mueve la neurona "
         "ganadora hacia el creador en los primeros pasos y después decae hasta {som.base_eta_final}. "
-        "El error topográfico queda entre {som.eta_te_min} y {som.eta_te_max}, las neuronas vacías entre "
-        "{som.eta_empty_min} y {som.eta_empty_max} y los creadores por neurona entre {som.eta_creators_min} y "
-        "{som.eta_creators_max}, con la ocupación siempre dentro de los límites. "
+        "Las neuronas vacías quedan entre {som.eta_empty_min} y {som.eta_empty_max} y los creadores por neurona "
+        "entre {som.eta_creators_min} y {som.eta_creators_max}, siempre dentro de los límites. "
         "Los ejes son los mismos que en la slide de k para que se vea que, al lado de cambiar la grilla, cambiar "
         "η0 mueve muy poco. "
         "Usamos η0 = {som.base_eta0}, un valor medio fijado de antemano, y con los otros valores la elección de k "
@@ -254,27 +253,25 @@ OUTLINE: tuple[Slide, ...] = (
         "Probamos R0 = {som.r0_values}, con k = {som.chosen_k} y el resto igual; R0 es cuántas neuronas vecinas se "
         "mueven junto con la ganadora al principio del entrenamiento y después el radio baja hasta "
         "{som.base_radius_final}. "
-        "El error topográfico queda entre {som.r0_te_min} y {som.r0_te_max}, las neuronas vacías entre "
-        "{som.r0_empty_min} y {som.r0_empty_max} y los creadores por neurona entre {som.r0_creators_min} y "
-        "{som.r0_creators_max}, con la ocupación siempre dentro de los límites. "
+        "Las neuronas vacías quedan entre {som.r0_empty_min} y {som.r0_empty_max} y los creadores por neurona "
+        "entre {som.r0_creators_min} y {som.r0_creators_max}, siempre dentro de los límites. "
         "Los ejes son los mismos que en las dos slides anteriores, así que se compara a la misma escala. "
         "Usamos R0 = {som.base_radius0}, la mitad de k, fijado de antemano, y con los otros valores la elección de "
         "k no cambia.",
     ),
     Slide(
-        "som-te", 1, "El error topográfico de k = {som.chosen_k} es {som.chosen_te} y no depende del schedule",
-        None, ("Q1.3",), (), None, _key("som/figures/te_explained.svg"),
+        "som-te", 1, "Ninguna grilla cumple a la vez el error topográfico y la ocupación",
+        None, ("Q1.3",), (), None, _key("som/figures/te_by_k.svg"),
         "El error topográfico se calcula, para cada creador, buscando la neurona más cercana y la segunda más cercana, "
         "y cuenta como error si no son vecinas en la grilla (arriba, abajo, izquierda o derecha; una diagonal cuenta "
         "como error). "
         "El resultado es la fracción de los creadores que cuentan como error, y mide si el mapa conserva la vecindad, "
         "que es lo que busca Kohonen: neuronas parecidas deberían quedar pegadas en la grilla. "
         "Cada barra es la media de 10 entrenamientos con distinta seed, las líneas negras son el desvío entre ellas y "
-        "la línea punteada es el límite de {som.te_max} de la regla: con k = {som.chosen_k} da {som.chosen_te} y con "
-        "las variantes de η0, R0 y épocas queda entre {som.s2_te_min} y {som.s2_te_max}, así que no depende del "
-        "schedule. "
-        "Los desvíos son del tamaño de las diferencias entre barras, así que estas diferencias no sirven para ordenar "
-        "las variantes; lo que sí muestra es que con k = {som.chosen_k} ninguna cumple el límite.",
+        "la línea punteada es el límite de {som.te_max}: con k = {som.chosen_k} da {som.chosen_te}, y las grillas que "
+        "cumplen el límite tienen demasiadas neuronas vacías (con k = {som.k_next} ya son {som.k_next_empty}). "
+        "Como ninguna grilla cumplió los tres límites a la vez, la regla quitó este y eligió k = {som.chosen_k}, la "
+        "más grande que cumple la ocupación.",
     ),
     Slide(
         "som-robust", 1,
