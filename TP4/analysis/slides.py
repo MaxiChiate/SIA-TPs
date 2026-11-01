@@ -243,9 +243,10 @@ OUTLINE: tuple[Slide, ...] = (
         "La distancia de cada creador a su neurona ganadora queda entre {som.eta_dist_min} y {som.eta_dist_max} y la "
         "U media, que es el promedio de la matriz U (la distancia entre neuronas vecinas), entre {som.eta_u_min} y "
         "{som.eta_u_max}. "
-        "Los ejes arrancan en cero para no exagerar las diferencias: al lado de cambiar la grilla, que lleva la "
-        "distancia a la neurona ganadora de {som.k_first_dist} con k = {som.k_first} a {som.k_last_dist} con "
-        "k = {som.k_last}, cambiar η0 mueve muy poco. "
+        "Los ejes están ampliados para que se vea el recorrido de cada curva, así que las diferencias parecen más "
+        "grandes de lo que son: al lado de cambiar la grilla, que lleva la distancia a la neurona ganadora de "
+        "{som.k_first_dist} con k = {som.k_first} a {som.k_last_dist} con k = {som.k_last}, cambiar η0 mueve muy "
+        "poco. "
         "Usamos η0 = {som.base_eta0}, un valor medio fijado de antemano, y con los otros valores la elección de k "
         "no cambia.",
     ),
@@ -258,8 +259,8 @@ OUTLINE: tuple[Slide, ...] = (
         "La distancia de cada creador a su neurona ganadora queda entre {som.r0_dist_min} y {som.r0_dist_max} y la "
         "U media, que es el promedio de la matriz U (la distancia entre neuronas vecinas), entre {som.r0_u_min} y "
         "{som.r0_u_max}. "
-        "Los ejes son los mismos que en la slide de η0, así que se compara a la misma escala, y un radio inicial "
-        "más chico acerca un poco los creadores a sus neuronas, pero no cambia la elección de k. "
+        "Los ejes son los mismos que en la slide de η0 y también están ampliados, y un radio inicial más chico "
+        "acerca un poco los creadores a sus neuronas, pero no cambia la elección de k. "
         "Usamos R0 = {som.base_radius0}, la mitad de k, fijado de antemano, y con los otros valores la elección de "
         "k no cambia.",
     ),

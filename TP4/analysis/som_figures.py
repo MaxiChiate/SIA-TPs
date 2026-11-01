@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+from matplotlib.ticker import MultipleLocator
 
 TP_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(TP_DIR / "scripts"))
@@ -302,7 +303,9 @@ EFFECT_PANELS = (
 SCHEDULE_MEASURES = ("qe", "u_mean")
 # The same y range in the three figures, so a change of eta0 or R0 is read on the scale of the change of k.
 EFFECT_YLIM = {"te": (-0.01, 0.22), "empty_fraction": (-2.0, 50.0), "creators_per_occupied": (0.0, 13.0),
-               "u_mean": (0.0, 2.5), "qe": (0.0, 3.2)}
+               "u_mean": (1.4, 1.9), "qe": (1.7, 2.1)}
+# panels whose axis is zoomed on the range of the schedule variants: a tick every 0.1
+EFFECT_YSTEP = {"u_mean": 0.1, "qe": 0.1}
 
 
 def effect_rows(stage2_rows: list[dict], vary: str) -> list[dict]:
@@ -331,6 +334,8 @@ def plot_effect(rows: list[dict], x_key: str, x_label: str, base_x: float, thres
             ax.axhline(limits[measure], color=plots_style.TEXT_SECONDARY, linestyle="--", linewidth=1)
         ax.axvline(base_x, color=plots_style.TEXT_PRIMARY, linewidth=1, alpha=0.5)
         ax.set_ylim(*EFFECT_YLIM[measure])
+        if measure in EFFECT_YSTEP:
+            ax.yaxis.set_major_locator(MultipleLocator(EFFECT_YSTEP[measure]))
         # the slide carries the title only; the report keeps the hint (what is better, the limit of the rule)
         title = label if plots_style.variant() == "slide" else f"{label}\n({hint})"
         ax.set_title(title, fontsize=plots_style.fontsize(9), loc="left")
