@@ -190,6 +190,33 @@ OUTLINE: tuple[Slide, ...] = (
         "borde, y solo la PCA se calculó con cada umbral: el SOM, Oja y las campañas se rehacen únicamente con el elegido.",
     ),
     Slide(
+        "som-hyperparams", 1, "Hiperparámetros del SOM y por qué los elegimos",
+        None, ("Q1.3",), (),
+        (
+            ("Hiperparámetro", "Valor", "Por qué"),
+            (
+                ("Grilla", "{som.chosen_k} × {som.chosen_k}",
+                 "La eligió la regla fijada de antemano: gana el menor QE-LOO entre las grillas que cumplen la ocupación"),
+                ("Vecindad", "{som.neighborhood}", "Es la del curso; la gaussiana se corrió solo como comparación"),
+                ("Radio inicial R0", "{som.base_radius0}",
+                 "Baseline fijado de antemano (la mitad de k); con otros valores la elección no cambia"),
+                ("Radio final", "{som.base_radius_final}",
+                 "Actualiza la ganadora y sus 4 vecinas pegadas, la adyacencia del TE y de la matriz U"),
+                ("Tasa η", "{som.base_eta0} a {som.base_eta_final}",
+                 "Decae exponencialmente con η0 menor que 1: suave y fácil de explicar"),
+                ("Épocas", "{som.base_epochs}",
+                 "Baseline fijado de antemano; con 50 a 1040 épocas la ocupación no se degrada"),
+            ),
+        ),
+        None,
+        "Estos son los hiperparámetros del mapa que usamos en todo el ejercicio. "
+        "La grilla la eligió la regla fijada de antemano, y el resto del schedule es el baseline de la serie, también "
+        "fijado antes de correr. "
+        "Después de elegir la grilla movimos una cosa a la vez (R0, η0 y épocas) con 10 seeds cada una, y en todas las "
+        "variantes la ocupación pasa los filtros, así que la elección es robusta. "
+        "El mapa se entrena con los scores de las {pca17.k_80} primeras componentes de la PCA.",
+    ),
+    Slide(
         "som-rule", 1,
         "Ninguna grilla cumple el TE máximo: sin ese filtro la regla elige k = {som.chosen_k}",
         "Regla fijada de antemano", ("Q1.3",), (), None, _key("som/figures/stage1_curves.svg"),

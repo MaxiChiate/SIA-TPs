@@ -42,7 +42,7 @@ analysis/                        # README.md explica las series y los drivers
   facts.py                       # los números del texto salen de los JSON/CSV; `facts.py check` fija 68 frases de los fragmentos
   informe.py                     # arma analysis/results/informe/informe.html
   corr_prune.py                  # sensibilidad de la PCA a podar por umbral de |r| (tabla de la slide pca-prune; no rehace SOM ni Oja)
-  slides.py                      # arma analysis/results/slides/ (27 slides, PNG y guion)
+  slides.py                      # arma analysis/results/slides/ (28 slides, PNG y guion)
   tests/                         # pytest; incluye test_repro_docs.py, que cuida README.md, CLAUDE.md y DECISIONS.md
 deliverables/                    # un fragmento por fase (01 a 05): lo que se entrega por escrito, congelado por guardas sha256
 DECISIONS.md                     # decisiones para la defensa y fuente del glosario del informe
@@ -94,7 +94,7 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Entrega
 
-- **Slides**: 27 slides armadas por `make deliverables` en `analysis/results/slides/` (sin la slide de método, y el deck arranca con la portada y el EDA); el Artifact tipo Slides publicado se republicó el 2026-10-30 con estas 27 y el 2026-11-01 con las slides del SOM nuevo (`som-rule`, `som-robust`, `som-map`, `som-one-region`, `som-zonas`, `som-pc` y `ej1-conclusiones`); además tiene slides que armó la persona dueña a mano y que no están en el repo (`289f728e`, `0732067f`, `bc794b98`, `oja-intro`, `pca-eigenvalue-table`).
+- **Slides**: 28 slides armadas por `make deliverables` en `analysis/results/slides/` (sin la slide de método, y el deck arranca con la portada y el EDA); el Artifact tipo Slides publicado se republicó el 2026-10-30 con estas 27 y el 2026-11-01 con las slides del SOM nuevo (`som-rule`, `som-robust`, `som-map`, `som-one-region`, `som-zonas`, `som-pc` y `ej1-conclusiones`); además tiene slides que armó la persona dueña a mano y que no están en el repo (`289f728e`, `0732067f`, `bc794b98`, `oja-intro`, `pca-eigenvalue-table`).
 - **Informe**: `analysis/results/informe/informe.html`, publicado como Artifact HTML (D-15).
 - Slides: https://claude.ai/artifact/CxnuCZKwF55r2tUMPWXBSN (las URLs `9YjSx…` y `32SjY…` de antes ya no existen; el 2026-10-28 se reemplazó el contenido de este deck por las 25 slides del repo)
 - Informe: https://claude.ai/artifact/ScERzQ4wTc8TrCNfuw2kKq (republicado el 2026-10-28 con el guion anterior en el anexo: todavía sin republicar tras sacar la slide de método y rehacer el SOM; está compartido por link)

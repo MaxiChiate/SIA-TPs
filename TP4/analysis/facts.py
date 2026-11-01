@@ -52,6 +52,7 @@ SOURCES: dict[str, tuple[str, str]] = {
     "som.selection": ("som/series_som_stage1/selection.json", "som-stage1"),
     "som.robustness": ("som/series_som_stage2/robustness.json", "som-stage2"),
     "som.robustness_table": ("som/series_som_stage2/robustness.csv", "som-stage2"),
+    "som.stage2_aggregate": ("som/series_som_stage2/aggregate.csv", "som-stage2"),
     "som.hits": ("som/figures/hits_members.csv", "som-figures"),
     "som.high_u_edges": ("som/profiles/high_u_edges.csv", "som-profiles"),
     "som.neuron_profiles": ("som/profiles/neuron_profiles.csv", "som-profiles"),
@@ -352,6 +353,12 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
         values[f"som.wall_{rank}.single"] = "sí" if alone else "no"
     values["som.n_walls_single"] = str(single)
     base = table["base"]
+    base_config = next(row for row in read_csv_source(results_dir, "som.stage2_aggregate") if row["label"] == "base")
+    values.update({
+        "som.neighborhood": {"step": "escalón", "gaussian": "gaussiana"}[base_config["neighborhood"]],
+        "som.base_radius_final": _number(base_config["radius_final"]),
+        "som.base_eta_final": _number(base_config["eta_final"]),
+    })
     variants = [label for label in table if label != "base"]
     passing = [label for label in variants if label not in robustness["failing_variants"]]
     values.update({

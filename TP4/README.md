@@ -131,7 +131,7 @@ no se arma si un número citado de los fragmentos cambió.
 
 `make deliverables` deja listo, sin publicar, lo siguiente (no se versiona):
 
-- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 27 slides), los PNG de las figuras
+- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 28 slides), los PNG de las figuras
   (`assets/`) y `notes.md` (el guion). Lo arma `analysis/slides.py`; `make slides` corre solo ese paso.
 - `analysis/results/informe/informe.html`: el informe, una página autocontenida. Lo arma `analysis/informe.py`; `make informe`
   corre solo ese paso.
