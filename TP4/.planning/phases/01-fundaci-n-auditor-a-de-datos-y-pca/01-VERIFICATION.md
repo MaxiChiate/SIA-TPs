@@ -175,7 +175,7 @@ Ninguno invalida un must-have. Evalue cada uno:
 
 | ID | Hallazgo | Efecto sobre la fase | Severidad aqui |
 |----|----------|----------------------|----------------|
-| WR-01 | `sensitivity.json/md` mezclan `abs_cos` con Pearson/Spearman con signo (PC1: 0.99998 vs -0.9992) | Confirmado en la salida generada. DATA-05 pide comparar y la comparacion existe; la seccion 7 del entregable explica la inversion de signo. Riesgo: quien lea solo el artefacto generado puede malinterpretar. | WARNING (cosmetico, reparar antes de reusar en slides) |
+| WR-01 | `sensitivity.json/md` mezclan `abs_cos` con Pearson/rank-correlation (retired) con signo (PC1: 0.99998 vs -0.9992) | Confirmado en la salida generada. DATA-05 pide comparar y la comparacion existe; la seccion 7 del entregable explica la inversion de signo. Riesgo: quien lea solo el artefacto generado puede malinterpretar. | WARNING (cosmetico, reparar antes de reusar en slides) |
 | WR-02 | Un `seed` variado/fijado en una serie se ignora en silencio | Confirmado: una serie con `"vary": "seed"` valores 7 y 8 corre ambas con seed 1 y lo etiqueta 7/8. No afecta SC2 (multi-seed via `seeds`) ni ninguna serie de la fase, pero es una trampa para los barridos de seeds de las Fases 2-5. | WARNING (arreglar al comenzar la Fase 2) |
 | WR-03 | Una corrida fallida deja un directorio con solo `config.json` | No afecta SC1 (corridas exitosas); `sweep.py` limpia sobrantes. Observado al correr desde un cwd equivocado. | WARNING |
 | WR-04 | `map_creator.py` acepta nan/inf y falla con tracebacks | SC4 se cumple para entradas validas; la validacion de borde es mas debil que la del loader. | WARNING |

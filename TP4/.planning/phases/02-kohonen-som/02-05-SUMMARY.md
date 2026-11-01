@@ -135,7 +135,7 @@ None. `analysis/results/` is gitignored, so the figures are regenerated with `ma
 
 ## Next Phase Readiness
 
-Ready for 02-06 (regions, PCA contrast): `som.umatrix`, `som.edge_distances`, `som.adjacent_pairs` and `hits_members.csv` are available for the region cut and the edge-wise Spearman.
+Ready for 02-06 (regions, PCA contrast): `som.umatrix`, `som.edge_distances`, `som.adjacent_pairs` and `hits_members.csv` are available for the region cut and the edge-wise rank-correlation (retired).
 
 ## Self-Check: PASSED
 

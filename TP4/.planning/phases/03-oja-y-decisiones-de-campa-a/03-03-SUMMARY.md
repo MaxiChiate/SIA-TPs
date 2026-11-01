@@ -46,7 +46,7 @@ requirements-completed: [OJA-01, OJA-02]
 
 coverage:
   - id: D1
-    description: "make oja runs the 10-seed Oja series and compares the figure seed with PC1: abs(cos) 0,9999998, same orientation, Pearson 0,99999998, Spearman 1, overlap@5 5 of 5 and overlap@10 10 of 10, max abs difference 2,0e-03"
+    description: "make oja runs the 10-seed Oja series and compares the figure seed with PC1: abs(cos) 0,9999998, same orientation, Pearson 0,99999998, rank-correlation (retired) 1, overlap@5 5 of 5 and overlap@10 10 of 10, max abs difference 2,0e-03"
     requirement: OJA-02
     verification:
       - kind: integration
@@ -114,7 +114,7 @@ plan_head_after: 9a58194475d9da16e8de8f0833f780ff9f43e926
 
 ## Accomplishments
 
-- `analysis/oja.py` reads each run folder as C wrote it (`read_oja_run`, refuses on header or row-count mismatch naming the file), reads PC1 from `make pca` (`read_pca`, refuses naming `make pca`), and compares the figure seed with PC1: abs(cos) 0,9999998, signed cos positive, Pearson 0,99999998, Spearman 1,0000, overlap@5 5 de 5, overlap@10 10 de 10, largest abs(index - PC1 score) 2,0e-03.
+- `analysis/oja.py` reads each run folder as C wrote it (`read_oja_run`, refuses on header or row-count mismatch naming the file), reads PC1 from `make pca` (`read_pca`, refuses naming `make pca`), and compares the figure seed with PC1: abs(cos) 0,9999998, signed cos positive, Pearson 0,99999998, rank-correlation (retired) 1,0000, overlap@5 5 de 5, overlap@10 10 de 10, largest abs(index - PC1 score) 2,0e-03.
 - Dispersion over seeds 1 to 10 (D-03): 10 de 10 above 0,99 and with the PCA orientation, one pivot (`average_caption_words`), minimum pairwise abs(cos) 0,9999993, per-creator index range at most 3,1e-03 (mean 1,5e-03), worst seed 6 with 1 - abs(cos) = 2,5e-07.
 - Convergence (D-01): abs(cos(w_e, v1)) is computed in Python per seed and epoch from the weights in trace.csv, next to C's w_norm and delta_w; seed 1 passes 1 - abs(cos) < 1e-3 at epoch 8; the figure has three panels (1 - abs(cos) on a log axis, abs(w) before renormalizing, delta w on a log axis).
 - Pivot margin written to dispersion.json and report_convergence.md: average_caption_words +0,2521 against average_impressions -0,2493, margin 0,00275, the limit of the D-02 convention (a different dataset could flip the pivot and with it the sign of w and the index).

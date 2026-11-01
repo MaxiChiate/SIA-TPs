@@ -49,7 +49,7 @@ Python 3.12 is installed; numpy 2.5.4 and scipy 1.18.1 both require >=3.12, so p
 | pytest | 9.1.1 | A few Python-side regression tests (Oja vs eigh alignment on the real data, Hopfield energy monotonic on C output, QR preprocessing shape/values) | Optional but cheap; TP3 has none on the Python side. Keep to under 10 tests. | MEDIUM |
 | Python stdlib (`argparse`, `csv`, `json`, `subprocess`, `concurrent.futures`, `html`, `pathlib`) | 3.12 | `sweep.py`, run reports, HTML generation | Copy TP3's `sweep.py` (ThreadPoolExecutor launching the C binary, seeds x variants, series JSON with `base_config`/`vary`/`values`/`seeds`) and `run_report.py` pattern. Stdlib-only generators are what TP3 uses for HTML; no Jinja2 needed. | HIGH |
 
-Optional, only if a specific question needs it: scipy 1.18.1 (`scipy.cluster.hierarchy` to cross-check SOM-derived clusters against hierarchical clustering; `scipy.stats` for Spearman between Oja index and PC1 score). Do not add it by default.
+Optional, only if a specific question needs it: scipy 1.18.1 (`scipy.cluster.hierarchy` to cross-check SOM-derived clusters against hierarchical clustering; `scipy.stats` for rank-correlation (retired) between Oja index and PC1 score). Do not add it by default.
 
 ### Environment management
 

@@ -25,7 +25,7 @@ All analog paths were checked with `git ls-files`; every one is tracked source, 
 | `Makefile` targets (som, optional) | config | n/a | root `Makefile` `pca` target | role-match |
 | `neuron/models/kohonen.c` occupancy.csv and trace.csv writers | model | file-I/O | `write_prototypes` in the stub | exact |
 | U-matrix, hit map, planes (inside `som_figures.py`) | utility | transform | none (no SOM-specific code yet) | no analog |
-| tie-aware Spearman (inside `som.py`) | utility | transform | `analysis/pca.py::spearman` (wrong with ties; use as signature only) | partial |
+| tie-aware rank-correlation (retired) (inside `som.py`) | utility | transform | `analysis/pca.py::rank-correlation (retired)` (wrong with ties; use as signature only) | partial |
 
 ## Pattern Assignments
 
@@ -104,7 +104,7 @@ from creadores import PREPARED_DIR, load_creadores, load_meta  # noqa: E402
 ```
 (pca.py inserts `scripts/` into `sys.path` before the creadores import; copy that exact mechanism.)
 
-**Do not reuse** `pca.spearman` (lines 157-174: `argsort(argsort())`, "no ties expected"). Implement `average_ranks`, `spearman_ties`, `grid_distance_vector`, `stability`, `metrics_from_prototypes`, `umatrix` from RESEARCH Pattern 5 (verified against scipy). Same function shape as `pca.py`: small pure functions with `np.ndarray` annotations.
+**Do not reuse** `pca.rank-correlation (retired)` (lines 157-174: `argsort(argsort())`, "no ties expected"). Implement `average_ranks`, `rank-correlation (retired)`, `grid_distance_vector`, `stability`, `metrics_from_prototypes`, `umatrix` from RESEARCH Pattern 5 (verified against scipy). Same function shape as `pca.py`: small pure functions with `np.ndarray` annotations.
 
 **CSV reading**: follow `pca.read_prepared` (line 130) and `creadores.load_meta`/`scaler_from_meta`/`inverse_transform` (scripts/creadores.py lines 215-235) for raw-unit profiles.
 
@@ -233,7 +233,7 @@ free(...); return ok;
 | File / function | Role | Data Flow | Reason |
 |---|---|---|---|
 | SOM training loop (inside `kohonen.c`) | model | batch | Only a stub exists; use RESEARCH Pattern 2 |
-| `average_ranks` / `spearman_ties` / `stability` | utility | transform | Existing `pca.spearman` cannot handle ties; use RESEARCH Pattern 5 |
+| `average_ranks` / `rank-correlation (retired)` / `stability` | utility | transform | Existing `pca.rank-correlation (retired)` cannot handle ties; use RESEARCH Pattern 5 |
 | `umatrix`, hit map, component planes, region rule, PCA contrast statistics | utility / plots | transform | No SOM or map plotting yet; use RESEARCH Pattern 5 and 7 with `plot_biplot` only for style |
 | Git-clean guard for the committed rule | utility | request-response | No git-aware code in the repo; use RESEARCH Pattern 6 item 8 |
 

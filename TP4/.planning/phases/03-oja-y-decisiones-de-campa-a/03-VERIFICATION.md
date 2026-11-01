@@ -54,7 +54,7 @@ Evidence that no result moved:
 - The four report SVGs of this phase (`oja/convergence.svg`, `oja/oja_vs_pc1.svg`, `campaigns/shortlists_biplot.svg`, `campaigns/shortlists_som.svg`) still hash to the entries in `analysis/results/variant_baseline/ej1.sha256` (`shasum -c`: 4 OK).
 - Every line of the six report files (`report_convergence.md`, `report_evidence.md`, `report_pc1.md`, `report_campaigns.md`, `report_reading.md`, `report_demo.md`) appears verbatim in `deliverables/03-oja-campanas.md` (`grep -xF`, 0 missing lines in all six).
 - `campaigns_select.rule_identity()` returns commit `a6212e89...`, rule sha256 `90113af5...`, selector sha256 `1d1bfe77...`, identical to `analysis/results/campaigns/selection_identity.json`.
-- Stored numbers are as in the first report: `oja/comparison.json` has abs_cos 0.9999998, Spearman 1.0, overlap@5 5/5, overlap@10 10/10; `oja/dispersion.json` has 10/10 seeds above the abs(cos) gate, 10/10 with the same orientation, pivot `average_caption_words`, worst 1-abs(cos) 2.5e-07; `oja/index.csv` has 50 rows.
+- Stored numbers are as in the first report: `oja/comparison.json` has abs_cos 0.9999998, rank-correlation (retired) 1.0, overlap@5 5/5, overlap@10 10/10; `oja/dispersion.json` has 10/10 seeds above the abs(cos) gate, 10/10 with the same orientation, pivot `average_caption_words`, worst 1-abs(cos) 2.5e-07; `oja/index.csv` has 50 rows.
 
 ## Goal Achievement
 

@@ -77,7 +77,7 @@ Plans:
 - [x] 02-01-PLAN.md — SOM real en C (tracer, después del commit de la regla): 7 claves estrictas, entrenamiento escalón/gaussiana, QE/TE/ocupación, occupancy.csv y trace.csv, tests C bajo ASan/UBSan y neuron/README
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [x] 02-02-PLAN.md — Lector de corridas y recomputación en numpy de QE/TE/ocupación, estabilidad entre seeds (Spearman con empates, medoide) y driver de QE leave-one-out con un directorio temporal por entrenamiento
+- [x] 02-02-PLAN.md — Lector de corridas y recomputación en numpy de QE/TE/ocupación, estabilidad entre seeds (rank-correlation (retired) con empates, medoide) y driver de QE leave-one-out con un directorio temporal por entrenamiento
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [x] 02-04-PLAN.md — Driver de etapas con guardia: etapa 1 (140 corridas + LOO + estabilidad + selección), serie de la etapa 2 generada y commiteada, robustez; secciones 3 y 4
@@ -109,7 +109,7 @@ Plans:
 - [x] 03-02-PLAN.md — Regla de campañas: checkpoint de decisión (términos y puntajes compuestos), regla como código con guardia y texto entre marcadores; el usuario hace el commit de la regla antes de calcular ninguna lista
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [x] 03-03-PLAN.md — `make oja`: 10 seeds, abs(cos) y Spearman contra PC1, dispersión entre seeds, convergencia por época con su figura y margen del pivote
+- [x] 03-03-PLAN.md — `make oja`: 10 seeds, abs(cos) y rank-correlation (retired) contra PC1, dispersión entre seeds, convergencia por época con su figura y margen del pivote
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [x] 03-04-PLAN.md — Evidencia del máximo con los dos signos (tracer hasta la sección 3, "No" primero), figura índice vs PC1 y secciones 1-2

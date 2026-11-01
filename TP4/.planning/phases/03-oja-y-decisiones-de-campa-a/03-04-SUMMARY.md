@@ -10,7 +10,7 @@ requires:
 provides:
   - "evidence() and plot_oja_vs_pc1() in analysis/oja.py; make oja also writes evidence_weights.csv, evidence_correlations.csv, evidence_top10.csv, evidence.json, report_evidence.md and oja_vs_pc1.svg/png"
   - "Sections 1-3 of deliverables/03-oja-campanas.md: algorithm and convergence, index vs PC1, and the written answer No to choosing the Oja maximum for any campaign"
-  - "The index-followers correlation under both signs (Pearson -0,879 / Spearman -0,921 with the D-02 sign) for plan 03-05 to cite"
+  - "The index-followers correlation under both signs (Pearson -0,879 / rank-correlation (retired) -0,921 with the D-02 sign) for plan 03-05 to cite"
 affects: [03-05, 03-06]
 
 actuals:
@@ -43,7 +43,7 @@ requirements-completed: [OJA-01, OJA-02, OJA-03]
 
 coverage:
   - id: D1
-    description: "evidence() under both signs: 26 weights by abs(w), Pearson and tie-aware Spearman with followers and the four raw topic shares, top-10 overlap and dominant-topic composition, maximum creator under each sign"
+    description: "evidence() under both signs: 26 weights by abs(w), Pearson and tie-aware rank-correlation (retired) with followers and the four raw topic shares, top-10 overlap and dominant-topic composition, maximum creator under each sign"
     requirement: OJA-03
     verification:
       - kind: unit
@@ -110,8 +110,8 @@ plan_head_after: 32717abfd55162f7c180132fbb9fdd948c6a6e4e
 
 ## Accomplishments
 
-- `evidence(w, features, index, data, ids)` computes, for the D-02 sign and its opposite: the 26 weights by abs(w); Pearson and tie-aware Spearman with `followers` and the four raw topic shares (`topic_art_pct` included); the overlap of the index top 10 with the top 10 of each topic share and the dominant-topic composition of the index top 10; and the maximum creator under each sign. `main` writes the three CSV tables, `evidence.json` and `report_evidence.md` (three tables and two bullets, comma decimals).
-- The evidence on the real data: the index tracks size inversely under D-02 (followers Pearson -0,879, Spearman -0,921); perros is the only topic above 0,4 in absolute correlation (+0,480); under D-02 seven of the index top 10 are perros creators and none arte, under the opposite sign five are fútbol, three maquillaje, one perros, one arte. The maximum is INF031 (@mundoanimal.ar, perros, 17062 followers) with D-02 and INF045 (@futbolsinvueltas, fútbol, 493194 followers) with the opposite sign.
+- `evidence(w, features, index, data, ids)` computes, for the D-02 sign and its opposite: the 26 weights by abs(w); Pearson and tie-aware rank-correlation (retired) with `followers` and the four raw topic shares (`topic_art_pct` included); the overlap of the index top 10 with the top 10 of each topic share and the dominant-topic composition of the index top 10; and the maximum creator under each sign. `main` writes the three CSV tables, `evidence.json` and `report_evidence.md` (three tables and two bullets, comma decimals).
+- The evidence on the real data: the index tracks size inversely under D-02 (followers Pearson -0,879, rank-correlation (retired) -0,921); perros is the only topic above 0,4 in absolute correlation (+0,480); under D-02 seven of the index top 10 are perros creators and none arte, under the opposite sign five are fútbol, three maquillaje, one perros, one arte. The maximum is INF031 (@mundoanimal.ar, perros, 17062 followers) with D-02 and INF045 (@futbolsinvueltas, fútbol, 493194 followers) with the opposite sign.
 - `plot_oja_vs_pc1` draws the PC1 score against the seed-1 index, coloured by dominant topic with the palette of the four topics, the identity line and a statistics box; I looked at the PNG: the 50 points sit on the line.
 - Sections 1-3 of `deliverables/03-oja-campanas.md`: section 1 (algorithm, parameters, D-02 sign, convergence with its six bullets and the convergence figure), section 2 (comparison table and four seed bullets, `oja_vs_pc1.svg`), section 3 (opens with **No.**, what the index represents, the weights, correlations, top-10 tables and the two maximum bullets, and a three-reason conclusion that sends the choice to the rule of section 4).
 - Two consecutive `make oja` give identical hashes for every CSV, JSON, MD and SVG except `runs.json`; `pytest analysis/tests` gives 72 passed; `rule_identity()` still returns rule commit `a6212e89...` after each deliverable edit and the deliverable diff has 0 deletions.
