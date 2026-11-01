@@ -201,7 +201,6 @@ OUTLINE: tuple[Slide, ...] = (
             (
                 ("Grilla", "{som.chosen_k} × {som.chosen_k}",
                  "La eligió la regla fijada de antemano: es la más grande entre las grillas que cumplen la ocupación"),
-                ("Vecindad", "{som.neighborhood}", "Es la del curso; la gaussiana se corrió solo como comparación"),
                 ("Radio inicial R0", "{som.base_radius0}",
                  "Baseline fijado de antemano (la mitad de k); con otros valores la elección no cambia"),
                 ("Radio final", "{som.base_radius_final}",

@@ -10,12 +10,9 @@ El modelo es un mapa autoorganizado de Kohonen con grilla rectangular de k × k 
 
 **Tasa de aprendizaje.** η decrece exponencialmente de η0 a ηf: η(t) = η0 · (ηf / η0)^(t / (T − 1)), con η0 < 1 (D-02).
 
-**Vecindad.** Hay dos modos, elegidos por la clave `neighborhood` (D-01). El radio R (en el modo escalón) y σ (en el gaussiano) decrecen con la misma forma exponencial que η, desde `radius0` hasta `radius_final`, y nunca bajan de `radius_final`.
+**Vecindario.** Se define con un radio R que decrece con la misma forma exponencial que η, desde `radius0` hasta `radius_final`, y nunca baja de `radius_final`. Se actualizan las neuronas cuya distancia en la grilla a la ganadora cumple `||n − n_k|| ≤ R(t)`. Las slides del curso escriben N_k(i) = {n / ||n − n_k|| < R(i)} con `<` estricto (p. 26) y fijan R = 1 para la grilla rectangular de 4 vecinos (p. 15); con el `<` estricto, R = 1 deja solo a la ganadora. Este TP usa `≤` a propósito (D-01), para que R = 1 actualice a la ganadora y a sus cuatro vecinas pegadas; las diagonales (a distancia √2) entran recién cuando R ≥ √2. R(0) es configurable y baja hasta 1 inclusive.
 
-- *Escalón* (camino principal, el del curso). Se actualizan las neuronas cuya distancia en la grilla a la ganadora cumple `||n − n_k|| ≤ R(t)`. Las slides del curso escriben N_k(i) = {n / ||n − n_k|| < R(i)} con `<` estricto (p. 26) y fijan R = 1 para la grilla rectangular de 4 vecinos (p. 15); con el `<` estricto, R = 1 deja solo a la ganadora. Este TP usa `≤` a propósito (D-01), para que R = 1 actualice a la ganadora y a sus cuatro vecinas pegadas; las diagonales (a distancia √2) entran recién cuando R ≥ √2. R(0) es configurable y baja hasta 1 inclusive.
-- *Gaussiano* (variante de comparación). El peso de una neurona a distancia d de la ganadora es h = exp(−d² / 2σ²), con σ decreciente y un piso mayor que 0, nunca 0.
-
-**Regla de actualización.** Para cada creador x con ganadora n_k, todas las neuronas j se actualizan con W_j ← W_j + η(t) · h_j · (x − W_j), con h_j ∈ {0, 1} en el modo escalón y h_j = exp(−d² / 2σ²) en el gaussiano.
+**Regla de actualización.** Para cada creador x con ganadora n_k, todas las neuronas j se actualizan con W_j ← W_j + η(t) · h_j · (x − W_j), con h_j = 1 si la neurona j está en el vecindario de la ganadora y h_j = 0 si no.
 
 **Salidas de cada corrida.**
 
@@ -62,7 +59,7 @@ Los scores no se reescalan: la distancia entre dos creadores en esas 7 columnas 
 
 Las cifras salen de `analysis/results/som/series_som_stage1/` (`aggregate.csv`, `selection.json`), que escribe `make som-stage1`. La regla de la sección 2 se aplicó sin cambios sobre los scores de las 7 componentes (sección 2.1): el comando se negaría a correr con el texto de la regla, `analysis/som_select.py` o la serie de la etapa 1 sin commitear, y `selection.json` guarda el commit que agregó la regla y el sha256 de su texto y de su código. Son 14 configuraciones × 10 seeds = 140 corridas; ninguna falló. Todas las cifras son media ± desvío (ddof 1) sobre las 10 seeds, nunca una seed sola (D-08).
 
-**Escalón (camino de la elección).** La columna "filtros" dice cuáles de los tres filtros de la sección 2 (TE ≤ 0,05, vacías ≤ 20 %, creadores por neurona ocupada ≥ 2) pasa la media de cada k.
+**Resultados por k.** La columna "filtros" dice cuáles de los tres filtros de la sección 2 (TE ≤ 0,05, vacías ≤ 20 %, creadores por neurona ocupada ≥ 2) pasa la media de cada k.
 
 | k | TE | % de neuronas vacías | creadores por neurona ocupada | filtros |
 | --- | --- | --- | --- | --- |
@@ -74,19 +71,7 @@ Las cifras salen de `analysis/results/som/series_som_stage1/` (`aggregate.csv`, 
 | 7 | 0,050 ± 0,027 | 33,9 ± 6,5 | 1,56 ± 0,15 | falla vacías y creadores |
 | 8 | 0,010 ± 0,011 | 43,8 ± 5,0 | 1,40 ± 0,12 | falla vacías y creadores |
 
-**Gaussiana (comparación, no entra en la elección, D-11).** Mismo R0 = σ0, mismo piso y mismas seeds. La columna "filtros" es solo informativa: la regla no la usa.
-
-| k | TE | % de neuronas vacías | creadores por neurona ocupada | filtros |
-| --- | --- | --- | --- | --- |
-| 2 | 0,110 ± 0,011 | 0,0 ± 0,0 | 12,50 ± 0,00 | falla TE |
-| 3 | 0,106 ± 0,010 | 5,6 ± 5,9 | 5,90 ± 0,37 | falla TE |
-| 4 | 0,084 ± 0,013 | 4,4 ± 3,0 | 3,27 ± 0,10 | falla TE |
-| 5 | 0,072 ± 0,029 | 15,2 ± 4,1 | 2,36 ± 0,11 | falla TE |
-| 6 | 0,022 ± 0,022 | 30,3 ± 2,0 | 1,99 ± 0,06 | falla vacías y creadores |
-| 7 | 0,040 ± 0,028 | 39,2 ± 3,6 | 1,68 ± 0,10 | falla vacías y creadores |
-| 8 | 0,024 ± 0,013 | 48,9 ± 2,4 | 1,53 ± 0,08 | falla vacías y creadores |
-
-**Cómo siguió la regla.** Con el escalón, **ninguna k pasa los tres filtros**. k = 2, 3, 4 y 5 ocupan bien sus neuronas (como máximo 7,2 % de vacías y al menos 2,16 creadores por neurona ocupada) pero quedan fuera por TE (0,180, 0,164, 0,070 y 0,064, contra el máximo de 0,05); k = 6, 7 y 8 pasan TE pero quedan fuera por la ocupación (21,7 %, 33,9 % y 43,8 % de neuronas vacías, y 1,78, 1,56 y 1,40 creadores por neurona ocupada). Como no sobrevivió ninguna, se aplicó el paso de D-14: la regla quita solo el filtro de TE, aplica el resto sin cambios y el informe dice que **ninguna grilla cumplió TE ≤ 0,05**. Sin el filtro de TE sobreviven k = 2, 3, 4 y 5 por ocupación, y entre ellas la regla elige la más grande, k = 5. Una limitación: k = 5 no cumple el TE (0,064, con 6 de las 10 seeds por encima de 0,05) y pasa por poco el mínimo de creadores por neurona ocupada (2,16 contra 2). La etapa 2 mide cuánto de esto depende del schedule.
+**Cómo siguió la regla.** **Ninguna k pasa los tres filtros**. k = 2, 3, 4 y 5 ocupan bien sus neuronas (como máximo 7,2 % de vacías y al menos 2,16 creadores por neurona ocupada) pero quedan fuera por TE (0,180, 0,164, 0,070 y 0,064, contra el máximo de 0,05); k = 6, 7 y 8 pasan TE pero quedan fuera por la ocupación (21,7 %, 33,9 % y 43,8 % de neuronas vacías, y 1,78, 1,56 y 1,40 creadores por neurona ocupada). Como no sobrevivió ninguna, se aplicó el paso de D-14: la regla quita solo el filtro de TE, aplica el resto sin cambios y el informe dice que **ninguna grilla cumplió TE ≤ 0,05**. Sin el filtro de TE sobreviven k = 2, 3, 4 y 5 por ocupación, y entre ellas la regla elige la más grande, k = 5. Una limitación: k = 5 no cumple el TE (0,064, con 6 de las 10 seeds por encima de 0,05) y pasa por poco el mínimo de creadores por neurona ocupada (2,16 contra 2). La etapa 2 mide cuánto de esto depende del schedule.
 
 - Grilla elegida: k = 5
 - Commit de la regla: ea7a0b11202d
@@ -96,7 +81,7 @@ Con k = 8 quedan 43,8 % de neuronas vacías y 1,40 creadores por neurona ocupada
 
 ## 4. Etapa 2: robustez del schedule
 
-Las cifras salen de `analysis/results/som/series_som_stage2/` (`aggregate.csv`, `robustness.csv`, `robustness.json`), que escribe `make som-stage2` sobre `analysis/series_som_stage2.json`. Ese archivo lo generó `analysis/som_stage.py write-stage2` a partir de la k elegida (k = 5) y de las escaleras de la sección 2, y se commiteó antes de correr: sale idéntico al de la corrida anterior porque la k elegida es la misma. Sobre k = 5 con el escalón se cambia una cosa a la vez respecto del baseline (R0 = 2,5; η0 = 0,5; 260 épocas): R0 en {1,25; 5}, η0 en {0,1; 0,25; 0,9} y épocas en {50; 130; 520; 1040}, con 10 seeds cada variante (10 variantes × 10 seeds = 100 corridas; ninguna falló, D-06). Todas las cifras son media ± desvío (ddof 1) sobre las 10 seeds. La fila `base` repite la fila k = 5 de la sección 3. Como en la etapa 1 se quitó el filtro de TE, la robustez revisa solo los filtros de ocupación (sección 2, **Criterio de robustez.**); el TE se informa pero no decide.
+Las cifras salen de `analysis/results/som/series_som_stage2/` (`aggregate.csv`, `robustness.csv`, `robustness.json`), que escribe `make som-stage2` sobre `analysis/series_som_stage2.json`. Ese archivo lo generó `analysis/som_stage.py write-stage2` a partir de la k elegida (k = 5) y de las escaleras de la sección 2, y se commiteó antes de correr: sale idéntico al de la corrida anterior porque la k elegida es la misma. Sobre k = 5 se cambia una cosa a la vez respecto del baseline (R0 = 2,5; η0 = 0,5; 260 épocas): R0 en {1,25; 5}, η0 en {0,1; 0,25; 0,9} y épocas en {50; 130; 520; 1040}, con 10 seeds cada variante (10 variantes × 10 seeds = 100 corridas; ninguna falló, D-06). Todas las cifras son media ± desvío (ddof 1) sobre las 10 seeds. La fila `base` repite la fila k = 5 de la sección 3. Como en la etapa 1 se quitó el filtro de TE, la robustez revisa solo los filtros de ocupación (sección 2, **Criterio de robustez.**); el TE se informa pero no decide.
 
 | variante | R0 | η0 | épocas | TE | % de neuronas vacías | creadores por neurona ocupada | pasa los filtros de ocupación |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -127,7 +112,7 @@ Las figuras salen de `analysis/results/som/figures/`, que escribe `make som-figu
 
 **`planes_appendix.svg`: planos de todas las componentes y las variables.** Las 7 componentes con las que se entrenó el mapa, como peso del prototipo (cada una con su escala centrada en 0), y las 31 variables de `datos/creadores.csv` como media cruda de los creadores de cada neurona. Sirve para buscar una variable que no entró en el plano principal; no se eligió ninguna por cómo se ve, y qué regiones se forman y cómo se parecen a PC1 y PC2 es la sección 6, no esta.
 
-**`stage1_curves.svg`: medidas de la etapa 1 contra k.** Paneles contra k (2 a 8), media ± desvío entre las 10 seeds, escalón y gaussiana. Los que usa la regla son el TE, el % de neuronas vacías y los creadores por neurona ocupada, con sus umbrales (TE 0,05; 20 % de vacías; 2 creadores por neurona ocupada) y la k elegida marcada; los demás paneles son medidas que el trabajo dejó de usar y no entran en la elección ni en el análisis. Las neuronas vacías suben de 0 % a 43,8 % y los creadores por neurona ocupada bajan de 12,5 a 1,40 entre k = 2 y k = 8, o sea que la grilla grande reparte los 50 creadores en neuronas casi individuales. Los umbrales valen para el escalón; la gaussiana se muestra como comparación.
+**`stage1_curves.svg`: medidas de la etapa 1 contra k.** Paneles contra k (2 a 8), media ± desvío entre las 10 seeds. Los que usa la regla son el TE, el % de neuronas vacías y los creadores por neurona ocupada, con sus umbrales (TE 0,05; 20 % de vacías; 2 creadores por neurona ocupada) y la k elegida marcada; los demás paneles son medidas que el trabajo dejó de usar y no entran en la elección ni en el análisis. Las neuronas vacías suben de 0 % a 43,8 % y los creadores por neurona ocupada bajan de 12,5 a 1,40 entre k = 2 y k = 8, o sea que la grilla grande reparte los 50 creadores en neuronas casi individuales.
 
 **`trace.svg`: entrenamiento de la corrida dibujada.** El TE en cada una de las 260 épocas (la figura trae además otra curva que no se usa). En la primera época el TE vale 0,90 y en la última 0,10; en el último 10 % de las épocas varía entre 0,10 y 0,12, o sea que queda casi plano. El TE final de la corrida dibujada (0,10) se compara con el de las 10 seeds de la sección 3 (TE medio 0,064): supera el máximo de 0,05, como el promedio.
 
