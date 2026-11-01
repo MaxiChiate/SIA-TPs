@@ -274,7 +274,10 @@ OUTLINE: tuple[Slide, ...] = (
     ),
     Slide(
         "som-te", 1, "Las grillas con menor error topográfico dejan demasiadas neuronas vacías",
-        None, ("Q1.3",), (), None, _key("som/figures/te_by_k.svg"),
+        None, ("Q1.3",),
+        ("Error topográfico = creadores cuya neurona más cercana y segunda más cercana no son vecinas en la grilla "
+         "/ total de creadores",),
+        None, _key("som/figures/te_by_k.svg"),
         "El error topográfico es la fracción de creadores cuya neurona más cercana y segunda más cercana no son "
         "vecinas en la grilla (una diagonal cuenta como error), y mide si el mapa conserva la vecindad, que es lo que "
         "busca Kohonen; cada barra es la media de 10 entrenamientos con distinta seed, las líneas negras son el "

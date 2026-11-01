@@ -403,10 +403,7 @@ def plot_te_by_k(step_rows: list[dict], chosen_k: int, thresholds: dict, out_ste
     ax.set_ylabel("error topográfico")
     handles = [plt.Rectangle((0, 0), 1, 1, color=colors["cumple la ocupación"]),
                plt.Rectangle((0, 0), 1, 1, color=plots_style.TEXT_SECONDARY)]
-    empty_limit = f"{thresholds['empty_max'] * 100:.0f} %"
-    ax.legend(handles, ["cumple los límites de ocupación",
-                        f"no cumple: más de {empty_limit} de vacías o menos de {thresholds['creators_min']:g} "
-                        "creadores por neurona"],
+    ax.legend(handles, ["cumple los límites de ocupación", "no cumple los límites de ocupación"],
               frameon=False, fontsize=plots_style.fontsize(9), loc="upper right")
     ax.grid(True, axis="y")
     _seeds_note(fig, rows, "barra")
