@@ -34,6 +34,7 @@ import som_stage  # noqa: E402
 from creadores import load_creadores  # noqa: E402
 
 DEFAULT_STAGE1 = TP_DIR / "analysis" / "results" / "som" / "series_som_stage1"
+DEFAULT_STAGE2 = TP_DIR / "analysis" / "results" / "som" / "series_som_stage2"
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "som" / "figures"
 RULE_FILE = TP_DIR / "deliverables" / "02-kohonen.md"
 HATCH_COLOR = "#8a8984"
@@ -285,6 +286,55 @@ def plot_stage1_curves(rows: list[dict], selection: dict, out_stem) -> None:
     plots_style.save_figure(fig, out_stem)
 
 
+# ---------- effect of one hyperparameter ----------
+
+# The three measures a person without the SOM vocabulary can read: how far a creator is from its neuron (QE-LOO, with
+# the map trained without that creator), how many neurons are empty and how many creators share an occupied one.
+EFFECT_PANELS = (
+    ("qe_loo", "Distancia del creador a su neurona", "menor es mejor", 1.0),
+    ("empty_fraction", "% de neuronas vacías", "límite: 20 %", 100.0),
+    ("creators_per_occupied", "Creadores por neurona ocupada", "mínimo: 2", 1.0),
+)
+# The same y range in the three figures, so a change of eta0 or R0 is read on the scale of the change of k.
+EFFECT_YLIM = {"qe_loo": (2.1, 3.05), "empty_fraction": (-2.0, 50.0), "creators_per_occupied": (0.0, 13.0)}
+
+
+def effect_rows(stage2_rows: list[dict], vary: str) -> list[dict]:
+    """The stage-2 rows that move `vary` (radius0 or eta0) plus the base one, sorted by that value."""
+    prefix = {"radius0": "radius0-", "eta0": "eta0-"}[vary]
+    chosen = [r for r in stage2_rows if r["label"] == "base" or r["label"].startswith(prefix)]
+    return sorted(chosen, key=lambda r: float(r[vary]))
+
+
+def plot_effect(rows: list[dict], x_key: str, x_label: str, base_x: float, thresholds: dict, out_stem) -> None:
+    """Three panels (distance, empty neurons, creators per neuron) against one hyperparameter, escalón only;
+    mean +/- sd over the 10 seeds, the dashed line is the limit of the rule, the vertical one the value we use."""
+    plt = plots_style.apply_style()
+    color = plots_style.palette_for(["escalón"])["escalón"]
+    limits = {"empty_fraction": thresholds["empty_max"] * 100.0, "creators_per_occupied": thresholds["creators_min"]}
+    fig, axes = plt.subplots(1, 3, figsize=plots_style.figsize((11.5, 3.9)))
+    xs = [float(r[x_key]) for r in rows]
+    for ax, (measure, label, hint, scale) in zip(axes, EFFECT_PANELS):
+        mean = [float(r[f"{measure}_mean"]) * scale for r in rows]
+        sd = [float(r[f"{measure}_sd"]) * scale for r in rows]
+        ax.errorbar(xs, mean, yerr=sd, color=color, marker="o", markersize=5, linewidth=1.8, capsize=3)
+        if measure in limits:
+            ax.axhline(limits[measure], color=plots_style.TEXT_SECONDARY, linestyle="--", linewidth=1)
+        ax.axvline(base_x, color=plots_style.TEXT_PRIMARY, linewidth=1, alpha=0.5)
+        ax.set_ylim(*EFFECT_YLIM[measure])
+        ax.set_title(f"{label}\n({hint})", fontsize=plots_style.fontsize(9), loc="left")
+        ax.set_xlabel(x_label)
+        ax.set_xticks(xs)
+        ax.set_xticklabels([_fmt_tick(x) for x in xs])
+        ax.grid(True, axis="y")
+    fig.tight_layout(rect=plots_style.rect((0, 0, 1, 1)))
+    plots_style.save_figure(fig, out_stem)
+
+
+def _fmt_tick(value: float) -> str:
+    return f"{value:g}".replace(".", ",")
+
+
 # ---------- training trace ----------
 
 def plot_trace(trace, title: str, out_stem) -> None:
@@ -337,6 +387,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Figures of the Kohonen grid chosen by the pre-registered rule.")
     parser.add_argument("--stage1", type=Path, default=DEFAULT_STAGE1,
                         help="stage-1 results folder (default: analysis/results/som/series_som_stage1)")
+    parser.add_argument("--stage2", type=Path, default=DEFAULT_STAGE2,
+                        help="stage-2 results folder (default: analysis/results/som/series_som_stage2)")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT,
                         help="output folder (default: analysis/results/som/figures)")
     args = parser.parse_args(argv)
@@ -417,6 +469,15 @@ def main(argv: list[str] | None = None) -> int:
         row["stability_sd"] = str(sd.get(row["label"], 0.0))
     for _ in plots_style.iter_variants():
         plot_stage1_curves(rows, selection, out / "stage1_curves")
+    stage2_rows = _read_csv(args.stage2 / "aggregate.csv")
+    base = next(r for r in stage2_rows if r["label"] == "base")
+    step_rows = sorted((r for r in rows if r["neighborhood"] == "step"), key=lambda r: int(r["grid_k"]))
+    for _ in plots_style.iter_variants():
+        plot_effect(step_rows, "grid_k", "k (lado de la grilla)", k, selection["thresholds"], out / "effect_k")
+        plot_effect(effect_rows(stage2_rows, "eta0"), "eta0", "tasa de aprendizaje inicial η0", float(base["eta0"]),
+                    selection["thresholds"], out / "effect_eta0")
+        plot_effect(effect_rows(stage2_rows, "radius0"), "radius0", "radio inicial R0", float(base["radius0"]),
+                    selection["thresholds"], out / "effect_radius0")
     plot_trace(run.trace, f"Traza del entrenamiento de la corrida dibujada: k = {k}, seed {seed}", out / "trace")
 
     # who is in each neuron

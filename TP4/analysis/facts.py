@@ -337,6 +337,40 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
         "som.s2_creators_min": dec(min(float(r["creators_per_occupied_mean"]) for r in stage2), 2),
         "som.s2_creators_max": dec(max(float(r["creators_per_occupied_mean"]) for r in stage2), 2),
     })
+    # The slides of the effect of k, eta0 and R0: the distance of a creator to its neuron (QE-LOO), the empty neurons and
+    # the creators per occupied neuron, read from the same tables as the figures.
+    per_k = sorted(selection["per_k"], key=lambda row: row["k"])
+    first, last = per_k[0], per_k[-1]
+    following = next(row for row in per_k if row["k"] == selection["chosen_k"] + 1)
+    values.update({
+        "som.k_first": integer(first["k"]),
+        "som.k_last": integer(last["k"]),
+        "som.k_first_dist": dec(first["qe_loo_mean"], 2),
+        "som.k_last_dist": dec(last["qe_loo_mean"], 2),
+        "som.k_next": integer(following["k"]),
+        "som.k_next_empty": pct(following["empty_fraction_mean"], 1),
+        "som.k_next_creators": dec(following["creators_per_occupied_mean"], 2),
+    })
+    for name, vary, other in (("eta", "eta0", "radius0"), ("r0", "radius0", "eta0")):
+        # the variants that move only `vary` (the base one included)
+        moved = sorted((r for r in table.values()
+                        if float(r[other]) == float(table["base"][other])
+                        and float(r["epochs"]) == float(table["base"]["epochs"])),
+                       key=lambda r: float(r[vary]))
+        dist = [float(r["qe_loo_mean"]) for r in moved]
+        empty = [float(r["empty_fraction_mean"]) for r in moved]
+        creators = [float(r["creators_per_occupied_mean"]) for r in moved]
+        values.update({
+            f"som.{name}_lo": _number(float(moved[0][vary])),
+            f"som.{name}_hi": _number(float(moved[-1][vary])),
+            f"som.{name}_values": "; ".join(_number(float(r[vary])) for r in moved),
+            f"som.{name}_dist_min": dec(min(dist), 2),
+            f"som.{name}_dist_max": dec(max(dist), 2),
+            f"som.{name}_empty_min": pct(min(empty), 1),
+            f"som.{name}_empty_max": pct(max(empty), 1),
+            f"som.{name}_creators_min": dec(min(creators), 2),
+            f"som.{name}_creators_max": dec(max(creators), 2),
+        })
     # The three highest walls of the U matrix: the neurons they join, the variables that differ most and whether one
     # of the two neurons holds a single creator.
     hits = {int(row["neuron"]): int(row["hits"]) for row in read_csv_source(results_dir, "som.hits")}

@@ -90,10 +90,11 @@ def write_results(root, *, robust=False):
     })
     write_csv(root / "som/series_som_stage2/robustness.csv",
               ["label", "radius0", "eta0", "epochs", "te_mean", "empty_fraction_mean", "creators_per_occupied_mean",
-               "passes_empty", "passes_creators"], [
-        ["base", 2.5, 0.5, 260, 0.046, 0.072, 2.16, True, True],
-        ["a", 5.0, 0.5, 260, 0.05600000000000001, 0.084, 2.18, True, True],
-        ["b", 2.5, 0.25, 260, 0.06, 0.076, 2.17, True, True], ["c", 2.5, 0.5, 50, 0.052, 0.108, 2.25, True, True],
+               "passes_empty", "passes_creators", "qe_loo_mean"], [
+        ["base", 2.5, 0.5, 260, 0.046, 0.072, 2.16, True, True, 2.34],
+        ["a", 5.0, 0.5, 260, 0.05600000000000001, 0.084, 2.18, True, True, 2.35],
+        ["b", 2.5, 0.25, 260, 0.06, 0.076, 2.17, True, True, 2.35],
+        ["c", 2.5, 0.5, 50, 0.052, 0.108, 2.25, True, True, 2.36],
     ])
     write_csv(root / "som/series_som_stage2/aggregate.csv", ["label", "neighborhood", "radius_final", "eta_final"],
               [["base", "step", 1.0, 0.01], ["a", "step", 1.0, 0.01]])
@@ -428,9 +429,10 @@ def _pinv_above_hamming(root):
 def _occupancy_fails(root):
     write_csv(root / "som/series_som_stage2/robustness.csv",
               ["label", "radius0", "eta0", "epochs", "te_mean", "empty_fraction_mean", "creators_per_occupied_mean",
-               "passes_empty", "passes_creators"],
-              [["base", 2.5, 0.5, 260, 0.046, 0.072, 2.16, True, True], ["a", 5.0, 0.5, 260, 0.056, 0.3, 2.1, False, True],
-               ["b", 2.5, 0.25, 260, 0.06, 0.076, 2.17, True, True]])
+               "passes_empty", "passes_creators", "qe_loo_mean"],
+              [["base", 2.5, 0.5, 260, 0.046, 0.072, 2.16, True, True, 2.34],
+               ["a", 5.0, 0.5, 260, 0.056, 0.3, 2.1, False, True, 2.35],
+               ["b", 2.5, 0.25, 260, 0.06, 0.076, 2.17, True, True, 2.35]])
 
 
 def _decided_by_another_measure(root):

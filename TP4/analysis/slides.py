@@ -49,7 +49,7 @@ import deliverables_manifest  # noqa: E402
 import facts  # noqa: E402
 
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "slides"
-MAX_SLIDES = 28  # D-01 said 20 to 25; three slides added after the review of the enunciado (EDA, zones, capacity)
+MAX_SLIDES = 30  # D-01 said 20 to 25; three slides added after the review of the enunciado (EDA, zones, capacity)
 HOME_PATH = re.compile(r"/Users/|/home/|[A-Za-z]:\\Users\\")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}")
 SLIDE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -221,19 +221,57 @@ OUTLINE: tuple[Slide, ...] = (
         "El mapa se entrena con los scores de las {pca17.k_80} primeras componentes de la PCA.",
     ),
     Slide(
-        "som-rule", 1,
-        "Ninguna grilla cumple el TE máximo: sin ese filtro la regla elige k = {som.chosen_k}",
-        "Regla fijada de antemano", ("Q1.3",), (), None, _key("som/figures/stage1_curves.svg"),
-        "La regla descarta las grillas que no pasan los filtros de error topográfico (TE), neuronas vacías y creadores "
-        "por neurona ocupada, y entre las que pasan gana el menor QE-LOO: el error de cuantización medido sobre cada "
-        "creador con un mapa entrenado sin él (leave-one-out). "
-        "Ninguna grilla pasó los tres filtros: con k = {som.chosen_k} el TE medio es {som.chosen_te} frente a un máximo "
-        "de {som.te_max}, y las grillas más grandes tienen demasiadas neuronas vacías, así que la regla quita el filtro "
-        "de TE, como dice de antemano, y elige entre las que cumplen los otros dos. "
-        "El QE de entrenamiento no decide porque baja siempre al agrandar la grilla: elegiría k = "
-        "{som.qe_train_argmin_k}, con muchas neuronas vacías. "
-        "Todas las curvas son media entre seeds y no una corrida, y la estabilidad entre seeds de k = {som.chosen_k} "
-        "es {som.chosen_stability}.",
+        "som-k", 1, "k = {som.chosen_k} es la grilla más grande que cumple los dos límites de ocupación",
+        "Regla fijada de antemano", ("Q1.3",),
+        (
+            "La distancia del creador a su neurona baja siempre al agrandar la grilla, de {som.k_first_dist} con "
+            "k = {som.k_first} a {som.k_last_dist} con k = {som.k_last}, pero las neuronas quedan casi individuales",
+            "Con k = {som.chosen_k}: {som.chosen_empty} de neuronas vacías (límite {som.empty_max}) y "
+            "{som.chosen_creators} creadores por neurona ocupada (mínimo {som.creators_min}); con k = {som.k_next} ya "
+            "son {som.k_next_empty} y {som.k_next_creators}",
+        ),
+        None, _key("som/figures/effect_k.svg"),
+        "Cada punto es la media de 10 entrenamientos con distinta seed y las barras son el desvío entre ellas. "
+        "La distancia es qué tan lejos queda un creador de su neurona cuando el mapa se entrenó sin ese creador "
+        "(el QE-LOO), así que mide si el mapa generaliza y no solo si memoriza. "
+        "La regla fijada de antemano descarta las grillas con más de {som.empty_max} de neuronas vacías o con menos de "
+        "{som.creators_min} creadores por neurona ocupada, y entre las que pasan elige la de menor distancia: "
+        "k = {som.chosen_k}. "
+        "Había un tercer filtro, el error topográfico, que ninguna grilla cumplió, así que la regla lo quitó como "
+        "decía de antemano.",
+    ),
+    Slide(
+        "som-eta0", 1, "Con η0 entre {som.eta_lo} y {som.eta_hi} el mapa casi no cambia",
+        "Regla fijada de antemano", ("Q1.3",),
+        (
+            "Probamos η0 = {som.eta_values}, con k = {som.chosen_k} y el resto igual",
+            "La distancia queda entre {som.eta_dist_min} y {som.eta_dist_max}, las neuronas vacías entre "
+            "{som.eta_empty_min} y {som.eta_empty_max} y los creadores por neurona entre {som.eta_creators_min} y "
+            "{som.eta_creators_max}: siempre dentro de los límites",
+        ),
+        None, _key("som/figures/effect_eta0.svg"),
+        "η0 es cuánto se mueve la neurona ganadora hacia el creador en los primeros pasos; después decae hasta "
+        "{som.base_eta_final}. "
+        "Los ejes son los mismos que en la slide de k para que se vea que, al lado de cambiar la grilla, cambiar "
+        "η0 mueve muy poco. "
+        "Usamos η0 = {som.base_eta0}, un valor medio fijado de antemano, y ninguna de las otras tres da una "
+        "distancia menor.",
+    ),
+    Slide(
+        "som-r0", 1, "Con R0 entre {som.r0_lo} y {som.r0_hi} el mapa casi no cambia",
+        "Regla fijada de antemano", ("Q1.3",),
+        (
+            "Probamos R0 = {som.r0_values}, con k = {som.chosen_k} y el resto igual",
+            "La distancia queda entre {som.r0_dist_min} y {som.r0_dist_max}, las neuronas vacías entre "
+            "{som.r0_empty_min} y {som.r0_empty_max} y los creadores por neurona entre {som.r0_creators_min} y "
+            "{som.r0_creators_max}: siempre dentro de los límites",
+        ),
+        None, _key("som/figures/effect_radius0.svg"),
+        "R0 es cuántas neuronas vecinas se mueven junto con la ganadora al principio del entrenamiento; después el "
+        "radio baja hasta {som.base_radius_final}. "
+        "Los ejes son los mismos que en las dos slides anteriores, así que se compara a la misma escala. "
+        "Usamos R0 = {som.base_radius0}, la mitad de k, fijado de antemano, y con los otros valores la elección no "
+        "cambia.",
     ),
     Slide(
         "som-robust", 1,

@@ -84,6 +84,9 @@ comando. Las filas salen del manifiesto `analysis/deliverables_manifest.py` y `m
 | `analysis/results/som/figures/planes_appendix.svg` | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json (entrada: datos/prepared/creadores_pca_scores.csv, make pca) | 10 (figure_seed de selection.json) |
 | `analysis/results/som/figures/trace.svg` | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json (entrada: datos/prepared/creadores_pca_scores.csv, make pca) | 10 (figure_seed de selection.json) |
 | `analysis/results/som/figures/stage1_curves.svg` (y `slide/`) | `02-kohonen.md` §3 | `make som-figures` | analysis/series_som_stage1.json | 1-10 (las seeds de la serie; la media y el desvío entre ellas) |
+| `analysis/results/som/figures/effect_k.svg` (y `slide/`) | `02-kohonen.md` §3 | `make som-figures` | analysis/series_som_stage1.json | 1-10 (las seeds de la serie; la media y el desvío entre ellas) |
+| `analysis/results/som/figures/effect_eta0.svg` (y `slide/`) | `02-kohonen.md` §3 | `make som-figures` | analysis/series_som_stage2.json | 1-10 (las seeds de la serie; la media y el desvío entre ellas) |
+| `analysis/results/som/figures/effect_radius0.svg` (y `slide/`) | `02-kohonen.md` §3 | `make som-figures` | analysis/series_som_stage2.json | 1-10 (las seeds de la serie; la media y el desvío entre ellas) |
 | `analysis/results/som/profiles/regions.svg` (y `slide/`) | `02-kohonen.md` §6.1 | `make som-profiles` | analysis/series_som_stage1.json (entrada: datos/prepared/creadores_pca_scores.csv, make pca) | 10 (figure_seed de selection.json) |
 | `analysis/results/som/profiles/zones.svg` (y `slide/`) | `02-kohonen.md` §6.2 | `make som-profiles` | analysis/series_som_stage1.json (entrada: datos/prepared/creadores_pca_scores.csv, make pca) | 10 (figure_seed de selection.json) |
 | `analysis/results/som/profiles/pc_planes.svg` (y `slide/`) | `02-kohonen.md` §6.4 | `make som-profiles` | analysis/series_som_stage1.json (entrada: datos/prepared/creadores_pca_scores.csv, make pca) | 10 (figure_seed de selection.json) |
@@ -131,7 +134,7 @@ no se arma si un número citado de los fragmentos cambió.
 
 `make deliverables` deja listo, sin publicar, lo siguiente (no se versiona):
 
-- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 28 slides), los PNG de las figuras
+- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 30 slides), los PNG de las figuras
   (`assets/`) y `notes.md` (el guion). Lo arma `analysis/slides.py`; `make slides` corre solo ese paso.
 - `analysis/results/informe/informe.html`: el informe, una página autocontenida. Lo arma `analysis/informe.py`; `make informe`
   corre solo ese paso.
