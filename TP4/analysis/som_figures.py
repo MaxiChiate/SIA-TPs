@@ -132,7 +132,9 @@ def plot_map(hits, U, k: int, title: str, caption: str, out_stem) -> None:
                           fontsize=plots_style.fontsize(11), color="white" if dark else plots_style.TEXT_PRIMARY)
     _hatch(left, empty)
     _grid_axes(left, k)
-    left.set_title("Creadores por neurona (celdas rayadas: vacías)", fontsize=plots_style.fontsize(10), loc="left")
+    slide = plots_style.variant() == "slide"
+    left.set_title("Creadores por neurona" + ("" if slide else " (celdas rayadas: vacías)"),
+                   fontsize=plots_style.fontsize(10), loc="left")
     bar = fig.colorbar(image, ax=left, fraction=0.046, pad=0.03)
     bar.set_label("creadores")
 
@@ -144,7 +146,8 @@ def plot_map(hits, U, k: int, title: str, caption: str, out_stem) -> None:
                        fontsize=plots_style.fontsize(8), color="white" if frac < 0.55 else plots_style.TEXT_PRIMARY)
     _hatch(right, empty)
     _grid_axes(right, k)
-    right.set_title("Matriz U (celdas rayadas: neuronas vacías)", fontsize=plots_style.fontsize(10), loc="left")
+    right.set_title("Matriz U" + ("" if slide else " (celdas rayadas: neuronas vacías)"),
+                    fontsize=plots_style.fontsize(10), loc="left")
     bar = fig.colorbar(image, ax=right, fraction=0.046, pad=0.03)
     bar.set_label("distancia media a los 4 vecinos (z)")
 
