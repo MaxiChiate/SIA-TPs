@@ -322,7 +322,9 @@ def plot_effect(rows: list[dict], x_key: str, x_label: str, base_x: float, thres
             ax.axhline(limits[measure], color=plots_style.TEXT_SECONDARY, linestyle="--", linewidth=1)
         ax.axvline(base_x, color=plots_style.TEXT_PRIMARY, linewidth=1, alpha=0.5)
         ax.set_ylim(*EFFECT_YLIM[measure])
-        ax.set_title(f"{label}\n({hint})", fontsize=plots_style.fontsize(9), loc="left")
+        # the slide carries the title only; the report keeps the hint (what is better, the limit of the rule)
+        title = label if plots_style.variant() == "slide" else f"{label}\n({hint})"
+        ax.set_title(title, fontsize=plots_style.fontsize(9), loc="left")
         ax.set_xlabel(x_label)
         ax.set_xticks(xs)
         ax.set_xticklabels([_fmt_tick(x) for x in xs])
@@ -473,7 +475,7 @@ def main(argv: list[str] | None = None) -> int:
     base = next(r for r in stage2_rows if r["label"] == "base")
     step_rows = sorted((r for r in rows if r["neighborhood"] == "step"), key=lambda r: int(r["grid_k"]))
     for _ in plots_style.iter_variants():
-        plot_effect(step_rows, "grid_k", "k (lado de la grilla)", k, selection["thresholds"], out / "effect_k")
+        plot_effect(step_rows, "grid_k", "k" if plots_style.variant() == "slide" else "k (lado de la grilla)", k, selection["thresholds"], out / "effect_k")
         plot_effect(effect_rows(stage2_rows, "eta0"), "eta0", "tasa de aprendizaje inicial η0", float(base["eta0"]),
                     selection["thresholds"], out / "effect_eta0")
         plot_effect(effect_rows(stage2_rows, "radius0"), "radius0", "radio inicial R0", float(base["radius0"]),
