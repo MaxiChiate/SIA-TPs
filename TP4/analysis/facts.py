@@ -54,6 +54,7 @@ SOURCES: dict[str, tuple[str, str]] = {
     "som.robustness_table": ("som/series_som_stage2/robustness.csv", "som-stage2"),
     "som.stage2_aggregate": ("som/series_som_stage2/aggregate.csv", "som-stage2"),
     "som.hits": ("som/figures/hits_members.csv", "som-figures"),
+    "som.u_mean": ("som/figures/u_mean_stage2.csv", "som-figures"),
     "som.high_u_edges": ("som/profiles/high_u_edges.csv", "som-profiles"),
     "som.neuron_profiles": ("som/profiles/neuron_profiles.csv", "som-profiles"),
     "som.zones": ("som/profiles/zones.csv", "som-profiles"),
@@ -346,21 +347,22 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
         "som.k_next_empty": pct(following["empty_fraction_mean"], 1),
         "som.k_next_creators": dec(following["creators_per_occupied_mean"], 2),
     })
+    u_by_label = {r["label"]: r["u_mean_mean"] for r in read_csv_source(results_dir, "som.u_mean")}
     for name, vary, other in (("eta", "eta0", "radius0"), ("r0", "radius0", "eta0")):
         # the variants that move only `vary` (the base one included)
         moved = sorted((r for r in table.values()
                         if float(r[other]) == float(table["base"][other])
                         and float(r["epochs"]) == float(table["base"]["epochs"])),
                        key=lambda r: float(r[vary]))
-        te = [float(r["te_mean"]) for r in moved]
+        u_mean = [float(u_by_label[r["label"]]) for r in moved]
         empty = [float(r["empty_fraction_mean"]) for r in moved]
         creators = [float(r["creators_per_occupied_mean"]) for r in moved]
         values.update({
             f"som.{name}_lo": _number(float(moved[0][vary])),
             f"som.{name}_hi": _number(float(moved[-1][vary])),
             f"som.{name}_values": "; ".join(_number(float(r[vary])) for r in moved),
-            f"som.{name}_te_min": dec(min(te), 3),
-            f"som.{name}_te_max": dec(max(te), 3),
+            f"som.{name}_u_min": dec(min(u_mean), 2),
+            f"som.{name}_u_max": dec(max(u_mean), 2),
             f"som.{name}_empty_min": pct(min(empty), 1),
             f"som.{name}_empty_max": pct(max(empty), 1),
             f"som.{name}_creators_min": dec(min(creators), 2),

@@ -102,6 +102,9 @@ def write_results(root, *, robust=False):
     # top right (the sentences check_claims guards)
     write_csv(root / "som/figures/hits_members.csv", ["neuron", "row", "col", "hits", "creators"],
               [[n, n // 5, n % 5, 1 if n in (9, 11, 13) else 2, ""] for n in range(25)])
+    write_csv(root / "som/figures/u_mean_stage2.csv", ["label", "radius0", "eta0", "epochs", "u_mean_mean", "u_mean_sd"],
+              [["base", 2.5, 0.5, 260, 1.64, 0.04], ["a", 5.0, 0.5, 260, 1.65, 0.04],
+               ["b", 2.5, 0.25, 260, 1.65, 0.05], ["c", 2.5, 0.5, 50, 1.61, 0.05]])
     write_csv(root / "som/profiles/high_u_edges.csv", ["edge_rank", "neuron_a", "neuron_b", "distance", "variable"],
               [[1, 9, 14, 3.67, "sponsored_posts_pct"], [2, 13, 14, 2.99, "likes_per_1000"],
                [3, 11, 12, 2.98, "non_follower_reach_pct"]])

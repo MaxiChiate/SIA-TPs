@@ -294,10 +294,13 @@ EFFECT_PANELS = (
     ("te", "Error topográfico", "límite: 0,05", 1.0),
     ("empty_fraction", "% de neuronas vacías", "límite: 20 %", 100.0),
     ("creators_per_occupied", "Creadores por neurona ocupada", "mínimo: 2", 1.0),
+    ("u_mean", "U media", "distancia entre neuronas vecinas", 1.0),
 )
-OCCUPANCY_MEASURES = ("empty_fraction", "creators_per_occupied")
+# eta0 and R0 slides: the occupancy that decides k does not move, and the U matrix is the other thing a schedule could change
+OCCUPANCY_MEASURES = ("empty_fraction", "u_mean")
 # The same y range in the three figures, so a change of eta0 or R0 is read on the scale of the change of k.
-EFFECT_YLIM = {"te": (-0.01, 0.22), "empty_fraction": (-2.0, 50.0), "creators_per_occupied": (0.0, 13.0)}
+EFFECT_YLIM = {"te": (-0.01, 0.22), "empty_fraction": (-2.0, 50.0), "creators_per_occupied": (0.0, 13.0),
+               "u_mean": (0.0, 2.5)}
 
 
 def effect_rows(stage2_rows: list[dict], vary: str) -> list[dict]:
@@ -337,20 +340,54 @@ def plot_effect(rows: list[dict], x_key: str, x_label: str, base_x: float, thres
     plots_style.save_figure(fig, out_stem)
 
 
-def plot_te_by_k(step_rows: list[dict], chosen_k: int, te_max: float, out_stem) -> None:
-    """The topographic error against k (step, mean +/- sd over the 10 seeds) and the limit of the rule."""
+def add_u_mean(stage2_rows: list[dict], stage2: Path, out: Path) -> None:
+    """Mean of the U matrix of every stage-2 run (the mean distance between neighbouring prototypes over the
+    neurons), summarised over the seeds of each variant: u_mean_mean and u_mean_sd are added to the rows, and the
+    table is written to u_mean_stage2.csv."""
+    info = json.loads((stage2 / "stage.json").read_text(encoding="utf-8"))
+    sweep_dir = TP_DIR / info["sweep_dir"]
+    per_label: dict[str, list[float]] = {}
+    for row in _read_csv(sweep_dir / "summary.csv"):
+        run = som.read_run(sweep_dir / "runs" / row["run"])
+        per_label.setdefault(row["label"], []).append(float(som.umatrix(run.prototypes, run.k).mean()))
+    out.mkdir(parents=True, exist_ok=True)
+    with (out / "u_mean_stage2.csv").open("w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file, lineterminator="\n")
+        writer.writerow(["label", "radius0", "eta0", "epochs", "u_mean_mean", "u_mean_sd"])
+        for row in stage2_rows:
+            values = per_label[row["label"]]
+            row["u_mean_mean"] = str(float(np.mean(values)))
+            row["u_mean_sd"] = str(float(np.std(values, ddof=1)))
+            writer.writerow([row["label"], row["radius0"], row["eta0"], row["epochs"], repr(float(np.mean(values))),
+                             repr(float(np.std(values, ddof=1)))])
+
+
+def plot_te_by_k(step_rows: list[dict], chosen_k: int, thresholds: dict, out_stem) -> None:
+    """The topographic error against k (step, mean +/- sd over the 10 seeds) and the limit of the rule. A bar is
+    blue when the grid keeps the occupancy limits (empty neurons, creators per occupied neuron) and grey when it
+    does not, and the tick shows the percentage of empty neurons: the grids with a lower error are the ones that
+    fail the occupancy."""
     plt = plots_style.apply_style()
-    color = plots_style.palette_for(["escalón"])["escalón"]
+    colors = plots_style.palette_for(["cumple la ocupación"])
     rows = sorted(step_rows, key=lambda r: int(r["grid_k"]))
     ks = [int(r["grid_k"]) for r in rows]
+    passes = [float(r["empty_fraction_mean"]) <= thresholds["empty_max"]
+              and float(r["creators_per_occupied_mean"]) >= thresholds["creators_min"] for r in rows]
     fig, ax = plt.subplots(figsize=plots_style.figsize((8.5, 4.2)))
-    ax.bar(ks, [float(r["te_mean"]) for r in rows], yerr=[float(r["te_sd"]) for r in rows], color=color,
+    ax.bar(ks, [float(r["te_mean"]) for r in rows], yerr=[float(r["te_sd"]) for r in rows],
+           color=[colors["cumple la ocupación"] if ok else plots_style.TEXT_SECONDARY for ok in passes],
            capsize=3, width=0.7)
-    ax.axhline(te_max, color=plots_style.TEXT_SECONDARY, linestyle="--", linewidth=1)
+    ax.axhline(thresholds["te_max"], color=plots_style.TEXT_PRIMARY, linestyle="--", linewidth=1)
     ax.axvline(chosen_k, color=plots_style.TEXT_PRIMARY, linewidth=1, alpha=0.5)
     ax.set_xticks(ks)
-    ax.set_xlabel("k")
+    ax.set_xticklabels([f"{k}\n{float(r['empty_fraction_mean']) * 100:.1f} % vacías".replace(".", ",")
+                        for k, r in zip(ks, rows)])
+    ax.set_xlabel("k y % de neuronas vacías")
     ax.set_ylabel("error topográfico")
+    handles = [plt.Rectangle((0, 0), 1, 1, color=colors["cumple la ocupación"]),
+               plt.Rectangle((0, 0), 1, 1, color=plots_style.TEXT_SECONDARY)]
+    ax.legend(handles, ["cumple la ocupación", "no cumple la ocupación"], frameon=False,
+              fontsize=plots_style.fontsize(9), loc="upper right")
     ax.grid(True, axis="y")
     fig.tight_layout(rect=plots_style.rect((0, 0, 1, 1)))
     plots_style.save_figure(fig, out_stem)
@@ -495,6 +532,7 @@ def main(argv: list[str] | None = None) -> int:
     for _ in plots_style.iter_variants():
         plot_stage1_curves(rows, selection, out / "stage1_curves")
     stage2_rows = _read_csv(args.stage2 / "aggregate.csv")
+    add_u_mean(stage2_rows, args.stage2, out)
     base = next(r for r in stage2_rows if r["label"] == "base")
     step_rows = sorted((r for r in rows if r["neighborhood"] == "step"), key=lambda r: int(r["grid_k"]))
     for _ in plots_style.iter_variants():
@@ -505,7 +543,7 @@ def main(argv: list[str] | None = None) -> int:
         plot_effect(effect_rows(stage2_rows, "radius0"), "radius0", "radio inicial R0", float(base["radius0"]),
                     selection["thresholds"], out / "effect_radius0", measures=OCCUPANCY_MEASURES)
     for _ in plots_style.iter_variants():
-        plot_te_by_k(step_rows, k, selection["thresholds"]["te_max"], out / "te_by_k")
+        plot_te_by_k(step_rows, k, selection["thresholds"], out / "te_by_k")
     plot_trace(run.trace, f"Traza del entrenamiento de la corrida dibujada: k = {k}, seed {seed}", out / "trace")
 
     # who is in each neuron

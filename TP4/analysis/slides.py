@@ -240,10 +240,11 @@ OUTLINE: tuple[Slide, ...] = (
         None, ("Q1.3",), (), None, _key("som/figures/effect_eta0.svg"),
         "Probamos η0 = {som.eta_values}, con k = {som.chosen_k} y el resto igual; η0 es cuánto se mueve la neurona "
         "ganadora hacia el creador en los primeros pasos y después decae hasta {som.base_eta_final}. "
-        "Las neuronas vacías quedan entre {som.eta_empty_min} y {som.eta_empty_max} y los creadores por neurona "
-        "entre {som.eta_creators_min} y {som.eta_creators_max}, siempre dentro de los límites. "
-        "Los ejes son los mismos que en la slide de k para que se vea que, al lado de cambiar la grilla, cambiar "
-        "η0 mueve muy poco. "
+        "Las neuronas vacías quedan entre {som.eta_empty_min} y {som.eta_empty_max}, siempre dentro del límite, y la "
+        "U media, que es el promedio de la matriz U (la distancia entre neuronas vecinas), queda entre "
+        "{som.eta_u_min} y {som.eta_u_max}. "
+        "Los ejes de las neuronas vacías son los mismos que en la slide de k para que se vea que, al lado de cambiar "
+        "la grilla, cambiar η0 mueve muy poco. "
         "Usamos η0 = {som.base_eta0}, un valor medio fijado de antemano, y con los otros valores la elección de k "
         "no cambia.",
     ),
@@ -253,25 +254,29 @@ OUTLINE: tuple[Slide, ...] = (
         "Probamos R0 = {som.r0_values}, con k = {som.chosen_k} y el resto igual; R0 es cuántas neuronas vecinas se "
         "mueven junto con la ganadora al principio del entrenamiento y después el radio baja hasta "
         "{som.base_radius_final}. "
-        "Las neuronas vacías quedan entre {som.r0_empty_min} y {som.r0_empty_max} y los creadores por neurona "
-        "entre {som.r0_creators_min} y {som.r0_creators_max}, siempre dentro de los límites. "
-        "Los ejes son los mismos que en las dos slides anteriores, así que se compara a la misma escala. "
+        "Las neuronas vacías quedan entre {som.r0_empty_min} y {som.r0_empty_max}, siempre dentro del límite, y la "
+        "U media, que es el promedio de la matriz U (la distancia entre neuronas vecinas), queda entre "
+        "{som.r0_u_min} y {som.r0_u_max}. "
+        "Los ejes de las neuronas vacías son los mismos que en las slides anteriores, así que se compara a la misma "
+        "escala. "
         "Usamos R0 = {som.base_radius0}, la mitad de k, fijado de antemano, y con los otros valores la elección de "
         "k no cambia.",
     ),
     Slide(
-        "som-te", 1, "Ninguna grilla cumple a la vez el error topográfico y la ocupación",
+        "som-te", 1, "Las grillas con menor error topográfico dejan demasiadas neuronas vacías",
         None, ("Q1.3",), (), None, _key("som/figures/te_by_k.svg"),
-        "El error topográfico se calcula, para cada creador, buscando la neurona más cercana y la segunda más cercana, "
-        "y cuenta como error si no son vecinas en la grilla (arriba, abajo, izquierda o derecha; una diagonal cuenta "
-        "como error). "
-        "El resultado es la fracción de los creadores que cuentan como error, y mide si el mapa conserva la vecindad, "
-        "que es lo que busca Kohonen: neuronas parecidas deberían quedar pegadas en la grilla. "
-        "Cada barra es la media de 10 entrenamientos con distinta seed, las líneas negras son el desvío entre ellas y "
-        "la línea punteada es el límite de {som.te_max}: con k = {som.chosen_k} da {som.chosen_te}, y las grillas que "
-        "cumplen el límite tienen demasiadas neuronas vacías (con k = {som.k_next} ya son {som.k_next_empty}). "
-        "Como ninguna grilla cumplió los tres límites a la vez, la regla quitó este y eligió k = {som.chosen_k}, la "
-        "más grande que cumple la ocupación.",
+        "El error topográfico es la fracción de creadores cuya neurona más cercana y segunda más cercana no son "
+        "vecinas en la grilla (una diagonal cuenta como error), y mide si el mapa conserva la vecindad, que es lo que "
+        "busca Kohonen. "
+        "Cada barra es la media de 10 entrenamientos con distinta seed, las líneas negras son el desvío entre ellas, "
+        "la línea punteada es el límite de {som.te_max} y las barras grises son las grillas que no cumplen la "
+        "ocupación. "
+        "Las grillas más grandes tienen menos error que k = {som.chosen_k} ({som.chosen_te}), pero dejan demasiadas "
+        "neuronas vacías (con k = {som.k_next} ya son {som.k_next_empty}) y menos de {som.creators_min} creadores "
+        "por neurona ocupada, así que bajan el error pero no agrupan lo suficiente. "
+        "Entre las grillas que sí cumplen la ocupación, k = {som.chosen_k} es la de menor error topográfico y la más "
+        "grande, y como ninguna cumplió el límite de {som.te_max}, la regla quitó ese límite y eligió k = "
+        "{som.chosen_k}.",
     ),
     Slide(
         "som-robust", 1,
