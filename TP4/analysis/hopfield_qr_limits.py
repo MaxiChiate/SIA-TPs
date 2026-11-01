@@ -12,7 +12,7 @@ recall.csv and from text alone, D-10/D-11):
       to; it differs from every one of the five stored QR by a positive Hamming distance, written to
       majority.json.
   (b) **Shift sensitivity of pixel-wise recall (D-11b).** A 1 px and a 2 px zero-padded shift of one
-      stored QR, evolved under the pinv network by a by-hand numpy async forward run (this script's
+      stored QR, evolved under the pinv network by a by-hand numpy synchronous forward run (this script's
       own implementation, not a library and not hopfield.py's trace-replay - PROJECT.md: Hopfield by
       hand), with the measured query and recovered Hamming distances to the source recorded in
       shift.json for each shift. The research predicts pixel-wise recovery breaks (recovered Hamming
@@ -75,10 +75,9 @@ LIMITS_CODE_FILES = ("analysis/hopfield_qr_limits.py", "analysis/hopfield.py")
 
 MAX_SWEEPS = 200  # generous ceiling for N = 1369; an implementation parameter, not part of the protocol
 # Fixed by index before looking at any result (same convention as hopfield_qr.py's ENERGY_TRACE_SEED and
-# hopfield_qr_figures.py's ENERGY_LEVELS): which QR is shifted (the first, "beverages") and the seed of
-# the by-hand async runner's sweep permutations.
+# hopfield_qr_figures.py's ENERGY_LEVELS): which QR is shifted (the first, "beverages"). The synchronous runner
+# draws nothing at random, so there is no seed.
 SHIFT_SOURCE = 0
-SHIFT_SEED = 1
 SHIFT_PIXELS = (1, 2)
 # The vacated edge of a zero-padded shift is light = -1 (documented edge convention, HOP-07 flagged
 # assumption): shifting down-and-right by k pixels leaves the top k rows and left k columns light.
@@ -128,54 +127,45 @@ def majority_json(P) -> dict:
     }
 
 
-# ---------- our own by-hand asynchronous forward run (D-11b; PROJECT.md: Hopfield by hand) ----------
+# ---------- our own by-hand synchronous forward run (D-11b; PROJECT.md: Hopfield by hand) ----------
 
-def by_hand_async_run(W, s0, seed: int, max_sweeps: int = MAX_SWEEPS) -> tuple[np.ndarray, int, int]:
-    """Our own numpy implementation of the asynchronous dynamics - NOT hopfield.py's _replay_async, which
-    only replays a trace the C core already saved; this one actually drives the network from a query we
-    hand it, exactly like neuron/models/hopfield_core.c's hopfield_async_run (field = W s, kept
-    incrementally after every flip; a neuron takes sign(h) or keeps its state when h == 0; a fresh
-    permutation of the n neurons drawn from `seed` at the start of every sweep; stop on a sweep with no
-    flips or at max_sweeps). Returns (final_state int64, sweeps, total_flips)."""
+def by_hand_sync_run(W, s0, max_sweeps: int = MAX_SWEEPS) -> tuple[np.ndarray, int, int]:
+    """Our own numpy implementation of the course's synchronous dynamics (slide 23) - NOT hopfield.py's
+    _replay_sync, which only replays a trace the C core already saved; this one actually drives the network
+    from a query we hand it, like neuron/models/hopfield_core.c's hopfield_sync_run: every neuron takes
+    sign(sum_j w_ij s_j) from the whole previous state (keeping its state when the field is 0), stopping on a
+    step with no change, on a two-cycle (the state two steps back comes back) or at max_sweeps. Returns
+    (final_state int64, steps, total_flips)."""
     W = np.asarray(W, dtype=np.float64)
     s = np.asarray(s0, dtype=np.float64).copy()
-    n = s.shape[0]
-    rng = np.random.default_rng(seed)
-    h = hopfield.fields(W, s)
+    previous = None
     flips_total = 0
-    sweeps = 0
-    for sweep in range(1, max_sweeps + 1):
-        order = rng.permutation(n)
-        flips_this_sweep = 0
-        for i in order:
-            if h[i] > hopfield.ENERGY_TOLERANCE:
-                new = 1.0
-            elif h[i] < -hopfield.ENERGY_TOLERANCE:
-                new = -1.0
-            else:
-                new = s[i]
-            if new != s[i]:
-                delta = new - s[i]
-                s[i] = new
-                h += W[:, i] * delta  # W is symmetric for both hebb and pinv, so column i == row i
-                flips_total += 1
-                flips_this_sweep += 1
-        sweeps = sweep
-        if flips_this_sweep == 0:
+    steps = 0
+    for step in range(1, max_sweeps + 1):
+        h = hopfield.fields(W, s)
+        new = np.where(h > hopfield.ENERGY_TOLERANCE, 1.0, np.where(h < -hopfield.ENERGY_TOLERANCE, -1.0, s))
+        changed = int((new != s).sum())
+        flips_total += changed
+        steps = step
+        if changed == 0:
             break
-    return s.astype(np.int64), sweeps, flips_total
+        if previous is not None and np.array_equal(new, previous):
+            s = new
+            break
+        previous, s = s, new
+    return s.astype(np.int64), steps, flips_total
 
 
-def _sanity_check_unshifted_fixed(P, W, source: int = SHIFT_SOURCE, seed: int = SHIFT_SEED) -> dict:
-    """Runs by_hand_async_run on an UNSHIFTED stored QR: it must stay fixed (zero flips), agreeing with
+def _sanity_check_unshifted_fixed(P, W, source: int = SHIFT_SOURCE) -> dict:
+    """Runs by_hand_sync_run on an UNSHIFTED stored QR: it must stay fixed (zero flips), agreeing with
     the C core's stored.csv fixed == 1 for pinv (D-07's exact-fixed-point property). This is what makes
     the shift demo below trustworthy - if the runner flipped an unshifted stored pattern, its shift
     results would not mean what they claim to mean."""
     P = np.asarray(P, dtype=np.int64)
-    final, sweeps, flips = by_hand_async_run(W, P[source], seed=seed)
+    final, sweeps, flips = by_hand_sync_run(W, P[source])
     if flips != 0 or not np.array_equal(final, P[source]):
         raise SystemExit(
-            "hopfield_qr_limits: the by-hand async runner did not keep an UNSHIFTED stored QR fixed under "
+            "hopfield_qr_limits: the by-hand synchronous runner did not keep an UNSHIFTED stored QR fixed under "
             "pinv's W (disagrees with the C core's stored.csv fixed == 1); the runner is not trustworthy, "
             "refusing to report a shift result from it"
         )
@@ -194,9 +184,8 @@ def shift_pattern(pattern_2d: np.ndarray, shift_px: int) -> np.ndarray:
     return shifted
 
 
-def shift_json(P, source: int = SHIFT_SOURCE, pixels=SHIFT_PIXELS, seed: int = SHIFT_SEED,
-               max_sweeps: int = MAX_SWEEPS) -> dict:
-    """For each magnitude in `pixels`, shifts the source QR, runs it through by_hand_async_run under the
+def shift_json(P, source: int = SHIFT_SOURCE, pixels=SHIFT_PIXELS, max_sweeps: int = MAX_SWEEPS) -> dict:
+    """For each magnitude in `pixels`, shifts the source QR, runs it through by_hand_sync_run under the
     pinv W and records the MEASURED Hamming distance of the shifted query to the source (query_hamming)
     and of the recovered state to the source (recovered_hamming) - never asserted to be positive; the
     research predicts the shift breaks pixel-wise recovery, but this function only measures (D-02 /
@@ -208,7 +197,7 @@ def shift_json(P, source: int = SHIFT_SOURCE, pixels=SHIFT_PIXELS, seed: int = S
     if side * side != n:
         raise SystemExit(f"hopfield_qr_limits: n_pixels={n} is not a perfect square, cannot reshape to a grid")
     W = hopfield.pinv(P)
-    sanity = _sanity_check_unshifted_fixed(P, W, source=source, seed=seed)
+    sanity = _sanity_check_unshifted_fixed(P, W, source=source)
 
     base = P[source].reshape(side, side)
     shifts = []
@@ -216,7 +205,7 @@ def shift_json(P, source: int = SHIFT_SOURCE, pixels=SHIFT_PIXELS, seed: int = S
         shifted_2d = shift_pattern(base, shift_px)
         shifted = shifted_2d.reshape(-1).astype(np.int64)
         query_hamming = int((shifted != P[source]).sum())
-        recovered, sweeps, flips = by_hand_async_run(W, shifted, seed=seed, max_sweeps=max_sweeps)
+        recovered, sweeps, flips = by_hand_sync_run(W, shifted, max_sweeps=max_sweeps)
         recovered_hamming = int((recovered != P[source]).sum())
         shifts.append({
             "shift": int(shift_px),
@@ -234,7 +223,6 @@ def shift_json(P, source: int = SHIFT_SOURCE, pixels=SHIFT_PIXELS, seed: int = S
         "source": source,
         "n_pixels": n,
         "edge_convention": EDGE_CONVENTION,
-        "seed": seed,
         "source_pattern": P[source].tolist(),
         "sanity_unshifted_fixed": sanity,
         "shifts": shifts,

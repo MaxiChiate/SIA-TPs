@@ -59,7 +59,7 @@ HYPOTHESIS = "Hebb no estabiliza los 5 QR correlacionados; la pseudo-inversa es 
 NOISE_LEVELS = tuple(round(k * 0.05, 2) for k in range(11))  # 11 levels, 0 to 0.5 step 0.05 (D-05)
 TRIALS = 30  # trials per noise level (D-05)
 SEEDS = tuple(range(1, 11))  # seeds 1..10 (D-05)
-UPDATES = ("async", "sync")  # async is the reference, sync the labelled comparison
+UPDATE = "sync"  # the course's synchronous update (slide 23), the only one (re-registration 2026-10-31)
 SUBSET = (0, 1, 2, 3, 4)  # the five QR, scripts/qr.py SOURCES order
 SUCCESS = "exact 1369-pixel match (|m| = 1 with the target); continuous mean final |m| also reported (D-03)"
 
@@ -81,7 +81,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def report(repo_dir: Path = TP_DIR) -> str:
-    """Text lines: the literal hypothesis, the noise grid, trials, seeds, updates, the success
+    """Text lines: the literal hypothesis, the noise grid, trials, seeds, the update, the success
     criterion, both verdict thresholds worded legibly, the Hamming tie-break and the five PNG
     sha256. Bitmap/text facts only: no network quantity is computed here."""
     repo_dir = Path(repo_dir)
@@ -89,7 +89,7 @@ def report(repo_dir: Path = TP_DIR) -> str:
     lines.append("noise grid (11 levels, 0 to 0.5 step 0.05): " + ", ".join(f"{level:.2f}" for level in NOISE_LEVELS))
     lines.append(f"trials per level: {TRIALS}")
     lines.append(f"seeds: {len(SEEDS)} ({SEEDS[0]}..{SEEDS[-1]})")
-    lines.append("updates: " + ", ".join(UPDATES))
+    lines.append(f"update: {UPDATE}")
     lines.append(f"subset: {list(SUBSET)}")
     lines.append(f"success: {SUCCESS}")
     lines.append(f"Hebb fails: exact recovery at noise 0 < {HEBB_FAIL_RECALL_AT_ZERO * 100:.0f}%")
@@ -128,9 +128,39 @@ def _is_ancestor(older: str, newer: str, repo_dir: Path) -> bool:
     return result.returncode == 0
 
 
+def _marker_digest_at(revision: str, repo_dir: Path) -> str:
+    """rule_digest of RULE_FILE as committed at `revision`."""
+    with tempfile.TemporaryDirectory() as folder:
+        committed = Path(folder) / "rule.md"
+        text = subprocess.run(["git", "show", f"{revision}:./{RULE_FILE}"], cwd=repo_dir,
+                              capture_output=True, check=True).stdout
+        committed.write_bytes(text)
+        return som_select.rule_digest(committed)
+
+
+def _registration_commit(repo_dir: Path) -> str:
+    """The commit that last registered the rule. It is the commit that added RULE_FILE and SELECT_FILE together,
+    unless SELECT_FILE changed later: then the last commit that changed SELECT_FILE is a re-registration and must
+    change the text between the markers of RULE_FILE in that same commit (re-registration of 2026-10-31, which is
+    declared inside the markers). Changing SELECT_FILE alone is refused."""
+    rule_added = _added_commit(RULE_FILE, repo_dir)
+    select_added = _added_commit(SELECT_FILE, repo_dir)
+    if select_added != rule_added:
+        raise SystemExit(f"{SELECT_FILE} was added in commit {select_added}, not in the rule commit {rule_added} "
+                         f"that added {RULE_FILE} (D-01)")
+    last = _git_stdout(["log", "-1", "--format=%H", "--", SELECT_FILE], repo_dir)
+    if not HEX40.fullmatch(last):
+        raise SystemExit(f"{SELECT_FILE}: cannot find its last commit (D-01)")
+    if last != rule_added and _marker_digest_at(last, repo_dir) == _marker_digest_at(f"{last}^", repo_dir):
+        raise SystemExit(f"{SELECT_FILE} changed in commit {last} without re-registering the text between the "
+                         f"markers of {RULE_FILE} in that commit (D-01)")
+    return last
+
+
 def rule_identity(repo_dir=TP_DIR) -> dict:
     """Refuse unless the guard code, scripts/qr.py and the five PNGs are committed, unchanged and
-    porcelain-clean, the protocol text and this module were added in the same commit, scripts/qr.py
+    porcelain-clean, the protocol text and this module were added in the same commit (or last
+    re-registered together, see _registration_commit), scripts/qr.py
     and the five PNGs are in that commit or an ancestor, nothing guarded changed after it, and the
     deliverable's current marker digest equals the one at the rule commit. The deliverable
     (RULE_FILE) is deliberately NOT in the porcelain-clean guarded set: its result sections (outside
@@ -149,11 +179,7 @@ def rule_identity(repo_dir=TP_DIR) -> dict:
     if tracked.returncode != 0:
         raise SystemExit(f"{RULE_FILE}: the protocol text must be committed (D-01)")
 
-    rule_commit = _added_commit(RULE_FILE, repo_dir)
-    select_added = _added_commit(SELECT_FILE, repo_dir)
-    if select_added != rule_commit:
-        raise SystemExit(f"{SELECT_FILE} was added in commit {select_added}, not in the rule commit "
-                         f"{rule_commit} that added {RULE_FILE} (D-01)")
+    rule_commit = _registration_commit(repo_dir)
     for path in (QR_FILE, *PNG_FILES):
         added = _added_commit(path, repo_dir)
         if not _is_ancestor(added, rule_commit, repo_dir):
@@ -164,12 +190,7 @@ def rule_identity(repo_dir=TP_DIR) -> dict:
         if not HEX40.fullmatch(last) or not _is_ancestor(last, rule_commit, repo_dir):
             raise SystemExit(f"{path} changed in commit {last} after the rule commit {rule_commit} (D-01)")
 
-    with tempfile.TemporaryDirectory() as folder:
-        committed = Path(folder) / "rule.md"
-        text = subprocess.run(["git", "show", f"{rule_commit}:./{RULE_FILE}"], cwd=repo_dir,
-                              capture_output=True, check=True).stdout
-        committed.write_bytes(text)
-        committed_digest = som_select.rule_digest(committed)
+    committed_digest = _marker_digest_at(rule_commit, repo_dir)
     current_digest = som_select.rule_digest(repo_dir / RULE_FILE)
     if committed_digest != current_digest:
         raise SystemExit(f"the text between the markers of {RULE_FILE} differs from the one at the rule commit "

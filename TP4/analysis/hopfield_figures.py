@@ -41,7 +41,6 @@ ENERGY_LEVELS_K = (3, 6, 9)
 ENERGY_SEED = 1
 SET_NAMES = ("separated", "correlated")
 SET_LABELS = {"separated": "separado", "correlated": "correlacionado"}
-VARIANTS = ("separated-async", "separated-sync", "correlated-async", "correlated-sync")
 FAILURE_CLASSES = (("wrong_stored_rate", "otra letra almacenada"), ("inverse_rate", "inverso"),
                    ("mixture_rate", "mezcla"), ("other_rate", "otro"))
 NEUTRAL_BAR = "#b9b8b3"
@@ -264,23 +263,19 @@ def plot_cross_terms(orthogonality: dict, out_stem) -> None:
 
 def plot_recall_noise(recall_rows: list[dict], out_stem) -> None:
     plt = plots_style.apply_style()
-    present = [v for v in VARIANTS if any(f"{r['set']}-{r['update']}" == v for r in recall_rows)]
-    colors = plots_style.palette_for(list(VARIANTS))
+    present = [name for name in SET_NAMES if any(r["set"] == name for r in recall_rows)]
+    colors = plots_style.palette_for(list(SET_NAMES))
     slide = plots_style.variant() == "slide"
     fig, axes = plt.subplots(1, 3, figsize=plots_style.figsize((14.0, 5.6)),
                              gridspec_kw={"width_ratios": [1.5, 1, 1]})
     left = axes[0]
     n_pixels = 25
     for variant in present:
-        rows = sorted((r for r in recall_rows if f"{r['set']}-{r['update']}" == variant),
-                      key=lambda r: int(r["flipped"]))
+        rows = sorted((r for r in recall_rows if r["set"] == variant), key=lambda r: int(r["flipped"]))
         k = np.array([int(r["flipped"]) for r in rows])
         rate = np.array([float(r["recall_rate"]) for r in rows])
         sd = np.array([float(r["recall_sd_seeds"]) for r in rows])
-        style = "-" if variant.endswith("async") else "--"
-        left.plot(k, rate, style, marker="o", markersize=4, color=colors[variant],
-                  label=variant.replace("separated", "separado").replace("correlated", "correlacionado")
-                  if not slide else variant.replace("separated", "sep.").replace("correlated", "corr."))
+        left.plot(k, rate, "-", marker="o", markersize=4, color=colors[variant], label=SET_LABELS[variant])
         left.fill_between(k, np.clip(rate - sd, 0, 1), np.clip(rate + sd, 0, 1), color=colors[variant], alpha=0.15,
                           linewidth=0)
     left.set_ylim(0, 1.02)
@@ -296,9 +291,7 @@ def plot_recall_noise(recall_rows: list[dict], out_stem) -> None:
     left.set_title("Recuperación de la letra propia", fontsize=plots_style.fontsize(10), loc="left")
 
     for ax, name in zip(axes[1:], SET_NAMES):
-        label = f"{name}-async"
-        rows = sorted((r for r in recall_rows if f"{r['set']}-{r['update']}" == label),
-                      key=lambda r: int(r["flipped"]))
+        rows = sorted((r for r in recall_rows if r["set"] == name), key=lambda r: int(r["flipped"]))
         if not rows:
             ax.axis("off")
             continue
@@ -315,19 +308,20 @@ def plot_recall_noise(recall_rows: list[dict], out_stem) -> None:
         ax.set_xlabel("píxeles invertidos k")
         ax.set_ylabel("proporción de ensayos")
         if slide:
-            ax.set_title(f"Fallas async: {SET_LABELS[name]}", fontsize=plots_style.fontsize(8), loc="left")
+            ax.set_title(f"Fallas: {SET_LABELS[name]}", fontsize=plots_style.fontsize(8), loc="left")
         else:
-            ax.set_title(f"Fallas, set {SET_LABELS[name]} asíncrono", fontsize=plots_style.fontsize(10), loc="left")
+            ax.set_title(f"Fallas, set {SET_LABELS[name]}", fontsize=plots_style.fontsize(10), loc="left")
         if name == SET_NAMES[0]:
             ax.legend(fontsize=plots_style.fontsize(8), frameon=False, loc="upper left")
-    cycle_max = max((float(r["cycle_rate"]) for r in recall_rows if r["update"] == "async"), default=0.0)
+    cycle_max = max((float(r["cycle_rate"]) for r in recall_rows), default=0.0)
     trials = int(recall_rows[0]["n_trials"]) if recall_rows else 0
     plots_style.suptitle(fig, "Recuperación frente al ruido", fontsize=12, x=0.01, ha="left")
     fig.tight_layout(rect=plots_style.rect((0, 0.1, 1, 0.95)))
     _caption(fig, "Éxito = match exacto de la letra de la propia consulta (la regla). Cada punto agrupa "
                   f"{trials} ensayos (30 por letra, 4 letras, 10 seeds); la banda es ± el desvío entre seeds. Los "
-                  "paneles de la derecha reparten los fallos del modo asíncrono según el estado final (suman "
-                  f"1 − tasa; ciclos en asíncrono: tasa máxima {_fmt(cycle_max, 3)}).")
+                  "paneles de la derecha reparten los fallos según el estado final; un ciclo de período 2 se clasifica "
+                  "en el estado donde se detecta y nunca cuenta como recuperado (tasa máxima de ciclos "
+                  f"{_fmt(cycle_max, 3)}). Actualización síncrona de la teórica.")
     plots_style.save_figure(fig, out_stem)
 
 
@@ -342,7 +336,7 @@ def _recall_run_dir(results_dir: Path, label: str, seed: int) -> Path:
 
 def energy_panels(results_dir) -> list[dict]:
     """One panel per (letter of the separated set, k in ENERGY_LEVELS_K present in the design): the first traced
-    trial of seed ENERGY_SEED in the separated-async run, found by its index and never by its energies."""
+    trial of seed ENERGY_SEED in the separated run, found by its index and never by its energies."""
     results_dir = Path(results_dir)
     design = _read_json(results_dir / "run.json")["design"]
     orth = _read_json(results_dir / "orthogonality.json")["separated"]
@@ -351,7 +345,7 @@ def energy_panels(results_dir) -> list[dict]:
     levels = list(design["recall_levels"])
     per_level = int(design["recall_trials"])
     ks = [int(math.floor(level * n_pixels + 0.5)) for level in levels]
-    run_dir = _recall_run_dir(results_dir, "separated-async", ENERGY_SEED)
+    run_dir = _recall_run_dir(results_dir, "separated", ENERGY_SEED)
     trials = {int(r["trial"]): r for r in _read_rows(run_dir / "trials.csv")}
     trace: dict[int, list[dict]] = {}
     for row in _read_rows(run_dir / "trace.csv"):
@@ -408,8 +402,6 @@ def plot_energy(panels: list[dict], out_stem) -> None:
             x = np.arange(len(panel["energies"]))
             ax.step(x, panel["energies"], where="post", color=colors["separated"], linewidth=1.6)
             ax.axhline(panel["stored_energy"], color=plots_style.TEXT_SECONDARY, linewidth=1.0, linestyle=":")
-            for end in panel["sweep_ends"]:
-                ax.axvline(end, color=plots_style.GRID, linewidth=1.0, linestyle="--", zorder=0)
             verdict = "correcta" if panel["correct"] else "incorrecta"
             klass = CLASS_TEXT[panel["class"]]
             if panel["final_letter"] is not None:
@@ -418,14 +410,14 @@ def plot_energy(panels: list[dict], out_stem) -> None:
             if c == 0:
                 ax.set_ylabel("energía")
             if r == len(letters) - 1:
-                ax.set_xlabel("actualización")
-    plots_style.suptitle(fig, "Energía por actualización asíncrona (set separado, primer ensayo trazado de la seed "
+                ax.set_xlabel("paso síncrono")
+    plots_style.suptitle(fig, "Energía por paso síncrono (set separado, primer ensayo trazado de la seed "
                  f"{ENERGY_SEED})", fontsize=12, x=0.01, ha="left")
     fig.tight_layout(rect=(0, 0.07, 1, 0.95))
     _caption(fig, f"Un ensayo por panel, fijado por índice antes de la corrida (el primero trazado de cada letra y "
                   f"nivel, seed {ENERGY_SEED}), no elegido por su forma. Línea punteada: energía de la letra "
-                  "almacenada; guiones verticales: fin de cada barrido. La energía asíncrona nunca sube "
-                  "(energy_increases = 0), pero bajar no es recuperar: el título dice qué estado quedó.")
+                  "almacenada. Cada paso actualiza las 25 neuronas a la vez; la energía síncrona no tiene garantía de "
+                  "bajar en cada paso, y bajar no es recuperar: el título dice qué estado quedó.")
     plots_style.save_figure(fig, out_stem)
 
 
@@ -680,7 +672,7 @@ def plot_spurious(spurious: dict, out_stem) -> None:
                                                                                                      stored_energies)),
                       fontsize=plots_style.fontsize(7), ha="right", va="bottom", color=plots_style.TEXT_SECONDARY)
         ax_e.axhline(float(pick["e_final"]), color=plots_style.TEXT_PRIMARY, linewidth=1.0, linestyle="--")
-        ax_e.set_xlabel("actualización")
+        ax_e.set_xlabel("paso síncrono")
         ax_e.set_ylabel("energía")
         ax_e.set_title(f"energía: inicial {_fmt(float(pick['e_start']), 0)}, final {_fmt(float(pick['e_final']), 0)} "
                        "(guiones)", fontsize=plots_style.fontsize(9), loc="left")

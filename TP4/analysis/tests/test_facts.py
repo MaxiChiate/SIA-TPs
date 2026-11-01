@@ -116,10 +116,9 @@ def write_results(root, *, robust=False):
     write_json(root / "hopfield/letters/orthogonality.json", {
         "n_pixels": 25, "separated": {"min_margin": [18, 18, 18, 18]}, "correlated": {"min_margin": [4, -30, -34, -34]},
     })
-    write_csv(root / "hopfield/letters/recall.csv", ["set", "update", "noise", "flipped", "recall_rate"], [
-        ["separated", "async", 0.12, 3, 0.99667], ["separated", "async", 0.24, 6, 0.847],
-        ["separated", "async", 0.36, 9, 0.3233], ["separated", "sync", 0.12, 3, 1.0],
-        ["correlated", "async", 0.12, 3, 0.25], ["correlated", "async", 0.24, 6, 0.25],
+    write_csv(root / "hopfield/letters/recall.csv", ["set", "noise", "flipped", "recall_rate"], [
+        ["separated", 0.12, 3, 0.99667], ["separated", 0.24, 6, 0.847], ["separated", 0.36, 9, 0.3233],
+        ["correlated", 0.12, 3, 0.25], ["correlated", 0.24, 6, 0.25],
     ])
     write_json(root / "hopfield/letters/capacity.json", {
         "p4_n_stable_counts": {"0": 284, "1": 1687, "2": 2653, "3": 3073, "4": 7253},
@@ -133,7 +132,7 @@ def write_results(root, *, robust=False):
         "counts_by_seed": {"1": {"stored": 463, "inverse": 334, "mixture": 254, "other": 149}},
     })
     write_json(root / "hopfield/qr/verdict.json", {
-        "hebb_exact_recovery_noise0_async": 0.0, "pinv_exact_recovery_noise0_async": 1.0,
+        "hebb_exact_recovery_noise0": 0.0, "pinv_exact_recovery_noise0": 1.0,
     })
     write_json(root / "hopfield/qr/qr_facts.json", {"n_pixels": 1369, "identical_fraction": 0.6976, "min_pair_hamming": 96})
     write_json(root / "hopfield/qr/overlaps.json", {

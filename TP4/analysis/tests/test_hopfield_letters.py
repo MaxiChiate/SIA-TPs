@@ -34,7 +34,6 @@ def fixture_design(**changes):
         recall_levels=(0.0, 0.24),
         recall_trials=3,
         seeds=(1, 2),
-        updates=("async", "sync"),
         trace_trials=1,
         capacity_p=4,
         capacity_level=0.12,
@@ -46,7 +45,6 @@ def fixture_design(**changes):
         spurious_levels=(0.4, 0.48),
         spurious_trials=5,
         spurious_seeds=(1, 2, 3),
-        spurious_update="async",
     )
     values.update(changes)
     return hopfield_letters.Design(**values)
@@ -79,7 +77,7 @@ def full_run(tmp_path_factory):
 
 # ---------- Task 1: guarded end-to-end path ----------
 
-def test_driver_fixture_separated_async(full_run, patterns):
+def test_driver_fixture_separated(full_run, patterns):
     assert full_run.name == "letters"
     selection = json.loads((full_run / "selection.json").read_text())
     chosen = hopfield_select.select_sets(patterns)
@@ -87,7 +85,7 @@ def test_driver_fixture_separated_async(full_run, patterns):
     assert selection["correlated"]["indices"] == list(chosen["correlated"])
     assert selection["rule_commit"] is None
 
-    rows = [r for r in read_csv(full_run / "recall.csv") if r["set"] == "separated" and r["update"] == "async"]
+    rows = [r for r in read_csv(full_run / "recall.csv") if r["set"] == "separated"]
     assert [float(r["noise"]) for r in rows] == [0.0, 0.24]
     assert rows[0]["n_trials"] == str(4 * 3 * 2)
     assert float(rows[0]["recall_rate"]) == 1.0
@@ -115,19 +113,18 @@ def test_driver_refuses_stale_prepared_csv(tmp_path, monkeypatch):
     assert not (tmp_path / "res" / OUT).exists()
 
 
-# ---------- Task 2: both sets, both modes, orthogonality, capacity ----------
+# ---------- Task 2: both sets, orthogonality, capacity ----------
 
-def test_recall_covers_both_sets_and_modes(full_run):
+def test_recall_covers_both_sets(full_run):
     rows = read_csv(full_run / "recall.csv")
-    assert len(rows) == 2 * 2 * 2
-    assert [(r["set"], r["update"]) for r in rows[::2]] == [("separated", "async"), ("separated", "sync"),
-                                                            ("correlated", "async"), ("correlated", "sync")]
+    assert len(rows) == 2 * 2
+    assert [r["set"] for r in rows[::2]] == ["separated", "correlated"]
     by_pattern = read_csv(full_run / "recall_by_pattern.csv")
-    assert len(by_pattern) == 2 * 2 * 4 * 2
-    # With no noise the async query is the stored letter: recalled exactly when the letter is a fixed point
+    assert len(by_pattern) == 2 * 4 * 2
+    # With no noise the query is the stored letter: recalled exactly when the letter is a fixed point
     report = json.loads((full_run / "orthogonality.json").read_text())
     for row in rows:
-        if row["update"] == "async" and float(row["noise"]) == 0.0:
+        if float(row["noise"]) == 0.0:
             assert float(row["recall_rate"]) == sum(report[row["set"]]["fixed"]) / 4
     first = rows[0]
     assert first["set"] == "separated" and float(first["recall_rate"]) == 1.0

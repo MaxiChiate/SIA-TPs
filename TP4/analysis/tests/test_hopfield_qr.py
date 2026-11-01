@@ -225,26 +225,26 @@ def test_majority_json_reports_hamming_and_overlap_to_every_target():
         assert report["overlap_to_targets"][a] == pytest.approx((n - 2 * h) / n)
 
 
-# ---------- Task 1 (Plan 05): the by-hand async runner's fixed-point sanity (D-11b) ----------
+# ---------- Task 1 (Plan 05): the by-hand synchronous runner's fixed-point sanity (D-11b) ----------
 
-def test_by_hand_async_run_keeps_an_unshifted_fixed_point_fixed():
+def test_by_hand_sync_run_keeps_an_unshifted_fixed_point_fixed():
     # Reuses CORRELATED (05-04): every one of its 4 patterns is an exact fixed point under pinv (D-06/D-07).
     # The by-hand runner (our own implementation, not hopfield.py's trace-replay) must report zero flips.
     W = hopfield.pinv(CORRELATED)
     for a in range(CORRELATED.shape[0]):
-        final, sweeps, flips = hopfield_qr_limits.by_hand_async_run(W, CORRELATED[a], seed=1)
+        final, sweeps, flips = hopfield_qr_limits.by_hand_sync_run(W, CORRELATED[a])
         assert flips == 0
-        assert sweeps == 1  # one sweep to confirm no neuron wants to flip
+        assert sweeps == 1  # one step to confirm no neuron wants to flip
         assert np.array_equal(final, CORRELATED[a])
 
 
-def test_by_hand_async_run_actually_moves_an_unstable_pattern():
+def test_by_hand_sync_run_actually_moves_an_unstable_pattern():
     # The flip side of the sanity check: hebb leaves at least one CORRELATED pattern unstable (already shown
     # above), and the by-hand runner must actually flip something when started from one of those, so the
     # "zero flips" result above is a real fixed-point finding and not the runner silently doing nothing.
     W = hopfield.hebb(CORRELATED)
     unstable = next(a for a in range(CORRELATED.shape[0]) if not hopfield.is_fixed(W, CORRELATED[a]))
-    _final, _sweeps, flips = hopfield_qr_limits.by_hand_async_run(W, CORRELATED[unstable], seed=1)
+    _final, _sweeps, flips = hopfield_qr_limits.by_hand_sync_run(W, CORRELATED[unstable])
     assert flips > 0
 
 
@@ -274,7 +274,7 @@ SHIFT_FIXTURE = np.array(
 
 
 def test_shift_json_includes_the_full_pixel_vectors_for_the_figures():
-    report = hopfield_qr_limits.shift_json(SHIFT_FIXTURE, source=0, pixels=(1,), seed=1)
+    report = hopfield_qr_limits.shift_json(SHIFT_FIXTURE, source=0, pixels=(1,))
     n = SHIFT_FIXTURE.shape[1]
     assert len(report["source_pattern"]) == n
     assert report["source_pattern"] == SHIFT_FIXTURE[0].tolist()

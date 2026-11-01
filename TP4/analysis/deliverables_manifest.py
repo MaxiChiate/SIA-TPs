@@ -422,7 +422,7 @@ FIGURES = (
     Figure(
         key="qr_energy_trace", path="hopfield/qr/figures/energy_trace.svg", make_target="hopfield-qr-figures",
         config=_QR_ENERGY[0], seed=_QR_ENERGY[1], fragment=5, anchor="f5-s4",
-        alt="Energía asíncrona paso a paso de un ensayo fijo por QR y nivel de ruido",
+        alt="Energía paso a paso, con la actualización síncrona, de un ensayo fijo por QR y nivel de ruido",
         caption="Energía por paso de la red de Hebb en ensayos fijados de antemano.",
         slide=True,
     ),

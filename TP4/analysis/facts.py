@@ -403,8 +403,8 @@ def _letters_facts(results_dir: Path) -> dict[str, str]:
 
     def recall_row(name: str, flipped: int) -> dict[str, str]:
         return _first(
-            recall, lambda r: r["set"] == name and r["update"] == "async" and int(r["flipped"]) == flipped,
-            f"async recall row of the {name} set with {flipped} flipped pixels", "hopfield-letters",
+            recall, lambda r: r["set"] == name and int(r["flipped"]) == flipped,
+            f"recall row of the {name} set with {flipped} flipped pixels", "hopfield-letters",
         )
 
     def recall_rate(name: str, flipped: int) -> str:
@@ -501,8 +501,8 @@ def _qr_facts(results_dir: Path) -> dict[str, str]:
         "qr.max_abs_overlap": dec(overlaps["max_abs_overlap"], 2),
         "qr.identical_fraction": pct(pair_facts["identical_fraction"], 1),
         "qr.min_pair_hamming": integer(pair_facts["min_pair_hamming"]),
-        "qr.hebb_exact_noise0": pct_short(verdict["hebb_exact_recovery_noise0_async"], 1),
-        "qr.pinv_exact_noise0": pct_short(verdict["pinv_exact_recovery_noise0_async"], 1),
+        "qr.hebb_exact_noise0": pct_short(verdict["hebb_exact_recovery_noise0"], 1),
+        "qr.pinv_exact_noise0": pct_short(verdict["pinv_exact_recovery_noise0"], 1),
         "qr.pinv_last_full_noise": dec(max(pinv_full), 2),
         "qr.noise_high": dec(QR_HIGH_NOISE, 2),
         "qr.pinv_at_high": pct_short(high["pinv"], 1),
@@ -657,7 +657,7 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (5, "{qr.n_noise_levels} niveles de 0 a 0,5 en pasos de 0,05"),
     (5, "{qr.trials} ensayos por nivel y seeds 1 a {qr.n_seeds}"),
     (5, "la tasa exacta es {qr.hebb_exact_noise0} en los {qr.n_noise_levels} niveles de ruido"),
-    (5, "(`pinv_stored_fixed_noise0_async = {qr.n_qr}`)"),
+    (5, "(`pinv_stored_fixed_noise0 = {qr.n_qr}`)"),
     (5, "por entre {qr.majority_hamming_min} y {qr.majority_hamming_max} píxeles"),
     (5, "pinv sostiene el {qr.pinv_exact_noise0} de recuperación exacta hasta el nivel {qr.pinv_last_full_noise}"),
     (5, "cae apenas a {qr.pinv_at_0_35} en 0,35, a {qr.pinv_at_0_40} en 0,40, a {qr.pinv_at_0_45} en 0,45 y colapsa a {qr.pinv_at_0_50} en 0,50"),

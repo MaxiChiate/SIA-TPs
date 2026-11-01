@@ -6,9 +6,9 @@
 // an integer held exactly in a double; the pseudo-inverse / projection rule (hopfield_pinv) is
 // W = X^T (X X^T)^-1 X with the diagonal left non-zero (D-07), a real-valued projection matrix whose entries are
 // not integers in general. A neuron with field h_i = sum_j w_ij s_j takes +1 if h_i > 0, -1 if h_i < 0 and keeps its
-// state if h_i == 0 (the course's rule). The energy is E = -1/2 s^T W s, kept incrementally in the dynamics with a
-// correction term for a non-zero diagonal (see hopfield_async_run) so it matches the from-scratch energy for either
-// rule. Nothing here reads or writes files; models/hopfield.c does the I/O. The core takes a generic P x N matrix
+// state if h_i == 0 (the course's rule). The dynamics are the course's synchronous update (slide 23): every neuron
+// computes S_i(t+1) = sign(sum_j w_ij S_j(t)) from the whole previous state. The energy is E = -1/2 s^T W s,
+// recomputed from scratch at every step. Nothing here reads or writes files; models/hopfield.c does the I/O. The core takes a generic P x N matrix
 // of +-1 and never assumes N = 25.
 
 #include "../rng.h"
@@ -33,8 +33,8 @@ typedef struct {
 
 typedef struct {
   int converged;         // 1 if the last step or sweep changed nothing
-  int cycle;             // 2 if a synchronous two-cycle was detected, else 0
-  int sweeps;            // sweeps (async) or steps (sync) taken, counting the confirming one
+  int cycle;             // 2 if a two-cycle was detected, else 0
+  int sweeps;            // synchronous steps taken, counting the confirming one
   long long updates;     // sweeps * n
   long long flips;       // neurons that changed their state
   int energy_increases;  // times the energy rose by more than 1e-9 between two consecutive logged values
@@ -68,19 +68,11 @@ void hopfield_fields(const double w[], int n, const double s[], double h[]);
 // -1/2 s^T W s, computed from scratch
 double hopfield_energy(const double w[], int n, const double s[]);
 
-// Asynchronous dynamics, the reference: every sweep visits the neurons in a fresh random order (rng_shuffle of
-// order, which holds 0..n-1 on entry), updating each one at once. Stops at the first sweep without a flip
-// (converged) or after max_sweeps. s is the state (updated in place), h and order are scratch of n entries. The
-// energy is kept incrementally (E += 2 s_i h_i - 2 w_ii on a flip, which reduces to the zero-diagonal Hebb formula
-// when w_ii == 0) and a row per visit goes to trace if it is not NULL. Returns 0 only if a trace append fails.
-int hopfield_async_run(const double w[], int n, double s[], double h[], int order[], Rng * rng, int max_sweeps,
-                       HopfieldTrace * trace, HopfieldOutcome * out);
-
 // One synchronous step s -> sign(W s), a zero field keeping the state; next must not alias s. Returns how many
 // neurons changed.
 int hopfield_sync_step(const double w[], int n, const double s[], double next[]);
 
-// Synchronous dynamics, the course's comparison: repeated hopfield_sync_step, the energy recomputed from scratch at
+// Synchronous dynamics (the course's update, slide 23): repeated hopfield_sync_step, the energy recomputed from scratch at
 // every step (it may rise). Stops when a step changes nothing (converged) or when the new state equals the state
 // two steps back (a two-cycle: cycle 2, converged 0, the detection state is the final state), or after max_sweeps.
 // Cycles longer than 2 are not searched for; the cap catches them as non-converged. scratch holds 2n doubles. s ends
