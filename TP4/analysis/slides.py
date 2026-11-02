@@ -146,10 +146,10 @@ OUTLINE: tuple[Slide, ...] = (
         "PC1 ({pca17.var_pc1}) opone tamaño a guardados y comentarios; PC2 ({pca17.var_pc2}) sigue el patrocinio",
         None, ("Q1.2",), (), None, _key("pca/pruned/biplot.svg"),
         "Las flechas del biplot son las cargas (loadings) de cada variable, y que PC1 oponga dos grupos significa que sus "
-        "cargas tienen signo contrario (se nombran las de 0,5 o más en valor absoluto): positivas para {pca17.pc1_pos} y "
+        "cargas tienen signo contrario (se nombran las de {pca17.loading_min} o más en valor absoluto): positivas para {pca17.pc1_pos} y "
         "negativas para {pca17.pc1_neg}, de modo que un creador con PC1 alto tiene mucho de lo primero y poco de lo "
         "segundo, y con PC1 bajo pasa al revés. "
-        "PC2 opone, con cargas positivas, {pca17.pc2_pos} a, con cargas negativas, {pca17.pc2_neg}, y el signo global "
+        "PC2 opone {pca17.pc2_pos}, con cargas positivas, a {pca17.pc2_neg}, con cargas negativas, y el signo global "
         "de una componente es arbitrario: lo que importa es que los dos grupos tengan signos opuestos. "
         "Sin precio ni las variables de alcance y de formato, que salieron por redundantes, PC1 ya no es un eje de tamaño y "
         "precio, y con {pca17.n_features} variables, PC1 y PC2 retienen {pca17.cum_pc2} de la varianza.",

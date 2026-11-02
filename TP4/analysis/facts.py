@@ -295,9 +295,11 @@ def _loading_facts(rows: list[dict[str, str]]) -> dict[str, str]:
         for sign, name, reverse in ((1, "pos", True), (-1, "neg", False)):
             chosen = sorted((item for item in loadings if sign * item[1] >= LOADING_MIN), key=lambda item: item[1],
                             reverse=reverse)
-            out[f"pca17.{component.lower()}_{name}"] = ", ".join(
-                f"{PCA_VARIABLE_WORDS.get(variable, variable)} ({'+' if value > 0 else '−'}{dec(abs(value), 2)})"
-                for variable, value in chosen)
+            items = [f"{PCA_VARIABLE_WORDS.get(variable, variable)} ({'+' if value > 0 else '−'}{dec(abs(value), 2)})"
+                     for variable, value in chosen]
+            out[f"pca17.{component.lower()}_{name}"] = (", ".join(items[:-1]) + " y " + items[-1]
+                                                       if len(items) > 1 else ", ".join(items))
+    out["pca17.loading_min"] = dec(LOADING_MIN, 1)
     return out
 
 
