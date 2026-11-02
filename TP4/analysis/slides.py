@@ -49,7 +49,7 @@ import deliverables_manifest  # noqa: E402
 import facts  # noqa: E402
 
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "slides"
-MAX_SLIDES = 30  # D-01 said 20 to 25; three slides added after the review of the enunciado (EDA, zones, capacity)
+MAX_SLIDES = 31  # D-01 said 20 to 25; three slides added after the review of the enunciado (EDA, zones, capacity)
 HOME_PATH = re.compile(r"/Users/|/home/|[A-Za-z]:\\Users\\")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}")
 SLIDE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -357,6 +357,43 @@ OUTLINE: tuple[Slide, ...] = (
         "validación independiente.",
     ),
     Slide(
+        "oja-setup", 1, "Oja es una neurona lineal que aprende de a un creador por vez y converge a PC1",
+        None, (), (),
+        (
+            ("Elemento", "Cómo lo usamos", "Por qué"),
+            (
+                ("Neurona", "Una sola, lineal: y = w · x",
+                 "Perceptrón simple con activación lineal: la salida es la suma de cada entrada por su peso"),
+                ("Entradas", "{oja.n_creators} creadores × {pca17.n_features} variables",
+                 "Estandarizadas (media 0), de a un creador por vez"),
+                ("Pesos iniciales", "{pca17.n_features} pesos, uniformes entre 0 y 1",
+                 "Como en el curso; se normalizan a longitud 1"),
+                ("Aprendizaje", "Online: w ← w + η · y · (x − y · w)",
+                 "Se actualiza después de cada creador, con el orden barajado en cada época"),
+                ("Tasa de aprendizaje", "η0 = {oja.eta0}, baja hasta {oja.eta_final}",
+                 "El curso propone 1 / ({pca17.eta_factor} · λ₁) = {pca17.eta_bound}, con λ₁ = {pca17.lambda1}, para "
+                 "asegurar la convergencia; usamos un valor mucho menor"),
+                ("Épocas", "{oja.epochs}",
+                 "{oja.updates} actualizaciones; el número es fijo, sin parada por tolerancia"),
+                ("Convergencia", "w tiende a PC1",
+                 "{oja.n_abs_cos_above} de {oja.n_seeds} seeds quedan alineadas con PC1"),
+            ),
+        ),
+        None,
+        "La regla de Oja la usamos como un perceptrón lineal simple: una neurona con una entrada por variable, un "
+        "peso por entrada y activación lineal, así que su salida es y = w · x, y como los datos están estandarizados "
+        "la regla converge al primer componente principal, que es el vector w final. "
+        "Aprende de forma online: después de cada creador actualiza los pesos con w ← w + η · y · (x − y · w), el "
+        "orden de los creadores se baraja en cada época y son {oja.epochs} épocas, o sea {oja.updates} "
+        "actualizaciones, sin parar por tolerancia. "
+        "La tasa inicial η0 = {oja.eta0} es una de las que sugiere el curso y queda muy por debajo del valor "
+        "1 / ({pca17.eta_factor} · λ₁) = {pca17.eta_bound} que da para asegurar la convergencia, donde "
+        "λ₁ = {pca17.lambda1} es el mayor autovalor de la matriz de correlación, lo que explica PC1; como ese "
+        "autovalor no se conoce de antemano, el curso recomienda estandarizar y empezar con una tasa chica. "
+        "Cuando converge, el vector de pesos final es la primera componente principal, como se vio en clase, y en "
+        "{oja.n_abs_cos_above} de las {oja.n_seeds} seeds el vector quedó prácticamente paralelo a PC1.",
+    ),
+    Slide(
         "oja-pc1", 1, "Oja aprendió PC1: su índice y el score de PC1 ordenan igual a los creadores",
         None, ("Q1.8", "Q1.11"),
         ("{oja.n_abs_cos_above} de {oja.n_seeds} seeds coinciden con PC1; mayor diferencia entre índice y score: {oja.max_abs_diff}",),
@@ -380,8 +417,8 @@ OUTLINE: tuple[Slide, ...] = (
             ),
         ),
         None,
-        "El índice es la proyección sobre PC1, un eje de tamaño y formato: con la convención del proyecto un índice alto "
-        "es un creador chico, y dar vuelta el signo da el extremo opuesto. "
+        "El índice es la proyección sobre PC1, un eje de tamaño y de tipo de respuesta de la audiencia: con la convención "
+        "del proyecto un índice alto es un creador grande, y dar vuelta el signo da el extremo opuesto. "
         "El máximo bajo cada signo es otro creador, de otro tema y de otro tamaño: {oja.max_name} con {oja.max_followers} "
         "followers contra {oja.max_opposite_name} con {oja.max_opposite_followers}. "
         "Con followers el índice tiene Pearson {oja.corr_followers_pearson}, "
@@ -401,8 +438,8 @@ OUTLINE: tuple[Slide, ...] = (
         "Los tres objetivos son reglas sobre variables del dataset: alcance masivo ordena por alcance argentino "
         "estimado, descubrimiento por la parte del alcance que viene de no seguidores, y profundidad por la media en z "
         "de contenido tutorial, guardados por mil y tiempo de visualización. "
-        "La PCA da el fundamento: PC1 opone tamaño, video corto y tendencias a tutoriales, guardados y epígrafes "
-        "largos, y los más seguidos caen en el extremo de tamaño (PC1 media {camp.followers_global_pc1_mean}) mientras "
+        "La PCA da el fundamento: PC1 opone tamaño, me gusta y alcance a tutoriales, guardados y tiempo de "
+        "visualización, y los más seguidos caen en el extremo de tamaño (PC1 media {camp.followers_global_pc1_mean}) mientras "
         "la lista de profundidad cae en el opuesto ({camp.futbol.pc1_mean}), que es justo lo que la agencia no estaba "
         "alcanzando. "
         "Para una marca de ropa de entrenamiento, que se vende mostrándola en uso, recomendamos profundidad, con "
@@ -484,24 +521,24 @@ OUTLINE: tuple[Slide, ...] = (
         "ej1-conclusiones", 1, "La PCA explica por qué falla elegir por followers; cada campaña decide con su regla",
         None, (),
         (
-            "PCA: PC1 opone tamaño a profundidad y los temas recién aparecen en PC3 y PC4",
+            "PCA: PC1 opone tamaño a profundidad y casi no mira los temas, que pesan más en PC2",
             "Por eso el top {camp.k} por followers tiene {camp.futbol.followers_global_topic_share}, "
             "{camp.perros.followers_global_topic_share}, {camp.maquillaje.followers_global_topic_share} y "
             "{camp.arte.followers_global_topic_share} del tema de fútbol, perros, maquillaje y arte",
-            "El SOM sigue ese eje (R² {som.r2_pc1}) y Oja lo aprende (Pearson {oja.corr_followers_pearson} con followers): "
-            "la regla filtra por tema y ordena por objetivo",
+            "El SOM ordena a los creadores igual que PC1 y Oja lo aprende (Pearson {oja.corr_followers_pearson} con "
+            "followers): la regla filtra por tema y ordena por objetivo",
         ),
         None, None,
-        "La PCA explica el problema de la agencia: PC1 ({pca.var_pc1}) opone tamaño, video corto y tendencias a "
-        "profundidad, y los temas no aparecen hasta PC3 y PC4, así que ordenar por followers es moverse sobre PC1 sin "
+        "La PCA explica el problema de la agencia: PC1 ({pca17.var_pc1}) opone tamaño y alcance a profundidad, y los "
+        "temas casi no pesan en PC1 y aparecen en PC2, así que ordenar por followers es moverse sobre PC1 sin "
         "mirar el tema. "
         "Se ve en la lista de los {camp.k} más seguidos: solo {camp.futbol.followers_global_topic_share}, "
         "{camp.perros.followers_global_topic_share}, {camp.maquillaje.followers_global_topic_share} y "
         "{camp.arte.followers_global_topic_share} de sus creadores tienen como tema dominante el de fútbol, perros, "
         "maquillaje y arte. "
-        "El SOM, entrenado con las componentes, sigue ese eje (R² {som.r2_pc1} con PC1) y agrupa los temas en zonas que sirven para ubicar "
-        "creadores nuevos y buscar sustitutos, y el índice de Oja es casi el inverso de followers (Pearson "
-        "{oja.corr_followers_pearson}), así que elegir su máximo tampoco resuelve. "
+        "El SOM, entrenado con las componentes, ordena a los creadores igual que PC1 y agrupa los temas en zonas que "
+        "sirven para ubicar creadores nuevos y buscar sustitutos, y el índice de Oja ordena casi igual que followers "
+        "(Pearson {oja.corr_followers_pearson}), así que elegir su máximo tampoco resuelve. "
         "Por eso cada campaña primero filtra por su tema y después ordena por su propio objetivo, con reglas fijadas "
         "antes de ver las listas.",
     ),

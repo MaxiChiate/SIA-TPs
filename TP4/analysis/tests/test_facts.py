@@ -115,7 +115,7 @@ def write_results(root, *, robust=False):
                [3, 11, 12, 2.98, "non_follower_reach_pct", -0.9, -17.0]])
     write_csv(root / "som/profiles/neuron_profiles.csv", ["group", "n", "followers", "price_usd"],
               [[n, 2, 10000 * (5 + n % 5 - n // 5), 100 * (5 + n % 5 - n // 5)] for n in range(25)])
-    write_json(root / "oja/comparison.json", {"max_abs_diff": 0.00197})
+    write_json(root / "oja/comparison.json", {"max_abs_diff": 0.00197, "eta0": 0.001, "eta_final": 0.0001, "epochs": 500})
     write_json(root / "oja/dispersion.json", {
         "n_seeds": 10, "n_abs_cos_above": 10, "min_pairwise_abs_cos": 0.99999932, "mean_pairwise_abs_cos": 0.99999978,
         "worst_seed": 6, "pivots": ["average_caption_words"], "pivot_margin": {"margin": 0.0027477},

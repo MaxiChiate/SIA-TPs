@@ -37,7 +37,7 @@ from pca import TOPICS, _pearson, dominant_topics  # noqa: E402
 
 SERIES = TP_DIR / "analysis" / "series_oja.json"
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "oja"
-PCA_DIR = TP_DIR / "analysis" / "results" / "pca" / "audited"
+PCA_DIR = TP_DIR / "analysis" / "results" / "pca" / "pruned"
 FIGURE_SEED = 1
 COS_MIN = 0.99
 TOP_KS = (5, 10)
@@ -144,7 +144,7 @@ def _read_pca_table(path: Path) -> tuple[list[str], list[list[str]]]:
 
 
 def read_pca(pca_dir=PCA_DIR) -> PcaRef:
-    """The PC1 eigenvector (already oriented) and the PC1 scores written by `make pca` for the audited set."""
+    """The PC1 eigenvector (already oriented) and the PC1 scores written by `make pca` for the pruned set."""
     pca_dir = Path(pca_dir)
     vectors_path, scores_path = pca_dir / "eigenvectors.csv", pca_dir / "scores.csv"
     header, rows = _read_pca_table(vectors_path)
@@ -620,7 +620,7 @@ def main(argv: list[str] | None = None) -> int:
     for seed, run in runs.items():
         if run.features != pca_ref.features:
             raise SystemExit(f"seed {seed}: the features of {run.run_dir / 'weights.csv'} differ from "
-                             "analysis/results/pca/audited/eigenvectors.csv (T-03-07)")
+                             "analysis/results/pca/pruned/eigenvectors.csv (T-03-07)")
         if len(run.index) != len(pca_ref.creator_ids):
             raise SystemExit(f"seed {seed}: {len(run.index)} samples but PCA has {len(pca_ref.creator_ids)} creators")
     if FIGURE_SEED not in runs:

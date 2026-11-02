@@ -17,7 +17,7 @@ came out (PROJECT Key Decisions).
 
 Every chosen creator is then located, only to describe the lists (D-14, D-15): its neuron (row, col) in the
 Phase 2 figure run of the chosen grid (k5-step), its Oja index and rank (analysis/results/oja/index.csv) and its
-PC1 and PC2 scores (analysis/results/pca/audited/scores.csv). The per-variable means of each criterion go to
+PC1 and PC2 scores (analysis/results/pca/pruned/scores.csv). The per-variable means of each criterion go to
 objective_metrics.csv, and two figures place the lists on the PC1-PC2 plane and on the SOM map. None of these
 readings changes a list. numpy, matplotlib (through plots_style) and the standard library only (Phase 1 D-06).
 """
@@ -47,8 +47,8 @@ from creadores import load_creadores  # noqa: E402
 
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "campaigns"
 OJA_INDEX = TP_DIR / "analysis" / "results" / "oja" / "index.csv"
-PCA_SCORES = TP_DIR / "analysis" / "results" / "pca" / "audited" / "scores.csv"
-PCA_EIGENVALUES = TP_DIR / "analysis" / "results" / "pca" / "audited" / "eigenvalues.csv"
+PCA_SCORES = TP_DIR / "analysis" / "results" / "pca" / "pruned" / "scores.csv"
+PCA_EIGENVALUES = TP_DIR / "analysis" / "results" / "pca" / "pruned" / "eigenvalues.csv"
 STAGE1 = TP_DIR / "analysis" / "results" / "som" / "series_som_stage1"
 PHASE2_RULE_FILE = "deliverables/02-kohonen.md"
 
@@ -160,7 +160,7 @@ def read_oja_rank(path, ids) -> np.ndarray:
 
 
 def read_pc_scores(path, ids) -> np.ndarray:
-    """PC1 and PC2 scores of the audited PCA, one row per creator in the order of datos/creadores.csv."""
+    """PC1 and PC2 scores of the pruned PCA, one row per creator in the order of datos/creadores.csv."""
     columns = _read_columns(path, ids, ["PC1", "PC2"], "make pca")
     return np.column_stack([[float(v) for v in columns["PC1"]], [float(v) for v in columns["PC2"]]])
 

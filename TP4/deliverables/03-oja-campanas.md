@@ -2,26 +2,26 @@
 
 ## 1. Regla de Oja: algoritmo, parámetros y convergencia
 
-**Datos.** La neurona entrena sobre las 26 variables auditadas de la Fase 1 con z-score (`datos/prepared/creadores_zscore.csv`, 50 creadores). Como cada columna tiene media 0 (lo comprueba `test_input_is_centered`, con medias de valor absoluto menores que 1e-12), la regla converge al primer componente principal de la matriz de covarianza; con datos sin centrar convergería a otra dirección, dominada por las medias.
+**Datos.** La neurona entrena sobre las 17 variables que quedan después de podar por correlación en la Fase 1 (|r| < 0,8, sección 6.2 de `deliverables/01-datos-pca.md`), con z-score (`datos/prepared/creadores_zscore_pruned.csv`, 50 creadores; lo escribe `make pca` con las mismas columnas del z-score de las 26 variables auditadas). Como cada columna tiene media 0 (lo comprueba `test_input_is_centered`, con medias de valor absoluto menores que 1e-12), la regla converge al primer componente principal de la matriz de covarianza; con datos sin centrar convergería a otra dirección, dominada por las medias.
 
 **Algoritmo.** Para cada creador `x` se calcula `y = w · x` y se actualiza `w ← w + η y (x − y w)` (regla de Oja, slides del curso p. 16). `w` arranca con cada componente uniforme en [0, 1) (con la semilla de la corrida) y escalado a longitud 1. Cada época recorre los 50 creadores una vez, en un orden barajado distinto cada vez. La tasa η decae exponencialmente de η0 a ηf a lo largo de todas las actualizaciones, y el número de épocas es fijo: no hay parada por tolerancia. Al terminar se renormaliza `w` a longitud 1 y se le aplica la convención de signo D-02. El índice de cada creador es `x · w`.
 
-**Parámetros.** `neuron/config.json.oja.example`: η0 = 0,001 (el valor del curso, slides p. 15), ηf = 0,0001 y 500 épocas. η0 es chico a propósito: la regla es estable cuando η0 · máx ‖x‖² es mucho menor que 1, y acá vale 0,0573, de modo que ni los creadores más alejados del centro llevan a `w` a divergir (Pitfall 8 de la investigación, y el binario se niega a correr con un producto de 1 o más). Se corren 10 seeds (1 a 10); la seed 1 es la de las figuras y la de las tablas.
+**Parámetros.** `neuron/config.json.oja.example`: η0 = 0,001 (el valor del curso, slides p. 15), ηf = 0,0001 y 500 épocas. η0 es chico a propósito: la regla es estable cuando η0 · máx ‖x‖² es mucho menor que 1, y acá vale 0,0367, de modo que ni los creadores más alejados del centro llevan a `w` a divergir (Pitfall 8 de la investigación, y el binario se niega a correr con un producto de 1 o más). Se corren 10 seeds (1 a 10); la seed 1 es la de las figuras y la de las tablas.
 
-**Signo (D-02).** `w` está definido salvo por el signo: `-w` es igual de buena como solución. La convención de D-02 la fija en C, para que la corrida sea reproducible: el coeficiente de mayor valor absoluto (el pivote) queda positivo, la misma regla con la que la Fase 1 orienta los componentes (sección 5 de `deliverables/01-datos-pca.md`). En las 10 seeds, `seeds.csv` marca `sign_flipped = 1`: el vector entrenado salió del lado opuesto al pivote positivo y C lo dio vuelta. No se verificó la causa; una lectura plausible es que el arranque, con todas las componentes positivas, queda más cerca del lado de las variables de tamaño, que en PC1 son negativas. Python nunca reorienta una corrida: la compara tal como la escribió C.
+**Signo (D-02).** `w` está definido salvo por el signo: `-w` es igual de buena como solución. La convención de D-02 la fija en C, para que la corrida sea reproducible: el coeficiente de mayor valor absoluto (el pivote) queda positivo, la misma regla con la que la Fase 1 orienta los componentes (sección 5 de `deliverables/01-datos-pca.md`). En 9 de las 10 seeds, `seeds.csv` marca `sign_flipped = 1`: el vector entrenado salió del lado opuesto al pivote positivo y C lo dio vuelta (la seed 10 salió ya orientada). No se verificó la causa. Python nunca reorienta una corrida: la compara tal como la escribió C.
 
 **Convergencia.** Estas son las líneas del informe de convergencia (`report_convergence.md`), con la seed 1 salvo donde se indica:
 
 - Parámetros: η0 = 0,001, ηf = 0,0001, 500 épocas (25000 actualizaciones: 500 × 50 creadores).
-- Cota de estabilidad: η0 · máx ‖x‖² = 0,0573 (debe ser menor que 1).
-- Seed 1 al final del entrenamiento: |w| = 1,00032 antes de renormalizar y ‖Δw‖ = 1,4e-04 en la última época.
-- Peor seed (6): 1 − |cos(w, v1)| = 2,5e-07.
-- Seed 1: primera época con 1 − |cos(w_e, v1)| < 1e-3: época 8.
-- Margen del pivote: los dos mayores coeficientes de PC1 son average_caption_words (+0,2521) y average_impressions (-0,2493), con un margen de 0,00275 en valor absoluto: es el límite de la convención de signo, que con otros datos podría elegir la otra variable e invertir w y el índice.
+- Cota de estabilidad: η0 · máx ‖x‖² = 0,0367 (debe ser menor que 1).
+- Seed 1 al final del entrenamiento: |w| = 1,00027 antes de renormalizar y ‖Δw‖ = 4,2e-05 en la última época.
+- Peor seed (10): 1 − |cos(w, v1)| = 5,6e-08.
+- Seed 1: primera época con 1 − |cos(w_e, v1)| < 1e-3: época 19.
+- Margen del pivote: los dos mayores coeficientes de PC1 son followers (+0,3319) y saves_per_1000 (-0,3248), con un margen de 0,00714 en valor absoluto: es el límite de la convención de signo, que con otros datos podría elegir la otra variable e invertir w y el índice.
 
-**Qué muestra la figura.** `analysis/results/oja/convergence.svg` tiene tres paneles sobre el eje de épocas, con la seed 1 en color y las otras 9 en gris. Arriba, 1 − |cos(w_e, v1)| en escala logarítmica, donde `w_e` es el vector sin normalizar al final de la época `e` y `v1` el primer autovector de la PCA: baja de 0,8 en la época 0 a menos de 1e-3 en la época 8 (seed 1), queda en el orden de 1e-4 hasta la época 20 aproximadamente y después sigue bajando, con ruido, a medida que η decrece, hasta 1,7e-7 en la época 500. En el medio, |w| antes de renormalizar: sube hasta 1,004 en las primeras épocas y vuelve hacia 1 hasta 1,0003, y las 10 seeds casi coinciden. Abajo, ‖Δw‖ de cada época, que cae de unos 0,3 a 1,4e-4. Como no hay parada por tolerancia, el entrenamiento no "termina" en un punto: el vector sigue moviéndose a escala de ‖Δw‖ ≈ 1e-4, y la alineación con PC1 que se mide en la sección 2 es la del vector final.
+**Qué muestra la figura.** `analysis/results/oja/convergence.svg` tiene tres paneles sobre el eje de épocas, con la seed 1 en color y las otras 9 en gris. Arriba, 1 − |cos(w_e, v1)| en escala logarítmica, donde `w_e` es el vector sin normalizar al final de la época `e` y `v1` el primer autovector de la PCA: baja de 0,9 en la época 0 a menos de 1e-3 en la época 19 (seed 1), a 6,8e-06 en la época 50 y después sigue bajando, con ruido, a medida que η decrece, hasta 1,0e-08 en la época 500. En el medio, |w| antes de renormalizar: sube hasta 1,003 hacia la época 10 y vuelve hacia 1 hasta 1,0003, y las 10 seeds casi coinciden. Abajo, ‖Δw‖ de cada época, que sube hasta unos 0,15 en las primeras épocas y cae a 4,2e-05. Como no hay parada por tolerancia, el entrenamiento no "termina" en un punto: el vector sigue moviéndose a escala de ‖Δw‖ ≈ 4e-05, y la alineación con PC1 que se mide en la sección 2 es la del vector final.
 
-**Qué implica el margen del pivote.** Los coeficientes de la viñeta son los de PC1 (`v1`), no los de `w`, que difieren en la cuarta decimal (sección 3). Los dos más grandes de PC1 difieren en 0,00275 en valor absoluto: con un `w` menos convergido la convención podría tomar `average_impressions` como pivote y dar vuelta todo el índice. Por eso se corren y se verifican las 10 seeds (todas con el mismo pivote, `average_caption_words`, sección 2), y no una sola.
+**Qué implica el margen del pivote.** Los coeficientes de la viñeta son los de PC1 (`v1`), no los de `w`, que difieren en la cuarta decimal (sección 3). Los dos más grandes de PC1 difieren en 0,00714 en valor absoluto: con un `w` menos convergido la convención podría tomar `saves_per_1000` como pivote y dar vuelta todo el índice. Por eso se corren y se verifican las 10 seeds (todas con el mismo pivote, `followers`, sección 2), y no una sola.
 
 ## 2. Índice de Oja frente a la proyección sobre PC1
 
@@ -34,79 +34,70 @@ El índice de Oja de un creador es la proyección de su vector z sobre `w`; el s
 | Pearson índice vs score de PC1 | 1,0000 |
 | overlap@5 | 5 de 5 |
 | overlap@10 | 10 de 10 |
-| mayor abs(índice − score PC1) | 2,0e-03 |
+| mayor abs(índice − score PC1) | 3,0e-04 |
 
 - Seeds con abs(cos(w, v1)) > 0,99: 10 de 10.
-- Seeds con la orientación de PCA (w · v1 > 0): 10 de 10; pivote de todas: average_caption_words.
-- abs(cos) entre pares de seeds: mínimo 0,9999993, media 0,9999998.
-- Rango del índice por creador entre seeds: máximo 3,1e-03, media 1,5e-03.
+- Seeds con la orientación de PCA (w · v1 > 0): 10 de 10; pivote de todas: followers.
+- abs(cos) entre pares de seeds: mínimo 0,9999999, media 1,0000000.
+- Rango del índice por creador entre seeds: máximo 1,2e-03, media 6,3e-04.
 
-**Cómo leerlo.** abs(cos) mide el ángulo entre las dos direcciones sin mirar el signo; el `cos` con signo, positivo, dice que las dos tienen además la misma orientación. Las dos columnas valen 1,000000 porque la tabla redondea a 6 decimales: el valor es 0,9999998 (la peor seed, la 6, queda a 2,5e-07 de 1, sección 1). El Pearson entre el índice y el score de PC1 mide si los dos ordenan a los creadores igual, y vale 1,0000 con 4 decimales; que el overlap@5 y el overlap@10 sean completos (5 de 5 y 10 de 10) dice que los mismos 5 y los mismos 10 creadores encabezan las dos listas. La mayor diferencia entre el índice y el score de un mismo creador es 2,0e-03, contra scores que van de unos -6 a unos +7. En conjunto: Oja aprendió PC1, y el índice y el score ordenan a los creadores del mismo modo, salvo por el error de convergencia; el índice no agrega información que PC1 no tenga.
+**Cómo leerlo.** abs(cos) mide el ángulo entre las dos direcciones sin mirar el signo; el `cos` con signo, positivo, dice que las dos tienen además la misma orientación. Las dos columnas valen 1,000000 porque la tabla redondea a 6 decimales: el valor es 0,99999999 (la peor seed, la 10, queda a 5,6e-08 de 1, sección 1). El Pearson entre el índice y el score de PC1 mide si los dos ordenan a los creadores igual, y vale 1,0000 con 4 decimales; que el overlap@5 y el overlap@10 sean completos (5 de 5 y 10 de 10) dice que los mismos 5 y los mismos 10 creadores encabezan las dos listas. La mayor diferencia entre el índice y el score de un mismo creador es 3,0e-04, contra scores que van de unos -5,4 a unos +4,3. En conjunto: Oja aprendió PC1, y el índice y el score ordenan a los creadores del mismo modo, salvo por el error de convergencia; el índice no agrega información que PC1 no tenga.
 
-**Entre seeds.** Las 10 seeds terminan con abs(cos) mayor que 0,99 respecto de PC1, la orientación de PCA y el mismo pivote, y entre sí con abs(cos) de al menos 0,9999993. El índice de un creador cambia entre seeds en 3,1e-03 como máximo, un orden parecido a la diferencia con PC1 (2,0e-03), de modo que elegir otra seed no cambia la lectura del índice.
+**Entre seeds.** Las 10 seeds terminan con abs(cos) mayor que 0,99 respecto de PC1, la orientación de PCA y el mismo pivote, y entre sí con abs(cos) de al menos 0,9999999. El índice de un creador cambia entre seeds en 1,2e-03 como máximo, un orden parecido a la diferencia con PC1 (3,0e-04), de modo que elegir otra seed no cambia la lectura del índice.
 
-**Figura.** `analysis/results/oja/oja_vs_pc1.svg` grafica el score de PC1 (eje x) contra el índice de Oja de la seed 1 (eje y), un punto por creador, con la recta identidad y los estadísticos de la tabla. Los 50 puntos caen sobre la recta, y el color, que marca el tema dominante, no los separa: el índice es una proyección de las 26 variables y no sabe a qué tema pertenece el creador, que es lo que se retoma en la sección 3.
+**Figura.** `analysis/results/oja/oja_vs_pc1.svg` grafica el score de PC1 (eje x) contra el índice de Oja de la seed 1 (eje y), un punto por creador, con la recta identidad y los estadísticos de la tabla. Los 50 puntos caen sobre la recta, y el color, que marca el tema dominante, no los separa: el índice es una proyección de las 17 variables y no sabe a qué tema pertenece el creador, que es lo que se retoma en la sección 3.
 
 ## 3. ¿Qué representa el índice? ¿Sería correcto elegir el máximo para cualquier campaña?
 
-**No.** El índice de Oja es la proyección de cada creador sobre PC1 (sección 2): un eje de escala y formato que retiene el 53,2 % de la varianza de las 26 variables y que casi no mira los temas: la Fase 1 ubicó fútbol y maquillaje en PC3 y PC4 y perros en PC2, no en PC1 (secciones 6 de `deliverables/01-datos-pca.md` y 6.4 de `deliverables/02-kohonen.md`). El creador con el valor más alto es el que está más lejos en un extremo de ese eje, y cuál extremo es "el máximo" lo decide una convención de signo; ni una ni otra cosa dice nada sobre el tema o el objetivo de una campaña.
+**No.** El índice de Oja es la proyección de cada creador sobre PC1 (sección 2): un eje de tamaño y de tipo de respuesta de la audiencia que retiene el 40,0 % de la varianza de las 17 variables y que casi no mira los temas: con las 17 variables PC1 solo carga de forma notable el tema perros (-0,53), mientras fútbol (+0,60) y perros (-0,55) aparecen en PC2 (sección 6.2 de `deliverables/01-datos-pca.md` y 6.4 de `deliverables/02-kohonen.md`). El creador con el valor más alto es el que está más lejos en un extremo de ese eje, y cuál extremo es "el máximo" lo decide una convención de signo; ni una ni otra cosa dice nada sobre el tema o el objetivo de una campaña.
 
-**Qué representa y cómo se lee.** Con la convención D-02 (el coeficiente de mayor valor absoluto, `average_caption_words`, es positivo; sección 1) un índice alto es un creador chico, de epígrafes largos, con más contenido tutorial y de reseña y más guardados, comentarios y visitas al perfil por mil; un índice bajo es un creador grande y caro, con más followers, alcance, impresiones y precio y más video corto y de tendencia. La tabla ordena las 26 variables por el valor absoluto de su coeficiente en `w` (semilla 1, la de las figuras); las cuatro de tamaño y alcance más los formatos de video ocupan el lado negativo, y los epígrafes, los guardados y los comentarios el positivo.
+**Qué representa y cómo se lee.** Con la convención D-02 (el coeficiente de mayor valor absoluto, `followers`, es positivo; sección 1) un índice alto es un creador grande, con más followers, me gusta por mil, alcance a no seguidores y alcance argentino estimado y más compartidos por mil; un índice bajo es un creador chico, con más guardados, visitas al perfil y comentarios por mil, más contenido tutorial y de reseñas y más tiempo de visualización. La tabla ordena las 17 variables por el valor absoluto de su coeficiente en `w` (semilla 1, la de las figuras); las de tamaño y alcance ocupan el lado positivo, y las de guardados, comentarios, tutoriales y tiempo de visualización el negativo.
 
 | Variable | w (convención D-02) |
 |---|---|
-| average_caption_words | +0,2521 |
-| average_impressions | -0,2494 |
-| average_video_views | -0,2482 |
-| average_reach | -0,2474 |
-| trend_posts_pct | -0,2413 |
-| followers | -0,2364 |
-| video_posts_pct | -0,2353 |
-| price_usd | -0,2349 |
-| short_form_posts_pct | -0,2337 |
-| saves_per_1000 | +0,2255 |
-| likes_per_1000 | -0,2115 |
-| content_entertainment_pct | -0,2101 |
-| profile_visits_per_1000 | +0,2074 |
-| comments_per_1000 | +0,2063 |
-| estimated_argentina_reach | -0,2022 |
-| non_follower_reach_pct | -0,1983 |
-| average_watch_time_seconds | +0,1977 |
-| content_tutorial_pct | +0,1952 |
-| shares_per_1000 | -0,1786 |
-| content_review_pct | +0,1756 |
-| topic_dogs_pct | +0,1290 |
-| topic_football_pct | -0,0641 |
-| topic_makeup_pct | -0,0630 |
-| monthly_posts | -0,0355 |
-| argentina_audience_pct | +0,0247 |
-| sponsored_posts_pct | -0,0140 |
+| followers | +0,3320 |
+| saves_per_1000 | -0,3248 |
+| profile_visits_per_1000 | -0,3040 |
+| likes_per_1000 | +0,3036 |
+| comments_per_1000 | -0,2943 |
+| non_follower_reach_pct | +0,2864 |
+| content_tutorial_pct | -0,2829 |
+| average_watch_time_seconds | -0,2798 |
+| estimated_argentina_reach | +0,2746 |
+| shares_per_1000 | +0,2625 |
+| content_review_pct | -0,2461 |
+| topic_dogs_pct | -0,2038 |
+| topic_football_pct | +0,1080 |
+| topic_makeup_pct | +0,0935 |
+| monthly_posts | +0,0568 |
+| argentina_audience_pct | -0,0449 |
+| sponsored_posts_pct | +0,0274 |
 
-**Con qué se correlaciona.** Las correlaciones son entre el índice (con cada signo) y los valores crudos de `datos/creadores.csv`: `followers` y los cuatro porcentajes de tema, `topic_art_pct` incluido aunque quedó fuera del entrenamiento en la Fase 1. Con el signo de D-02 el índice baja casi en bloque con el tamaño (Pearson -0,879 con `followers`); con el signo opuesto sube con él. Los temas tienen una relación mucho más débil y despareja: perros es la única que pasa de 0,4 en valor absoluto (+0,480 con el signo de D-02; su coeficiente en `w`, +0,1290, es también el mayor de los tres temas del entrenamiento), fútbol y maquillaje rondan 0,23 de Pearson y arte es prácticamente nula.
+**Con qué se correlaciona.** Las correlaciones son entre el índice (con cada signo) y los valores crudos de `datos/creadores.csv`: `followers` y los cuatro porcentajes de tema, `topic_art_pct` incluido aunque quedó fuera del entrenamiento en la Fase 1. Con el signo de D-02 el índice sube casi en bloque con el tamaño (Pearson 0,866 con `followers`); con el signo opuesto baja con él. Los temas tienen una relación mucho más débil y despareja: perros es la única que pasa de 0,4 en valor absoluto (-0,532 con el signo de D-02; su coeficiente en `w`, -0,2038, es también el mayor de los tres temas del entrenamiento), fútbol y maquillaje rondan 0,26 de Pearson (+0,282 y +0,244) y arte es prácticamente nula (+0,028).
 
 | Variable cruda | Pearson (D-02) | Pearson (signo opuesto) |
 |---|---|---|
-| followers | -0,879 | +0,879 |
-| topic_football_pct | -0,239 | +0,239 |
-| topic_makeup_pct | -0,234 | +0,234 |
-| topic_dogs_pct | +0,480 | -0,480 |
-| topic_art_pct | -0,029 | +0,029 |
+| followers | +0,866 | -0,866 |
+| topic_football_pct | +0,282 | -0,282 |
+| topic_makeup_pct | +0,244 | -0,244 |
+| topic_dogs_pct | -0,532 | +0,532 |
+| topic_art_pct | +0,028 | -0,028 |
 
-**Los diez primeros según el índice.** Hay dos maneras de preguntar si el top 10 del índice coincide con "los top 10 de cada tema dominante", y se muestran las dos con ambos signos. La primera es el solapamiento del top 10 del índice con el top 10 de cada porcentaje de tema crudo (los empates de la frontera se resuelven por orden de fila). La segunda es la composición del top 10 del índice: cuántos de sus diez creadores tienen cada tema como dominante. Con el signo de D-02, siete de los diez primeros son de perros y ninguno es de arte; con el opuesto, cinco son de fútbol, tres de maquillaje, y de perros solo uno. El índice favorece un tema en cada extremo, y el arte queda casi afuera en ambos.
+**Los diez primeros según el índice.** Hay dos maneras de preguntar si el top 10 del índice coincide con "los top 10 de cada tema dominante", y se muestran las dos con ambos signos. La primera es el solapamiento del top 10 del índice con el top 10 de cada porcentaje de tema crudo (los empates de la frontera se resuelven por orden de fila). La segunda es la composición del top 10 del índice: cuántos de sus diez creadores tienen cada tema como dominante. Con el signo de D-02, cinco de los diez primeros son de fútbol, tres de maquillaje, uno de perros y uno de arte; con el opuesto, siete son de perros y ninguno es de arte. El índice favorece un tema en cada extremo, y el arte queda casi afuera en ambos.
 
 | Tema | Top 10 por porcentaje en común con el top 10 del índice (D-02) | Top 10 por porcentaje en común con el top 10 del índice (signo opuesto) | Creadores del top 10 del índice con ese tema dominante (D-02) | Creadores del top 10 del índice con ese tema dominante (signo opuesto) |
 |---|---|---|---|---|
-| fútbol | 1 de 10 | 4 de 10 | 2 de 10 | 5 de 10 |
-| maquillaje | 1 de 10 | 3 de 10 | 1 de 10 | 3 de 10 |
-| perros | 5 de 10 | 1 de 10 | 7 de 10 | 1 de 10 |
-| arte | 0 de 10 | 1 de 10 | 0 de 10 | 1 de 10 |
+| fútbol | 4 de 10 | 1 de 10 | 5 de 10 | 2 de 10 |
+| maquillaje | 3 de 10 | 1 de 10 | 3 de 10 | 1 de 10 |
+| perros | 1 de 10 | 5 de 10 | 1 de 10 | 7 de 10 |
+| arte | 1 de 10 | 0 de 10 | 1 de 10 | 0 de 10 |
 
 **El máximo bajo cada signo.** Es el mismo modelo, los mismos datos y la misma semilla; solo cambia el signo, y el creador que sale primero es otro, de otro tema y de otro tamaño:
 
-- Máximo con el signo de D-02: INF031 (@mundoanimal.ar), tema dominante perros, 17062 followers, índice +6,70.
-- Máximo con el signo opuesto: INF045 (@futbolsinvueltas), tema dominante fútbol, 493194 followers, índice +6,26.
+- Máximo con el signo de D-02: INF021 (@golconmate), tema dominante fútbol, 745025 followers, índice +4,31.
+- Máximo con el signo opuesto: INF031 (@mundoanimal.ar), tema dominante perros, 17062 followers, índice +5,35.
 
-**Conclusión.** Elegir automáticamente al creador con el valor más alto del índice no es correcto para cualquier campaña, por tres razones que salen de las tablas de arriba. Primero, "el máximo" depende de una convención: la de D-02 fija el signo para que `w` sea reproducible (sección 1), y dar vuelta el signo da el creador del extremo opuesto; el margen que la sostiene es de apenas 0,00275 (sección 1), así que con otros datos la convención podría elegir la otra variable y también invertir el índice. Segundo, ninguno de los dos máximos es neutral: bajo D-02 sale un creador de perros de 17 mil followers, y bajo el signo opuesto uno de fútbol de casi 500 mil, y en el top 10 de cada signo un tema domina y arte casi no aparece. Tercero, el índice es en lo esencial una forma de ordenar por tamaño (|Pearson| de 0,879 con `followers`) y no sabe cuál es el tema de la campaña ni qué se busca con ella: ni alcance masivo, ni descubrimiento, ni costo por mil, ni profundidad. Una campaña debe entonces filtrar primero por su tema y ordenar por su propio objetivo, que es la regla de la sección 4; el índice de Oja queda como descripción de cada lista y como desempate de empates exactos, sin decidir quién entra.
+**Conclusión.** Elegir automáticamente al creador con el valor más alto del índice no es correcto para cualquier campaña, por tres razones que salen de las tablas de arriba. Primero, "el máximo" depende de una convención: la de D-02 fija el signo para que `w` sea reproducible (sección 1), y dar vuelta el signo da el creador del extremo opuesto; el margen que la sostiene es de apenas 0,00714 (sección 1), así que con otros datos la convención podría elegir la otra variable y también invertir el índice. Segundo, ninguno de los dos máximos es neutral: bajo D-02 sale un creador de fútbol de 745 mil followers, y bajo el signo opuesto uno de perros de 17 mil, y en el top 10 de cada signo un tema domina y arte casi no aparece. Tercero, el índice es en lo esencial una forma de ordenar por tamaño (|Pearson| de 0,866 con `followers`) y no sabe cuál es el tema de la campaña ni qué se busca con ella: ni alcance masivo, ni descubrimiento, ni costo por mil, ni profundidad. Una campaña debe entonces filtrar primero por su tema y ordenar por su propio objetivo, que es la regla de la sección 4; el índice de Oja queda como descripción de cada lista y como desempate de empates exactos, sin decidir quién entra.
 
 ## 4. Regla de selección por campaña (fijada antes de calcular las listas)
 
@@ -264,7 +255,7 @@ Las dos líneas base usan k = 5 igual que las listas propias (D-16): la global e
 - **Costo por mil argentinos.** La línea base global es la más barata por mil en cinco de las seis comparaciones (USD 25,71); solo en perros la lista propia la supera (USD 17,94). Contra la línea base dentro del tema, la lista propia es más barata en cuatro (alcance, perros, maquillaje y arte) y más cara en dos (descubrimiento, USD 42,35 contra 41,01, y profundidad, USD 47,35 contra 41,01).
 - **Métrica objetivo.** En cada objetivo la lista propia supera a las dos líneas base en la media de su criterio (en perros, con el valor más bajo, porque el costo por mil se ordena de menor a mayor), salvo alcance masivo contra la línea base global, que alcanza más porque sus cinco creadores son los más grandes de los 50 (media de alcance argentino de 176272 contra 109038).
 
-**Ventajas de elegir solo por followers.** Es simple (ordenar una columna), se supone estable de un mes al otro porque el número de seguidores cambia despacio (los datos son de un solo corte y esto no se puede comprobar con ellos), no hay un modelo que mantener ni una regla que recalibrar, y está correlacionado con el alcance: la línea base global tiene el mayor alcance argentino total de la tabla (881361) y, frente a las listas propias, el menor costo por mil en cinco de las seis. La evidencia de la sección 3 muestra cuánto ya recoge `followers`: el índice de Oja, que es la proyección sobre PC1, la dirección de mayor varianza de las 26 variables (sección 2), se ordena casi como el tamaño (Pearson de -0,879 con `followers` con el signo de D-02).
+**Ventajas de elegir solo por followers.** Es simple (ordenar una columna), se supone estable de un mes al otro porque el número de seguidores cambia despacio (los datos son de un solo corte y esto no se puede comprobar con ellos), no hay un modelo que mantener ni una regla que recalibrar, y está correlacionado con el alcance: la línea base global tiene el mayor alcance argentino total de la tabla (881361) y, frente a las listas propias, el menor costo por mil en cinco de las seis. La evidencia de la sección 3 muestra cuánto ya recoge `followers`: el índice de Oja, que es la proyección sobre PC1, la dirección de mayor varianza de las 17 variables (sección 2), se ordena casi como el tamaño (Pearson de 0,866 con `followers` con el signo de D-02).
 
 **Desventajas.** La línea base global es la misma para las cuatro campañas e ignora el tema (20,0 %, 20,0 %, 60,0 % y 0,0 % de la lista con el tema de la campaña), e ignora el objetivo: en profundidad su contenido tutorial medio es 13,482 contra 40,764 de la lista propia de fútbol, en descubrimiento su alcance de no seguidores medio es 66,820 contra 79,658, y concentra el presupuesto en los creadores más grandes (USD 22657 por los cinco contra USD 1367 a USD 14803 de las listas propias de fútbol). Dentro del tema, elegir por followers es una línea base razonable si lo que se busca es volumen (en alcance, y en maquillaje por el alcance que consigue), pero queda lejos en profundidad (8,080 de tutorial medio en fútbol contra 40,764) y no mira el costo por mil.
 
@@ -274,22 +265,22 @@ Sin datos de resultado (ventas, adopciones o conversiones) no se puede afirmar n
 
 Kohonen, Oja y PCA no eligieron a nadie: describen dónde cae cada lista, y la selección es la de la sección 4. En ninguna de las 18 listas hubo un empate exacto en el criterio ni en `followers`, así que ni siquiera el desempate por índice de Oja (D-13) decidió quién entra. Cada bullet de abajo es una lista propia (seis) o la línea base global de una campaña (cuatro; es la misma lista de cinco creadores en las cuatro).
 
-- fútbol / alcance: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 47, 43, 27, 37, 50; PC1 media -4,00; PC2 media 0,37; neuronas (fila, col): (4, 4), (4, 3), (2, 2), (3, 2), (4, 3)
-- fútbol / descubrimiento: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 43, 37, 42, 27, 41; PC1 media -3,12; PC2 media -0,73; neuronas (fila, col): (4, 3), (3, 2), (4, 2), (2, 2), (4, 2)
-- fútbol / profundidad: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 11, 8, 16, 7, 20; PC1 media 3,25; PC2 media -1,24; neuronas (fila, col): (1, 1), (1, 1), (2, 0), (1, 1), (2, 1)
-- perros / costo_por_mil: 2 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 48, 3, 2, 23, 9; PC1 media 2,19; PC2 media 2,27; neuronas (fila, col): (4, 4), (0, 0), (0, 0), (1, 3), (0, 1)
-- maquillaje / profundidad: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 6, 25, 24, 12, 35; PC1 media 1,14; PC2 media -0,10; neuronas (fila, col): (1, 0), (0, 4), (0, 4), (2, 0), (1, 3)
-- arte / engagement_profundidad: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 49, 15, 31, 21, 19; PC1 media -0,36; PC2 media -0,68; neuronas (fila, col): (4, 4), (0, 2), (4, 1), (0, 4), (3, 0)
-- fútbol, línea base followers global: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 46, 47, 45, 44, 48; PC1 media -5,69; PC2 media 2,27; neuronas (fila, col): (3, 4), (4, 4), (3, 4), (3, 4), (4, 4)
-- perros, línea base followers global: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 46, 47, 45, 44, 48; PC1 media -5,69; PC2 media 2,27; neuronas (fila, col): (3, 4), (4, 4), (3, 4), (3, 4), (4, 4)
-- maquillaje, línea base followers global: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 46, 47, 45, 44, 48; PC1 media -5,69; PC2 media 2,27; neuronas (fila, col): (3, 4), (4, 4), (3, 4), (3, 4), (4, 4)
-- arte, línea base followers global: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 46, 47, 45, 44, 48; PC1 media -5,69; PC2 media 2,27; neuronas (fila, col): (3, 4), (4, 4), (3, 4), (3, 4), (4, 4)
+- fútbol / alcance: 2 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 1, 8, 25, 12, 2; PC1 media 2,87; PC2 media 0,38; neuronas (fila, col): (0, 4), (0, 3), (0, 0), (0, 3), (0, 3)
+- fútbol / descubrimiento: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 8, 12, 9, 25, 10; PC1 media 2,31; PC2 media 0,81; neuronas (fila, col): (0, 3), (0, 3), (0, 2), (0, 0), (0, 2)
+- fútbol / profundidad: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 40, 42, 35, 41, 30; PC1 media -2,11; PC2 media 1,65; neuronas (fila, col): (2, 0), (3, 1), (1, 0), (1, 0), (1, 1)
+- perros / costo_por_mil: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 7, 48, 49, 27, 44; PC1 media -1,82; PC2 media -2,21; neuronas (fila, col): (1, 4), (4, 0), (4, 0), (4, 3), (4, 1)
+- maquillaje / profundidad: 0 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 45, 29, 24, 37, 15; PC1 media -0,55; PC2 media -0,29; neuronas (fila, col): (3, 0), (4, 4), (3, 4), (2, 1), (3, 4)
+- arte / engagement_profundidad: 1 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 4, 33, 18, 31, 36; PC1 media 0,14; PC2 media -0,10; neuronas (fila, col): (0, 4), (3, 1), (1, 2), (4, 3), (2, 1)
+- fútbol, línea base followers global: 3 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 5, 1, 6, 3, 7; PC1 media 3,75; PC2 media -1,67; neuronas (fila, col): (1, 4), (0, 4), (2, 4), (1, 4), (1, 4)
+- perros, línea base followers global: 3 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 5, 1, 6, 3, 7; PC1 media 3,75; PC2 media -1,67; neuronas (fila, col): (1, 4), (0, 4), (2, 4), (1, 4), (1, 4)
+- maquillaje, línea base followers global: 3 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 5, 1, 6, 3, 7; PC1 media 3,75; PC2 media -1,67; neuronas (fila, col): (1, 4), (0, 4), (2, 4), (1, 4), (1, 4)
+- arte, línea base followers global: 3 de 5 en el top 5 del índice de Oja; rangos del índice (1 = máximo): 5, 1, 6, 3, 7; PC1 media 3,75; PC2 media -1,67; neuronas (fila, col): (1, 4), (0, 4), (2, 4), (1, 4), (1, 4)
 
 Lo que muestran las tres lecturas:
 
-- **Mapa SOM.** La Fase 2 dio una sola región (R1 = 50), así que las neuronas se leen como posiciones sobre un continuo y no como segmentos (D-14). Según la lectura de `deliverables/02-kohonen.md` (6.3), la zona inferior derecha del mapa reúne creadores grandes y caros y la superior izquierda creadores chicos y baratos, y la línea base global cae en (3, 4) y (4, 4), en la primera. La lista de profundidad de fútbol cae en (1, 1), (2, 0) y (2, 1), y las dos primeras están entre las neuronas de creadores chicos y baratos; la de perros pone dos creadores en (0, 0), donde 6.3 ubica creadores chicos y baratos de perros, y a @crearenreels en (4, 4). Las listas de alcance y descubrimiento de fútbol quedan sobre todo en las filas 2 a 4, la de maquillaje en las filas 0 a 2 y la de arte aparece en esquinas opuestas, de (0, 2) a (4, 4). La orientación del mapa es arbitraria; la figura es `analysis/results/campaigns/shortlists_som.svg`.
-- **Índice de Oja.** Solo la lista de perros tiene creadores en el top 5 del índice (2 de 5, rangos 2 y 3); las otras cinco listas propias tienen 0 de 5, y la línea base global ocupa los puestos 44 a 48 (el índice con el signo de D-02 ordena a los grandes al final, sección 3). Es lo que se quería mostrar (D-15): elegir por el índice no daría ninguna de estas listas, y coincide con el "No" de la sección 3.
-- **PC1 y PC2.** La línea base global y las listas de alcance y descubrimiento de fútbol caen en el lado negativo de PC1 (medias de -5,69, -4,00 y -3,12), el lado de los creadores grandes de la figura, y la lista de profundidad de fútbol (3,25), la de perros (2,19) y la de maquillaje (1,14) en el positivo; la de arte queda cerca del origen (-0,36). En PC2, la lista de perros y la línea base global tienen medias altas (2,27 las dos) y las demás quedan entre -1,24 y 0,37. Son lecturas de posición en un plano que explica 53,2 % y 8,5 % de la varianza, no una razón para estar en la lista; la figura es `analysis/results/campaigns/shortlists_biplot.svg`.
+- **Mapa SOM.** Las neuronas se leen como posiciones sobre el mapa y no como segmentos (D-14). Según la lectura de `deliverables/02-kohonen.md` (6.3), el tamaño crece en diagonal, de los creadores chicos y baratos abajo a la izquierda a los grandes y caros arriba a la derecha, y los temas forman zonas: perros abajo, arte en el centro, fútbol arriba y maquillaje a la derecha. La línea base global cae en (1, 4), (0, 4) y (2, 4), la columna derecha de los grandes. Las listas de alcance y descubrimiento de fútbol quedan casi todas en la fila 0, la zona de fútbol; la de profundidad de fútbol cae en (1, 0), (1, 1), (2, 0) y (3, 1), sobre el lado izquierdo, el de los chicos; la de perros pone cuatro creadores en la fila 4, la zona de perros, y a @crearenreels en (1, 4), con los grandes; la de maquillaje se reparte entre las filas 2 y 4 y la de arte aparece en esquinas opuestas, de (0, 4) a (4, 3). La orientación del mapa es arbitraria; la figura es `analysis/results/campaigns/shortlists_som.svg`.
+- **Índice de Oja.** Dos listas propias tienen creadores en el top 5 del índice: alcance de fútbol (2 de 5, rangos 1 y 2) y arte (1 de 5, rango 4); las otras cuatro tienen 0 de 5, y la línea base global ocupa los puestos 1, 3, 5, 6 y 7 (3 de sus 5 creadores están en el top 5). Con el signo de D-02 el índice ordena a los grandes primero, así que elegir por el índice daría casi la lista por followers y no ninguna de las listas propias de profundidad, costo o descubrimiento (D-15), y coincide con el "No" de la sección 3.
+- **PC1 y PC2.** La línea base global y las listas de alcance y descubrimiento de fútbol caen en el lado positivo de PC1 (medias de 3,75, 2,87 y 2,31), el lado de los creadores grandes, y las listas de profundidad de fútbol (-2,11), de perros (-1,82) y de maquillaje (-0,55) en el negativo; la de arte queda cerca del origen (0,14). En PC2, la lista de profundidad de fútbol tiene la media más alta (1,65) y la de perros la más baja (-2,21), y las demás quedan entre -1,67 y 0,81. Son lecturas de posición en un plano que explica 40,0 % y 11,7 % de la varianza, no una razón para estar en la lista; la figura es `analysis/results/campaigns/shortlists_biplot.svg`.
 
 ## 6. Mantenimiento del sistema
 
@@ -301,7 +292,7 @@ Cuatro preguntas del enunciado (qué pasa con una campaña nueva, con creadores 
 
 **Variables nuevas.** Cambia la dimensión de la entrada, así que no hay nada que reutilizar del modelo: se rehace la auditoría de la Fase 1 (relaciones exactas y redundancias), se vuelve a estandarizar y se vuelve a entrenar el SOM y Oja desde cero, porque el libro de códigos y `w` tienen una componente por variable; también se rehace la PCA de referencia, de la que depende el signo y la comparación de la sección 2.
 
-**Actualización mensual.** Se fija la seed y se versionan, por mes, el scaler y el libro de códigos junto con el `w` de Oja. Al re-entrenar la orientación del mapa puede cambiar, así que las neuronas y las regiones se rotulan por su contenido (el perfil en unidades originales) y no por su posición, y el `w` de Oja se orienta siempre con la convención de signo de D-02 para que el índice conserve su significado (un índice alto sigue siendo un creador chico). Antes de re-entrenar, el chequeo del mes es el de arriba: la distancia al BMU de los creadores del mes sobre el mapa anterior, contra la distribución de entrenamiento; solo si la supera se re-entrena.
+**Actualización mensual.** Se fija la seed y se versionan, por mes, el scaler y el libro de códigos junto con el `w` de Oja. Al re-entrenar la orientación del mapa puede cambiar, así que las neuronas y las regiones se rotulan por su contenido (el perfil en unidades originales) y no por su posición, y el `w` de Oja se orienta siempre con la convención de signo de D-02 para que el índice conserve su significado (un índice alto sigue siendo un creador grande). Antes de re-entrenar, el chequeo del mes es el de arriba: la distancia al BMU de los creadores del mes sobre el mapa anterior, contra la distribución de entrenamiento; solo si la supera se re-entrena.
 
 **Demo con un creador sintético.** Para mostrar el mecanismo se arma un creador sintético (`SYN001`, `@sintetico_demo`) con las medianas de las 31 columnas de `datos/creadores.csv`, con las cinco relaciones exactas restauradas; no es un creador real, vive solo en `analysis/results/maintenance/` y nunca entra a `datos/creadores.csv` ni a ninguna lista. `make maintenance` lo mapea con `scripts/map_creator.py` y el scaler guardado, lo proyecta sobre las 7 componentes de la PCA, lo ubica en el mapa de la Fase 2 (k = 5, `k5-step`, seed de las figuras), calcula su índice de Oja con el `w` guardado y compara su distancia al BMU con la de los 50 creadores de entrenamiento. Estas son las líneas de `report_demo.md`:
 
@@ -309,7 +300,7 @@ Cuatro preguntas del enunciado (qué pasa con una campaña nueva, con creadores 
 - Su neurona ganadora en el mapa k5-step (seed 10) es (fila 2, col 2) a distancia 1,093 de su vector.
 - Distancias de entrenamiento al BMU: distancia media 1,933, máximo 2,969, percentil 95 2,631; el 4,0 % de esas distancias es menor o igual que la del creador sintético.
 - Veredicto de deriva: no hace falta re-entrenar (la distancia del creador sintético no supera el máximo de entrenamiento).
-- El creador sintético tiene índice de Oja 0,249 con el w guardado y ocuparía el lugar 24 entre los 50 creadores (1 = índice más alto, 51 = más bajo que los 50).
+- El creador sintético tiene índice de Oja -0,063 con el w guardado y ocuparía el lugar 27 entre los 50 creadores (1 = índice más alto, 51 = más bajo que los 50).
 
 El veredicto significa que, con la regla D-18, este creador, que tiene valores típicos por construcción (las medianas), no obliga a re-entrenar: su distancia al BMU no supera la mayor de entrenamiento. Es una demostración del mecanismo y no una prueba de que los creadores reales de un mes nuevo vayan a pasar el chequeo; un creador con valores lejos de los 50 sí lo dispararía.
 
@@ -321,7 +312,7 @@ Desde `TP4/`, en un clone nuevo:
 make venv         # crea .venv e instala analysis/requirements.txt (versiones fijadas); sin uv: python3.12 -m venv .venv,
                   # .venv/bin/pip install -r analysis/requirements.txt y touch .venv/.installed
 make prepare      # escribe datos/prepared/: matriz auditada de 26 variables y de 31 columnas con sus .meta.json
-make pca          # PCA de la matriz de correlación; escribe analysis/results/pca/ (la lee Oja)
+make pca          # PCA de la matriz de correlación; escribe analysis/results/pca/ y la matriz de las 17 variables que lee Oja
 make som-stage1   # 140 corridas del SOM; escribe analysis/results/som/series_som_stage1/ con selection.json
                   # (se niega a correr si la regla de la Fase 2 no está commiteada y sin cambios)
 make oja          # Oja en C con 10 seeds, comparación con PC1, convergencia y evidencia del máximo; escribe analysis/results/oja/

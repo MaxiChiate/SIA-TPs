@@ -55,6 +55,7 @@ PCA_VARIABLE_WORDS: dict[str, str] = {
     "profile_visits_per_1000": "visitas al perfil por mil",
     "saves_per_1000": "guardados por mil",
 }
+OJA_ETA_FACTOR = 1.2  # eta0 = 1 / (1.2 lambda_1) is the convergence bound of the course (Regla de Oja y Sanger, p. 14)
 LOADING_MIN = 0.5  # a variable is named in the reading of a component when its loading is at least this in absolute value
 
 # The variables of the highest walls of the U matrix in plain words: (what changes, plural, unit of the change).
@@ -282,6 +283,9 @@ def _pca17_facts(results_dir: Path) -> dict[str, str]:
         "pca17.var_pc2": pct(decision["explained_pc2"], 1),
         "pca17.cum_pc2": pct(decision["cumulative_pc2"], 1),
         "pca17.cum_k80": pct(eigenvalues[k_80 - 1]["cumulative"], 1),
+        "pca17.lambda1": dec(eigenvalues[0]["eigenvalue"], 2),
+        "pca17.eta_factor": dec(OJA_ETA_FACTOR, 1),
+        "pca17.eta_bound": dec(1.0 / (OJA_ETA_FACTOR * float(eigenvalues[0]["eigenvalue"])), 3),
         **_loading_facts(read_csv_source(results_dir, "pca17.loadings")),
     }
 
@@ -503,6 +507,10 @@ def _oja_facts(results_dir: Path) -> dict[str, str]:
     return {
         "oja.n_seeds": integer(dispersion["n_seeds"]),
         "oja.n_creators": str(len(index)),
+        "oja.eta0": dec(comparison["eta0"], 3),
+        "oja.eta_final": dec(comparison["eta_final"], 4),
+        "oja.epochs": integer(comparison["epochs"]),
+        "oja.updates": integer(float(comparison["epochs"]) * len(index)),
         "oja.n_abs_cos_above": integer(dispersion["n_abs_cos_above"]),
         "oja.abs_cos_min": dec(dispersion["min_pairwise_abs_cos"], 7),
         "oja.abs_cos_mean": dec(dispersion["mean_pairwise_abs_cos"], 7),
@@ -835,7 +843,7 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (3, "pivote de todas: {oja.pivot}."),
     (3, "Los dos más grandes de PC1 difieren en {oja.pivot_margin} en valor absoluto"),
     (3, "Máximo con el signo de D-02: {oja.max_id} ({oja.max_name}), tema dominante {oja.max_topic}, {oja.max_followers} followers"),
-    (3, "Máximo con el signo opuesto: {oja.max_opposite_id} ({oja.max_opposite_name}), tema dominante fútbol, {oja.max_opposite_followers} followers"),
+    (3, "Máximo con el signo opuesto: {oja.max_opposite_id} ({oja.max_opposite_name}), tema dominante {oja.max_opposite_topic}, {oja.max_opposite_followers} followers"),
     (3, "Commit de la regla: {camp.rule_commit}"),
     (3, "Las dos líneas base usan k = {camp.k} igual que las listas propias"),
     (3, "fútbol / profundidad — propia: {camp.futbol.top5}"),

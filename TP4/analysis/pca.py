@@ -30,7 +30,7 @@ sys.path.insert(0, str(TP_DIR / "scripts"))
 sys.path.insert(0, str(TP_DIR / "analysis"))
 
 import plots_style  # noqa: E402
-from creadores import PREPARED_DIR, load_creadores, load_meta  # noqa: E402
+from creadores import PREPARED_DIR, load_creadores, load_meta, zscore_csv_text  # noqa: E402
 
 DEFAULT_OUT_DIR = TP_DIR / "analysis" / "results" / "pca"
 
@@ -543,6 +543,33 @@ def write_som_input(prepared_dir: Path = PREPARED_DIR) -> tuple[Path, Path]:
     return csv_path, meta_path
 
 
+PRUNED_INPUT_STEM = "creadores_zscore_pruned"
+
+
+def write_pruned_input(prepared_dir: Path = PREPARED_DIR) -> tuple[Path, Path]:
+    """Write {PRUNED_INPUT_STEM}.csv and .meta.json: the z-score matrix of the variables that stay after the
+    correlation pruning (the same columns of the audited matrix), the input of Oja's neuron. The meta keeps the
+    scaler (mean and std of the kept variables) so a new creator can be mapped to the same space."""
+    prepared_dir = Path(prepared_dir)
+    features, z, meta = read_prepared("creadores_zscore", prepared_dir)
+    kept, z_kept, kept_meta = pruned_data(features, z, meta)
+    position = [features.index(name) for name in kept]
+    saved = {
+        **kept_meta,
+        "variant": PRUNED_FOLDER,
+        "note": f"Z-scores de las {len(kept)} variables que quedan con |r| < {corr_prune_threshold():.2f}: "
+                "entrada de la regla de Oja",
+        "source": "datos/prepared/creadores_zscore.csv",
+        "mean": [float(meta["mean"][i]) for i in position],
+        "std": [float(meta["std"][i]) for i in position],
+    }
+    csv_path = prepared_dir / f"{PRUNED_INPUT_STEM}.csv"
+    meta_path = prepared_dir / f"{PRUNED_INPUT_STEM}.meta.json"
+    csv_path.write_text(zscore_csv_text(kept, z_kept), encoding="utf-8")
+    meta_path.write_text(json.dumps(saved, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return csv_path, meta_path
+
+
 def run_variant(stem: str, folder: str, title: str, out_dir: Path):
     features, z, meta = read_prepared(stem)
     if folder == PRUNED_FOLDER:
@@ -588,6 +615,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"sensitivity -> {out_dir / 'sensitivity.json'}, {out_dir / 'sensitivity.md'}")
     csv_path, _ = write_som_input(args.prepared_dir)
     print(f"som input -> {csv_path}")
+    pruned_path, _ = write_pruned_input(args.prepared_dir)
+    print(f"oja input -> {pruned_path}")
     return 0
 
 

@@ -219,7 +219,8 @@ def main(argv: list[str] | None = None) -> int:
     neuron, r, c, distance = bmu(scores, run.prototypes, k)
     check = drift_check(distance, run.distance)
     training_indices = read_training_indices(OJA_INDEX)
-    oja_value = float(z @ read_weights(OJA_WEIGHTS, features))
+    # Oja's neuron is trained on the variables that stay, in the order of the pruned scaler
+    oja_value = float(z[position] @ read_weights(OJA_WEIGHTS, som_data["variables"]))
     result = {
         "synthetic": True,
         "creator_id": SYNTHETIC_ID,
