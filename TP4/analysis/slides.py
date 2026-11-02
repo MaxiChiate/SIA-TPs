@@ -345,16 +345,16 @@ OUTLINE: tuple[Slide, ...] = (
         "cae cada perfil y no validan grupos.",
     ),
     Slide(
-        "som-pc", 1, "El mapa sigue a PC1 (R² {som.r2_pc1}) y a PC2 (R² {som.r2_pc2}), que son sus propias entradas",
-        "Regla fijada de antemano", ("Q1.6",), (), None, _key("som/profiles/pc_planes.svg"),
-        "La posición de la neurona ganadora explica el {som.r2_pc1_pct} de la variación de PC1, y ninguna de las "
-        "{som.n_permutations} permutaciones lo alcanza (p = {som.p_r2_pc1}). "
-        "Con PC2 el R² es {som.r2_pc2} y p = {som.p_r2_pc2}: el mapa también la sigue. "
-        "Como el mapa se entrena con los scores de las componentes, que siga a PC1 y PC2 es esperable y no una validación "
-        "independiente. "
-        "En conjunto, el orden de las distancias de la grilla coincide con el del plano PC1-PC2 (Mantel rho "
-        "{som.mantel_rho}), casi igual que con las {som.n_vars} variables ({som.mantel_vars_rho}), y las paredes altas "
-        "de la matriz U no coinciden con saltos de PC1 ni de PC2 (rho {som.edge_rho_pc1} y {som.edge_rho_pc2}).",
+        "som-pc", 1, "El mapa ordena a los creadores igual que PC1 y, en menor medida, PC2",
+        None, ("Q1.6",), (), None, _key("som/profiles/pc_planes.svg"),
+        "Esta slide sirve para constatar que el biplot de la PCA y el mapa de Kohonen coinciden: son dos formas de "
+        "ubicar a los creadores, como dos planos de la misma ciudad, y se chequea que los barrios queden en el mismo "
+        "lugar. "
+        "Si te digo solamente en qué casilla cayó un creador, con una regla simple sobre su fila y su columna se "
+        "explica el {som.r2_pc1_pct} de lo que vale su PC1 y el {som.r2_pc2_pct} de lo que vale su PC2, o sea que el "
+        "mapa ordena a los creadores casi igual que PC1 y solo en parte igual que PC2. "
+        "Como el mapa se entrena con los scores de las componentes, que siga a PC1 y PC2 es esperable y no una "
+        "validación independiente.",
     ),
     Slide(
         "oja-pc1", 1, "Oja aprendió PC1: su índice y el score de PC1 ordenan igual a los creadores",

@@ -346,6 +346,7 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
         "som.r2_pc1_pct": pct(contrast["r2_pc1"], 1),
         "som.p_r2_pc1": dec(contrast["p_r2_pc1"], 3),
         "som.r2_pc2": dec(contrast["r2_pc2"], 3),
+        "som.r2_pc2_pct": pct(contrast["r2_pc2"], 1),
         "som.p_r2_pc2": dec(contrast["p_r2_pc2"], 3),
         "som.mantel_rho": dec(contrast["mantel_plane_rho"], 3),
         "som.p_mantel": dec(contrast["p_mantel_plane"], 3),
