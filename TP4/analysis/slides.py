@@ -49,7 +49,7 @@ import deliverables_manifest  # noqa: E402
 import facts  # noqa: E402
 
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "slides"
-MAX_SLIDES = 31  # D-01 said 20 to 25; three slides added after the review of the enunciado (EDA, zones, capacity)
+MAX_SLIDES = 30  # D-01 said 20 to 25; three slides added after the review of the enunciado (EDA, zones, capacity)
 HOME_PATH = re.compile(r"/Users/|/home/|[A-Za-z]:\\Users\\")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}")
 SLIDE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -328,30 +328,19 @@ OUTLINE: tuple[Slide, ...] = (
         "vacía es interpolación y no un límite entre grupos.",
     ),
     Slide(
-        "som-zone-map", 1, "Fútbol arriba, arte en el centro, perros abajo y maquillaje a la derecha",
-        None, ("Q1.5",), (), None, _key("som/profiles/zone_map.svg"),
-        "Cada neurona ocupada toma el color del tema que más aparece entre sus creadores, y los colores se agrupan en "
-        "zonas del mapa: fútbol arriba, arte en el centro, perros abajo y maquillaje a la derecha. "
-        "Cada zona son neuronas contiguas con un tema dominante en común y representa un perfil de creador distinto; en "
-        "la slide siguiente se ve además cuántos creadores tiene cada neurona y su tamaño. "
-        "Los temas son parte de lo que pesa en las componentes con las que se entrena el mapa, así que es esperable "
-        "que ordenen los lugares, y describen dónde cae cada perfil sin validar grupos. "
-        "Las neuronas grises son un empate de temas y las rayadas están vacías.",
-    ),
-    Slide(
-        "som-zonas", 1, "El tamaño crece en diagonal, de abajo a la izquierda hacia arriba a la derecha",
-        None, ("Q1.5",),
-        ("El fútbol aparece tanto entre creadores chicos como entre grandes",),
-        None, _key("som/profiles/zones.svg"),
+        "som-zonas", 1, "Fútbol arriba, arte en el centro, perros abajo y maquillaje a la derecha",
+        None, ("Q1.5",), (), None, _key("som/profiles/zones.svg"),
         "Cada neurona ocupada toma el color del tema dominante más frecuente entre sus creadores y muestra la mediana "
         "de followers y de precio por post. "
         "El tamaño crece en diagonal: en {som.zone_small.cell} hay {som.zone_small.n} creadores de "
         "{som.zone_small.topic} con una mediana de {som.zone_small.followers} followers y USD {som.zone_small.price}, y "
         "en {som.zone_large.cell} hay {som.zone_large.n} de {som.zone_large.topic} con {som.zone_large.followers} "
         "followers y USD {som.zone_large.price}. "
-        "Dentro de ese eje los temas forman las zonas de la slide anterior, con fútbol tanto entre creadores chicos "
-        "como entre grandes, y como los temas son parte de lo que pesa en las componentes con las que se entrena el "
-        "mapa, describen dónde cae cada perfil y no validan grupos.",
+        "Dentro de ese eje los temas forman zonas, que son neuronas contiguas con un tema dominante en común: perros "
+        "abajo, arte en el centro, fútbol arriba y maquillaje en la columna derecha, con fútbol tanto entre creadores "
+        "chicos como entre grandes. "
+        "Los temas son parte de lo que pesa en las componentes con las que se entrena el mapa, así que describen dónde "
+        "cae cada perfil y no validan grupos.",
     ),
     Slide(
         "som-pc", 1, "El mapa sigue a PC1 (R² {som.r2_pc1}) y a PC2 (R² {som.r2_pc2}), que son sus propias entradas",

@@ -347,13 +347,6 @@ FIGURES = (
         slide=False,
     ),
     Figure(
-        key="som_zone_map", path="som/profiles/zone_map.svg", make_target="som-profiles",
-        config=_SOM[0], seed=_SOM[1], fragment=2, anchor="f2-s6-2",
-        alt="Mapa de Kohonen con cada neurona coloreada por el tema dominante de sus creadores",
-        caption="Zonas del mapa: el tema dominante de cada neurona.",
-        slide=True,
-    ),
-    Figure(
         key="som_zones", path="som/profiles/zones.svg", make_target="som-profiles",
         config=_SOM[0], seed=_SOM[1], fragment=2, anchor="f2-s6-2",
         alt="Mapa de Kohonen con cada neurona coloreada por el tema dominante de sus creadores y su mediana de followers y precio",
