@@ -35,6 +35,19 @@ sys.path.insert(0, str(TP_DIR / "analysis"))
 
 RESULTS_DIR = TP_DIR / "analysis" / "results"
 
+# The variables of the highest walls of the U matrix in plain words: (what changes, plural, unit of the change).
+WALL_VARIABLE_WORDS: dict[str, tuple[str, bool, str]] = {
+    "sponsored_posts_pct": ("la proporción de publicaciones patrocinadas", False, " puntos"),
+    "topic_dogs_pct": ("el tema perros", False, " puntos"),
+    "topic_football_pct": ("el tema fútbol", False, " puntos"),
+    "argentina_audience_pct": ("la audiencia argentina", False, " puntos"),
+    "non_follower_reach_pct": ("el alcance a no seguidores", False, " puntos"),
+    "content_review_pct": ("el contenido de reseñas", False, " puntos"),
+    "likes_per_1000": ("los me gusta por mil", True, ""),
+    "shares_per_1000": ("los compartidos por mil", True, ""),
+    "monthly_posts": ("las publicaciones por mes", True, ""),
+}
+
 # source name -> (path relative to the results directory, make step that writes it)
 VARIANCE_THRESHOLD = 0.80  # cumulative variance that fixes k (a team convention); the same value as pca.VARIANCE_THRESHOLD
 
@@ -392,6 +405,15 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
         single += int(alone)
         values[f"som.wall_{rank}.cells"] = f"({a // k},{a % k}) y ({b // k},{b % k})"
         values[f"som.wall_{rank}.vars"] = ", ".join(row["variable"] for row in rows)
+        values[f"som.wall_{rank}.path"] = f"de la neurona ({a // k},{a % k}) a la ({b // k},{b % k})"
+        values[f"som.wall_{rank}.dist"] = dec(rows[0]["distance"], 2)
+        parts = []
+        for row in rows:
+            words, plural, unit = WALL_VARIABLE_WORDS.get(row["variable"], (row["variable"], False, ""))
+            up = float(row["delta_raw"]) > 0
+            verb = ("suben" if plural else "sube") if up else ("bajan" if plural else "baja")
+            parts.append(f"{verb} {words} en {dec(abs(float(row['delta_raw'])), 1)}{unit}")
+        values[f"som.wall_{rank}.changes"] = (", ".join(parts[:-1]) + " y " + parts[-1]) if len(parts) > 1 else parts[0]
         values[f"som.wall_{rank}.single"] = "sí" if alone else "no"
     values["som.n_walls_single"] = str(single)
     base = table["base"]

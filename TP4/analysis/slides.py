@@ -315,13 +315,17 @@ OUTLINE: tuple[Slide, ...] = (
     Slide(
         "som-map", 1, "Las paredes altas de la matriz U separan perfiles por patrocinio, engagement y alcance",
         None, ("Q1.4", "Q1.7"), (), None, _key("som/figures/map.svg"),
-        "El mapa de {som.chosen_k} por {som.chosen_k} muestra los creadores por neurona y, a la derecha, la matriz U: "
-        "una distancia alta entre vecinas es un límite entre perfiles lejanos. "
-        "La pared más alta, entre {som.wall_1.cells}, se debe sobre todo a {som.wall_1.vars}; la segunda, entre "
-        "{som.wall_2.cells}, a {som.wall_2.vars}, y la tercera, entre {som.wall_3.cells}, a {som.wall_3.vars}, y "
-        "ninguna se debe a followers ni al precio. "
-        "En {som.n_walls_single} de las tres paredes hay una neurona con un solo creador, así que ese salto puede ser un "
-        "caso suelto, y una pared junto a una neurona vacía es interpolación y no un límite entre grupos.",
+        "El mapa de {som.chosen_k} por {som.chosen_k} muestra a la izquierda cuántos creadores cayeron en cada neurona y, "
+        "a la derecha, la matriz U, que para cada neurona es la distancia promedio entre su perfil y el de sus vecinas: "
+        "un valor bajo (más oscuro) significa que se parece a sus vecinas y un valor alto (más claro) significa que es "
+        "bien distinta. "
+        "Una pared alta es un par de neuronas vecinas con perfiles muy distintos, y al cruzar la más alta, "
+        "{som.wall_1.path} (distancia {som.wall_1.dist}), {som.wall_1.changes}. "
+        "Al cruzar la segunda, {som.wall_2.path} (distancia {som.wall_2.dist}), {som.wall_2.changes}, y al cruzar la "
+        "tercera, {som.wall_3.path} (distancia {som.wall_3.dist}), {som.wall_3.changes}. "
+        "Ninguna se debe a followers ni al precio, o sea al tamaño, y en {som.n_walls_single} de las tres paredes hay "
+        "una neurona con un solo creador, así que ese salto puede ser un caso suelto, y una pared junto a una neurona "
+        "vacía es interpolación y no un límite entre grupos.",
     ),
     Slide(
         "som-one-region", 1, "Con la regla fijada el mapa da una sola región: no se parte en grupos de creadores",

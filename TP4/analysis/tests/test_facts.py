@@ -106,9 +106,10 @@ def write_results(root, *, robust=False):
     write_csv(root / "som/figures/u_mean_stage2.csv", ["label", "radius0", "eta0", "epochs", "u_mean_mean", "u_mean_sd"],
               [["base", 2.5, 0.5, 260, 1.64, 0.04], ["a", 5.0, 0.5, 260, 1.65, 0.04],
                ["b", 2.5, 0.25, 260, 1.65, 0.05], ["c", 2.5, 0.5, 50, 1.61, 0.05]])
-    write_csv(root / "som/profiles/high_u_edges.csv", ["edge_rank", "neuron_a", "neuron_b", "distance", "variable"],
-              [[1, 9, 14, 3.67, "sponsored_posts_pct"], [2, 13, 14, 2.99, "likes_per_1000"],
-               [3, 11, 12, 2.98, "non_follower_reach_pct"]])
+    write_csv(root / "som/profiles/high_u_edges.csv",
+              ["edge_rank", "neuron_a", "neuron_b", "distance", "variable", "delta_z", "delta_raw"],
+              [[1, 9, 14, 3.67, "sponsored_posts_pct", -1.3, -26.1], [2, 13, 14, 2.99, "likes_per_1000", 0.9, 6.8],
+               [3, 11, 12, 2.98, "non_follower_reach_pct", -0.9, -17.0]])
     write_csv(root / "som/profiles/neuron_profiles.csv", ["group", "n", "followers", "price_usd"],
               [[n, 2, 10000 * (5 + n % 5 - n // 5), 100 * (5 + n % 5 - n // 5)] for n in range(25)])
     write_json(root / "oja/comparison.json", {"max_abs_diff": 0.00197})
@@ -447,9 +448,10 @@ def _decided_by_another_measure(root):
 
 
 def _a_wall_due_to_followers(root):
-    write_csv(root / "som/profiles/high_u_edges.csv", ["edge_rank", "neuron_a", "neuron_b", "distance", "variable"],
-              [[1, 9, 14, 3.67, "followers"], [2, 13, 14, 2.99, "likes_per_1000"],
-               [3, 11, 12, 2.98, "non_follower_reach_pct"]])
+    write_csv(root / "som/profiles/high_u_edges.csv",
+              ["edge_rank", "neuron_a", "neuron_b", "distance", "variable", "delta_z", "delta_raw"],
+              [[1, 9, 14, 3.67, "followers", 1.0, 5000.0], [2, 13, 14, 2.99, "likes_per_1000", 0.9, 6.8],
+               [3, 11, 12, 2.98, "non_follower_reach_pct", -0.9, -17.0]])
 
 
 def _price_falls_towards_the_bottom_right(root):
