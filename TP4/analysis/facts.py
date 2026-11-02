@@ -35,6 +35,28 @@ sys.path.insert(0, str(TP_DIR / "analysis"))
 
 RESULTS_DIR = TP_DIR / "analysis" / "results"
 
+# The variables of the PCA in plain words, for the notes that read the loadings of PC1 and PC2.
+PCA_VARIABLE_WORDS: dict[str, str] = {
+    "followers": "seguidores",
+    "likes_per_1000": "me gusta por mil",
+    "non_follower_reach_pct": "alcance a no seguidores",
+    "estimated_argentina_reach": "alcance estimado en Argentina",
+    "shares_per_1000": "compartidos por mil",
+    "topic_football_pct": "tema fútbol",
+    "topic_makeup_pct": "tema maquillaje",
+    "monthly_posts": "publicaciones por mes",
+    "sponsored_posts_pct": "publicaciones patrocinadas",
+    "argentina_audience_pct": "audiencia argentina",
+    "topic_dogs_pct": "tema perros",
+    "content_review_pct": "contenido de reseñas",
+    "average_watch_time_seconds": "tiempo de visualización",
+    "content_tutorial_pct": "contenido tutorial",
+    "comments_per_1000": "comentarios por mil",
+    "profile_visits_per_1000": "visitas al perfil por mil",
+    "saves_per_1000": "guardados por mil",
+}
+LOADING_MIN = 0.5  # a variable is named in the reading of a component when its loading is at least this in absolute value
+
 # The variables of the highest walls of the U matrix in plain words: (what changes, plural, unit of the change).
 WALL_VARIABLE_WORDS: dict[str, tuple[str, bool, str]] = {
     "sponsored_posts_pct": ("la proporción de publicaciones patrocinadas", False, " puntos"),
@@ -60,6 +82,7 @@ SOURCES: dict[str, tuple[str, str]] = {
     "pca.eigenvalues": ("pca/audited/eigenvalues.csv", "pca"),
     "pca17.decision": ("pca/pruned/decision.json", "pca"),
     "pca17.eigenvalues": ("pca/pruned/eigenvalues.csv", "pca"),
+    "pca17.loadings": ("pca/pruned/loadings.csv", "pca"),
     "prune.sensitivity": ("corr_prune/sensitivity.json", "corr-prune"),
     "som.contrast": ("som/profiles/pca_contrast.json", "som-profiles"),
     "som.selection": ("som/series_som_stage1/selection.json", "som-stage1"),
@@ -259,7 +282,23 @@ def _pca17_facts(results_dir: Path) -> dict[str, str]:
         "pca17.var_pc2": pct(decision["explained_pc2"], 1),
         "pca17.cum_pc2": pct(decision["cumulative_pc2"], 1),
         "pca17.cum_k80": pct(eigenvalues[k_80 - 1]["cumulative"], 1),
+        **_loading_facts(read_csv_source(results_dir, "pca17.loadings")),
     }
+
+
+def _loading_facts(rows: list[dict[str, str]]) -> dict[str, str]:
+    """pca17.pc<j>_pos and pca17.pc<j>_neg: the variables with a loading of LOADING_MIN or more on component j,
+    largest first, each with its loading (the two groups an axis opposes have opposite signs)."""
+    out = {}
+    for component in ("PC1", "PC2"):
+        loadings = [(row["variable"], float(row[component])) for row in rows]
+        for sign, name, reverse in ((1, "pos", True), (-1, "neg", False)):
+            chosen = sorted((item for item in loadings if sign * item[1] >= LOADING_MIN), key=lambda item: item[1],
+                            reverse=reverse)
+            out[f"pca17.{component.lower()}_{name}"] = ", ".join(
+                f"{PCA_VARIABLE_WORDS.get(variable, variable)} ({'+' if value > 0 else '−'}{dec(abs(value), 2)})"
+                for variable, value in chosen)
+    return out
 
 
 def _prune_facts(results_dir: Path) -> dict[str, str]:
