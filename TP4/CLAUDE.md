@@ -18,8 +18,11 @@ Enunciado: `docs/Archivo SIATP 42026.pdf`.
 3. **SOM sobre los scores de PC1 a PC7, sin reescalar** (`datos/prepared/creadores_pca_scores.csv`, lo escribe `make pca`; F2 D-16). La regla
    de grilla no cambió. Resultado: k = 5 (ninguna grilla cumple el TE máximo, se aplica F2 D-14), etapa 2 robusta, una sola región, el
    mapa sigue a PC1 (R² 0,938) y a PC2 (R² 0,439), que son entradas suyas.
-4. **Todavía con las 26 variables (falta rehacer)**: **Oja**, las **campañas**, `ej1-conclusiones` (dice que los temas aparecen en PC3 y PC4,
-   cierto solo para la PCA de 26) y el informe en lo que hable de PCA.
+4. **Oja y campañas, con las 17 (2026-11-02)**: `make pca` escribe también `datos/prepared/creadores_zscore_pruned.csv` (las 17 columnas
+   z-score) y Oja entrena sobre él; se compara con PC1 de `pca/pruned/`. Con las 17, el pivote de la convención de signo es `followers`: un
+   índice alto es un creador **grande** (antes, con las 26, era chico). Las listas de campaña no cambiaron (la regla pre-registrada elige sobre
+   las columnas crudas del dataset, no sobre la PCA); cambiaron las lecturas (índice de Oja, PC1 y PC2, neuronas) y la demo de
+   mantenimiento. Fragmento 03, `ej1-conclusiones` y las slides de Oja y campañas ya usan las 17; falta el informe publicado.
 
 ## Reglas de trabajo que dio el usuario
 
@@ -138,7 +141,7 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Pendientes
 
-- **Rehacer Oja y las campañas con las 17 variables** y reescribir `ej1-conclusiones`; después regenerar fragmentos 03, slides e informe y republicar.
+- **Regenerar el informe** (`make deliverables`) con los números de las 17 variables y republicarlo, con el OK del usuario.
 - **Push**: los commits posteriores a `a0cb312` (sacar Spearman, hiperparámetros del SOM) están solo locales.
 - **Volver a exportar el PDF del deck** desde su Artifact (lo hace la persona dueña): el exportado antes no tiene los cambios de esta tanda.
 
