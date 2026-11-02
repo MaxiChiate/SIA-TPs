@@ -357,7 +357,7 @@ OUTLINE: tuple[Slide, ...] = (
         "validación independiente.",
     ),
     Slide(
-        "oja-setup", 1, "Oja entrena una neurona lineal con una entrada por variable y un peso por entrada",
+        "oja-setup", 1, "Oja es una neurona lineal con una entrada por variable",
         None, (),
         (
             "Una neurona lineal: sus pesos arrancan uniformes entre 0 y 1 y su salida es y = w · x",
