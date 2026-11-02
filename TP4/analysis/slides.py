@@ -357,35 +357,33 @@ OUTLINE: tuple[Slide, ...] = (
         "validación independiente.",
     ),
     Slide(
-        "oja-setup", 1, "Oja es una neurona lineal que aprende de a un creador por vez y converge a PC1",
-        None, (), (),
+        "oja-setup", 1, "Oja entrena una neurona lineal con una entrada por variable y un peso por entrada",
+        None, (),
         (
-            ("Elemento", "Cómo lo usamos", "Por qué"),
+            "Una neurona lineal: sus pesos arrancan uniformes entre 0 y 1 y su salida es y = w · x",
+            "Entran los {oja.n_creators} creadores con sus {pca17.n_features} variables estandarizadas, de a uno por "
+            "vez, y después de cada uno se actualiza w ← w + η · y · (x − y · w)",
+            "La tasa baja en cada iteración de forma exponencial: η(t) = η0 · ({oja.eta_final} / η0)^(t / (T − 1)), "
+            "con T los pasos de entrenamiento",
+        ),
+        (
+            ("Hiperparámetro", "Valor", "Por qué"),
             (
-                ("Neurona", "Una sola, lineal: y = w · x",
-                 "Perceptrón simple con activación lineal: la salida es la suma de cada entrada por su peso"),
-                ("Entradas", "{oja.n_creators} creadores × {pca17.n_features} variables",
-                 "Estandarizadas (media 0), de a un creador por vez"),
-                ("Pesos iniciales", "{pca17.n_features} pesos, uniformes entre 0 y 1",
-                 "Como en el curso; se normalizan a longitud 1"),
-                ("Aprendizaje", "Online: w ← w + η · y · (x − y · w)",
-                 "Se actualiza después de cada creador, con el orden barajado en cada época"),
-                ("Tasa de aprendizaje", "η0 = {oja.eta0}, baja hasta {oja.eta_final}",
-                 "El curso propone 1 / ({pca17.eta_factor} · λ₁) = {pca17.eta_bound}, con λ₁ = {pca17.lambda1}, para "
-                 "asegurar la convergencia; usamos un valor mucho menor"),
+                ("Tasa de aprendizaje inicial η0", "{oja.eta0}",
+                 "El curso propone 1 / ({pca17.eta_factor} · λ₁) = {pca17.eta_bound}, con λ₁ = {pca17.lambda1} el "
+                 "mayor autovalor de la matriz de correlación, para asegurar la convergencia; usamos un valor mucho "
+                 "menor"),
                 ("Épocas", "{oja.epochs}",
-                 "{oja.updates} actualizaciones; el número es fijo, sin parada por tolerancia"),
-                ("Convergencia", "w tiende a PC1",
-                 "{oja.n_abs_cos_above} de {oja.n_seeds} seeds quedan alineadas con PC1"),
+                 "{oja.updates} actualizaciones, una por creador y por época; el número es fijo, sin parada por "
+                 "tolerancia"),
             ),
         ),
         None,
         "La regla de Oja la usamos como un perceptrón lineal simple: una neurona con una entrada por variable, un "
         "peso por entrada y activación lineal, así que su salida es y = w · x, y como los datos están estandarizados "
         "la regla converge al primer componente principal, que es el vector w final. "
-        "Aprende de forma online: después de cada creador actualiza los pesos con w ← w + η · y · (x − y · w), el "
-        "orden de los creadores se baraja en cada época y son {oja.epochs} épocas, o sea {oja.updates} "
-        "actualizaciones, sin parar por tolerancia. "
+        "Los pesos se actualizan después de cada creador con w ← w + η · y · (x − y · w), que es el algoritmo del "
+        "curso, y el orden de los creadores se baraja en cada época. "
         "La tasa inicial η0 = {oja.eta0} es una de las que sugiere el curso y queda muy por debajo del valor "
         "1 / ({pca17.eta_factor} · λ₁) = {pca17.eta_bound} que da para asegurar la convergencia, donde "
         "λ₁ = {pca17.lambda1} es el mayor autovalor de la matriz de correlación, lo que explica PC1; como ese "
