@@ -8,6 +8,13 @@ Enunciado: `docs/Archivo SIATP 42026.pdf`.
 
 ## Dónde estamos hoy (leer primero)
 
+**Retomar (2026-11-02, fin del día):** el ejercicio 1 está hecho con las 17 variables y las 7 componentes en repo y deck. Orden del deck publicado: 20 `oja-pc1`, 21 `oja-max`
+(Q1.9 y Q1.10), 22 `camp-futbol`, 23 `camp-table`, 24 `camp-followers`, 25 `camp-maintenance`, 26 `ej1-conclusiones`. Plan del usuario para mañana: **que yo le
+explique a fondo las slides 20 a 24** (no dice que estén mal, quiere entenderlas), después sacar la 26 (redundante; confirmar antes de borrar) y pasar al
+ejercicio 2. Dudas abiertas: (a) tres columnas de criterio de campaña están fuera de las 17 (`price_usd`, `total_engagement_per_1000`, `trend_posts_pct`; la
+regla pre-registrada de campañas no se tocó, decidir con el usuario si se deja o se rehace el criterio de arte); (b) el texto de la regla pre-registrada del SOM
+sigue nombrando QE, QE-LOO, estabilidad, escalón y gaussiana (no se edita: su sha256 lo guardan los pasos del SOM).
+
 **El ejercicio 1 se está rehaciendo con las variables que quedan después de podar por correlación.** Orden de lo hecho (2026-10-28 a 11-02):
 
 1. **Variables**: se sacan las 5 triviales (combinación lineal exacta de otras) y, con el umbral **|r| ≥ 0,8**, 9 más por correlación (en cada
