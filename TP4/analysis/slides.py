@@ -367,15 +367,10 @@ OUTLINE: tuple[Slide, ...] = (
             "con T los pasos de entrenamiento",
         ),
         (
-            ("Hiperparámetro", "Valor", "Por qué"),
+            ("Hiperparámetro", "Valor"),
             (
-                ("Tasa de aprendizaje inicial η0", "{oja.eta0}",
-                 "El curso propone 1 / ({pca17.eta_factor} · λ₁) = {pca17.eta_bound}, con λ₁ = {pca17.lambda1} el "
-                 "mayor autovalor de la matriz de correlación, para asegurar la convergencia; usamos un valor mucho "
-                 "menor"),
-                ("Épocas", "{oja.epochs}",
-                 "{oja.updates} actualizaciones, una por creador y por época; el número es fijo, sin parada por "
-                 "tolerancia"),
+                ("Tasa de aprendizaje inicial η0", "{oja.eta0}"),
+                ("Épocas", "{oja.epochs}"),
             ),
         ),
         None,
