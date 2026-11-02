@@ -411,6 +411,53 @@ def plot_zones(zones: list[dict], k: int, title: str, caption: str, out_stem) ->
     plots_style.save_figure(fig, out_stem)
 
 
+def plot_zone_map(zones: list[dict], k: int, title: str, caption: str, out_stem) -> None:
+    """The chosen map with every occupied neuron coloured by the dominant topic of its creators and nothing else:
+    where each profile sits. Empty neurons are hatched, ties in grey."""
+    from matplotlib.patches import Patch, Rectangle
+
+    plt = plots_style.apply_style()
+    order = [label for _, label in pca.TOPICS]
+    colors = plots_style.palette_for(order)
+    slide = plots_style.variant() == "slide"
+    if slide:
+        fig, (ax, legend_ax) = plt.subplots(1, 2, figsize=plots_style.figsize((7.4, 7.6)),
+                                            gridspec_kw={"width_ratios": [1.0, 1.15]})
+        legend_ax.axis("off")
+    else:
+        fig, ax = plt.subplots(figsize=(7.4, 7.6))
+    for zone in zones:
+        row, col = zone["row"], zone["col"]
+        if zone["n"] == 0:
+            ax.add_patch(Rectangle((col - 0.5, row - 0.5), 1, 1, facecolor=plots_style.SURFACE,
+                                   edgecolor=plots_style.GRID, linewidth=1.0))
+            ax.add_patch(Rectangle((col - 0.5, row - 0.5), 1, 1, fill=False, hatch="////", linewidth=0,
+                                   edgecolor=som_figures.HATCH_COLOR))
+            continue
+        face = colors.get(zone["topic"], plots_style.TEXT_SECONDARY)
+        ax.add_patch(Rectangle((col - 0.5, row - 0.5), 1, 1, facecolor=face, edgecolor=plots_style.SURFACE,
+                               linewidth=2.0))
+    som_figures._grid_axes(ax, k)
+    ax.set_aspect("equal")
+    handles = [Patch(facecolor=colors[label], label=label) for label in order]
+    if any(zone["topic"] == TIE_LABEL for zone in zones):
+        handles.append(Patch(facecolor=plots_style.TEXT_SECONDARY, label=TIE_LABEL))
+    handles.append(Patch(facecolor=plots_style.SURFACE, hatch="////", edgecolor=som_figures.HATCH_COLOR,
+                         label="neurona vacía"))
+    note = "color: tema dominante de los\ncreadores de cada neurona"
+    if slide:
+        legend_ax.legend(handles=handles, loc="center left", ncol=1, frameon=False,
+                         fontsize=plots_style.fontsize(10), title=note, title_fontsize=plots_style.fontsize(9),
+                         alignment="left")
+    else:
+        ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.04), ncol=3, frameon=False,
+                  fontsize=8, title=note.replace("\n", " "), title_fontsize=8)
+    plots_style.suptitle(fig, title, fontsize=12, x=0.01, ha="left")
+    fig.tight_layout(rect=plots_style.rect((0, 0.14, 1, 0.96)))
+    plots_style.caption(fig, caption, width=100)
+    plots_style.save_figure(fig, out_stem)
+
+
 # ---------- driver ----------
 
 def _fmt_float(value: float) -> str:
@@ -562,6 +609,11 @@ def main(argv: list[str] | None = None) -> int:
                    "(empate de temas en gris) y muestra cuántos creadores tiene y la mediana de sus followers y de su "
                    "precio por post. Los temas son entradas del mapa: describen dónde cae cada perfil y no validan "
                    "ninguna región. La orientación del mapa es arbitraria.", out / "zones")
+        plot_zone_map(zones, k, f"Zonas del mapa SOM {k} x {k} ({label}): tema dominante de cada neurona",
+                      f"{ident}. Cada neurona ocupada se colorea con el tema dominante más frecuente entre sus "
+                      "creadores (empate de temas en gris, neuronas vacías rayadas). Los temas son entradas del mapa: "
+                      "describen dónde cae cada perfil y no validan grupos. La orientación del mapa es arbitraria.",
+                      out / "zone_map")
     planes = [som_figures.Plane("PC1",som_figures.neuron_raw_means(bmu, k, pc[:, 0]), "raw", "score"),
               som_figures.Plane("PC2", som_figures.neuron_raw_means(bmu, k, pc[:, 1]), "raw", "score")]
     for _ in plots_style.iter_variants():

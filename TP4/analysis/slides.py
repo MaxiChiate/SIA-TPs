@@ -328,22 +328,20 @@ OUTLINE: tuple[Slide, ...] = (
         "vacía es interpolación y no un límite entre grupos.",
     ),
     Slide(
-        "som-one-region", 1, "Con la regla fijada el mapa da una sola región: no se parte en grupos de creadores",
-        "Regla fijada de antemano", ("Q1.5",),
-        ("{som.n_regions} región con los {oja.n_creators} creadores; no cambiamos el percentil para obtener más",),
-        None, _key("som/profiles/regions.svg"),
-        "La regla de regiones corta las aristas entre neuronas vecinas por encima de un percentil fijado de las "
-        "distancias entre prototipos y descarta las que tocan neuronas vacías. "
-        "Con esos cortes las neuronas ocupadas siguen conectadas, así que sale una sola región con los "
-        "{oja.n_creators} creadores. "
-        "Cambiar el percentil para obtener más regiones sería elegir la regla mirando el mapa, y por eso se informa como salió. "
-        "La lectura útil es la de un continuo: creadores chicos y baratos abajo a la izquierda y grandes y caros arriba a la derecha.",
+        "som-zone-map", 1, "Fútbol arriba, arte en el centro, perros abajo y maquillaje a la derecha",
+        None, ("Q1.5",), (), None, _key("som/profiles/zone_map.svg"),
+        "Cada neurona ocupada toma el color del tema que más aparece entre sus creadores, y los colores se agrupan en "
+        "zonas del mapa: fútbol arriba, arte en el centro, perros abajo y maquillaje a la derecha. "
+        "Cada zona son neuronas contiguas con un tema dominante en común y representa un perfil de creador distinto; en "
+        "la slide siguiente se ve además cuántos creadores tiene cada neurona y su tamaño. "
+        "Los temas son parte de lo que pesa en las componentes con las que se entrena el mapa, así que es esperable "
+        "que ordenen los lugares, y describen dónde cae cada perfil sin validar grupos. "
+        "Las neuronas grises son un empate de temas y las rayadas están vacías.",
     ),
     Slide(
-        "som-zonas", 1, "Dentro de la única región, el mapa ordena por tamaño y agrupa los temas en zonas",
+        "som-zonas", 1, "El tamaño crece en diagonal, de abajo a la izquierda hacia arriba a la derecha",
         None, ("Q1.5",),
-        ("Perros abajo, arte en el centro, fútbol arriba y maquillaje a la derecha, con fútbol tanto entre creadores "
-         "chicos como entre grandes",),
+        ("El fútbol aparece tanto entre creadores chicos como entre grandes",),
         None, _key("som/profiles/zones.svg"),
         "Cada neurona ocupada toma el color del tema dominante más frecuente entre sus creadores y muestra la mediana "
         "de followers y de precio por post. "
@@ -351,10 +349,9 @@ OUTLINE: tuple[Slide, ...] = (
         "{som.zone_small.topic} con una mediana de {som.zone_small.followers} followers y USD {som.zone_small.price}, y "
         "en {som.zone_large.cell} hay {som.zone_large.n} de {som.zone_large.topic} con {som.zone_large.followers} "
         "followers y USD {som.zone_large.price}. "
-        "Dentro de ese eje los temas forman zonas: perros abajo, arte en el centro, fútbol arriba y maquillaje en la "
-        "columna derecha, con fútbol tanto entre creadores chicos como entre grandes. "
-        "Los temas son parte de lo que pesa en las componentes con las que se entrena el mapa, así que describen dónde cae "
-        "cada perfil y no validan grupos, y por eso la regla de regiones sigue dando una sola.",
+        "Dentro de ese eje los temas forman las zonas de la slide anterior, con fútbol tanto entre creadores chicos "
+        "como entre grandes, y como los temas son parte de lo que pesa en las componentes con las que se entrena el "
+        "mapa, describen dónde cae cada perfil y no validan grupos.",
     ),
     Slide(
         "som-pc", 1, "El mapa sigue a PC1 (R² {som.r2_pc1}) y a PC2 (R² {som.r2_pc2}), que son sus propias entradas",
