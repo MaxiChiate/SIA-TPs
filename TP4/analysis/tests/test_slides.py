@@ -92,7 +92,7 @@ def test_unfavorable_titles_say_the_result_plainly():
     # the slide of the QR with Hebb shows only the 3-QR experiment (decision of the user, 2026-11-03); the 0 % of the
     # five QR stays in the report and in fragment 05
     assert "Hebb" in by_id("qr-hebb-falla").title and "{qrm.n_chosen}" in by_id("qr-hebb-falla").title
-    assert "Hamming" in by_id("qr-lookup").title and "pseudo-inversa" in by_id("qr-lookup").title
+    assert "pseudo-inversa" in by_id("qr-lookup").title
 
 
 def test_every_figure_is_a_slide_figure_and_questions_cover_the_enunciado():

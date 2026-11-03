@@ -485,7 +485,7 @@ FIGURES = (
     Figure(
         key="qr_recovery", path="hopfield/qr/figures/recovery.svg", make_target="hopfield-qr-figures",
         config=_QR_SEEDS[0], seed=_QR_SEEDS[1], fragment=5, anchor="f5-s5",
-        alt="Recuperación exacta frente al nivel de ruido para Hebb, pseudo-inversa y la línea base de Hamming",
+        alt="Recuperación exacta frente al nivel de ruido para Hebb y pseudo-inversa sobre los cinco QR",
         caption="Recuperación exacta por nivel de ruido, con las tres reglas.",
         slide=True,
     ),
@@ -515,7 +515,7 @@ FIGURES = (
         key="qr_masked_recovery", path="hopfield/qr_masked/figures/masked_recovery.svg",
         make_target="hopfield-qr-masked-figures",
         config=_QR_MASKED_SEEDS[0], seed=_QR_MASKED_SEEDS[1], fragment=5, anchor="f5-s7",
-        alt="Recuperación exacta de Hebb y de un lookup de Hamming sobre la parte variable de tres QR frente al ruido",
+        alt="Recuperación exacta de Hebb sobre la parte variable de tres QR frente al ruido",
         caption="Hebb con máscara y tres QR: recuperación por nivel de ruido y qué paso hace falta.",
         slide=True,
     ),

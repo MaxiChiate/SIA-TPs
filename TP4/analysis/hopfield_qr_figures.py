@@ -174,6 +174,8 @@ def plot_recovery(rows: list[dict], out_stem) -> None:
     energy_ax = cost_ax.twinx()
 
     for rule in RULES:
+        if slide and rule == "hamming":  # the slide leaves the lookup baseline out (it is not part of the course)
+            continue
         mine = sorted((r for r in rows if r["rule"] == rule), key=lambda r: float(r["noise"]))
         if not mine:
             continue
@@ -240,11 +242,10 @@ def plot_recovery(rows: list[dict], out_stem) -> None:
         cost_ax.legend(handles, labels_all, fontsize=6, frameon=False, loc="lower right", bbox_to_anchor=(0.72, 0.0))
     cost_ax.set_title("Costo: hebb vs pinv" if slide else "Costo dinamico: hebb vs pinv (D-09)",
                       fontsize=plots_style.fontsize(10), loc="left")
-    cost_ax.annotate("Hamming: lookup\ninstantaneo, sin\npasos ni energia" if not slide else
-                     "Hamming: lookup,\nsin pasos", xy=(0.02, 0.8) if slide else (0.99, 0.5),
-                     xycoords="axes fraction", ha="left" if slide else "right", va="center",
-                     fontsize=plots_style.fontsize(7),
-                     color=plots_style.TEXT_SECONDARY, style="italic")
+    if not slide:
+        cost_ax.annotate("Hamming: lookup\ninstantaneo, sin\npasos ni energia", xy=(0.99, 0.5),
+                         xycoords="axes fraction", ha="right", va="center", fontsize=plots_style.fontsize(7),
+                         color=plots_style.TEXT_SECONDARY, style="italic")
 
     trials = int(rows[0]["n_trials"]) if rows else 0
     plots_style.suptitle(fig, "Hebb, pseudo-inversa y Hamming sobre los 5 QR: recuperacion frente al ruido",

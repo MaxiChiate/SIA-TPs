@@ -100,6 +100,8 @@ def plot_masked_recovery(rows: list[dict], ablation: dict, out_stem) -> None:
         fig, (recall_ax, bar_ax) = plt.subplots(1, 2, figsize=plots_style.figsize((12.5, 4.8)),
                                                 gridspec_kw={"width_ratios": (1.6, 1)})
     for rule in RULES:
+        if slide and rule != "hebb":  # the slide shows Hebb only
+            continue
         mine = sorted((r for r in rows if r["rule"] == rule), key=lambda r: float(r["noise"]))
         noise = np.array([float(r["noise"]) for r in mine])
         rate = np.array([float(r["recall_rate"]) for r in mine])

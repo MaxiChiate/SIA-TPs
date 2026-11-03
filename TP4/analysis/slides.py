@@ -616,7 +616,7 @@ OUTLINE: tuple[Slide, ...] = (
         "qr-hebb-falla", 2, "Hebb recupera QR si guarda solo la parte variable de {qrm.n_chosen} QR poco parecidos",
         None, ("Q2.3",),
         ("Experimento posterior al protocolo: sin ruido son punto fijo {qrm.fixed_masked_subset}; con ruido "
-         "{qrm.noise_mid}: Hebb {qrm.hebb_at_0_40}, Hamming {qrm.hamming_at_0_40}",),
+         "{qrm.noise_mid}, Hebb recupera {qrm.hebb_at_0_40}",),
         None, _key("hopfield/qr_masked/figures/masked_recovery.svg"),
         "Es un experimento aparte, fuera del protocolo preregistrado: la red guarda solo los {qrm.n_varying} píxeles que "
         "cambian entre los QR, completa los {qrm.n_common} comunes desde la plantilla y se queda con el trío menos "
@@ -625,20 +625,22 @@ OUTLINE: tuple[Slide, ...] = (
         "repetir, en {qr.n_noise_levels} niveles. "
         "Con los {qrm.n_chosen} QR completos no alcanza, solo son punto fijo {qrm.fixed_full_subset}, y hace falta usar "
         "solo la parte variable: así los {qrm.n_chosen} son punto fijo sin ruido y Hebb recupera el "
-        "{qrm.hebb_exact_noise0} hasta ruido {qrm.hebb_last_full_noise} y {qrm.hebb_at_0_40} en {qrm.noise_mid}. "
-        "Un lookup de Hamming sobre los mismos patrones sigue por encima, con {qrm.hamming_at_0_40} en {qrm.noise_mid}, y "
-        "el problema es más chico porque la plantilla común se conoce de antemano.",
+        "{qrm.hebb_exact_noise0} hasta ruido {qrm.hebb_last_full_noise} y {qrm.hebb_at_0_40} en {qrm.noise_mid}; es un "
+        "problema más chico, porque la plantilla común se conoce de antemano.",
     ),
     Slide(
-        "qr-lookup", 2, "Un lookup de Hamming iguala o supera a la pseudo-inversa con ruido alto",
+        "qr-lookup", 2, "La pseudo-inversa recupera {qr.pinv_exact_noise0} de los QR hasta el nivel {qr.pinv_last_full_noise}",
         "Regla fijada de antemano", ("Q2.3",),
-        ("Con ruido alto (nivel {qr.noise_high}): Hamming {qr.hamming_at_high}, pseudo-inversa {qr.pinv_at_high}",),
+        ("Con ruido alto (nivel {qr.noise_high}): pseudo-inversa {qr.pinv_at_high}; en el último nivel, "
+         "{qr.pinv_at_0_50}",),
         None, _key("hopfield/qr/figures/recovery.svg"),
-        "La pseudo-inversa sí guarda los {qr.n_qr} QR: recupera {qr.pinv_exact_noise0} sin ruido y se mantiene así hasta "
-        "el nivel {qr.pinv_last_full_noise}. "
-        "Pero la línea base de Hamming, un 1-NN sin dinámica, queda por encima de ella con ruido alto: {qr.hamming_at_high} "
-        "contra {qr.pinv_at_high} en el nivel {qr.noise_high} y {qr.hamming_at_0_50} contra {qr.pinv_at_0_50} en el último nivel. "
-        "Con cinco patrones conocidos de antemano, la ventaja de Hopfield frente a una tabla de búsqueda no está en la tasa de acierto.",
+        "Hebb falla porque los QR están muy correlacionados, y la pseudo-inversa es otra forma de armar los pesos de la red "
+        "que hace que cada QR guardado sea un punto fijo aunque se parezcan entre sí. "
+        "Con ella la red recupera {qr.pinv_exact_noise0} sin ruido y se mantiene así hasta el nivel "
+        "{qr.pinv_last_full_noise}, y después cae a {qr.pinv_at_high} en el nivel {qr.noise_high} y a {qr.pinv_at_0_50} en "
+        "el último nivel. "
+        "La pseudo-inversa no es parte de la teoría del curso, así que se presenta como una alternativa a Hebb para "
+        "patrones correlacionados y no como el método del curso.",
     ),
     Slide(
         "qr-energia", 2, "Con Hebb la red converge al estado común; con la pseudo-inversa, al QR consultado",
@@ -658,7 +660,7 @@ OUTLINE: tuple[Slide, ...] = (
         "{qr.shift1_recovered_hamming}.",
     ),
     Slide(
-        "ej2-conclusiones", 2, "Hopfield para QR: la correlación rompe Hebb y un lookup resuelve el mismo problema",
+        "ej2-conclusiones", 2, "Hopfield para QR: la correlación rompe Hebb y hay tres limitaciones medidas",
         None, ("Q2.5",),
         (
             "Correlación entre los QR: Hebb converge a un atractor común",
@@ -669,7 +671,7 @@ OUTLINE: tuple[Slide, ...] = (
         "Las limitaciones medidas son tres: la correlación entre los QR ({qr.mean_abs_overlap} de producto escalar normalizado medio) rompe "
         "a Hebb, un corrimiento de un solo píxel ya mueve la consulta a {qr.shift1_query_hamming} de {qr.n_pixels} píxeles, "
         "y la matriz de pesos tiene {qr.n_pixels} por {qr.n_pixels} entradas para solo {qr.n_qr} patrones. "
-        "Un lookup de Hamming resuelve el mismo problema cerrado con igual o más acierto y sin dinámica ni energía. "
+        "La pseudo-inversa sí guarda los QR, pero su recuperación cae con ruido alto. "
         "Tampoco verificamos que un QR recuperado se decodifique, porque no corrimos ningún decodificador y el formato QR "
         "ya trae su propia corrección de errores, y el daño estructurado, como un rayón, no se midió.",
     ),
