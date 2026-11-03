@@ -89,7 +89,9 @@ def test_unfavorable_and_campaign_slides_exist_with_their_own_ids():
 
 def test_unfavorable_titles_say_the_result_plainly():
     assert "es robusta" in by_id("som-robust").title
-    assert "Hebb" in by_id("qr-hebb-falla").title and "{qr.hebb_exact_noise0}" in by_id("qr-hebb-falla").title
+    # the slide of the QR with Hebb shows only the 3-QR experiment (decision of the user, 2026-11-03); the 0 % of the
+    # five QR stays in the report and in fragment 05
+    assert "Hebb" in by_id("qr-hebb-falla").title and "{qrm.n_chosen}" in by_id("qr-hebb-falla").title
     assert "Hamming" in by_id("qr-lookup").title and "pseudo-inversa" in by_id("qr-lookup").title
 
 

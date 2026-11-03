@@ -613,25 +613,21 @@ OUTLINE: tuple[Slide, ...] = (
         "entre pares es {qr.max_abs_overlap} como máximo y {qr.mean_abs_overlap} en promedio, lejos de la ortogonalidad.",
     ),
     Slide(
-        "qr-hebb-falla", 2, "Con los 5 QR Hebb recupera {qr.hebb_exact_noise0}; con {qrm.n_chosen} QR y su parte variable, hasta {qrm.hebb_exact_noise0}",
+        "qr-hebb-falla", 2, "Hebb recupera QR si guarda solo la parte variable de {qrm.n_chosen} QR poco parecidos",
         None, ("Q2.3",),
-        ("El experimento con {qrm.n_chosen} QR es posterior al protocolo y no estaba preregistrado",),
+        ("Experimento posterior al protocolo: sin ruido son punto fijo {qrm.fixed_masked_subset}; con ruido "
+         "{qrm.noise_mid}: Hebb {qrm.hebb_at_0_40}, Hamming {qrm.hamming_at_0_40}",),
         None, _key("hopfield/qr_masked/figures/masked_recovery.svg"),
-        "Con el protocolo fijado de antemano la tasa de recuperación exacta de Hebb sobre los {qr.n_qr} QR es "
-        "{qr.hebb_exact_noise0} en todos los niveles de ruido, el nivel cero incluido: no son puntos fijos porque están muy "
-        "correlacionados (producto escalar normalizado medio {qr.mean_abs_overlap}), y la red converge a un único estado, la "
-        "mayoría píxel a píxel de los cinco, que difiere de cada QR por entre {qr.majority_hamming_min} y "
-        "{qr.majority_hamming_max} píxeles de {qr.n_pixels}; el ruido invierte el signo de una fracción de los píxeles de la "
-        "consulta, elegidos al azar y sin repetir, en {qr.n_noise_levels} niveles. "
-        "Después de ver ese cero diseñamos un experimento aparte, fuera del protocolo: la red guarda solo los {qrm.n_varying} "
-        "píxeles que cambian entre los cinco QR, completa los {qrm.n_common} comunes desde la plantilla y se queda con el "
-        "trío menos parecido, {qrm.chosen_names}. "
-        "Hace falta todo junto: con los cinco QR sobre la parte variable son punto fijo {qrm.fixed_masked_all} y con los "
-        "tres completos {qrm.fixed_full_subset}, mientras que con los tres sobre la parte variable son punto fijo "
-        "{qrm.fixed_masked_subset}. "
-        "Así Hebb recupera el {qrm.hebb_exact_noise0} hasta ruido {qrm.hebb_last_full_noise} y {qrm.hebb_at_0_40} en "
-        "{qrm.noise_mid}, pero un lookup de Hamming sobre los mismos patrones sigue por encima: achica el problema, no lo "
-        "resuelve para los cinco QR.",
+        "Es un experimento aparte, fuera del protocolo preregistrado: la red guarda solo los {qrm.n_varying} píxeles que "
+        "cambian entre los QR, completa los {qrm.n_common} comunes desde la plantilla y se queda con el trío menos "
+        "parecido, {qrm.chosen_names}. "
+        "El ruido invierte el signo de una fracción de los píxeles variables de la consulta, elegidos al azar y sin "
+        "repetir, en {qr.n_noise_levels} niveles. "
+        "Con los {qrm.n_chosen} QR completos no alcanza, solo son punto fijo {qrm.fixed_full_subset}, y hace falta usar "
+        "solo la parte variable: así los {qrm.n_chosen} son punto fijo sin ruido y Hebb recupera el "
+        "{qrm.hebb_exact_noise0} hasta ruido {qrm.hebb_last_full_noise} y {qrm.hebb_at_0_40} en {qrm.noise_mid}. "
+        "Un lookup de Hamming sobre los mismos patrones sigue por encima, con {qrm.hamming_at_0_40} en {qrm.noise_mid}, y "
+        "el problema es más chico porque la plantilla común se conoce de antemano.",
     ),
     Slide(
         "qr-lookup", 2, "Un lookup de Hamming iguala o supera a la pseudo-inversa con ruido alto",

@@ -93,8 +93,12 @@ def plot_masked_recovery(rows: list[dict], ablation: dict, out_stem) -> None:
     plt = plots_style.apply_style()
     colors = plots_style.palette_for(list(RULES))
     slide = plots_style.variant() == "slide"
-    fig, (recall_ax, bar_ax) = plt.subplots(1, 2, figsize=plots_style.figsize((12.5, 4.8)),
-                                            gridspec_kw={"width_ratios": (1.6, 1)})
+    if slide:  # the slide shows only the recovery curve, at full size; the ablation stays in the report
+        fig, recall_ax = plt.subplots(1, 1, figsize=plots_style.figsize((12.5, 4.8), slide=(11.5, 5.0)))
+        bar_ax = None
+    else:
+        fig, (recall_ax, bar_ax) = plt.subplots(1, 2, figsize=plots_style.figsize((12.5, 4.8)),
+                                                gridspec_kw={"width_ratios": (1.6, 1)})
     for rule in RULES:
         mine = sorted((r for r in rows if r["rule"] == rule), key=lambda r: float(r["noise"]))
         noise = np.array([float(r["noise"]) for r in mine])
@@ -110,19 +114,20 @@ def plot_masked_recovery(rows: list[dict], ablation: dict, out_stem) -> None:
     recall_ax.legend(fontsize=plots_style.fontsize(7.5), frameon=False, loc="lower left")
     recall_ax.set_title("Recuperación exacta", fontsize=plots_style.fontsize(10), loc="left")
 
-    keys = [key for key, _m, _s in hopfield_qr_masked.ABLATION]
-    fractions = [ablation[key]["stored_fixed"] / ablation[key]["n_patterns"] for key in keys]
-    bars = bar_ax.bar(range(len(keys)), fractions, color=[COMMON] * (len(keys) - 1) + [colors["hebb"]])
-    for bar, key in zip(bars, keys):
-        item = ablation[key]
-        bar_ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.03,
-                    f"{item['stored_fixed']}/{item['n_patterns']}", ha="center", va="bottom",
-                    fontsize=plots_style.fontsize(9), color=plots_style.TEXT_PRIMARY)
-    bar_ax.set_xticks(range(len(keys)))
-    bar_ax.set_xticklabels([ABLATION_LABELS[key] for key in keys], fontsize=plots_style.fontsize(8))
-    bar_ax.set_ylim(0, 1.2)
-    bar_ax.set_ylabel("QR que son punto fijo de Hebb")
-    bar_ax.set_title("Sin ruido: hacen falta los dos pasos", fontsize=plots_style.fontsize(10), loc="left")
+    if bar_ax is not None:
+        keys = [key for key, _m, _s in hopfield_qr_masked.ABLATION]
+        fractions = [ablation[key]["stored_fixed"] / ablation[key]["n_patterns"] for key in keys]
+        bars = bar_ax.bar(range(len(keys)), fractions, color=[COMMON] * (len(keys) - 1) + [colors["hebb"]])
+        for bar, key in zip(bars, keys):
+            item = ablation[key]
+            bar_ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.03,
+                        f"{item['stored_fixed']}/{item['n_patterns']}", ha="center", va="bottom",
+                        fontsize=plots_style.fontsize(9), color=plots_style.TEXT_PRIMARY)
+        bar_ax.set_xticks(range(len(keys)))
+        bar_ax.set_xticklabels([ABLATION_LABELS[key] for key in keys], fontsize=plots_style.fontsize(8))
+        bar_ax.set_ylim(0, 1.2)
+        bar_ax.set_ylabel("QR que son punto fijo de Hebb")
+        bar_ax.set_title("Sin ruido: hacen falta los dos pasos", fontsize=plots_style.fontsize(10), loc="left")
 
     trials = int(rows[0]["n_trials"]) if rows else 0
     plots_style.suptitle(fig, "Hebb sobre la parte variable de 3 QR: recuperación frente al ruido",
