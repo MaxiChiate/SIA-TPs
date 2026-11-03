@@ -49,7 +49,7 @@ import deliverables_manifest  # noqa: E402
 import facts  # noqa: E402
 
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "slides"
-MAX_SLIDES = 31  # D-01 said 20 to 25; slides added after the review of the enunciado (EDA, zones, capacity), the Ej. 1 recap dropped
+MAX_SLIDES = 30  # D-01 said 20 to 25; slides added after the review of the enunciado (EDA, zones, capacity), the Ej. 1 recap dropped
 HOME_PATH = re.compile(r"/Users/|/home/|[A-Za-z]:\\Users\\")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}")
 SLIDE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -613,17 +613,25 @@ OUTLINE: tuple[Slide, ...] = (
         "entre pares es {qr.max_abs_overlap} como máximo y {qr.mean_abs_overlap} en promedio, lejos de la ortogonalidad.",
     ),
     Slide(
-        "qr-hebb-falla", 2, "Hebb recupera {qr.hebb_exact_noise0} de los QR, ni siquiera sin ruido",
-        "Regla fijada de antemano", ("Q2.3",),
-        ("Cae siempre al mismo estado: la mayoría píxel a píxel de los {qr.n_qr} QR",),
-        None, _key("hopfield/qr/figures/majority.svg"),
-        "Con el protocolo fijado de antemano la tasa de recuperación exacta de Hebb es {qr.hebb_exact_noise0} en todos los "
-        "niveles de ruido, el nivel cero incluido: los {qr.n_qr} QR no son puntos fijos de la regla de Hebb. "
-        "La causa es la correlación entre los QR, con producto escalar normalizado medio {qr.mean_abs_overlap}: la red converge a un único "
-        "estado, la mayoría píxel a píxel de los cinco, que difiere de cada QR por entre {qr.majority_hamming_min} y "
-        "{qr.majority_hamming_max} píxeles de {qr.n_pixels}. "
-        "El ruido invierte el signo de una fracción de los {qr.n_pixels} píxeles de la consulta, elegidos al azar y sin repetir, en {qr.n_noise_levels} niveles. "
-        "Es el resultado de la regla tal como se fijó y se informa así.",
+        "qr-hebb-falla", 2, "Con los 5 QR Hebb recupera {qr.hebb_exact_noise0}; con {qrm.n_chosen} QR y su parte variable, hasta {qrm.hebb_exact_noise0}",
+        None, ("Q2.3",),
+        ("El experimento con {qrm.n_chosen} QR es posterior al protocolo y no estaba preregistrado",),
+        None, _key("hopfield/qr_masked/figures/masked_recovery.svg"),
+        "Con el protocolo fijado de antemano la tasa de recuperación exacta de Hebb sobre los {qr.n_qr} QR es "
+        "{qr.hebb_exact_noise0} en todos los niveles de ruido, el nivel cero incluido: no son puntos fijos porque están muy "
+        "correlacionados (producto escalar normalizado medio {qr.mean_abs_overlap}), y la red converge a un único estado, la "
+        "mayoría píxel a píxel de los cinco, que difiere de cada QR por entre {qr.majority_hamming_min} y "
+        "{qr.majority_hamming_max} píxeles de {qr.n_pixels}; el ruido invierte el signo de una fracción de los píxeles de la "
+        "consulta, elegidos al azar y sin repetir, en {qr.n_noise_levels} niveles. "
+        "Después de ver ese cero diseñamos un experimento aparte, fuera del protocolo: la red guarda solo los {qrm.n_varying} "
+        "píxeles que cambian entre los cinco QR, completa los {qrm.n_common} comunes desde la plantilla y se queda con el "
+        "trío menos parecido, {qrm.chosen_names}. "
+        "Hace falta todo junto: con los cinco QR sobre la parte variable son punto fijo {qrm.fixed_masked_all} y con los "
+        "tres completos {qrm.fixed_full_subset}, mientras que con los tres sobre la parte variable son punto fijo "
+        "{qrm.fixed_masked_subset}. "
+        "Así Hebb recupera el {qrm.hebb_exact_noise0} hasta ruido {qrm.hebb_last_full_noise} y {qrm.hebb_at_0_40} en "
+        "{qrm.noise_mid}, pero un lookup de Hamming sobre los mismos patrones sigue por encima: achica el problema, no lo "
+        "resuelve para los cinco QR.",
     ),
     Slide(
         "qr-lookup", 2, "Un lookup de Hamming iguala o supera a la pseudo-inversa con ruido alto",
@@ -652,20 +660,6 @@ OUTLINE: tuple[Slide, ...] = (
         "El número de pasos crece poco con el ruido, y con un solo píxel de corrimiento la consulta ya está a "
         "{qr.shift1_query_hamming} de {qr.n_pixels} píxeles de la fuente y la pseudo-inversa la deja a "
         "{qr.shift1_recovered_hamming}.",
-    ),
-    Slide(
-        "qr-mascara", 2, "Hebb recupera QR si guarda solo la parte variable de {qrm.n_chosen} QR poco parecidos",
-        None, ("Q2.3",),
-        ("Experimento posterior al protocolo. Sin ruido son punto fijo {qrm.fixed_masked_subset}; con ruido {qrm.noise_mid}: Hebb {qrm.hebb_at_0_40}, Hamming {qrm.hamming_at_0_40}",),
-        None, _key("hopfield/qr_masked/figures/masked_recovery.svg"),
-        "Después de ver el cero por ciento de Hebb diseñamos un experimento aparte, fuera del protocolo: la red guarda "
-        "solo los {qrm.n_varying} píxeles que cambian entre los cinco QR, completa los {qrm.n_common} comunes desde la "
-        "plantilla y se queda con el trío menos parecido, {qrm.chosen_names}. "
-        "Hace falta todo junto: con los cinco QR enmascarados son punto fijo {qrm.fixed_masked_all} y con los tres "
-        "completos {qrm.fixed_full_subset}. "
-        "Así Hebb recupera el {qrm.hebb_exact_noise0} hasta ruido {qrm.hebb_last_full_noise} y {qrm.hebb_at_0_40} en "
-        "{qrm.noise_mid}, pero un lookup de Hamming sobre los mismos patrones sigue por encima. "
-        "Achica el problema, no lo resuelve para los cinco QR.",
     ),
     Slide(
         "ej2-conclusiones", 2, "Hopfield para QR: la correlación rompe Hebb y un lookup resuelve el mismo problema",
@@ -702,7 +696,10 @@ UNPLACED_SLIDE_FIGURES: dict[str, str] = {
     _key("hopfield/qr/figures/overlaps.svg"):
         "la slide qr-correlados muestra los QR y da los productos escalares como números de facts",
     _key("hopfield/qr_masked/figures/masked_patterns.svg"):
-        "la slide qr-mascara muestra la recuperación; la máscara y los tres QR quedan en el fragmento 05",
+        "la slide qr-hebb-falla muestra la recuperación del experimento con máscara; la máscara y los tres QR quedan en el "
+        "fragmento 05",
+    _key("hopfield/qr/figures/majority.svg"):
+        "el estado común de Hebb se describe en las notas de qr-hebb-falla; la figura queda en el fragmento 05",
     _key("hopfield/qr/figures/shift.svg"):
         "la limitación del corrimiento se nombra en las notas de qr-energia y ej2-conclusiones; la figura queda en el fragmento 05",
 }
