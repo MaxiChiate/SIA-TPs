@@ -104,7 +104,7 @@ letters: venv
 hopfield-letters: letters
 	$(PY) analysis/hopfield_letters.py
 
-# Figuras de Hopfield sobre las letras (glifos, solapamientos, término de cruce, recuperación y energía); necesitan los
+# Figuras de Hopfield sobre las letras (glifos, parecidos, término de cruce, recuperación y energía); necesitan los
 # resultados de make hopfield-letters y se niegan a dibujar si la regla cambió.
 hopfield-figures: venv
 	$(PY) analysis/hopfield_figures.py
@@ -125,7 +125,7 @@ hopfield-qr: qr
 hopfield-qr-limits: qr
 	$(PY) analysis/hopfield_qr_limits.py
 
-# Figuras de Hopfield sobre los 5 QR (glifos, solapamientos, curva de recuperación de Hebb y energía por paso);
+# Figuras de Hopfield sobre los 5 QR (glifos, parecidos, curva de recuperación de Hebb y energía por paso);
 # necesitan los resultados de make hopfield-qr (y, las de limitaciones, de make hopfield-qr-limits) y se
 # niegan a dibujar si el protocolo o el código cambiaron.
 hopfield-qr-figures: venv

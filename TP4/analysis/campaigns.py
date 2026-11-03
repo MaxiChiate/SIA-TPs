@@ -349,6 +349,12 @@ def report_reading_lines(entries, oja_index, oja_rank, pc, bmu, k) -> list[str]:
 # ----------------------------------------------------------------------------------------------
 
 MARKERS = ("o", "s", "^")
+# slide legend: each objective with the variables its rule orders by, so the slide needs no line to define them
+SLIDE_LABELS = {
+    "alcance": "top 5 en alcance:\nalcance argentino",
+    "descubrimiento": "top 5 en descubrimiento:\nalcance de no seguidores",
+    "profundidad": "top 5 en profundidad:\ntutoriales, guardados y\ntiempo de visualización",
+}
 
 
 def _own_groups(entries, campaign) -> list[tuple[str, list[int]]]:
@@ -360,32 +366,40 @@ def _global_members(entries, campaign) -> list[int]:
 
 
 def plot_shortlists_biplot(entries, pc, explained, out_stem) -> None:
-    """2 x 2 figure, one panel per campaign: every creator as a grey point on PC1 (x) and PC2 (y), the campaign's
-    own list or lists as filled markers (one colour and shape per objective), the global followers baseline as
-    hollow black markers."""
+    """Report: 2 x 2 figure, one panel per campaign. Slide: only the football panel, at full size (the four panels
+    in the 2.6:1 slide box were too small to read). Every creator is a grey point on PC1 (x) and PC2 (y), the
+    campaign's own list or lists are filled markers (one colour and shape per objective), the global followers
+    baseline is hollow black markers."""
     plt = plots_style.apply_style()
     slide = plots_style.variant() == "slide"
-    fig, axes = plt.subplots(2, 2, figsize=plots_style.figsize((11.5, 9.4)), sharex=True, sharey=True)
+    campaigns = campaigns_select.CAMPAIGNS[:1] if slide else campaigns_select.CAMPAIGNS
+    if slide:
+        fig, ax_single = plt.subplots(1, 1, figsize=plots_style.figsize((11.5, 9.4), slide=(11.5, 5.2)))
+        axes = np.array([[ax_single]])
+    else:
+        fig, axes = plt.subplots(2, 2, figsize=plots_style.figsize((11.5, 9.4)), sharex=True, sharey=True)
     objectives = [objective for _campaign, objectives in campaigns_select.CAMPAIGNS for objective in objectives]
     colors = plots_style.palette_for(objectives)
-    for ax, (campaign, _objs) in zip(axes.ravel(), campaigns_select.CAMPAIGNS):
+    for ax, (campaign, _objs) in zip(axes.ravel(), campaigns):
         ax.axhline(0, color=plots_style.GRID, linewidth=1, zorder=0)
         ax.axvline(0, color=plots_style.GRID, linewidth=1, zorder=0)
-        ax.scatter(pc[:, 0], pc[:, 1], s=26, color="#c9c8c3", zorder=1, label="50 creadores" if slide else "los 50 creadores")
+        ax.scatter(pc[:, 0], pc[:, 1], s=60 if slide else 26, color="#c9c8c3", zorder=1,
+                   label="los 50 creadores")
         base = _global_members(entries, campaign)
-        ax.scatter(pc[base, 0], pc[base, 1], s=170, facecolors="none", edgecolors="black", linewidths=1.6,
-                   zorder=3, label="base: followers" if slide else "línea base: followers global")
+        ax.scatter(pc[base, 0], pc[base, 1], s=380 if slide else 170, facecolors="none", edgecolors="black",
+                   linewidths=2.2 if slide else 1.6, zorder=3,
+                   label="los 5 con más followers" if slide else "línea base: followers global")
         for index, (objective, members) in enumerate(_own_groups(entries, campaign)):
-            ax.scatter(pc[members, 0], pc[members, 1], s=70, marker=MARKERS[index % len(MARKERS)],
+            ax.scatter(pc[members, 0], pc[members, 1], s=190 if slide else 70, marker=MARKERS[index % len(MARKERS)],
                        color=colors[objective], edgecolor=plots_style.SURFACE, linewidth=1.2, zorder=4,
-                       label=objective if slide else f"lista propia: {objective}")
-        ax.set_title(campaign, fontsize=plots_style.fontsize(11), loc="left")
-        if slide:  # a legend over the points hides them: it sits to the right of its panel, own lists by name
-            ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=plots_style.fontsize(7.5),
-                      frameon=False, borderaxespad=0.0)
+                       label=SLIDE_LABELS.get(objective, objective) if slide else f"lista propia: {objective}")
+        ax.set_title(f"Campaña de {campaign}" if slide else campaign, fontsize=plots_style.fontsize(11), loc="left")
+        if slide:  # a legend over the points hides them: it sits to the right of the panel
+            ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=plots_style.fontsize(10),
+                      frameon=False, borderaxespad=0.0, labelspacing=1.1)
         else:
             ax.legend(loc="best", fontsize=plots_style.fontsize(7.5), frameon=True, facecolor=plots_style.SURFACE)
-    for ax in axes[1]:
+    for ax in axes[-1]:
         ax.set_xlabel(f"PC1 ({_decimal(explained[0] * 100, 1)} %)")
     for ax in axes[:, 0]:
         ax.set_ylabel(f"PC2 ({_decimal(explained[1] * 100, 1)} %)")

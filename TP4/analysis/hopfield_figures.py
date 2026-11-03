@@ -47,7 +47,7 @@ FAILURE_CLASSES = (("wrong_stored_rate", "otra letra almacenada"), ("inverse_rat
 NEUTRAL_BAR = "#b9b8b3"
 GLYPH_ON = "#1f1f1f"
 GLYPH_OFF = "#ecebe6"
-FIGURE_STEMS = ("letters", "overlaps", "max_overlap_hist", "cross_terms", "recall_noise", "energy", "capacity_p4",
+FIGURE_STEMS = ("letters", "overlaps", "max_overlap_hist", "cross_terms", "recall_noise", "energy", "spurious_energy", "capacity_p4",
                 "capacity_by_p", "spurious")
 SPURIOUS_ORDER = ("inverse", "mixture", "other")
 SPURIOUS_TEXT = {"inverse": "inverso", "mixture": "mezcla", "other": "otro"}
@@ -170,11 +170,11 @@ def plot_overlaps(orthogonality: dict, out_stem) -> None:
         bar = fig.colorbar(image, cax=fig.add_axes([0.9, 0.1, 0.015, 0.74]))
     else:
         bar = fig.colorbar(image, ax=list(axes), fraction=0.035, pad=0.03)
-    bar.set_label("solapamiento d / N")
-    plots_style.suptitle(fig, "Solapamientos entre las letras de cada set", fontsize=12, x=0.01, ha="left")
+    bar.set_label("parecido d / N")
+    plots_style.suptitle(fig, "Parecidos entre las letras de cada set", fontsize=12, x=0.01, ha="left")
     if plots_style.variant() != "slide":
         fig.subplots_adjust(left=0.05, right=0.86, top=0.88, bottom=0.2)
-    _caption(fig, f"En cada celda, el producto escalar entero d y el solapamiento d / {n}. Con N = {n} píxeles d es "
+    _caption(fig, f"En cada celda, el producto escalar entero d y el parecido d / {n}. Con N = {n} píxeles d es "
                   "impar, así que ningún par es exactamente ortogonal; la diagonal vale 1 por definición. Las dos "
                   "matrices comparten la escala de -1 a 1.")
     plots_style.save_figure(fig, out_stem)
@@ -204,10 +204,10 @@ def plot_max_overlap_hist(selection: dict, out_stem) -> None:
     ax.set_xticks(overlaps)
     ax.set_xticklabels([f"{_fmt(entry['max_abs_overlap'])}\nd = {entry['max_abs_dot']}" for entry in histogram],
                        fontsize=8)
-    ax.set_xlabel("máximo |solapamiento| entre los pares del subconjunto (d / N)")
+    ax.set_xlabel("máximo |parecido| entre los pares del subconjunto (d / N)")
     ax.set_ylabel("subconjuntos")
     ax.set_ylim(0, max(counts) * 1.2)
-    plots_style.suptitle(fig, f"Máximo |solapamiento| de los {total} subconjuntos de {size} letras", fontsize=12, x=0.01,
+    plots_style.suptitle(fig, f"Máximo |parecido| de los {total} subconjuntos de {size} letras", fontsize=12, x=0.01,
                  ha="left")
     fig.tight_layout(rect=(0, 0.1, 1, 0.95))
     _caption(fig, f"Cada barra cuenta los subconjuntos de {size} letras cuyo par más parecido tiene ese |d|; d es "
@@ -264,12 +264,17 @@ def plot_cross_terms(orthogonality: dict, out_stem) -> None:
 
 def plot_recall_noise(recall_rows: list[dict], out_stem) -> None:
     plt = plots_style.apply_style()
-    present = [v for v in VARIANTS if any(f"{r['set']}-{r['update']}" == v for r in recall_rows)]
+    # the figures show the reference run only: one line per set (the other update mode is not part of the course)
+    present = [v for v in VARIANTS if v.endswith("async") and any(f"{r['set']}-{r['update']}" == v for r in recall_rows)]
     colors = plots_style.palette_for(list(VARIANTS))
     slide = plots_style.variant() == "slide"
-    fig, axes = plt.subplots(1, 3, figsize=plots_style.figsize((14.0, 5.6)),
-                             gridspec_kw={"width_ratios": [1.5, 1, 1]})
-    left = axes[0]
+    if slide:  # the slide shows only the recovery curve, at full size; the failure panels stay in the report
+        fig, left = plt.subplots(1, 1, figsize=plots_style.figsize((14.0, 5.6), slide=(11.5, 5.0)))
+        axes = [left]
+    else:
+        fig, axes = plt.subplots(1, 3, figsize=plots_style.figsize((14.0, 5.6)),
+                                 gridspec_kw={"width_ratios": [1.5, 1, 1]})
+        left = axes[0]
     n_pixels = 25
     for variant in present:
         rows = sorted((r for r in recall_rows if f"{r['set']}-{r['update']}" == variant),
@@ -277,10 +282,8 @@ def plot_recall_noise(recall_rows: list[dict], out_stem) -> None:
         k = np.array([int(r["flipped"]) for r in rows])
         rate = np.array([float(r["recall_rate"]) for r in rows])
         sd = np.array([float(r["recall_sd_seeds"]) for r in rows])
-        style = "-" if variant.endswith("async") else "--"
-        left.plot(k, rate, style, marker="o", markersize=4, color=colors[variant],
-                  label=variant.replace("separated", "separado").replace("correlated", "correlacionado")
-                  if not slide else variant.replace("separated", "sep.").replace("correlated", "corr."))
+        label = variant.replace("-async", "").replace("separated", "separado").replace("correlated", "correlacionado")
+        left.plot(k, rate, "-", marker="o", markersize=4, color=colors[variant], label=label)
         left.fill_between(k, np.clip(rate - sd, 0, 1), np.clip(rate + sd, 0, 1), color=colors[variant], alpha=0.15,
                           linewidth=0)
     left.set_ylim(0, 1.02)
@@ -315,19 +318,17 @@ def plot_recall_noise(recall_rows: list[dict], out_stem) -> None:
         ax.set_xlabel("píxeles invertidos k")
         ax.set_ylabel("proporción de ensayos")
         if slide:
-            ax.set_title(f"Fallas async: {SET_LABELS[name]}", fontsize=plots_style.fontsize(8), loc="left")
+            ax.set_title(f"Fallas: {SET_LABELS[name]}", fontsize=plots_style.fontsize(8), loc="left")
         else:
-            ax.set_title(f"Fallas, set {SET_LABELS[name]} asíncrono", fontsize=plots_style.fontsize(10), loc="left")
+            ax.set_title(f"Fallas, set {SET_LABELS[name]}", fontsize=plots_style.fontsize(10), loc="left")
         if name == SET_NAMES[0]:
             ax.legend(fontsize=plots_style.fontsize(8), frameon=False, loc="upper left")
-    cycle_max = max((float(r["cycle_rate"]) for r in recall_rows if r["update"] == "async"), default=0.0)
     trials = int(recall_rows[0]["n_trials"]) if recall_rows else 0
     plots_style.suptitle(fig, "Recuperación frente al ruido", fontsize=12, x=0.01, ha="left")
     fig.tight_layout(rect=plots_style.rect((0, 0.1, 1, 0.95)))
     _caption(fig, "Éxito = match exacto de la letra de la propia consulta (la regla). Cada punto agrupa "
                   f"{trials} ensayos (30 por letra, 4 letras, 10 seeds); la banda es ± el desvío entre seeds. Los "
-                  "paneles de la derecha reparten los fallos del modo asíncrono según el estado final (suman "
-                  f"1 − tasa; ciclos en asíncrono: tasa máxima {_fmt(cycle_max, 3)}).")
+                  "paneles de la derecha reparten los fallos según el estado final (suman 1 − tasa).")
     plots_style.save_figure(fig, out_stem)
 
 
@@ -419,12 +420,12 @@ def plot_energy(panels: list[dict], out_stem) -> None:
                 ax.set_ylabel("energía")
             if r == len(letters) - 1:
                 ax.set_xlabel("actualización")
-    plots_style.suptitle(fig, "Energía por actualización asíncrona (set separado, primer ensayo trazado de la seed "
+    plots_style.suptitle(fig, "Energía por actualización (set separado, primer ensayo trazado de la seed "
                  f"{ENERGY_SEED})", fontsize=12, x=0.01, ha="left")
     fig.tight_layout(rect=(0, 0.07, 1, 0.95))
     _caption(fig, f"Un ensayo por panel, fijado por índice antes de la corrida (el primero trazado de cada letra y "
                   f"nivel, seed {ENERGY_SEED}), no elegido por su forma. Línea punteada: energía de la letra "
-                  "almacenada; guiones verticales: fin de cada barrido. La energía asíncrona nunca sube "
+                  "almacenada; guiones verticales: fin de cada barrido. La energía nunca sube "
                   "(energy_increases = 0), pero bajar no es recuperar: el título dice qué estado quedó.")
     plots_style.save_figure(fig, out_stem)
 
@@ -478,8 +479,8 @@ def plot_capacity_p4(rows: list[dict], selection: dict, out_stem) -> None:
     left.set_xticks(x)
     left.set_xticklabels([_fmt(b) for b in buckets], fontsize=plots_style.fontsize(7), rotation=90)
     left.set_ylim(0, 1.0)
-    left.set_xlabel("máx |solapamiento| (d / N); arriba, cantidad" if slide
-                    else "máximo |solapamiento| del subconjunto (d / N); arriba, cantidad de subconjuntos")
+    left.set_xlabel("máx |parecido| (d / N); arriba, cantidad" if slide
+                    else "máximo |parecido| del subconjunto (d / N); arriba, cantidad de subconjuntos")
     left.set_ylabel("proporción de subconjuntos")
     if slide:  # the set markers are explained once, by the legend of the right panel
         handles, labels = left.get_legend_handles_labels()
@@ -497,19 +498,19 @@ def plot_capacity_p4(rows: list[dict], selection: dict, out_stem) -> None:
     low = np.array([np.percentile(recall[keys == b], 10) for b in buckets])
     high = np.array([np.percentile(recall[keys == b], 90) for b in buckets])
     right.fill_between(buckets, low, high, color=NEUTRAL_BAR, alpha=0.5, linewidth=0,
-                       label="percentiles 10-90" if slide else "percentiles 10 a 90 (máx |solap.|)")
+                       label="percentiles 10-90" if slide else "percentiles 10 a 90 (máx |parec.|)")
     right.plot(buckets, mean_rate, "-", marker="o", markersize=3.5, color=plots_style.TEXT_PRIMARY,
-               label="media por máx |solap.|" if slide else "media por máx |solapamiento|")
+               label="media por máx |parec.|" if slide else "media por máx |parecido|")
     mean_keys = np.round(mean_ov / MEAN_OVERLAP_STEP) * MEAN_OVERLAP_STEP
     mean_buckets = sorted({round(float(v), 4) for v in mean_keys})
     right.plot(mean_buckets, [recall[np.isclose(mean_keys, b)].mean() for b in mean_buckets], "--", marker="s",
                markersize=3.5, color=plots_style.TEXT_SECONDARY,
-               label="media por |solap.| medio" if slide else "media por |solapamiento| medio (paso 0,04)")
+               label="media por |parec.| medio" if slide else "media por |parecido| medio (paso 0,04)")
     for name, row in marks:
         right.plot([float(row["max_abs_overlap"])], [float(row["recall_rate_mean"])], marker="^", markersize=10,
                    linestyle="none", color=colors[name], label=f"set {SET_LABELS[name]} {row['letters']}")
     right.set_ylim(0, 1.02)
-    right.set_xlabel("|solapamiento| (d / N)")
+    right.set_xlabel("|parecido| (d / N)")
     right.set_ylabel("recuperación (ruido 0,12)" if slide else "tasa de recuperación con ruido 0,12")
     if slide:
         right.legend(fontsize=plots_style.fontsize(7), frameon=False, loc="upper center",
@@ -555,16 +556,19 @@ def plot_capacity_by_p(rows: list[dict], capacity: dict, out_stem) -> None:
                 mask = (extension == flag_ext) & (exhaustive == flag_exh)
                 if not mask.any():
                     continue
-                ax.plot(p_values[mask], mean[mask], linestyle="none", marker="D" if flag_ext else marker,
-                        markersize=6, markerfacecolor="white" if flag_exh else color, markeredgecolor=color,
-                        markeredgewidth=1.4)
-    if extension.any():
+                # the slide draws plain markers: the extension of the rule (diamonds) and the exhaustive subsets
+                # (hollow) are details of the report
+                ax.plot(p_values[mask], mean[mask], linestyle="none",
+                        marker=marker if slide else ("D" if flag_ext else marker),
+                        markersize=6, markerfacecolor="white" if (flag_exh and not slide) else color,
+                        markeredgecolor=color, markeredgewidth=1.4)
+    if extension.any() and not slide:
         first = int(p_values[extension].min())
         ax.axvline(first - 0.5, color=plots_style.TEXT_SECONDARY, linewidth=1.0, linestyle=":")
         ax.text(first - 0.4, 0.96, "extensión por la regla\n(rombos)", fontsize=plots_style.fontsize(8), va="top",
                 color=plots_style.TEXT_SECONDARY)
     near_zero = capacity.get("p_extension", {}).get("near_zero")
-    if near_zero is not None:
+    if near_zero is not None and not slide:
         ax.axhline(float(near_zero), color=plots_style.TEXT_SECONDARY, linewidth=1.0, linestyle="--")
         ax.text(float(p_values.min()) + 3.0, float(near_zero) - 0.012, f"\"~0\" de la regla = {_fmt(float(near_zero))}",
                 fontsize=plots_style.fontsize(8), ha="left", va="top", color=plots_style.TEXT_SECONDARY)
@@ -573,6 +577,10 @@ def plot_capacity_by_p(rows: list[dict], capacity: dict, out_stem) -> None:
                   ("0.15N", "0,15N = {v} (curso, orden de magnitud)", (0, (1, 1))))
     reference_handles = []
     for key, text, style in references:
+        if slide:  # the slide keeps only 0,15N, named without the source
+            if key != "0.15N":
+                continue
+            text = "0,15N = {v}"
         if key in orders:
             value = float(orders[key])
             reference_handles.append(ax.axvline(value, color=plots_style.TEXT_PRIMARY, linewidth=1.0, linestyle=style,
@@ -665,8 +673,8 @@ def plot_spurious(spurious: dict, out_stem) -> None:
         ax_o.set_xticks(range(len(overlaps)))
         ax_o.set_xticklabels(stored[:len(overlaps)] or [str(i) for i in range(len(overlaps))])
         if not slide_layout:
-            ax_o.set_ylabel("solapamiento m")
-        ax_o.set_title("solapamiento con las letras" if slide else "solapamiento con las letras almacenadas",
+            ax_o.set_ylabel("parecido m")
+        ax_o.set_title("parecido con las letras" if slide else "parecido con las letras almacenadas",
                        fontsize=plots_style.fontsize(9), loc="left")
         if ax_e is None:
             continue
@@ -693,6 +701,99 @@ def plot_spurious(spurious: dict, out_stem) -> None:
     _caption(fig, "Clases de los ensayos convergidos por seed probada (" + (count_text or "sin datos") + "). Ningún "
                   "ejemplo se eligió a mano: es el primero en el orden del archivo de cada clase. La energía final "
                   "se lee frente a las energías medidas de las letras almacenadas, sin una regla general.")
+    plots_style.save_figure(fig, out_stem)
+
+
+def _plot_spurious_energy_single(spurious: dict, patterns, letters, out_stem) -> None:
+    """Slide variant: one query only (the inverse pick). The stored letter, the noisy query and the state the network
+    ends in, as three glyphs, next to the energy per update of that run against the energy of the stored letters."""
+    from matplotlib.colors import ListedColormap
+
+    plt = plots_style.apply_style()
+    name = "inverse" if "inverse" in spurious.get("picks", {}) else next(iter(spurious["picks"]))
+    pick = spurious["picks"][name]
+    cmap = ListedColormap([GLYPH_OFF, GLYPH_ON])
+    colors = _colors()
+    fig = plt.figure(figsize=plots_style.figsize((9.0, 4.6), slide=(11.5, 6.4)))
+    outer = fig.add_gridspec(2, 3, height_ratios=[1.0, 2.6], left=0.1, right=0.99, top=0.88, bottom=0.13,
+                             wspace=0.15, hspace=0.5)
+    side = _side(len(pick["query"]))
+    stored = np.asarray(patterns[letters.index(pick["letter"])])
+    glyphs = (
+        (stored, f"la {pick['letter']} guardada"),
+        (np.asarray(pick["query"]), f"consulta: la {pick['letter']} con\n{pick['flipped']} píxeles invertidos"),
+        (np.asarray(pick["final"]), "estado final"),
+    )
+    for column, (glyph, title) in enumerate(glyphs):
+        ax = fig.add_subplot(outer[0, column])
+        ax.imshow(glyph.reshape(side, side), cmap=cmap, vmin=-1, vmax=1, interpolation="nearest")
+        ax.set_title(title, fontsize=plots_style.fontsize(9), loc="center")
+        _clean_glyph_axes(ax)
+    from matplotlib.patches import FancyArrowPatch
+
+    boxes = [fig.axes[1].get_position(), fig.axes[2].get_position()]  # the query glyph and the final glyph
+    middle = (boxes[0].y0 + boxes[0].y1) / 2
+    start = (boxes[0].x0 + boxes[0].x1) / 2 + 0.075
+    end = (boxes[1].x0 + boxes[1].x1) / 2 - 0.075
+    fig.add_artist(FancyArrowPatch((start, middle), (end, middle), transform=fig.transFigure, arrowstyle="-|>",
+                                   mutation_scale=28, linewidth=2.4, color=plots_style.TEXT_SECONDARY))
+    ax = fig.add_subplot(outer[1, :])
+    trace = np.asarray(pick["energy_trace"], dtype=np.float64)
+    ax.step(np.arange(len(trace)), trace, where="post", color=colors["separated"], linewidth=2.6, zorder=3,
+            label="energía de la red")
+    stored_energies = [float(e) for e in spurious.get("stored_energies", [])]
+    if stored_energies:
+        ax.axhline(stored_energies[0], color=plots_style.TEXT_SECONDARY, linewidth=1.4, linestyle=":", zorder=1,
+                   label="energía de las letras guardadas")
+    ax.set_xlabel("actualización")
+    ax.set_ylabel("energía")
+    ax.legend(fontsize=plots_style.fontsize(8), frameon=False, loc="upper right")
+    plots_style.save_figure(fig, out_stem)
+
+
+def plot_spurious_energy(spurious: dict, out_stem, patterns=None, letters=None) -> None:
+    if plots_style.variant() == "slide" and patterns is not None and spurious.get("picks"):
+        _plot_spurious_energy_single(spurious, patterns, letters, out_stem)
+        return
+    """The energy per update of the three pre-registered spurious picks (inverse, mixture, other: the same letter and noise level, different pixels,
+    a G with k randomly flipped pixels), against the energy of the stored letters (dotted)."""
+    plt = plots_style.apply_style()
+    slide = plots_style.variant() == "slide"
+    picks = [(name, spurious["picks"][name]) for name in SPURIOUS_ORDER if name in spurious.get("picks", {})]
+    colors = plots_style.palette_for([name for name, _pick in picks])
+    fig, ax = plt.subplots(1, 1, figsize=plots_style.figsize((9.0, 4.6), slide=(11.5, 5.0)))
+    for name, pick in picks:
+        trace = np.asarray(pick["energy_trace"], dtype=np.float64)
+        positive = [letter for sign, letter in zip(pick["signs"], pick["match_letters"]) if sign > 0]
+        negative = [letter for sign, letter in zip(pick["signs"], pick["match_letters"]) if sign < 0]
+        if name == "inverse":
+            text = (f"Inverso de la {negative[0]}\n(la {negative[0]} con todos los píxeles al revés)"
+                    if negative else "Inverso de una letra")
+        elif name == "mixture":
+            parts = ["parecida a " + " y ".join(positive)] if positive else []
+            if negative:
+                parts.append("al revés de " + " y ".join(negative))
+            text = "Mezcla de letras\n(" + ", ".join(parts) + ")"
+        else:
+            text = "Otro estado\n(no se parece a ninguna letra)"
+        label = f"{text}\nenergía final {_fmt(float(trace[-1]), 0)}"
+        ax.step(np.arange(len(trace)), trace, where="post", color=colors[name], linewidth=2.4, label=label, zorder=3)
+    stored_energies = [float(e) for e in spurious.get("stored_energies", [])]
+    if stored_energies:
+        ax.axhline(stored_energies[0], color=plots_style.TEXT_SECONDARY, linewidth=1.4, linestyle=":", zorder=1,
+                   label="energía de las letras guardadas")
+    ax.set_xlabel("actualización")
+    ax.set_ylabel("energía")
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels, fontsize=plots_style.fontsize(7.5), frameon=False, loc="center left",
+              bbox_to_anchor=(1.01, 0.5), labelspacing=1.2)
+    if not slide:
+        plots_style.suptitle(fig, "Energía por actualización de los tres estados espurios elegidos por la regla",
+                             fontsize=12, x=0.01, ha="left")
+    fig.tight_layout(rect=plots_style.rect((0, 0.1, 1, 0.95)))
+    _caption(fig, "Tres ensayos con la G y k píxeles invertidos al azar terminan en un inverso, una mezcla y otro "
+                  "estado, el primer ensayo convergido de cada clase según la regla. La línea punteada es la energía de "
+                  "las letras almacenadas; el inverso la alcanza y los otros dos quedan en mínimos más altos.")
     plots_style.save_figure(fig, out_stem)
 
 
@@ -739,6 +840,9 @@ def draw(results_dir, out_dir, patterns_path=None, check_rule: bool = True, chec
     for _ in plots_style.iter_variants():
         plot_recall_noise(recall_rows, out_dir / "recall_noise")
     plot_energy(energy_panels(results_dir), out_dir / "energy")
+    for _ in plots_style.iter_variants():
+        plot_spurious_energy(_read_json(results_dir / "spurious.json"), out_dir / "spurious_energy", patterns,
+                             design["letters"])
     for _ in plots_style.iter_variants():
         plot_capacity_p4(_read_rows(results_dir / "capacity_p4.csv"), selection, out_dir / "capacity_p4")
     for _ in plots_style.iter_variants():  # the slide variant is the capacity slide of the deck

@@ -121,7 +121,8 @@ def test_campaign_shortlists_biplot_in_both_variants(tmp_path):
         assert (tmp_path / f"shortlists_biplot{suffix}").stat().st_size > 0
         assert (tmp_path / "slide" / f"shortlists_biplot{suffix}").stat().st_size > 0
     slide = tmp_path / "slide" / "shortlists_biplot.svg"
-    assert svg_aspect(slide) == pytest.approx(plots_style.SLIDE_FIGSIZE[0] / plots_style.SLIDE_FIGSIZE[1], abs=0.02)
+    # the slide draws only the football panel in a 11.5 x 5.2 figure, so it is taller than the common slide box
+    assert svg_aspect(slide) == pytest.approx(11.5 / 5.2, abs=0.02)
     assert (tmp_path / "shortlists_biplot.svg").read_bytes() != slide.read_bytes()
     assert plots_style.variant() == "report"
 

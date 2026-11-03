@@ -49,7 +49,7 @@ import deliverables_manifest  # noqa: E402
 import facts  # noqa: E402
 
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "slides"
-MAX_SLIDES = 31  # D-01 said 20 to 25; three slides added after the review of the enunciado (EDA, zones, capacity)
+MAX_SLIDES = 30  # D-01 said 20 to 25; slides added after the review of the enunciado (EDA, zones, capacity), the Ej. 1 recap dropped
 HOME_PATH = re.compile(r"/Users/|/home/|[A-Za-z]:\\Users\\")
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}")
 SLIDE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -388,14 +388,18 @@ OUTLINE: tuple[Slide, ...] = (
     ),
     Slide(
         "oja-pc1", 1, "Oja aprendió PC1: su índice y el score de PC1 ordenan igual a los creadores",
-        None, ("Q1.8", "Q1.11"),
+        None, ("Q1.8", "Q1.9", "Q1.11"),
         ("{oja.n_abs_cos_above} de {oja.n_seeds} seeds coinciden con PC1; mayor diferencia entre índice y score: {oja.max_abs_diff}",),
         None, _key("oja/oja_vs_pc1.svg"),
         "El índice de Oja es la proyección de cada creador sobre el vector w que aprende la neurona, y ese w coincide "
-        "con el primer componente principal: entre pares de seeds el abs(cos) mínimo es {oja.abs_cos_min}. "
+        "con el primer componente principal (abs(cos) mínimo entre pares de seeds {oja.abs_cos_min}), así que representa "
+        "la posición del creador en el eje donde más se diferencian los creadores, que explica {pca17.var_pc1} de la varianza. "
+        "Se interpreta por los pesos de w: followers, me gusta, alcance y alcance de no seguidores suman, y guardados, "
+        "visitas al perfil, comentarios, tutoriales y tiempo de visualización restan, así que con la convención del "
+        "proyecto (el peso de followers es positivo) un índice alto es un creador grande y uno bajo es un creador chico con audiencia que guarda y mira con "
+        "atención; es una posición en un eje y no una calificación. "
         "Por eso el índice y el score de PC1 ordenan a los creadores del mismo modo, salvo un error de convergencia de "
-        "{oja.max_abs_diff} como máximo. "
-        "El índice no agrega información que PC1 no tenga.",
+        "{oja.max_abs_diff} como máximo, y no agrega información que PC1 no tenga.",
     ),
     Slide(
         "oja-max", 1, "Elegir el máximo del índice no es correcto: cambia con el signo y no mira el tema",
@@ -404,26 +408,29 @@ OUTLINE: tuple[Slide, ...] = (
         (
             ("Signo del índice", "Creador con el máximo", "Tema dominante", "Followers"),
             (
-                ("Convención del proyecto", "{oja.max_id} {oja.max_name}", "{oja.max_topic}", "{oja.max_followers}"),
+                ("Convención del proyecto: followers con peso positivo", "{oja.max_id} {oja.max_name}", "{oja.max_topic}", "{oja.max_followers}"),
                 ("Signo opuesto", "{oja.max_opposite_id} {oja.max_opposite_name}", "{oja.max_opposite_topic}",
                  "{oja.max_opposite_followers}"),
             ),
         ),
         None,
         "El índice es la proyección sobre PC1, un eje de tamaño y de tipo de respuesta de la audiencia: con la convención "
-        "del proyecto un índice alto es un creador grande, y dar vuelta el signo da el extremo opuesto. "
-        "El máximo bajo cada signo es otro creador, de otro tema y de otro tamaño: {oja.max_name} con {oja.max_followers} "
-        "followers contra {oja.max_opposite_name} con {oja.max_opposite_followers}. "
+        "del proyecto, que fija el signo de w para que followers pese positivo, un índice alto es un creador grande, y "
+        "dar vuelta el signo da el extremo opuesto. "
+        "Como w y −w son el mismo eje, el signo no significa nada y el máximo depende de una elección arbitraria: bajo "
+        "cada signo es otro creador, de otro tema y de otro tamaño, {oja.max_name} con {oja.max_followers} followers "
+        "contra {oja.max_opposite_name} con {oja.max_opposite_followers}. "
         "Con followers el índice tiene Pearson {oja.corr_followers_pearson}, "
         "porque en esencia ordena por tamaño y no conoce el tema de la campaña. "
-        "Una campaña debe filtrar primero por su tema y ordenar por su propio objetivo.",
+        "El índice dice dónde cae cada creador en un eje de tamaño, pero no dice a quién conviene contratar para una "
+        "campaña concreta, así que hay que filtrar primero por el tema de la campaña y ordenar por su propio objetivo; "
+        "sirve solamente para describir el tamaño y el perfil de audiencia de cada creador, y lo incorrecto es usarlo "
+        "como un puntaje de calidad.",
     ),
     Slide(
-        "camp-futbol", 1, "Fútbol: profundidad; elegir por followers se queda en el extremo de alcance de PC1",
+        "camp-futbol", 1, "Fútbol: conviene profundidad, que queda lejos de los más seguidos",
         "Regla fijada de antemano", ("Q1.12",),
         (
-            "Alcance: alcance argentino · Descubrimiento: alcance de no seguidores · Profundidad: tutoriales, "
-            "guardados y tiempo de visualización",
             "Recomendación: profundidad, con descubrimiento como segunda opción (USD {camp.futbol.cost_total} en "
             "total, USD {camp.futbol.cost_per_thousand_ar} por mil argentinos)",
         ),
@@ -444,26 +451,30 @@ OUTLINE: tuple[Slide, ...] = (
         "más alto de las tres.",
     ),
     Slide(
-        "camp-table", 1, "Perros, maquillaje y arte se ordenan con su propio criterio, no con followers",
+        "camp-table", 1, "Cada campaña se ordena con su propio criterio, no con followers",
         "Regla fijada de antemano", ("Q1.17",), (),
         (
-            ("Campaña", "Criterio (valor medio)", "Top 5", "USD por mil argentinos"),
+            ("Campaña", "Criterio que fijamos", "Top 5", "USD por mil argentinos"),
             (
-                ("Perros", "{camp.perros.objective}: {camp.perros.criterion}", "{camp.perros.top5}",
-                 "{camp.perros.cost_per_thousand_ar}"),
-                ("Maquillaje", "{camp.maquillaje.objective}: {camp.maquillaje.criterion}", "{camp.maquillaje.top5}",
-                 "{camp.maquillaje.cost_per_thousand_ar}"),
-                ("Arte", "{camp.arte.objective}: {camp.arte.criterion}", "{camp.arte.top5}",
-                 "{camp.arte.cost_per_thousand_ar}"),
+                ("Fútbol", "Mayor profundidad (tutoriales, guardados, tiempo de visualización)",
+                 "{camp.futbol.top5}", "{camp.futbol.cost_per_thousand_ar}"),
+                ("Perros", "Menor costo por mil argentinos", "{camp.perros.top5}", "{camp.perros.cost_per_thousand_ar}"),
+                ("Maquillaje", "Mayor profundidad (tutoriales, guardados, tiempo de visualización)",
+                 "{camp.maquillaje.top5}", "{camp.maquillaje.cost_per_thousand_ar}"),
+                ("Arte", "Mayor engagement por mil y profundidad", "{camp.arte.top5}", "{camp.arte.cost_per_thousand_ar}"),
             ),
         ),
         None,
-        "Cada lista sale de la regla de campaña fijada antes de calcular las listas: filtro por tema y ranking por el "
-        "criterio propio. "
-        "El costo por mil de la lista es USD {camp.perros.cost_per_thousand_ar} en perros, que se ordena por costo por mil, "
-        "USD {camp.maquillaje.cost_per_thousand_ar} en maquillaje y USD {camp.arte.cost_per_thousand_ar} en arte, que se "
-        "ordenan por profundidad y por engagement con profundidad. "
-        "El costo por mil es el costo total sobre el alcance argentino total, un cociente de sumas. "
+        "Cada lista sale de la regla de campaña fijada antes de calcular las listas: filtro por tema y ranking por un "
+        "criterio que fijamos nosotros a partir de un supuesto sobre el cliente, que son refugios con poco presupuesto en perros, una marca de "
+        "belleza que busca profundidad en maquillaje y un nicho que busca engagement y profundidad en arte, y fútbol muestra la lista de profundidad, que es la recomendada. "
+        "En perros se ordena de menor a mayor costo por mil y los cinco tienen un costo por mil promedio de USD "
+        "{camp.perros.criterion}; en maquillaje y arte se ordena de mayor a menor un puntaje que es la media de tutoriales, "
+        "guardados y tiempo de visualización estandarizados (en arte, la mitad es engagement por mil), con promedios de "
+        "{camp.maquillaje.criterion} y {camp.arte.criterion} desvíos sobre el promedio de los {oja.n_creators} creadores. "
+        "El costo por mil de la lista, USD {camp.futbol.cost_per_thousand_ar} en fútbol, USD {camp.perros.cost_per_thousand_ar} en perros, USD {camp.maquillaje.cost_per_thousand_ar} "
+        "en maquillaje y USD {camp.arte.cost_per_thousand_ar} en arte, es el costo total sobre el alcance argentino total, un "
+        "cociente de sumas, y por eso no coincide con el promedio de los costos individuales de perros. "
         "Son {oja.n_creators} creadores en un solo corte de datos: describimos y no probamos, y estos datos no dicen nada de ventas.",
     ),
     Slide(
@@ -511,32 +522,7 @@ OUTLINE: tuple[Slide, ...] = (
         "veredicto es: {maint.retrain}; es una demostración del mecanismo y no una prueba sobre creadores reales.",
     ),
     Slide(
-        "ej1-conclusiones", 1, "La PCA explica por qué falla elegir por followers; cada campaña decide con su regla",
-        None, (),
-        (
-            "PCA: PC1 opone tamaño a profundidad y casi no mira los temas, que pesan más en PC2",
-            "Por eso el top {camp.k} por followers tiene {camp.futbol.followers_global_topic_share}, "
-            "{camp.perros.followers_global_topic_share}, {camp.maquillaje.followers_global_topic_share} y "
-            "{camp.arte.followers_global_topic_share} del tema de fútbol, perros, maquillaje y arte",
-            "El SOM ordena a los creadores igual que PC1 y Oja lo aprende (Pearson {oja.corr_followers_pearson} con "
-            "followers): la regla filtra por tema y ordena por objetivo",
-        ),
-        None, None,
-        "La PCA explica el problema de la agencia: PC1 ({pca17.var_pc1}) opone tamaño y alcance a profundidad, y los "
-        "temas casi no pesan en PC1 y aparecen en PC2, así que ordenar por followers es moverse sobre PC1 sin "
-        "mirar el tema. "
-        "Se ve en la lista de los {camp.k} más seguidos: solo {camp.futbol.followers_global_topic_share}, "
-        "{camp.perros.followers_global_topic_share}, {camp.maquillaje.followers_global_topic_share} y "
-        "{camp.arte.followers_global_topic_share} de sus creadores tienen como tema dominante el de fútbol, perros, "
-        "maquillaje y arte. "
-        "El SOM, entrenado con las componentes, ordena a los creadores igual que PC1 y agrupa los temas en zonas que "
-        "sirven para ubicar creadores nuevos y buscar sustitutos, y el índice de Oja ordena casi igual que followers "
-        "(Pearson {oja.corr_followers_pearson}), así que elegir su máximo tampoco resuelve. "
-        "Por eso cada campaña primero filtra por su tema y después ordena por su propio objetivo, con reglas fijadas "
-        "antes de ver las listas.",
-    ),
-    Slide(
-        "letras", 2, "El set {letters.separated_set} casi no se solapa (máximo {letters.separated_max_overlap}); el set "
+        "letras", 2, "El set {letters.separated_set} es casi ortogonal (producto escalar máximo {letters.separated_max_overlap}); "
         "{letters.correlated_set} llega a {letters.correlated_max_overlap}",
         "Regla fijada de antemano", ("Q2.6", "Q2.7"),
         ("Con N = {letters.n_pixels} píxeles ningún par de letras es exactamente ortogonal",),
@@ -546,7 +532,8 @@ OUTLINE: tuple[Slide, ...] = (
         "separado ({letters.separated_set}) y el más correlacionado ({letters.correlated_set}) entre todos los "
         "subconjuntos de cuatro letras. "
         "Con N = {letters.n_pixels} el producto escalar es siempre impar, así que ningún par es exactamente ortogonal: el "
-        "máximo solapamiento es {letters.separated_max_overlap} en el primero y {letters.correlated_max_overlap} en el segundo. "
+        "máximo producto escalar de un par de letras, dividido por N (vale 0 si son ortogonales y 1 si son iguales), es "
+        "{letters.separated_max_overlap} en el primero y {letters.correlated_max_overlap} en el segundo. "
         "Una divulgación: {letters.draft_matching_glyphs} de los {letters.alphabet_size} glifos coinciden con un "
         "borrador que se usó en un prototipo, y el desempate del set "
         "correlacionado no es independiente de él.",
@@ -557,15 +544,36 @@ OUTLINE: tuple[Slide, ...] = (
         ("Recuperación exacta con {letters.flips_k3}, {letters.flips_k6} y {letters.flips_k9} píxeles invertidos en el "
          "set separado: {letters.separated_recall_k3}, {letters.separated_recall_k6} y {letters.separated_recall_k9}",),
         None, _key("hopfield/figures/recall_noise.svg"),
+        "El ruido invierte el signo de k píxeles distintos de la letra, elegidos al azar y sin repetir, y el nivel de ruido es k dividido N. "
         "Recuperar es llegar exactamente a la letra de la consulta: en el set separado la tasa es "
         "{letters.separated_recall_k3} con {letters.flips_k3} píxeles invertidos, {letters.separated_recall_k6} con "
         "{letters.flips_k6} y {letters.separated_recall_k9} con {letters.flips_k9}. "
         "En el correlacionado solo {letters.correlated_n_stable} de las {letters.set_size} letras es punto fijo y las "
         "otras caen sobre ella, "
         "de ahí el techo de {letters.correlated_recall_k3}. "
-        "La capacidad con p = 4 depende de cuánto se solapen las letras: {letters.p4_all_stable_fraction} de los "
+        "La capacidad con p = 4 depende de cuánto se parezcan las letras: {letters.p4_all_stable_fraction} de los "
         "subconjuntos posibles de cuatro letras las tienen todas estables, y la fracción estable media es "
         "{letters.p4_mean_stable_fraction}.",
+    ),
+    Slide(
+        "letras-energia", 2, "La red puede bajar de energía hasta un estado espurio, que no es ninguna letra",
+        "Regla fijada de antemano", ("Q2.8",),
+        (),
+        None, _key("hopfield/figures/spurious_energy.svg"),
+        "La energía de la red es E = −½ sᵀ W s y baja o se queda igual cada vez que una neurona cambia de estado, así que "
+        "la curva solo desciende hasta quedar plana en un estado estable; eso no garantiza que sea una letra guardada. "
+        "La consulta es la G con {letters.spur_flip_min} píxeles invertidos al azar y la red termina en el inverso de la "
+        "{letters.spur_inverse_of}, que es la {letters.spur_inverse_of} con todos los píxeles al revés: no es ninguna de "
+        "las letras guardadas, así que es un estado espurio. "
+        "Con ruido alto sobre el set separado ({letters.spur_flip_min} a {letters.spur_flip_max} píxeles invertidos de "
+        "{letters.n_pixels}), {letters.spur_total} de {letters.spur_trials} ensayos ({letters.spur_total_pct}) terminan "
+        "en un estado que no es una letra guardada, repartidos en inverso ({letters.spur_inverse_pct}), mezcla "
+        "({letters.spur_mixture_pct}) y otro ({letters.spur_other_pct}), y la clase más frecuente es la del "
+        "{letters.spurious_class}. "
+        "El inverso termina en {letters.stored_energy}, la misma energía de las letras guardadas, porque invertir todos "
+        "los píxeles de un patrón no cambia la energía, mientras que una mezcla ({letters.spur_mixture_energy}) y otro "
+        "estado ({letters.spur_other_energy}) de los ejemplos de la regla quedan en mínimos más altos; son tres ejemplos "
+        "y no una ley sobre la energía de los estados espurios.",
     ),
     Slide(
         "letras-capacidad", 2,
@@ -575,48 +583,33 @@ OUTLINE: tuple[Slide, ...] = (
         (
             "Fracción de letras estables: {letters.stable_p3} con p = 3, {letters.stable_p4} con p = 4 y "
             "{letters.stable_p6} con p = 6",
-            "Con p = 4 manda el solapamiento: {letters.p4_all_stable_fraction} de los subconjuntos tienen las cuatro "
-            "letras estables",
         ),
         None, _key("hopfield/figures/capacity_by_p.svg"),
+        "La curva azul, la fracción estable, responde si la red guarda la letra, o sea si sin ruido es un punto fijo, y la "
+        "naranja, la tasa de recuperación con {letters.flips_k3} píxeles invertidos al azar, responde si la red corrige "
+        "errores, o sea si devuelve la letra exacta. "
         "La referencia del curso es p ≤ {letters.course_capacity_ratio}·N, que con N = {letters.n_pixels} da "
-        "{letters.course_capacity}: con cuatro letras ya estamos en ese orden, aunque es una estimación para patrones "
-        "al azar con N grande y no para letras dibujadas. "
-        "Medida sobre subconjuntos al azar, la fracción de letras estables cae de forma gradual, de {letters.stable_p3} "
+        "{letters.course_capacity}, aunque es una estimación para patrones al azar con N grande y no para letras dibujadas: "
+        "medida sobre subconjuntos al azar, la fracción de letras estables cae de forma gradual, de {letters.stable_p3} "
         "con p = 3 a {letters.stable_p4} con p = 4 y {letters.stable_p6} con p = 6, y con p = "
         "{letters.capacity_last_p} todavía vale {letters.stable_last_p}, así que no hay un quiebre en "
         "{letters.course_capacity}. "
-        "Lo que decide es el solapamiento: con p = 4 solo {letters.p4_all_stable_fraction} de los subconjuntos tienen "
+        "Lo que decide es cuánto se parecen las letras: con p = 4 solo {letters.p4_all_stable_fraction} de los subconjuntos tienen "
         "las cuatro letras estables, porque el término de cruce de las letras parecidas le gana al de la propia letra. "
         "En los QR la misma referencia da {qr.course_capacity} patrones para {qr.n_pixels} píxeles, muy por encima de "
         "{qr.n_qr}: ahí Hebb no falla por capacidad sino por ese término de cruce, que solo se anula con patrones "
         "ortogonales.",
     ),
     Slide(
-        "espurio", 2, "Con mucho ruido la red cae en estados espurios: {letters.spur_total_pct} de los ensayos",
-        "Regla fijada de antemano", ("Q2.8",),
-        ("{letters.spur_trials} ensayos: inverso {letters.spur_inverse_pct}, mezcla {letters.spur_mixture_pct}, "
-         "otro {letters.spur_other_pct}",),
-        None, _key("hopfield/figures/spurious.svg"),
-        "Con ruido alto sobre el set separado ({letters.spur_flip_min} a {letters.spur_flip_max} píxeles invertidos de "
-        "{letters.n_pixels}), {letters.spur_total} de "
-        "{letters.spur_trials} ensayos ({letters.spur_total_pct}) terminan en un estado que no es una letra almacenada. "
-        "Las clases son inverso ({letters.spur_inverse_pct}), mezcla ({letters.spur_mixture_pct}) y otro "
-        "({letters.spur_other_pct}), y la más frecuente es la del {letters.spurious_class}. "
-        "Un inverso tiene la misma energía que su letra, porque la energía no cambia al invertir todo el patrón, mientras "
-        "que la mezcla y el otro quedan en mínimos locales más altos; son tres ejemplos fijados y no una ley sobre la "
-        "energía de los estados espurios.",
-    ),
-    Slide(
         "qr-correlados", 2, "Los QR son idénticos en {qr.identical_fraction} de sus píxeles: están muy correlacionados",
         None, ("Q2.1", "Q2.2"),
-        ("Matrices binarias de 37×37 ({qr.n_pixels} píxeles); solapamiento máximo {qr.max_abs_overlap}, medio {qr.mean_abs_overlap}",),
+        ("Matrices binarias de 37×37 ({qr.n_pixels} píxeles); parecido máximo {qr.max_abs_overlap}, medio {qr.mean_abs_overlap}",),
         None, _key("hopfield/qr/figures/qr.svg"),
         "Cada QR es una matriz binaria de 37×37 de módulos oscuros y claros, como pide la pregunta, y son {qr.n_qr} "
         "almacenados en una sola red. "
         "Como codificación de este trabajo, y no como parte del enunciado, la red guarda cada matriz como un vector de "
         "{qr.n_pixels} valores ±1, con la polaridad oscuro = +1 y claro = −1. "
-        "El {qr.identical_fraction} de los {qr.n_pixels} píxeles es idéntico en los {qr.n_qr} a la vez y el solapamiento "
+        "El {qr.identical_fraction} de los {qr.n_pixels} píxeles es idéntico en los {qr.n_qr} a la vez y el parecido "
         "entre pares es {qr.max_abs_overlap} como máximo y {qr.mean_abs_overlap} en promedio, lejos de la ortogonalidad.",
     ),
     Slide(
@@ -626,9 +619,10 @@ OUTLINE: tuple[Slide, ...] = (
         None, _key("hopfield/qr/figures/majority.svg"),
         "Con el protocolo fijado de antemano la tasa de recuperación exacta de Hebb es {qr.hebb_exact_noise0} en todos los "
         "niveles de ruido, el nivel cero incluido: los {qr.n_qr} QR no son puntos fijos de la regla de Hebb. "
-        "La causa es la correlación entre los QR, con solapamiento medio {qr.mean_abs_overlap}: la red converge a un único "
+        "La causa es la correlación entre los QR, con parecido medio {qr.mean_abs_overlap}: la red converge a un único "
         "estado, la mayoría píxel a píxel de los cinco, que difiere de cada QR por entre {qr.majority_hamming_min} y "
         "{qr.majority_hamming_max} píxeles de {qr.n_pixels}. "
+        "El ruido invierte el signo de una fracción de los {qr.n_pixels} píxeles de la consulta, elegidos al azar y sin repetir, en {qr.n_noise_levels} niveles. "
         "Es el resultado de la regla tal como se fijó y se informa así.",
     ),
     Slide(
@@ -645,9 +639,9 @@ OUTLINE: tuple[Slide, ...] = (
     Slide(
         "qr-energia", 2, "Con Hebb la red converge al estado común; con la pseudo-inversa, al QR consultado",
         None, ("Q2.4", "Q2.5"),
-        ("Ensayos fijos por QR y nivel de ruido: la energía asíncrona nunca sube",),
+        ("Ensayos fijos por QR y nivel de ruido: la energía nunca sube",),
         None, _key("hopfield/qr/figures/energy_trace.svg"),
-        "La figura traza la energía asíncrona, paso a paso, de un ensayo fijo por QR y nivel de ruido, arriba con Hebb "
+        "La figura traza la energía, paso a paso, de un ensayo fijo por QR y nivel de ruido, arriba con Hebb "
         "y abajo con la pseudo-inversa, y en ningún ensayo trazado la energía sube. "
         "Con Hebb cada corrida converge al estado común y no al QR consultado; con la pseudo-inversa converge al QR "
         "consultado hasta el nivel {qr.pinv_last_full_noise}, y cada QR guardado queda en la energía mínima, −N/2 = "
@@ -667,7 +661,7 @@ OUTLINE: tuple[Slide, ...] = (
             "No verificamos que un QR recuperado se decodifique",
         ),
         None, None,
-        "Las limitaciones medidas son tres: la correlación entre los QR ({qr.mean_abs_overlap} de solapamiento medio) rompe "
+        "Las limitaciones medidas son tres: la correlación entre los QR ({qr.mean_abs_overlap} de parecido medio) rompe "
         "a Hebb, un corrimiento de un solo píxel ya mueve la consulta a {qr.shift1_query_hamming} de {qr.n_pixels} píxeles, "
         "y la matriz de pesos tiene {qr.n_pixels} por {qr.n_pixels} entradas para solo {qr.n_qr} patrones. "
         "Un lookup de Hamming resuelve el mismo problema cerrado con igual o más acierto y sin dinámica ni energía. "
@@ -682,13 +676,16 @@ UNPLACED_SLIDE_FIGURES: dict[str, str] = {
     _key("campaigns/shortlists_som.svg"):
         "las cuatro slides de campaña están fijadas por D-05 (fútbol sobre el biplot, dos tablas y mantenimiento); "
         "la vista de las listas sobre el SOM queda en el fragmento 03",
+    _key("hopfield/figures/spurious.svg"):
+        "la slide letras-energia muestra un solo estado espurio con su energía; la frecuencia de cada clase se da en sus "
+        "notas y los tres ejemplos con sus letras quedan en el fragmento 04",
     _key("hopfield/figures/overlaps.svg"):
         "la ortogonalidad de los dos sets de letras se da como números en la slide letras",
     _key("hopfield/figures/capacity_p4.svg"):
         "la slide letras-ruido muestra la recuperación frente al ruido; la capacidad con p = 4 queda en el fragmento 04 "
         "y se nombra en las notas de esa slide",
     _key("hopfield/qr/figures/overlaps.svg"):
-        "la slide qr-correlados muestra los QR y da los solapamientos como números de facts",
+        "la slide qr-correlados muestra los QR y da los parecidos como números de facts",
     _key("hopfield/qr/figures/shift.svg"):
         "la limitación del corrimiento se nombra en las notas de qr-energia y ej2-conclusiones; la figura queda en el fragmento 05",
 }

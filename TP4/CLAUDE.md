@@ -8,10 +8,19 @@ Enunciado: `docs/Archivo SIATP 42026.pdf`.
 
 ## Dónde estamos hoy (leer primero)
 
-**Retomar (2026-11-02, fin del día):** el ejercicio 1 está hecho con las 17 variables y las 7 componentes en repo y deck. Orden del deck publicado: 20 `oja-pc1`, 21 `oja-max`
-(Q1.9 y Q1.10), 22 `camp-futbol`, 23 `camp-table`, 24 `camp-followers`, 25 `camp-maintenance`, 26 `ej1-conclusiones`. Plan del usuario para mañana: **que yo le
-explique a fondo las slides 20 a 24** (no dice que estén mal, quiere entenderlas), después sacar la 26 (redundante; confirmar antes de borrar) y pasar al
-ejercicio 2. Dudas abiertas: (a) tres columnas de criterio de campaña están fuera de las 17 (`price_usd`, `total_engagement_per_1000`, `trend_posts_pct`; la
+**Retomar (2026-11-03):** el ejercicio 1 está hecho con las 17 variables y las 7 componentes en repo y deck, y las slides 20 a 25 están revisadas con el usuario.
+Orden del deck publicado: 20 `oja-pc1`, 21 `oja-max`, 22 `camp-futbol`, 23 `camp-table`, 24 `camp-followers`, 25 `camp-maintenance`; `ej1-conclusiones` se sacó
+(repo y deck, 30 slides en el repo). Lo que cambió en esa revisión: notas de 20 y 21 (convención de signo: followers con peso positivo; el signo de w es arbitrario),
+`camp-futbol` con título nuevo y solo el panel de fútbol en el gráfico (`campaigns.py`, variante slide), `camp-table` con la columna "Criterio que fijamos" y la fila
+de fútbol arriba, en el mismo orden que `camp-followers`. `camp-followers` y `camp-maintenance` quedan como están (decisión del usuario). **El deck publicado en el Artifact es lo que se presenta**: sus slides se editaron
+varias veces desde la página; no republicar el que arma el repo (ver "Cómo se publica el deck"). Ejercicio 2, ya revisado: 26 (`6aa851b4`, a mano), 27 `letras`
+(título con "producto escalar máximo", sin "solapamiento"), 28 `letras-ruido` (solo la curva de recuperación; notas con la función de ruido: invierte k píxeles
+distintos al azar), 29 `letras-energia` (nueva: una consulta, la G con 10 píxeles invertidos, que termina en un estado espurio; absorbió la antigua `espurio`),
+30 `letras-capacidad` (sin rombos, sin 0,138N, notas con qué responde cada curva), 31 `qr-correlados`, 32 `qr-hebb-falla`, 33 `qr-lookup`, 34 `qr-energia`,
+35 `ej2-conclusiones`. Regla del usuario: **ninguna slide, figura ni texto dice "solapamiento"** (se usa "parecido" o "producto escalar"); queda solo en el texto
+congelado de las reglas pre-registradas de los fragmentos 04 y 05 (su sha256) y en `.planning/`. Sin sync/async en slides, figuras y fragmentos (el código en C
+todavía tiene los dos modos). Lo que sigue: revisar las slides 32 a 35, la de Hamming y la pseudo-inversa (el usuario quiere justificarlas bien o sacarlas) y
+traer la rama `fix-entrega` de Matías (QR: experimento con 3 QR sobre los 414 píxeles variables; solo actualización síncrona). Dudas abiertas: (a) tres columnas de criterio de campaña están fuera de las 17 (`price_usd`, `total_engagement_per_1000`, `trend_posts_pct`; la
 regla pre-registrada de campañas no se tocó, decidir con el usuario si se deja o se rehace el criterio de arte); (b) el texto de la regla pre-registrada del SOM
 sigue nombrando QE, QE-LOO, estabilidad, escalón y gaussiana (no se edita: su sha256 lo guardan los pasos del SOM).
 
@@ -75,11 +84,11 @@ analysis/                        # README.md explica las series y los drivers
   hopfield.py, hopfield_letters.py, hopfield_select.py, hopfield_figures.py     # Hopfield sobre las letras
   hopfield_qr.py, hopfield_qr_limits.py, hopfield_qr_select.py, hopfield_qr_figures.py   # Hopfield sobre los 5 QR
   plots_style.py                 # estilo común y variantes de figura (informe y slide)
-  deliverables_manifest.py       # fuente única: 38 figuras, 25 preguntas del enunciado, fragmentos
+  deliverables_manifest.py       # fuente única: 39 figuras, 25 preguntas del enunciado, fragmentos
   facts.py                       # los números del texto salen de los JSON/CSV; `facts.py check` fija 68 frases de los fragmentos
   informe.py                     # arma analysis/results/informe/informe.html
   corr_prune.py                  # sensibilidad de la PCA a podar por umbral de |r| (tabla de la slide pca-prune; no rehace SOM ni Oja)
-  slides.py                      # arma analysis/results/slides/ (31 slides, PNG y guion)
+  slides.py                      # arma analysis/results/slides/ (30 slides, PNG y guion)
   tests/                         # pytest; incluye test_repro_docs.py, que cuida README.md, CLAUDE.md y DECISIONS.md
 deliverables/                    # un fragmento por fase (01 a 05): lo que se entrega por escrito, congelado por guardas sha256
 DECISIONS.md                     # decisiones para la defensa y fuente del glosario del informe
@@ -131,7 +140,7 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Entrega
 
-- **Slides**: 31 slides armadas por `make deliverables` en `analysis/results/slides/` (el repo no tiene la slide de método; el deck empieza con portada y EDA). El Artifact publicado tiene además slides que armó la persona dueña a mano o yo directo en el Artifact y que **no están en el repo**: `289f728e` ("Ejercicio 1"), `0732067f` (EDA: z-score, 5 triviales, umbral), `bc794b98` ("Kohonen"), `oja-intro` ("Regla de Oja") y `pca-eigenvalue-table` (tabla de los 17 autovalores). El orden del deck publicado manda: `project/deck.json` del Artifact no se pisa con el que arma el repo.
+- **Slides**: 30 slides armadas por `make deliverables` en `analysis/results/slides/` (el repo no tiene la slide de método; el deck empieza con portada y EDA). El Artifact publicado tiene además slides que armó la persona dueña a mano o yo directo en el Artifact y que **no están en el repo**: `289f728e` ("Ejercicio 1"), `0732067f` (EDA: z-score, 5 triviales, umbral), `bc794b98` ("Kohonen"), `oja-intro` ("Regla de Oja") y `pca-eigenvalue-table` (tabla de los 17 autovalores). El orden del deck publicado manda: `project/deck.json` del Artifact no se pisa con el que arma el repo.
 - **Cómo se publica el deck** (a mano, con la herramienta Artifact): (1) subir como asset los PNG que cambiaron (`analysis/results/slides/assets/`) y anotar sus `/_blob/…`; (2) armar `slides.py --out <carpeta> --asset-map <json>` con esas URLs; (3) **leer del Artifact** `project/deck.json` y las slides que se van a pisar (la persona dueña edita desde la página y las versiones cambian solas); (4) publicar **solo las slides que cambiaron** (y `deck.json` solo si cambia el orden, editando la copia leída). Nunca mandar el `deck.json` que arma el repo.
 - **Informe**: `analysis/results/informe/informe.html`, publicado como Artifact HTML (D-15).
 - Slides: https://claude.ai/artifact/CxnuCZKwF55r2tUMPWXBSN (las URLs `9YjSx…` y `32SjY…` de antes ya no existen; el 2026-10-28 se reemplazó el contenido de este deck por las slides del repo)

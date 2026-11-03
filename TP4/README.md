@@ -104,6 +104,7 @@ comando. Las filas salen del manifiesto `analysis/deliverables_manifest.py` y `m
 | `analysis/results/hopfield/figures/capacity_p4.svg` (y `slide/`) | `04-hopfield-letras.md` §6 | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
 | `analysis/results/hopfield/figures/capacity_by_p.svg` (y `slide/`) | `04-hopfield-letras.md` §6 | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
 | `analysis/results/hopfield/figures/spurious.svg` (y `slide/`) | `04-hopfield-letras.md` §7 | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
+| `analysis/results/hopfield/figures/spurious_energy.svg` (y `slide/`) | `04-hopfield-letras.md` §7 (energía) | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
 | `analysis/results/hopfield/qr/figures/qr.svg` (y `slide/`) | `05-hopfield-qr.md` §2 | `make hopfield-qr-figures` | deliverables/05-hopfield-qr.md sección 3 (analysis/hopfield_qr_select.py) | sin seed (los 5 QR son fijos) |
 | `analysis/results/hopfield/qr/figures/overlaps.svg` (y `slide/`) | `05-hopfield-qr.md` §2 | `make hopfield-qr-figures` | deliverables/05-hopfield-qr.md sección 3 (analysis/hopfield_qr_select.py) | sin seed (los 5 QR son fijos) |
 | `analysis/results/hopfield/qr/figures/energy_trace.svg` (y `slide/`) | `05-hopfield-qr.md` §4 | `make hopfield-qr-figures` | deliverables/05-hopfield-qr.md sección 3 (analysis/hopfield_qr_select.py) | 1 (ENERGY_TRACE_SEED de analysis/hopfield_qr.py) |
@@ -135,7 +136,7 @@ no se arma si un número citado de los fragmentos cambió.
 
 `make deliverables` deja listo, sin publicar, lo siguiente (no se versiona):
 
-- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 31 slides), los PNG de las figuras
+- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 30 slides), los PNG de las figuras
   (`assets/`) y `notes.md` (el guion). Lo arma `analysis/slides.py`; `make slides` corre solo ese paso.
 - `analysis/results/informe/informe.html`: el informe, una página autocontenida. Lo arma `analysis/informe.py`; `make informe`
   corre solo ese paso.

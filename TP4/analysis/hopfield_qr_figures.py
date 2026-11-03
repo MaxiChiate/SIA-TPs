@@ -45,8 +45,8 @@ DEFAULT_OUT = DEFAULT_RESULTS / "figures"
 # output directory - mirrors hopfield_qr_limits.RESULTS_SUBDIR's layout (D-01: make hopfield-qr never
 # rmtrees qr_limits/).
 DEFAULT_LIMITS_RESULTS = DEFAULT_RESULTS.parent / "qr_limits"
-UPDATES = ("async", "sync")
-UPDATE_LABELS = {"async": "asincrono (referencia)", "sync": "sincrono"}
+# the figures show the reference run only: the other update mode is not part of the course
+UPDATES = ("async",)
 # The three rules compared on the recovery figure, and the two with dynamics (the per-step energy panel and the
 # cost/iterations panel are hebb-vs-pinv only: the Hamming baseline has no sweeps or energy, D-09).
 RULES = ("hebb", "pinv", "hamming")
@@ -144,16 +144,16 @@ def plot_overlaps(overlaps: dict, out_stem) -> None:
     if slide:  # square matrix at the left, its numbers read off at the right
         fig.subplots_adjust(left=0.25, right=0.5344, top=0.95, bottom=0.2)
         bar = fig.colorbar(image, cax=fig.add_axes([0.56, 0.2, 0.015, 0.75]))
-        fig.text(0.68, 0.58, f"max |solapamiento| = {_fmt(overlaps['max_abs_overlap'])}\n"
+        fig.text(0.68, 0.58, f"max |parecido| = {_fmt(overlaps['max_abs_overlap'])}\n"
                              f"media = {_fmt(overlaps['mean_abs_overlap'])}", ha="left", va="center",
                  fontsize=plots_style.fontsize(10), color=plots_style.TEXT_PRIMARY)
     else:
         bar = fig.colorbar(image, ax=ax, fraction=0.045, pad=0.03)
-    bar.set_label("solapamiento d / N")
-    plots_style.suptitle(fig, "Solapamientos entre los 5 QR almacenados", fontsize=12, x=0.01, ha="left")
+    bar.set_label("parecido d / N")
+    plots_style.suptitle(fig, "Parecidos entre los 5 QR almacenados", fontsize=12, x=0.01, ha="left")
     if not slide:
         fig.subplots_adjust(left=0.18, right=0.86, top=0.88, bottom=0.2)
-    _caption(fig, f"En cada celda, el producto escalar entero d y el solapamiento d / {n}. max|solapamiento| = "
+    _caption(fig, f"En cada celda, el producto escalar entero d y el parecido d / {n}. max|parecido| = "
                   f"{_fmt(overlaps['max_abs_overlap'])}, media = {_fmt(overlaps['mean_abs_overlap'])}: los 5 QR "
                   "estan lejos de ser ortogonales entre si, la causa raiz del fallo de Hebb (HOP-04, D-11a).")
     plots_style.save_figure(fig, out_stem)
@@ -162,11 +162,10 @@ def plot_overlaps(overlaps: dict, out_stem) -> None:
 # ---------- the three-rule recovery curve, continuous overlap, sweeps and energy (HOP-06, D-03, D-09) ----------
 
 def plot_recovery(rows: list[dict], out_stem) -> None:
-    """Three panels: exact recovery (hebb, pinv, hamming - async as the reference line, sync a labelled
-    companion for the two dynamical rules, hamming a single no-update line) with +-seed-SD bands; the continuous
+    """Three panels: exact recovery (hebb, pinv, hamming - hamming a single no-update line) with +-seed-SD bands; the continuous
     mean |final overlap| for the same three; and the dynamical cost (sweeps, final energy) for hebb vs pinv only
     (the Hamming lookup has no dynamics, annotated as instantaneous, D-09). Colour is by rule (stable across
-    panels), linestyle by update (solid async, dashed sync)."""
+    panels)."""
     plt = plots_style.apply_style()
     colors = plots_style.palette_for(list(RULES))
     slide = plots_style.variant() == "slide"
@@ -187,9 +186,9 @@ def plot_recovery(rows: list[dict], out_stem) -> None:
             sd = np.array([float(r["recall_sd_seeds"]) for r in mine])
             overlap = np.array([float(r["mean_final_overlap"]) for r in mine])
             style = "-" if (rule == "hamming" or update == "async") else "--"
-            label = RULE_LABELS[rule] if rule == "hamming" else f"{RULE_LABELS[rule]} ({UPDATE_LABELS[update]})"
+            label = RULE_LABELS[rule]
             if slide:  # short names; one legend under the three panels
-                label = "Hamming (lookup)" if rule == "hamming" else f"{short[rule]} ({update})"
+                label = "Hamming (lookup)" if rule == "hamming" else short[rule]
             recall_ax.plot(noise, rate, style, marker="o", markersize=4, color=colors[rule], label=label)
             recall_ax.fill_between(noise, np.clip(rate - sd, 0, 1), np.clip(rate + sd, 0, 1), color=colors[rule],
                                    alpha=0.12, linewidth=0)
@@ -205,7 +204,7 @@ def plot_recovery(rows: list[dict], out_stem) -> None:
             sweeps = np.array([float(r["mean_sweeps"]) for r in mine])
             energy = np.array([float(r["mean_final_energy"]) for r in mine])
             style = "-" if update == "async" else "--"
-            label = f"{RULE_LABELS[rule]} ({UPDATE_LABELS[update]})"
+            label = RULE_LABELS[rule]
             cost_ax.plot(noise, sweeps, style, marker="s", markersize=4, color=colors[rule],
                         label=f"{label}: barridos")
             energy_ax.plot(noise, energy, style, marker="^", markersize=4, color=colors[rule], alpha=0.55,
@@ -236,7 +235,7 @@ def plot_recovery(rows: list[dict], out_stem) -> None:
 
     overlap_ax.set_ylim(0, 1.02)
     overlap_ax.set_xlabel("nivel de ruido")
-    overlap_ax.set_ylabel("|solapamiento final| medio" if slide else "|solapamiento final| medio con el objetivo")
+    overlap_ax.set_ylabel("|parecido final| medio" if slide else "|parecido final| medio con el objetivo")
     if not slide:
         overlap_ax.legend(fontsize=6.5, frameon=False, loc="lower left")
     overlap_ax.set_title("Cercania continua" if slide else "Cercania continua, 3 reglas (|m|, D-03)",
@@ -299,7 +298,7 @@ def _plot_energy_trace_slide(by_key: dict, rules: list, sources: list, levels: l
             if c == 0:
                 ax.set_ylabel(f"energia {rule}")
             if i == len(rules) - 1:
-                ax.set_xlabel("paso (asincrono)")
+                ax.set_xlabel("paso")
     handles, names = axes[0, 0].get_legend_handles_labels()
     fig.legend(handles, names, fontsize=plots_style.fontsize(8), frameon=False, ncol=len(names), loc="lower center")
     fig.tight_layout(rect=(0, 0.1, 1, 1))
@@ -357,17 +356,17 @@ def plot_energy_trace(rows: list[dict], out_stem) -> None:
             if twin is not None and c == len(levels) - 1:
                 twin.set_ylabel("energia pinv", color=colors.get("pinv", plots_style.TEXT_PRIMARY), fontsize=8)
             if r == len(sources) - 1:
-                ax.set_xlabel("paso (actualizacion asincrona)")
+                ax.set_xlabel("paso (actualizacion)")
     if legend_handles:
         fig.legend(legend_handles, [h.get_label() for h in legend_handles], fontsize=8, frameon=False, ncol=2,
                   loc="upper right", bbox_to_anchor=(0.99, 0.985))
-    plots_style.suptitle(fig, "Energia por paso, asincrono (hebb vs pinv, un ensayo trazado por celda, seed fija)",
+    plots_style.suptitle(fig, "Energia por paso (hebb vs pinv, un ensayo trazado por celda, seed fija)",
                          fontsize=12, x=0.01, ha="left")
     fig.tight_layout(rect=(0, 0.07, 1, 0.93))
     _caption(fig, "Un ensayo por panel (el primero trazado de cada QR y nivel de ruido de la seed fija de "
                   "energy_trace.csv) para hebb y para pinv, no elegido por su forma. Cada panel tiene un eje "
                   "propio por regla (la energia de pinv es mucho menor en magnitud que la de hebb, que suma sobre "
-                  "N=1369). La energia asincrona nunca sube para ninguna de las dos reglas (HOP-05 'energia por "
+                  "N=1369). La energia nunca sube para ninguna de las dos reglas (HOP-05 'energia por "
                   "paso'), a diferencia de la energia final por nivel que recall.csv promedia sobre todos los "
                   "ensayos.")
     plots_style.save_figure(fig, out_stem)
@@ -428,7 +427,7 @@ def plot_shift(shift: dict, out_stem) -> None:
     else:
         fig.subplots_adjust(left=0.02, right=0.98, top=0.90, bottom=0.14, hspace=0.75, wspace=0.08)
     _caption(fig, f"Corrimiento con relleno en cero ({shift['edge_convention']}); la red evoluciona desde la "
-                  "consulta desplazada bajo la W de pseudo-inversa con una corrida asincrona propia (no la traza "
+                  "consulta desplazada bajo la W de pseudo-inversa con una corrida propia (no la traza "
                   "de hopfield.py). La distancia de Hamming medida a la fuente es un hallazgo, nunca forzada: "
                   "este corrimiento de pocos pixeles ya mueve una fraccion grande de los 1369 pixeles.")
     plots_style.save_figure(fig, out_stem)
