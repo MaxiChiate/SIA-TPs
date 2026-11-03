@@ -4,9 +4,8 @@
 // failure on correlated patterns, built by hopfield_pinv and reported as an error if the Gram matrix X X^T is
 // singular. Either way h_i = 0 is an exact tie (the neuron keeps its state).
 // Task "recall" stores the rows of the input named by "subset", then corrupts every stored pattern by flipping exactly
-// k = lround(level * N) distinct pixels per trial and runs the dynamics: "async" (one neuron at a time in a fresh
-// random order per sweep, the reference) or "sync" (every neuron at once, the course's comparison, with two-cycle
-// detection). The final state of every trial is classified as stored, inverse, mixture of three or other.
+// k = lround(level * N) distinct pixels per trial and runs the course's synchronous dynamics (every neuron at once,
+// slide 23, with two-cycle detection). The final state of every trial is classified as stored, inverse, mixture of three or other.
 // Writes stored.csv, overlaps.csv, trials.csv, trace.csv, states.csv and metrics.json.
 // Task "capacity" stores p rows of the input at a time, either every p-subset in lexicographic order or n_subsets
 // distinct subsets drawn with the seed, and writes per subset the overlaps, how many stored patterns are fixed
@@ -28,12 +27,12 @@
 #define TRIAL_ROWS_MAX 2000000       // p * levels * trials
 #define TABLE_DOUBLES_MAX 50000000   // values of one table (400 MB)
 #define TRACE_ROWS_MAX 1000000
-#define RECALL_METRICS 20
+#define RECALL_METRICS 19
 #define CAPACITY_P_MAX 64
 #define CAPACITY_SAMPLES_MAX 10000
 #define CAPACITY_ROWS_MAX 200000
 #define CAPACITY_WORK_MAX 50000000   // subsets * p * trials
-#define CAPACITY_METRICS 14
+#define CAPACITY_METRICS 13
 #define CAPACITY_TAIL 7              // columns of capacity.csv after the indices
 #define DRAWS_PER_SUBSET 1000
 #define TRIAL_FIXED 22 // columns of trials.csv before m_0
@@ -45,7 +44,6 @@
 typedef struct {
   int recall;       // task "recall"
   int pinv;         // 0: rule "hebb", 1: rule "pinv"
-  int sync;         // 0: update "async", 1: update "sync"
   int max_sweeps;
   int trials;
   int trace_trials;
@@ -216,10 +214,8 @@ static int read_capacity_keys(const Config * config, const Matrix * input, Hopfi
 static int read_params(const Config * config, const Matrix * input, HopfieldParams * params) {
   const char * task;
   const char * rule;
-  const char * update;
   if (!config_get_string(config, "task", &task)
       || !config_get_string(config, "rule", &rule)
-      || !config_get_string(config, "update", &update)
       || !config_get_int(config, "max_sweeps", &params->max_sweeps)
       || !config_get_int(config, "trials", &params->trials)) {
     return 0;
@@ -237,14 +233,6 @@ static int read_params(const Config * config, const Matrix * input, HopfieldPara
     params->pinv = 1;
   } else {
     fprintf(stderr, "%s: rule must be \"hebb\" or \"pinv\"\n", config->path);
-    return 0;
-  }
-  if (strcmp(update, "async") == 0) {
-    params->sync = 0;
-  } else if (strcmp(update, "sync") == 0) {
-    params->sync = 1;
-  } else {
-    fprintf(stderr, "%s: update must be \"async\" or \"sync\"\n", config->path);
     return 0;
   }
   if (params->max_sweeps < 1 || params->max_sweeps > SWEEPS_MAX) {
@@ -450,7 +438,6 @@ typedef struct {
   double * w;
   double * s;
   double * query;
-  double * h;
   double * scratch;  // 2n
   double * gram;     // 2*p*p, hopfield_pinv's Gram scratch (unused when rule is hebb)
   int * order;
@@ -474,18 +461,11 @@ static int run_trials(const HopfieldParams * params, Rng * rng, int n, RecallBuf
         int k = (int) lround(params->levels[l] * n);
         corrupt(rng, xi, n, k, buf->order, buf->s);
         memcpy(buf->query, buf->s, (size_t) n * sizeof(double));
-        for (int j = 0; j < n; j++) buf->order[j] = j;
 
         int traced = t < params->trace_trials;
         trace->trial = (double) trial;
         HopfieldOutcome out;
-        int ok;
-        if (params->sync) {
-          ok = hopfield_sync_run(buf->w, n, buf->s, buf->scratch, params->max_sweeps, traced ? trace : NULL, &out);
-        } else {
-          ok = hopfield_async_run(buf->w, n, buf->s, buf->h, buf->order, rng, params->max_sweeps,
-                                  traced ? trace : NULL, &out);
-        }
+        int ok = hopfield_sync_run(buf->w, n, buf->s, buf->scratch, params->max_sweeps, traced ? trace : NULL, &out);
         if (!ok) {
           fprintf(stderr, "hopfield: trace.csv would pass %d rows; lower trace_trials\n", TRACE_ROWS_MAX);
           return 0;
@@ -556,13 +536,12 @@ static int run_recall(const Config * config, const HopfieldParams * params, Rng 
   buf.w = malloc((size_t) n * n * sizeof(double));
   buf.s = malloc((size_t) n * sizeof(double));
   buf.query = malloc((size_t) n * sizeof(double));
-  buf.h = malloc((size_t) n * sizeof(double));
   buf.scratch = malloc((size_t) 2 * n * sizeof(double));
   buf.gram = malloc((size_t) 2 * p * p * sizeof(double));
   buf.order = malloc((size_t) n * sizeof(int));
   buf.trials = malloc(trial_rows * (TRIAL_FIXED + p) * sizeof(double));
   buf.states = malloc((state_rows > 0 ? state_rows : 1) * (2 + n) * sizeof(double));
-  int ok = buf.patterns != NULL && buf.w != NULL && buf.s != NULL && buf.query != NULL && buf.h != NULL
+  int ok = buf.patterns != NULL && buf.w != NULL && buf.s != NULL && buf.query != NULL
            && buf.scratch != NULL && buf.gram != NULL && buf.order != NULL && buf.trials != NULL
            && buf.states != NULL;
   if (!ok) fprintf(stderr, "hopfield: couldn't allocate the weights and the trial tables\n");
@@ -600,7 +579,6 @@ static int run_recall(const Config * config, const HopfieldParams * params, Rng 
       { "model", "hopfield", 0 },
       { "seed", NULL, config->seed },
       { "task", "recall", 0 },
-      { "update", params->sync ? "sync" : "async", 0 },
       { "rule", params->pinv ? "pinv" : "hebb", 0 },
       { "n_patterns", NULL, p },
       { "n_neurons", NULL, n },
@@ -626,7 +604,6 @@ static int run_recall(const Config * config, const HopfieldParams * params, Rng 
   free(buf.w);
   free(buf.s);
   free(buf.query);
-  free(buf.h);
   free(buf.scratch);
   free(buf.gram);
   free(buf.order);
@@ -685,7 +662,6 @@ typedef struct {
   double * patterns;  // p x n
   double * w;
   double * s;
-  double * h;
   double * scratch;   // 2n
   double * gram;      // 2*p*p, hopfield_pinv's Gram scratch (unused when rule is hebb)
   int * order;        // n, and n_rows while drawing
@@ -783,13 +759,8 @@ static int run_subsets(const Config * config, const HopfieldParams * params, Rng
       const double * xi = buf->patterns + (size_t) a * n;
       for (int t = 0; t < params->trials; t++) {
         corrupt(rng, xi, n, k, buf->order, buf->s);
-        for (int j = 0; j < n; j++) buf->order[j] = j;
         HopfieldOutcome out;
-        if (params->sync) {
-          hopfield_sync_run(buf->w, n, buf->s, buf->scratch, params->max_sweeps, NULL, &out);
-        } else {
-          hopfield_async_run(buf->w, n, buf->s, buf->h, buf->order, rng, params->max_sweeps, NULL, &out);
-        }
+        hopfield_sync_run(buf->w, n, buf->s, buf->scratch, params->max_sweeps, NULL, &out);
         int match[3];
         int sign[3];
         HopfieldClass klass = hopfield_classify(buf->patterns, p, n, buf->s, match, sign);
@@ -821,12 +792,11 @@ static int run_capacity(const Config * config, const HopfieldParams * params, Rn
   buf.patterns = malloc((size_t) p * n * sizeof(double));
   buf.w = malloc((size_t) n * n * sizeof(double));
   buf.s = malloc((size_t) n * sizeof(double));
-  buf.h = malloc((size_t) n * sizeof(double));
   buf.scratch = malloc((size_t) 2 * n * sizeof(double));
   buf.gram = malloc((size_t) 2 * p * p * sizeof(double));
   buf.order = malloc((size_t) order_size * sizeof(int));
   int ok = buf.idx != NULL && buf.table != NULL && buf.patterns != NULL && buf.w != NULL && buf.s != NULL
-           && buf.h != NULL && buf.scratch != NULL && buf.gram != NULL && buf.order != NULL;
+           && buf.scratch != NULL && buf.gram != NULL && buf.order != NULL;
   if (!ok) fprintf(stderr, "hopfield: couldn't allocate the capacity tables\n");
 
   if (ok && params->n_subsets > 0) {
@@ -857,7 +827,6 @@ static int run_capacity(const Config * config, const HopfieldParams * params, Rn
       { "model", "hopfield", 0 },
       { "seed", NULL, config->seed },
       { "task", "capacity", 0 },
-      { "update", params->sync ? "sync" : "async", 0 },
       { "rule", params->pinv ? "pinv" : "hebb", 0 },
       { "n_patterns", NULL, p },
       { "n_neurons", NULL, n },
@@ -877,7 +846,6 @@ static int run_capacity(const Config * config, const HopfieldParams * params, Rn
   free(buf.patterns);
   free(buf.w);
   free(buf.s);
-  free(buf.h);
   free(buf.scratch);
   free(buf.gram);
   free(buf.order);

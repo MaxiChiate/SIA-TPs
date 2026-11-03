@@ -41,7 +41,6 @@ ENERGY_LEVELS_K = (3, 6, 9)
 ENERGY_SEED = 1
 SET_NAMES = ("separated", "correlated")
 SET_LABELS = {"separated": "separado", "correlated": "correlacionado"}
-VARIANTS = ("separated-async", "separated-sync", "correlated-async", "correlated-sync")
 FAILURE_CLASSES = (("wrong_stored_rate", "otra letra almacenada"), ("inverse_rate", "inverso"),
                    ("mixture_rate", "mezcla"), ("other_rate", "otro"))
 NEUTRAL_BAR = "#b9b8b3"
@@ -170,11 +169,11 @@ def plot_overlaps(orthogonality: dict, out_stem) -> None:
         bar = fig.colorbar(image, cax=fig.add_axes([0.9, 0.1, 0.015, 0.74]))
     else:
         bar = fig.colorbar(image, ax=list(axes), fraction=0.035, pad=0.03)
-    bar.set_label("parecido d / N")
-    plots_style.suptitle(fig, "Parecidos entre las letras de cada set", fontsize=12, x=0.01, ha="left")
+    bar.set_label("producto escalar normalizado d / N")
+    plots_style.suptitle(fig, "Productos escalares entre las letras de cada set", fontsize=12, x=0.01, ha="left")
     if plots_style.variant() != "slide":
         fig.subplots_adjust(left=0.05, right=0.86, top=0.88, bottom=0.2)
-    _caption(fig, f"En cada celda, el producto escalar entero d y el parecido d / {n}. Con N = {n} píxeles d es "
+    _caption(fig, f"En cada celda, el producto escalar entero d y el producto escalar normalizado d / {n}. Con N = {n} píxeles d es "
                   "impar, así que ningún par es exactamente ortogonal; la diagonal vale 1 por definición. Las dos "
                   "matrices comparten la escala de -1 a 1.")
     plots_style.save_figure(fig, out_stem)
@@ -204,10 +203,10 @@ def plot_max_overlap_hist(selection: dict, out_stem) -> None:
     ax.set_xticks(overlaps)
     ax.set_xticklabels([f"{_fmt(entry['max_abs_overlap'])}\nd = {entry['max_abs_dot']}" for entry in histogram],
                        fontsize=8)
-    ax.set_xlabel("máximo |parecido| entre los pares del subconjunto (d / N)")
+    ax.set_xlabel("máximo |producto escalar normalizado| entre los pares del subconjunto (d / N)")
     ax.set_ylabel("subconjuntos")
     ax.set_ylim(0, max(counts) * 1.2)
-    plots_style.suptitle(fig, f"Máximo |parecido| de los {total} subconjuntos de {size} letras", fontsize=12, x=0.01,
+    plots_style.suptitle(fig, f"Máximo |producto escalar normalizado| de los {total} subconjuntos de {size} letras", fontsize=12, x=0.01,
                  ha="left")
     fig.tight_layout(rect=(0, 0.1, 1, 0.95))
     _caption(fig, f"Cada barra cuenta los subconjuntos de {size} letras cuyo par más parecido tiene ese |d|; d es "
@@ -252,9 +251,9 @@ def plot_cross_terms(orthogonality: dict, out_stem) -> None:
     fig.subplots_adjust(left=0.05, right=0.88, top=0.89, bottom=0.17, hspace=0.3)
     cax = fig.add_axes([0.91, 0.22, 0.015, 0.62])
     bar = fig.colorbar(image, cax=cax)
-    bar.set_label("margen ξ_i h_i = (N − p) + término de cruce")
+    bar.set_label("margen ξ_i h_i = (N − p) + crosstalk")
     plots_style.suptitle(fig, "Margen de estabilidad de cada píxel de cada letra", fontsize=12, x=0.01, ha="left")
-    _caption(fig, f"Margen de cada píxel cuando la letra misma es la consulta: ξ_i h_i = (N − p) + término de cruce, "
+    _caption(fig, f"Margen de cada píxel cuando la letra misma es la consulta: ξ_i h_i = (N − p) + crosstalk, "
                   f"con N − p = {n - p}. Los píxeles con margen negativo (recuadro negro) se invierten al primer "
                   "paso, de modo que esa letra no es un punto fijo. Escala simétrica compartida.")
     plots_style.save_figure(fig, out_stem)
@@ -264,9 +263,8 @@ def plot_cross_terms(orthogonality: dict, out_stem) -> None:
 
 def plot_recall_noise(recall_rows: list[dict], out_stem) -> None:
     plt = plots_style.apply_style()
-    # the figures show the reference run only: one line per set (the other update mode is not part of the course)
-    present = [v for v in VARIANTS if v.endswith("async") and any(f"{r['set']}-{r['update']}" == v for r in recall_rows)]
-    colors = plots_style.palette_for(list(VARIANTS))
+    present = [name for name in SET_NAMES if any(r["set"] == name for r in recall_rows)]
+    colors = plots_style.palette_for(list(SET_NAMES))
     slide = plots_style.variant() == "slide"
     if slide:  # the slide shows only the recovery curve, at full size; the failure panels stay in the report
         fig, left = plt.subplots(1, 1, figsize=plots_style.figsize((14.0, 5.6), slide=(11.5, 5.0)))
@@ -277,13 +275,11 @@ def plot_recall_noise(recall_rows: list[dict], out_stem) -> None:
         left = axes[0]
     n_pixels = 25
     for variant in present:
-        rows = sorted((r for r in recall_rows if f"{r['set']}-{r['update']}" == variant),
-                      key=lambda r: int(r["flipped"]))
+        rows = sorted((r for r in recall_rows if r["set"] == variant), key=lambda r: int(r["flipped"]))
         k = np.array([int(r["flipped"]) for r in rows])
         rate = np.array([float(r["recall_rate"]) for r in rows])
         sd = np.array([float(r["recall_sd_seeds"]) for r in rows])
-        label = variant.replace("-async", "").replace("separated", "separado").replace("correlated", "correlacionado")
-        left.plot(k, rate, "-", marker="o", markersize=4, color=colors[variant], label=label)
+        left.plot(k, rate, "-", marker="o", markersize=4, color=colors[variant], label=SET_LABELS[variant])
         left.fill_between(k, np.clip(rate - sd, 0, 1), np.clip(rate + sd, 0, 1), color=colors[variant], alpha=0.15,
                           linewidth=0)
     left.set_ylim(0, 1.02)
@@ -299,9 +295,7 @@ def plot_recall_noise(recall_rows: list[dict], out_stem) -> None:
     left.set_title("Recuperación de la letra propia", fontsize=plots_style.fontsize(10), loc="left")
 
     for ax, name in zip(axes[1:], SET_NAMES):
-        label = f"{name}-async"
-        rows = sorted((r for r in recall_rows if f"{r['set']}-{r['update']}" == label),
-                      key=lambda r: int(r["flipped"]))
+        rows = sorted((r for r in recall_rows if r["set"] == name), key=lambda r: int(r["flipped"]))
         if not rows:
             ax.axis("off")
             continue
@@ -323,12 +317,15 @@ def plot_recall_noise(recall_rows: list[dict], out_stem) -> None:
             ax.set_title(f"Fallas, set {SET_LABELS[name]}", fontsize=plots_style.fontsize(10), loc="left")
         if name == SET_NAMES[0]:
             ax.legend(fontsize=plots_style.fontsize(8), frameon=False, loc="upper left")
+    cycle_max = max((float(r["cycle_rate"]) for r in recall_rows), default=0.0)
     trials = int(recall_rows[0]["n_trials"]) if recall_rows else 0
     plots_style.suptitle(fig, "Recuperación frente al ruido", fontsize=12, x=0.01, ha="left")
     fig.tight_layout(rect=plots_style.rect((0, 0.1, 1, 0.95)))
     _caption(fig, "Éxito = match exacto de la letra de la propia consulta (la regla). Cada punto agrupa "
                   f"{trials} ensayos (30 por letra, 4 letras, 10 seeds); la banda es ± el desvío entre seeds. Los "
-                  "paneles de la derecha reparten los fallos según el estado final (suman 1 − tasa).")
+                  "paneles de la derecha reparten los fallos según el estado final; un ciclo de período 2 se clasifica "
+                  "en el estado donde se detecta y nunca cuenta como recuperado (tasa máxima de ciclos "
+                  f"{_fmt(cycle_max, 3)}). Actualización síncrona de la teórica.")
     plots_style.save_figure(fig, out_stem)
 
 
@@ -343,7 +340,7 @@ def _recall_run_dir(results_dir: Path, label: str, seed: int) -> Path:
 
 def energy_panels(results_dir) -> list[dict]:
     """One panel per (letter of the separated set, k in ENERGY_LEVELS_K present in the design): the first traced
-    trial of seed ENERGY_SEED in the separated-async run, found by its index and never by its energies."""
+    trial of seed ENERGY_SEED in the separated run, found by its index and never by its energies."""
     results_dir = Path(results_dir)
     design = _read_json(results_dir / "run.json")["design"]
     orth = _read_json(results_dir / "orthogonality.json")["separated"]
@@ -352,7 +349,7 @@ def energy_panels(results_dir) -> list[dict]:
     levels = list(design["recall_levels"])
     per_level = int(design["recall_trials"])
     ks = [int(math.floor(level * n_pixels + 0.5)) for level in levels]
-    run_dir = _recall_run_dir(results_dir, "separated-async", ENERGY_SEED)
+    run_dir = _recall_run_dir(results_dir, "separated", ENERGY_SEED)
     trials = {int(r["trial"]): r for r in _read_rows(run_dir / "trials.csv")}
     trace: dict[int, list[dict]] = {}
     for row in _read_rows(run_dir / "trace.csv"):
@@ -409,8 +406,6 @@ def plot_energy(panels: list[dict], out_stem) -> None:
             x = np.arange(len(panel["energies"]))
             ax.step(x, panel["energies"], where="post", color=colors["separated"], linewidth=1.6)
             ax.axhline(panel["stored_energy"], color=plots_style.TEXT_SECONDARY, linewidth=1.0, linestyle=":")
-            for end in panel["sweep_ends"]:
-                ax.axvline(end, color=plots_style.GRID, linewidth=1.0, linestyle="--", zorder=0)
             verdict = "correcta" if panel["correct"] else "incorrecta"
             klass = CLASS_TEXT[panel["class"]]
             if panel["final_letter"] is not None:
@@ -419,14 +414,14 @@ def plot_energy(panels: list[dict], out_stem) -> None:
             if c == 0:
                 ax.set_ylabel("energía")
             if r == len(letters) - 1:
-                ax.set_xlabel("actualización")
-    plots_style.suptitle(fig, "Energía por actualización (set separado, primer ensayo trazado de la seed "
+                ax.set_xlabel("paso síncrono")
+    plots_style.suptitle(fig, "Energía por paso síncrono (set separado, primer ensayo trazado de la seed "
                  f"{ENERGY_SEED})", fontsize=12, x=0.01, ha="left")
     fig.tight_layout(rect=(0, 0.07, 1, 0.95))
     _caption(fig, f"Un ensayo por panel, fijado por índice antes de la corrida (el primero trazado de cada letra y "
                   f"nivel, seed {ENERGY_SEED}), no elegido por su forma. Línea punteada: energía de la letra "
-                  "almacenada; guiones verticales: fin de cada barrido. La energía nunca sube "
-                  "(energy_increases = 0), pero bajar no es recuperar: el título dice qué estado quedó.")
+                  "almacenada. Cada paso actualiza las 25 neuronas a la vez; la energía síncrona no tiene garantía de "
+                  "bajar en cada paso, y bajar no es recuperar: el título dice qué estado quedó.")
     plots_style.save_figure(fig, out_stem)
 
 
@@ -479,8 +474,8 @@ def plot_capacity_p4(rows: list[dict], selection: dict, out_stem) -> None:
     left.set_xticks(x)
     left.set_xticklabels([_fmt(b) for b in buckets], fontsize=plots_style.fontsize(7), rotation=90)
     left.set_ylim(0, 1.0)
-    left.set_xlabel("máx |parecido| (d / N); arriba, cantidad" if slide
-                    else "máximo |parecido| del subconjunto (d / N); arriba, cantidad de subconjuntos")
+    left.set_xlabel("máx |d| / N; arriba, cantidad" if slide
+                    else "máximo |producto escalar normalizado| del subconjunto (d / N); arriba, cantidad de subconjuntos")
     left.set_ylabel("proporción de subconjuntos")
     if slide:  # the set markers are explained once, by the legend of the right panel
         handles, labels = left.get_legend_handles_labels()
@@ -498,19 +493,19 @@ def plot_capacity_p4(rows: list[dict], selection: dict, out_stem) -> None:
     low = np.array([np.percentile(recall[keys == b], 10) for b in buckets])
     high = np.array([np.percentile(recall[keys == b], 90) for b in buckets])
     right.fill_between(buckets, low, high, color=NEUTRAL_BAR, alpha=0.5, linewidth=0,
-                       label="percentiles 10-90" if slide else "percentiles 10 a 90 (máx |parec.|)")
+                       label="percentiles 10-90" if slide else "percentiles 10 a 90 (máx |d| / N)")
     right.plot(buckets, mean_rate, "-", marker="o", markersize=3.5, color=plots_style.TEXT_PRIMARY,
-               label="media por máx |parec.|" if slide else "media por máx |parecido|")
+               label="media por máx |d| / N" if slide else "media por máx |producto escalar normalizado|")
     mean_keys = np.round(mean_ov / MEAN_OVERLAP_STEP) * MEAN_OVERLAP_STEP
     mean_buckets = sorted({round(float(v), 4) for v in mean_keys})
     right.plot(mean_buckets, [recall[np.isclose(mean_keys, b)].mean() for b in mean_buckets], "--", marker="s",
                markersize=3.5, color=plots_style.TEXT_SECONDARY,
-               label="media por |parec.| medio" if slide else "media por |parecido| medio (paso 0,04)")
+               label="media por |d| / N medio" if slide else "media por |producto escalar normalizado| medio (paso 0,04)")
     for name, row in marks:
         right.plot([float(row["max_abs_overlap"])], [float(row["recall_rate_mean"])], marker="^", markersize=10,
                    linestyle="none", color=colors[name], label=f"set {SET_LABELS[name]} {row['letters']}")
     right.set_ylim(0, 1.02)
-    right.set_xlabel("|parecido| (d / N)")
+    right.set_xlabel("|d| / N (producto escalar normalizado)")
     right.set_ylabel("recuperación (ruido 0,12)" if slide else "tasa de recuperación con ruido 0,12")
     if slide:
         right.legend(fontsize=plots_style.fontsize(7), frameon=False, loc="upper center",
@@ -673,8 +668,8 @@ def plot_spurious(spurious: dict, out_stem) -> None:
         ax_o.set_xticks(range(len(overlaps)))
         ax_o.set_xticklabels(stored[:len(overlaps)] or [str(i) for i in range(len(overlaps))])
         if not slide_layout:
-            ax_o.set_ylabel("parecido m")
-        ax_o.set_title("parecido con las letras" if slide else "parecido con las letras almacenadas",
+            ax_o.set_ylabel("producto escalar m")
+        ax_o.set_title("producto escalar con las letras" if slide else "producto escalar normalizado con las letras almacenadas",
                        fontsize=plots_style.fontsize(9), loc="left")
         if ax_e is None:
             continue
@@ -688,7 +683,7 @@ def plot_spurious(spurious: dict, out_stem) -> None:
                                                                                                      stored_energies)),
                       fontsize=plots_style.fontsize(7), ha="right", va="bottom", color=plots_style.TEXT_SECONDARY)
         ax_e.axhline(float(pick["e_final"]), color=plots_style.TEXT_PRIMARY, linewidth=1.0, linestyle="--")
-        ax_e.set_xlabel("actualización")
+        ax_e.set_xlabel("paso síncrono")
         ax_e.set_ylabel("energía")
         ax_e.set_title(f"energía: inicial {_fmt(float(pick['e_start']), 0)}, final {_fmt(float(pick['e_final']), 0)} "
                        "(guiones)", fontsize=plots_style.fontsize(9), loc="left")

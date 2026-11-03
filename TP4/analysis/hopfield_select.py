@@ -51,7 +51,7 @@ MAX_SWEEPS = 100
 RECALL_LEVELS = tuple(k / 25 for k in range(13))  # k = 0..12 flipped pixels of 25
 RECALL_TRIALS = 30
 SEEDS = tuple(range(1, 11))
-UPDATES = ("async", "sync")
+UPDATE = "sync"  # the course's synchronous update (slide 23), the only one (re-registration 2026-10-31)
 TRACE_TRIALS = 1  # the full trace of the first trial per letter and level
 
 CAPACITY_P = 4  # exhaustive over all C(26, 4) subsets
@@ -66,7 +66,6 @@ CAPACITY_REFERENCES = (0.138, 0.15)  # orders of magnitude to mark (x N), never 
 SPURIOUS_LEVELS = (0.40, 0.44, 0.48)
 SPURIOUS_TRIALS = 100
 SPURIOUS_SEEDS = tuple(range(1, 11))
-SPURIOUS_UPDATE = "async"
 CLASS_NAMES = ("stored", "inverse", "mixture", "other")
 
 
@@ -250,9 +249,38 @@ def _sha256_file(path: Path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def _marker_digest_at(revision: str, repo_dir: Path) -> str:
+    """rule_digest of RULE_FILE as committed at `revision`."""
+    with tempfile.TemporaryDirectory() as folder:
+        committed = Path(folder) / "rule.md"
+        text = subprocess.run(["git", "show", f"{revision}:./{RULE_FILE}"], cwd=repo_dir,
+                              capture_output=True, check=True).stdout
+        committed.write_bytes(text)
+        return som_select.rule_digest(committed)
+
+
+def _registration_commit(repo_dir: Path) -> str:
+    """The commit that last registered the rule. It is the commit that added RULE_FILE and SELECT_FILE together,
+    unless SELECT_FILE changed later: then the last commit that changed SELECT_FILE is a re-registration and must
+    change the text between the markers of RULE_FILE in that same commit (re-registration of 2026-10-31, which is
+    declared inside the markers). Changing SELECT_FILE alone is refused."""
+    rule_added = _added_commit(RULE_FILE, repo_dir)
+    select_added = _added_commit(SELECT_FILE, repo_dir)
+    if select_added != rule_added:
+        raise SystemExit(f"{SELECT_FILE} was added in commit {select_added}, not in the rule commit {rule_added} "
+                         f"that added {RULE_FILE} (D-04)")
+    last = _git_stdout(["log", "-1", "--format=%H", "--", SELECT_FILE], repo_dir)
+    if not HEX40.fullmatch(last):
+        raise SystemExit(f"{SELECT_FILE}: cannot find its last commit (D-04)")
+    if last != rule_added and _marker_digest_at(last, repo_dir) == _marker_digest_at(f"{last}^", repo_dir):
+        raise SystemExit(f"{SELECT_FILE} changed in commit {last} without re-registering the text between the "
+                         f"markers of {RULE_FILE} in that commit (D-04)")
+    return last
+
+
 def rule_identity(repo_dir=TP_DIR) -> dict:
-    """Refuse unless the rule text and the selection code were added in one commit, the alphabet and
-    scripts/letters.py in that commit or an ancestor, nothing guarded changed after it, the three data and
+    """Refuse unless the rule text and the selection code were added in one commit (or last re-registered together,
+    see _registration_commit), the alphabet and scripts/letters.py in that commit or an ancestor, nothing guarded changed after it, the three data and
     code files have no uncommitted change and the text between the markers equals the one at the rule commit.
     Returns the identity to record. Every refusal is a SystemExit ending in "(D-04)"."""
     repo_dir = Path(repo_dir).resolve()
@@ -268,11 +296,7 @@ def rule_identity(repo_dir=TP_DIR) -> dict:
     if tracked.returncode != 0:
         raise SystemExit(f"{RULE_FILE}: the rule text must be committed (D-04)")
 
-    rule_commit = _added_commit(RULE_FILE, repo_dir)
-    select_added = _added_commit(SELECT_FILE, repo_dir)
-    if select_added != rule_commit:
-        raise SystemExit(f"{SELECT_FILE} was added in commit {select_added}, not in the rule commit {rule_commit} "
-                         f"that added {RULE_FILE} (D-04)")
+    rule_commit = _registration_commit(repo_dir)
     for path in (ALPHABET_FILE, LETTERS_FILE):
         added = _added_commit(path, repo_dir)
         if not _is_ancestor(added, rule_commit, repo_dir):
@@ -283,12 +307,7 @@ def rule_identity(repo_dir=TP_DIR) -> dict:
         if not HEX40.fullmatch(last) or not _is_ancestor(last, rule_commit, repo_dir):
             raise SystemExit(f"{path} changed in commit {last} after the rule commit {rule_commit} (D-04)")
 
-    with tempfile.TemporaryDirectory() as folder:
-        committed = Path(folder) / "rule.md"
-        text = subprocess.run(["git", "show", f"{rule_commit}:./{RULE_FILE}"], cwd=repo_dir,
-                              capture_output=True, check=True).stdout
-        committed.write_bytes(text)
-        committed_digest = som_select.rule_digest(committed)
+    committed_digest = _marker_digest_at(rule_commit, repo_dir)
     current_digest = som_select.rule_digest(repo_dir / RULE_FILE)
     if committed_digest != current_digest:
         raise SystemExit(f"the text between the markers of {RULE_FILE} differs from the one at the rule commit "

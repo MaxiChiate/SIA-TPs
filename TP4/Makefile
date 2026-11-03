@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda pca corr-prune som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr hopfield-qr-limits hopfield-qr-figures results informe slides deliverables
+.PHONY: all venv prepare eda pca corr-prune som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr hopfield-qr-limits hopfield-qr-figures hopfield-qr-masked hopfield-qr-masked-figures results informe slides deliverables
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -104,7 +104,7 @@ letters: venv
 hopfield-letters: letters
 	$(PY) analysis/hopfield_letters.py
 
-# Figuras de Hopfield sobre las letras (glifos, parecidos, término de cruce, recuperación y energía); necesitan los
+# Figuras de Hopfield sobre las letras (glifos, productos escalares, crosstalk, recuperación y energía); necesitan los
 # resultados de make hopfield-letters y se niegan a dibujar si la regla cambió.
 hopfield-figures: venv
 	$(PY) analysis/hopfield_figures.py
@@ -125,11 +125,21 @@ hopfield-qr: qr
 hopfield-qr-limits: qr
 	$(PY) analysis/hopfield_qr_limits.py
 
-# Figuras de Hopfield sobre los 5 QR (glifos, parecidos, curva de recuperación de Hebb y energía por paso);
+# Figuras de Hopfield sobre los 5 QR (glifos, productos escalares, curva de recuperación de Hebb y energía por paso);
 # necesitan los resultados de make hopfield-qr (y, las de limitaciones, de make hopfield-qr-limits) y se
 # niegan a dibujar si el protocolo o el código cambiaron.
 hopfield-qr-figures: venv
 	$(PY) analysis/hopfield_qr_figures.py
+
+# Experimento posterior al protocolo (KD-9, no preregistrado): Hebb sobre los pixeles que cambian entre los 5 QR, con
+# los 3 QR de menor producto escalar maximo. Corre el binario de C y escribe su propio directorio qr_masked/. Se niega
+# a correr si el protocolo de los QR cambio (D-01).
+hopfield-qr-masked: qr
+	$(PY) analysis/hopfield_qr_masked.py
+
+# Figuras del experimento con mascara (patrones guardados y recuperacion); se niegan a dibujar si el codigo cambio.
+hopfield-qr-masked-figures: venv
+	$(PY) analysis/hopfield_qr_masked_figures.py
 
 # ---------------------------------------------------------------------------------------------------------------------
 # make results: regenera solo los resultados de las fases 1-5 que faltan (D-11). Cada paso tiene un archivo centinela;
@@ -158,7 +168,9 @@ RESULTS_SENTINELS := \
 	$(PREP)/qr_pm1.csv \
 	$(RES)/hopfield/qr/verdict.json \
 	$(RES)/hopfield/qr_limits/majority.json \
-	$(RES)/hopfield/qr/figures/majority.svg
+	$(RES)/hopfield/qr/figures/majority.svg \
+	$(RES)/hopfield/qr_masked/recall.csv \
+	$(RES)/hopfield/qr_masked/figures/masked_recovery.svg
 
 # Regenera lo que falta de las fases 1-5, en orden de dependencia. Para forzar un paso: rm -rf analysis/results/<paso>
 # y volver a correr make results. Un centinela viejo no detecta que el codigo cambio. Las guardas de cada driver
@@ -241,6 +253,14 @@ $(RES)/hopfield/qr_limits/majority.json: | $(PREP)/qr_pm1.csv
 $(RES)/hopfield/qr/figures/majority.svg: | $(RES)/hopfield/qr/verdict.json $(RES)/hopfield/qr_limits/majority.json
 	$(PY) analysis/hopfield_qr_figures.py
 
+# Experimento posterior con mascara sobre 3 QR (KD-9).
+$(RES)/hopfield/qr_masked/recall.csv: | $(PREP)/qr_pm1.csv
+	$(PY) analysis/hopfield_qr_masked.py
+
+# Figuras del experimento con mascara; leen hopfield-qr-masked.
+$(RES)/hopfield/qr_masked/figures/masked_recovery.svg: | $(RES)/hopfield/qr_masked/recall.csv
+	$(PY) analysis/hopfield_qr_masked_figures.py
+
 # Arma el informe HTML (resumen, tabla de preguntas del enunciado y el detalle de cada fase) en
 # analysis/results/informe/informe.html (no se versiona). Necesita los resultados de make results.
 informe: venv
@@ -266,7 +286,8 @@ SLIDE_SENTINELS := \
 	$(RES)/oja/slide/oja_vs_pc1.svg \
 	$(RES)/campaigns/slide/shortlists_som.svg \
 	$(RES)/hopfield/figures/slide/spurious.svg \
-	$(RES)/hopfield/qr/figures/slide/majority.svg
+	$(RES)/hopfield/qr/figures/slide/majority.svg \
+	$(RES)/hopfield/qr_masked/figures/slide/masked_recovery.svg
 
 # Guion de la presentacion en el informe: el guion viaja como notas del orador de cada slide (06-ARTIFACT-FORMAT.md,
 # notes_supported: true) y ademas, por decision del usuario en el checkpoint de 06-12, el informe lleva el anexo
@@ -301,6 +322,10 @@ $(RES)/hopfield/figures/slide/spurious.svg: | $(RES)/hopfield/figures/spurious.s
 # Variantes de slide de Hopfield sobre los 5 QR.
 $(RES)/hopfield/qr/figures/slide/majority.svg: | $(RES)/hopfield/qr/figures/majority.svg
 	$(PY) analysis/hopfield_qr_figures.py
+
+# Variantes de slide del experimento con mascara.
+$(RES)/hopfield/qr_masked/figures/slide/masked_recovery.svg: | $(RES)/hopfield/qr_masked/figures/masked_recovery.svg
+	$(PY) analysis/hopfield_qr_masked_figures.py
 
 # Regenera solo lo que falta (resultados y figuras de slide), despues rearma slides e informe en segundos. slides.py
 # corre antes que informe.py para que notes.md exista si INFORME_FLAGS pide el anexo. Publicar los dos Artifacts es un

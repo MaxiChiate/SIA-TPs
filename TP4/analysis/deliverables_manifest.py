@@ -6,7 +6,7 @@ No I/O at import: informe.py reads these tables and checks them against the real
 - `QUESTIONS`: the 25 literal questions of the enunciado with the anchors that answer them. An anchor is
   `f<n>-s<a>-<b>` for the heading "<a>.<b> ..." of fragment n (informe.make_slugify).
 - `FIGURES`: every report figure of the fragments, with the make target that regenerates it, its config and
-  its seed. `path` is relative to analysis/results; `slide` marks the 23 figures that also have a slide
+  its seed. `path` is relative to analysis/results; `slide` marks the 25 figures that also have a slide
   variant (`slide_path`, written by plots_style next to the report figure).
 
 CLI: `python analysis/deliverables_manifest.py questions` prints the review sheet a human compares with the
@@ -173,7 +173,7 @@ QUESTIONS = (
         "Q2.3",
         "Analizar la alteración de los códigos QR mediante la adición de ruido aleatorio con distintos niveles "
         "de ruido, simulando el deterioro de los mismos.",
-        "2.1", 5, ("f5-s4", "f5-s5"),
+        "2.1", 5, ("f5-s4", "f5-s5", "f5-s7"),
     ),
     Question(
         "Q2.4",
@@ -220,6 +220,9 @@ _QR_SEEDS = (_QR[0], "1-10")
 _QR_ENERGY = (_QR[0], "1 (ENERGY_TRACE_SEED de analysis/hopfield_qr.py)")
 _QR_SHIFT = (_QR[0], "1 (SHIFT_SEED de analysis/hopfield_qr_limits.py)")
 _QR_MAJORITY = (_QR[0], "sin seed (atractor mayoría determinista)")
+_QR_MASKED = ("analysis/hopfield_qr_masked.py (experimento posterior, KD-9; no preregistrado)",
+              "sin seed (máscara y trío por regla fija)")
+_QR_MASKED_SEEDS = (_QR_MASKED[0], "1-10")
 
 FIGURES = (
     Figure(
@@ -398,21 +401,21 @@ FIGURES = (
     Figure(
         key="letters_overlaps", path="hopfield/figures/overlaps.svg", make_target="hopfield-figures",
         config=_LETTERS[0], seed=_LETTERS[1], fragment=4, anchor="f4-s4",
-        alt="Dos matrices de parecido entre las cuatro letras de cada set",
-        caption="Parecidos entre pares de letras del set separado y del set correlacionado.",
+        alt="Dos matrices de productos escalares entre las cuatro letras de cada set",
+        caption="Productos escalares entre pares de letras del set separado y del set correlacionado.",
         slide=True,
     ),
     Figure(
         key="letters_max_overlap_hist", path="hopfield/figures/max_overlap_hist.svg", make_target="hopfield-figures",
         config=_LETTERS[0], seed=_LETTERS[1], fragment=4, anchor="f4-s4",
-        alt="Histograma del máximo parecido entre los subconjuntos de cuatro letras",
+        alt="Histograma del máximo producto escalar normalizado entre los subconjuntos de cuatro letras",
         caption="Dónde caen los dos sets entre todos los subconjuntos de cuatro letras.",
         slide=False,
     ),
     Figure(
         key="letters_cross_terms", path="hopfield/figures/cross_terms.svg", make_target="hopfield-figures",
         config=_LETTERS[0], seed=_LETTERS[1], fragment=4, anchor="f4-s4",
-        alt="Mapas de 5×5 del margen de cada píxel con el término de cruce de cada letra",
+        alt="Mapas de 5×5 del margen de cada píxel con el crosstalk de cada letra",
         caption="Margen de cada píxel de cada letra, con una sola escala de color.",
         slide=False,
     ),
@@ -440,8 +443,8 @@ FIGURES = (
     Figure(
         key="letters_capacity_p4", path="hopfield/figures/capacity_p4.svg", make_target="hopfield-figures",
         config=_LETTERS_SEEDS[0], seed=_LETTERS_SEEDS[1], fragment=4, anchor="f4-s6",
-        alt="Los subconjuntos de cuatro letras repartidos según su máximo parecido y su estabilidad",
-        caption="Capacidad con cuatro patrones: los subconjuntos posibles frente a su máximo parecido.",
+        alt="Los subconjuntos de cuatro letras repartidos según su máximo producto escalar normalizado y su estabilidad",
+        caption="Capacidad con cuatro patrones: los subconjuntos posibles frente a su máximo producto escalar normalizado.",
         slide=True,
     ),
     Figure(
@@ -454,7 +457,7 @@ FIGURES = (
     Figure(
         key="letters_spurious", path="hopfield/figures/spurious.svg", make_target="hopfield-figures",
         config=_LETTERS_SEEDS[0], seed=_LETTERS_SEEDS[1], fragment=4, anchor="f4-s7",
-        alt="Tres ejemplos de consulta muy ruidosa con su estado final y sus parecidos con las cuatro letras",
+        alt="Tres ejemplos de consulta muy ruidosa con su estado final y sus productos escalares con las cuatro letras",
         caption="Los tres ejemplos fijados de estado espurio.",
         slide=True,
     ),
@@ -468,8 +471,8 @@ FIGURES = (
     Figure(
         key="qr_overlaps", path="hopfield/qr/figures/overlaps.svg", make_target="hopfield-qr-figures",
         config=_QR[0], seed=_QR[1], fragment=5, anchor="f5-s2",
-        alt="Matriz de parecidos de 5×5 entre los cinco QR",
-        caption="Parecido entre cada par de QR.",
+        alt="Matriz de productos escalares de 5×5 entre los cinco QR",
+        caption="Producto escalar normalizado entre cada par de QR.",
         slide=True,
     ),
     Figure(
@@ -498,6 +501,22 @@ FIGURES = (
         config=_QR_SHIFT[0], seed=_QR_SHIFT[1], fragment=5, anchor="f5-s6",
         alt="Recuperación de un QR desplazado uno y dos píxeles bajo la pseudo-inversa",
         caption="Sensibilidad de la pseudo-inversa a corrimientos de un QR.",
+        slide=True,
+    ),
+    Figure(
+        key="qr_masked_patterns", path="hopfield/qr_masked/figures/masked_patterns.svg",
+        make_target="hopfield-qr-masked-figures",
+        config=_QR_MASKED[0], seed=_QR_MASKED[1], fragment=5, anchor="f5-s7",
+        alt="La máscara de píxeles que cambian entre los cinco QR y los tres QR elegidos sobre esa máscara",
+        caption="Los píxeles que la red guarda en el experimento con máscara.",
+        slide=True,
+    ),
+    Figure(
+        key="qr_masked_recovery", path="hopfield/qr_masked/figures/masked_recovery.svg",
+        make_target="hopfield-qr-masked-figures",
+        config=_QR_MASKED_SEEDS[0], seed=_QR_MASKED_SEEDS[1], fragment=5, anchor="f5-s7",
+        alt="Recuperación exacta de Hebb sobre la parte variable de tres QR frente al ruido, y la ablación a ruido cero",
+        caption="Hebb con máscara y tres QR: recuperación por nivel de ruido y qué paso hace falta.",
         slide=True,
     ),
 )

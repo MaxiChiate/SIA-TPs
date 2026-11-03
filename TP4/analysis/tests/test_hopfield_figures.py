@@ -35,7 +35,6 @@ def fixture_design():
         recall_levels=(0.0, 0.12, 0.24, 0.36),
         recall_trials=3,
         seeds=(1, 2),
-        updates=("async", "sync"),
         trace_trials=1,
         capacity_p=4,
         capacity_level=0.12,
@@ -47,7 +46,6 @@ def fixture_design():
         spurious_levels=(0.4, 0.48),
         spurious_trials=5,
         spurious_seeds=(1, 2),
-        spurious_update="async",
     )
 
 
@@ -217,8 +215,8 @@ def test_energy_panels_are_the_first_traced_trials(results):
             assert panel["k"] == k
             assert panel["energies"][0] == panel["e_start"]
             assert panel["energies"][-1] == panel["e_final"]
-            # the async energy never rises
-            assert all(b <= a + 1e-9 for a, b in zip(panel["energies"], panel["energies"][1:]))
+            # one logged energy per synchronous step, plus the query
+            assert len(panel["energies"]) == panel["sweeps"] + 1
             assert panel["sweep_ends"][-1] == len(panel["energies"]) - 1
 
 

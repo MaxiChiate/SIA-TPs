@@ -360,7 +360,7 @@ FINDINGS: tuple[Finding, ...] = (
     ),
     Finding(
         "Letras",
-        "En letras de {letters.n_pixels} píxeles, el set separado {letters.separated_set} tiene máximo |parecido| "
+        "En letras de {letters.n_pixels} píxeles, el set separado {letters.separated_set} tiene máximo |producto escalar normalizado| "
         "{letters.separated_max_overlap} y margen mínimo {letters.separated_min_margin}; el correlacionado "
         "{letters.correlated_set} llega a {letters.correlated_max_overlap}. Entre todos los subconjuntos de cuatro "
         "letras, {letters.p4_stable_4} ({letters.p4_all_stable_fraction}) tienen las cuatro estables.",
@@ -374,27 +374,43 @@ FINDINGS: tuple[Finding, ...] = (
     ),
     Finding(
         "QR, Hebb",
-        "Con la regla de Hebb la recuperación exacta de los {qr.n_qr} QR es {qr.hebb_exact_noise0} incluso sin ruido: no "
-        "son puntos fijos de la red. Siempre cae al mismo atractor, la mayoría píxel a píxel de los QR, a entre "
-        "{qr.majority_hamming_min} y {qr.majority_hamming_max} píxeles de cada uno (de {qr.n_pixels}); la causa es la "
-        "correlación entre los QR (máximo |parecido| {qr.max_abs_overlap}).",
-        "f5-s4",
+        "Una red de Hopfield devuelve el patrón almacenado más parecido a la consulta solo si los patrones son "
+        "atractores, y con la regla de Hebb eso exige que sean casi ortogonales (crosstalk cercano a cero). Los "
+        "{qr.n_qr} QR se parecen demasiado entre sí (producto escalar normalizado medio {qr.mean_abs_overlap}, máximo "
+        "{qr.max_abs_overlap}; el {qr.identical_fraction} de los píxeles es igual en los {qr.n_qr}), así que el crosstalk "
+        "supera a la señal y ninguno es punto fijo: la recuperación exacta es {qr.hebb_exact_noise0} incluso sin ruido. "
+        "La red siempre converge, pero a un atractor espurio que combina los {qr.n_qr} recuerdos (la mayoría píxel a "
+        "píxel), a entre {qr.majority_hamming_min} y {qr.majority_hamming_max} píxeles de cada QR (de {qr.n_pixels}). "
+        "Es el caso de falla que anticipa la teoría, no un error de la implementación.",
+        "f5-s6",
         True,
     ),
     Finding(
         "QR, pseudo-inversa",
-        "La pseudo-inversa sostiene {qr.pinv_exact_noise0} de recuperación exacta hasta el nivel de ruido "
-        "{qr.pinv_last_full_noise}, pero en el nivel {qr.noise_high} cae a {qr.pinv_at_high}. Una tabla de búsqueda por "
-        "distancia de Hamming, sin dinámica, queda en {qr.hamming_at_high} en ese mismo nivel: iguala o supera a la red "
-        "en todo el rango evaluado.",
+        "El problema está en los pesos, no en la dinámica. Con la pseudo-inversa, W = K (KᵀK)⁻¹ Kᵀ, el crosstalk se anula "
+        "aunque los QR no sean ortogonales: los {qr.n_qr} vuelven a ser atractores y la misma red recupera el QR "
+        "consultado en el {qr.pinv_exact_noise0} de los casos hasta el nivel de ruido {qr.pinv_last_full_noise}. Con "
+        "ruido {qr.noise_high} cae a {qr.pinv_at_high}.",
         "f5-s5",
-        True,
+    ),
+    Finding(
+        "QR, Hebb con máscara",
+        "En un experimento posterior, no preregistrado, la red guarda solo los {qrm.n_varying} píxeles que cambian entre "
+        "los QR (los {qrm.n_common} comunes se completan desde la plantilla) y solo el trío menos parecido "
+        "({qrm.chosen_names}). Así los {qrm.n_chosen} QR son puntos fijos de Hebb y la recuperación exacta es "
+        "{qrm.hebb_exact_noise0} hasta ruido {qrm.hebb_last_full_noise} y {qrm.hebb_at_0_40} en {qrm.noise_mid}. Hace falta todo junto: con "
+        "los 5 QR enmascarados son punto fijo {qrm.fixed_masked_all}, y con los 3 completos {qrm.fixed_full_subset}. "
+        "Achica el problema, no lo resuelve para los 5 QR, y un lookup de Hamming sobre los mismos patrones sigue por "
+        "encima ({qrm.hamming_at_0_40} en {qrm.noise_mid}).",
+        "f5-s7",
     ),
     Finding(
         "QR, límites",
-        "Un corrimiento de un píxel ya deja la consulta a {qr.shift1_query_hamming} de {qr.n_pixels} píxeles de la fuente "
-        "y el estado que recupera la pseudo-inversa queda todavía más lejos, a {qr.shift1_recovered_hamming}. No se "
-        "corrió ningún decodificador de QR: no se afirma que un QR recuperado se pueda escanear.",
+        "Una tabla de búsqueda por distancia de Hamming, sin dinámica, queda en {qr.hamming_at_high} con ruido "
+        "{qr.noise_high}: iguala o supera a la red en todo el rango evaluado. Un corrimiento de un píxel ya deja la "
+        "consulta a {qr.shift1_query_hamming} de {qr.n_pixels} píxeles de la fuente y el estado que recupera la "
+        "pseudo-inversa queda todavía más lejos, a {qr.shift1_recovered_hamming}. No se corrió ningún decodificador "
+        "sobre los estados recuperados: no se afirma que un QR recuperado se pueda escanear.",
         "f5-s6",
         True,
     ),

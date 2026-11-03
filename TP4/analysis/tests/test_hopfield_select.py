@@ -277,7 +277,23 @@ def test_identity_refuses_later_commit_on_code(tmp_path):
     (repo / h.SELECT_FILE).write_text("SET_SIZE = 5\n")
     git(repo, "add", h.SELECT_FILE)
     git(repo, "commit", "-q", "-m", "edit the code")
-    assert "after the rule commit" in refused(repo)
+    assert "without re-registering" in refused(repo)
+
+
+def test_identity_accepts_a_re_registration_of_code_and_text_together(tmp_path):
+    repo = tmp_path / "repo"
+    make_repo(repo, FILES)
+    (repo / h.SELECT_FILE).write_text("SET_SIZE = 5\n")
+    (repo / h.RULE_FILE).write_text(RULE_TEXT.replace("la regla", "la regla re-registrada"))
+    git(repo, "add", h.SELECT_FILE, h.RULE_FILE)
+    git(repo, "commit", "-q", "-m", "re-register")
+    ident = h.rule_identity(repo_dir=repo)
+    assert ident["rule_commit"] == git(repo, "rev-parse", "HEAD")
+    # and the re-registered text is frozen from then on
+    (repo / h.RULE_FILE).write_text(RULE_TEXT)
+    git(repo, "add", h.RULE_FILE)
+    git(repo, "commit", "-q", "-m", "edit the rule again")
+    assert "differs" in refused(repo)
 
 
 def test_identity_refuses_select_added_later(tmp_path):
