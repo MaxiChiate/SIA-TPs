@@ -1,0 +1,16 @@
+{
+  "train_dataset": "data/ex3_base_train_union.csv",
+  "validation_dataset": "data/ex3_base_validation.csv",
+  "activation": "logistic",
+  "optimizer": "adaptive_eta",
+  "eta": 0.5,
+  "eta_increase": 0.05,
+  "eta_decrease": 0.5,
+  "eta_patience_up": 3,
+  "eta_patience_down": 3,
+  "epochs": 50,
+  "batch_size": 1,
+  "shuffle": true,
+  "hidden_layers": [64],
+  "seed": 1
+}
