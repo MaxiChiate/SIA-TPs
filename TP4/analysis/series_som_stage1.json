@@ -1,7 +1,8 @@
 {
-  "_comment": "Stage 1 of the Kohonen sweep (D-06): k = 2..8 x {step, gaussian}, radius0 = max(1, k/2), radius_final 1, eta 0.5 -> 0.01, 260 epochs, seeds 1..10. Committed with the rule of deliverables/02-kohonen.md section 2 and analysis/som_select.py before any trained SOM runs on the creators' data (D-10).",
+  "_comment": "Stage 1 of the Kohonen sweep (D-06): k = 2..8 x {step, gaussian}, radius0 = max(1, k/2), radius_final 1, eta 0.5 -> 0.01, 260 epochs, seeds 1..10. Committed with the rule of deliverables/02-kohonen.md section 2 and analysis/som_select.py before any trained SOM runs on the creators' data (D-10). Re-applied (rule text and som_select.py unchanged) on the scores of the first 7 principal components of the PCA of the 17 variables left by the correlation threshold: the input is datos/prepared/creadores_pca_scores.csv, committed here before the new stage 1 runs.",
   "base_config": "../neuron/config.json.kohonen.example",
   "set": {
+    "input": "../datos/prepared/creadores_pca_scores.csv",
     "eta0": 0.5,
     "eta_final": 0.01,
     "epochs": 260

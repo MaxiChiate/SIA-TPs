@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `sweep.py` corre una serie con varias seeds para cualquier modelo y deja un `summary.csv` con las claves de `metrics.json` y las claves variadas; el `.venv` se recrea con dependencias fijadas y `make test` pasa.
   3. El loader falla con un error claro si `creadores.csv` no tiene n=50 filas y 33 columnas; el EDA muestra distribuciones y correlaciones, y la tabla de auditoría documenta las 5 dependencias lineales exactas y la regla escrita de selección de variables.
   4. Existe la matriz z-scored con su scaler guardado (`.meta.json`), y un creador nuevo se puede mapear al mismo espacio usando solo ese archivo.
-  5. La PCA por autovalores muestra scree, loadings y biplot PC1/PC2 con una justificación escrita de si se reduce dimensionalidad y cómo se leen las componentes; la corrida de sensibilidad con las 31 columnas está etiquetada como tal y comparada contra el conjunto auditado.
+  5. La PCA por autovalores muestra eigenvalues plot, loadings y biplot PC1/PC2 con una justificación escrita de si se reduce dimensionalidad y cómo se leen las componentes; la corrida de sensibilidad con las 31 columnas está etiquetada como tal y comparada contra el conjunto auditado.
 
 **Plans:** 8/8 plans complete
 
@@ -47,13 +47,13 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [x] 01-05-PLAN.md — Stubs kohonen y hopfield con claves estrictas por modelo; configs de oja y kohonen sobre `datos/prepared`
-- [x] 01-06-PLAN.md — EDA (distribuciones, correlaciones, dependencias), tabla de auditoría generada, `make prepare`/`make eda` y fragmento escrito con la regla de PCA fijada antes del scree
+- [x] 01-06-PLAN.md — EDA (distribuciones, correlaciones, dependencias), tabla de auditoría generada, `make prepare`/`make eda` y fragmento escrito con la regla de PCA fijada antes del eigenvalue plot
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [x] 01-07-PLAN.md — Una serie por modelo desde la raíz, `make`/`make sweep`/`make clean`, `make test` (3 tests de C + pytest) y `make debug`
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [x] 01-08-PLAN.md — PCA por autovalores (scree, loadings, biplot, decisión 80 %/Kaiser), sensibilidad con 31 columnas e interpretación escrita
+- [x] 01-08-PLAN.md — PCA por autovalores (eigenvalues plot, loadings, biplot, decisión 80 %), sensibilidad con 31 columnas e interpretación escrita
 
 ### Phase 2: Kohonen SOM
 
@@ -77,7 +77,7 @@ Plans:
 - [x] 02-01-PLAN.md — SOM real en C (tracer, después del commit de la regla): 7 claves estrictas, entrenamiento escalón/gaussiana, QE/TE/ocupación, occupancy.csv y trace.csv, tests C bajo ASan/UBSan y neuron/README
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [x] 02-02-PLAN.md — Lector de corridas y recomputación en numpy de QE/TE/ocupación, estabilidad entre seeds (Spearman con empates, medoide) y driver de QE leave-one-out con un directorio temporal por entrenamiento
+- [x] 02-02-PLAN.md — Lector de corridas y recomputación en numpy de QE/TE/ocupación, estabilidad entre seeds (rank-correlation (retired) con empates, medoide) y driver de QE leave-one-out con un directorio temporal por entrenamiento
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [x] 02-04-PLAN.md — Driver de etapas con guardia: etapa 1 (140 corridas + LOO + estabilidad + selección), serie de la etapa 2 generada y commiteada, robustez; secciones 3 y 4
@@ -109,7 +109,7 @@ Plans:
 - [x] 03-02-PLAN.md — Regla de campañas: checkpoint de decisión (términos y puntajes compuestos), regla como código con guardia y texto entre marcadores; el usuario hace el commit de la regla antes de calcular ninguna lista
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [x] 03-03-PLAN.md — `make oja`: 10 seeds, abs(cos) y Spearman contra PC1, dispersión entre seeds, convergencia por época con su figura y margen del pivote
+- [x] 03-03-PLAN.md — `make oja`: 10 seeds, abs(cos) y rank-correlation (retired) contra PC1, dispersión entre seeds, convergencia por época con su figura y margen del pivote
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [x] 03-04-PLAN.md — Evidencia del máximo con los dos signos (tracer hasta la sección 3, "No" primero), figura índice vs PC1 y secciones 1-2

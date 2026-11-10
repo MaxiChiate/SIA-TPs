@@ -39,7 +39,7 @@
 
 **How to avoid:** Standardize (z-score) every variable that enters PCA, SOM and Oja, using one `ddof` convention everywhere (1 is natural; state it, because the choice rescales covariance by n/(n-1)). Store the per-column mean and std. They are needed later for the maintenance question (new creators must be projected with the same scaler). Report PCA on the correlation matrix, not covariance. Consider `log10` for the skewed size family (followers, reach, impressions, video views, prices, estimated reach; skew up to 2.0); (measured) log lifts PC1 from 48% to 52%, a small effect, so decide once, document, and do not over-engineer.
 
-**Warning signs:** PC1 loading concentrated on one variable; scree plot with PC1 above 95%; U-matrix gradient aligned to a single price-like variable.
+**Warning signs:** PC1 loading concentrated on one variable; eigenvalue plot with PC1 above 95%; U-matrix gradient aligned to a single price-like variable.
 
 **Phase to address:** P1 (decided there, reused by P2 and P3).
 
@@ -56,7 +56,7 @@
 
 Dropping the first three still leaves rank 25 of 27, because the two compositions remain. In addition, `estimated_argentina_reach = average_reach * argentina_audience_pct / 100` is a nonlinear product (not rank-deficient, r = 0.87 with reach), `followers` / `average_reach` / `average_impressions` / `average_video_views` / `price_usd` are mutually correlated at 0.82 to 0.997, and `video_posts_pct` / `short_form_posts_pct` / `trend_posts_pct` at 0.95 to 0.97.
 
-Consequences: 5 near-zero eigenvalues (about 1e-16) whose eigenvectors are numerical noise; Kaiser/scree counts and "components for 80%" are polluted; any code that inverts the covariance or whitens divides by about 0; and PC1 plus the SOM main axis become an inflated "size" axis (7+ near-duplicate variables vs 4 topic variables) that can hide the topic structure the campaigns need.
+Consequences: 5 near-zero eigenvalues (about 1e-16) whose eigenvectors are numerical noise; eigenvalue plot counts and "components for 80%" are polluted; any code that inverts the covariance or whitens divides by about 0; and PC1 plus the SOM main axis become an inflated "size" axis (7+ near-duplicate variables vs 4 topic variables) that can hide the topic structure the campaigns need.
 
 **Why it happens:** The CSV looks like 31 independent features. The derived-variable relations are stated in prose in the statement, not in the data.
 
@@ -133,7 +133,7 @@ Consequences: 5 near-zero eigenvalues (about 1e-16) whose eigenvectors are numer
 
 **Why it happens:** Oja is presented as "a neuron learns PC1", which hides the centering assumption; sign symmetry is invisible when only the magnitude of a cosine is printed.
 
-**How to avoid:** Use the same centered and standardized matrix as PCA. Shuffle samples each epoch, decay eta (for example 0.01 down to 0.0005), run until |w| ~ 1 and the change in w per epoch is below tolerance, then renormalize w to unit length before computing the index. Validate against `eigh` of the correlation matrix: report |cos(w, v1)|, then fix the orientation by a convention written down in advance (for example make the `followers` or `average_reach` loading positive) and report the PCA score under the same convention. Report Spearman rank correlation (measured: 0.92 between PC1 score and followers rank) and top-k overlap between the Oja index and PC1, which should be about identical when converged; any gap is convergence error or a centering bug, not a "finding".
+**How to avoid:** Use the same centered and standardized matrix as PCA. Shuffle samples each epoch, decay eta (for example 0.01 down to 0.0005), run until |w| ~ 1 and the change in w per epoch is below tolerance, then renormalize w to unit length before computing the index. Validate against `eigh` of the correlation matrix: report |cos(w, v1)|, then fix the orientation by a convention written down in advance (for example make the `followers` or `average_reach` loading positive) and report the PCA score under the same convention. Report rank-correlation (retired) rank correlation (measured: 0.92 between PC1 score and followers rank) and top-k overlap between the Oja index and PC1, which should be about identical when converged; any gap is convergence error or a centering bug, not a "finding".
 
 **Warning signs:** cos(w, PC1) below 0.99; |w| drifting from 1; NaN; sign flipping between seeds; ranking reversed vs PCA.
 
@@ -242,7 +242,7 @@ Consequences: 5 near-zero eigenvalues (about 1e-16) whose eigenvectors are numer
 ## Moderate Pitfalls
 
 ### Pitfall 16: Reading PCA components and the biplot wrong
-**What goes wrong:** (measured, z-scored) PC1 48%, PC2 9.8%, PC3 8.6%, so 2D shows only 58%; 6 components give 80%, 10 give 90%, and 7 eigenvalues exceed 1 (Kaiser). "Reduce to 2D" is justified for visualization, not for lossless reduction. Component signs are arbitrary (eigh / SVD can return either sign, and across runs or libraries they flip). Biplot arrows are scaled for readability, so arrow length is not directly the loading. 31 arrows are unreadable.
+**What goes wrong:** (measured, z-scored) PC1 48%, PC2 9.8%, PC3 8.6%, so 2D shows only 58%; 6 components give 80%, 10 give 90%, and 7 eigenvalues exceed 1 (retired criterion). "Reduce to 2D" is justified for visualization, not for lossless reduction. Component signs are arbitrary (eigh / SVD can return either sign, and across runs or libraries they flip). Biplot arrows are scaled for readability, so arrow length is not directly the loading. 31 arrows are unreadable.
 **Prevention:** Report cumulative variance and say what is kept for which purpose (viewing: 2 PCs; clustering: the selected features, not the PCs). Fix a sign convention (largest-|loading| positive, or followers positive). Label only the top-loading arrows, show the loadings table, name the components by loadings, not by guesses. Do not read distance in biplot as distance in data (it is a 58% projection).
 **Phase:** P1.
 

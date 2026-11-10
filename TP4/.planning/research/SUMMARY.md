@@ -31,7 +31,7 @@ C11 con gcc y make (compatible con Make 3.81), modelado sobre TP3 y reutilizando
 Detalle en `FEATURES.md`.
 
 **Must have (table stakes):**
-- EDA con regla escrita de selección de variables, z-score y PCA con scree, loadings y biplot
+- EDA con regla escrita de selección de variables, z-score y PCA con eigenvalues plot, loadings y biplot
 - Kohonen con barrido de hiperparámetros multi-seed, QE y TE, mapa de hits, matriz U, planos de componentes y perfiles por región contrastados con PC1/PC2
 - Oja con evidencia de convergencia, índice ordenado y comparación contra PC1
 - Decisiones de campaña, comparación contra la estrategia solo por `followers` y respuestas sobre mantenimiento
@@ -72,7 +72,7 @@ Detalle en `PITFALLS.md`.
 
 ### Phase 1: Foundation y auditoría de datos
 **Rationale:** Todo lo demás depende del entorno, del contrato C/Python y de las decisiones de variables.
-**Delivers:** `.venv`, esqueleto C, `sweep.py` generalizado, lazo extremo a extremo con un modelo trivial; EDA, tabla de auditoría de variables, z-score y scaler; PCA con scree, loadings y biplot.
+**Delivers:** `.venv`, esqueleto C, `sweep.py` generalizado, lazo extremo a extremo con un modelo trivial; EDA, tabla de auditoría de variables, z-score y scaler; PCA con eigenvalues plot, loadings y biplot.
 **Addresses:** EDA, preprocesamiento, PCA.
 **Avoids:** pitfalls 2, 3, 4, 16, 17, 18, 21.
 

@@ -7,7 +7,7 @@ SERIES ?= analysis/series_smoke_oja.json
 
 .DEFAULT_GOAL := all
 
-.PHONY: all venv prepare eda pca som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr hopfield-qr-limits hopfield-qr-figures hopfield-qr-masked hopfield-qr-masked-figures results informe slides deliverables
+.PHONY: all venv prepare eda pca corr-prune som-stage1 som-stage2 som-figures som-profiles oja campaigns maintenance sweep test clean letters hopfield-letters hopfield-figures qr hopfield-qr hopfield-qr-limits hopfield-qr-figures hopfield-qr-masked hopfield-qr-masked-figures results informe slides deliverables
 
 # Un make sin argumentos en TP4/ deja un clone nuevo listo con un solo comando: crea .venv,
 # regenera datos/prepared/ (lo leen los ejemplos de kohonen y oja) y compila el binario unico.
@@ -52,23 +52,28 @@ eda: venv
 pca: prepare
 	$(PY) analysis/pca.py
 
+# Sensibilidad de la PCA a podar variables correlacionadas por umbral de |r| (tabla de la slide pca-prune); solo la PCA,
+# no rehace el SOM ni Oja. Escribe analysis/results/corr_prune/ (no se versiona) y lee datos/prepared/.
+corr-prune: prepare
+	$(PY) analysis/corr_prune.py
+
 # Etapa 1 del SOM (140 corridas, leave-one-out y estabilidad) con la regla de eleccion ya commiteada:
 # se niega a correr si deliverables/02-kohonen.md, analysis/som_select.py o la serie estan sin commitear.
-som-stage1: prepare
+som-stage1: pca
 	$(PY) analysis/som_stage.py run analysis/series_som_stage1.json --select
 
 # Etapa 2 (robustez del schedule sobre la k elegida): ademas se niega a correr si la regla cambio desde la etapa 1.
-som-stage2: prepare
+som-stage2: pca
 	$(PY) analysis/som_stage.py run analysis/series_som_stage2.json
 
 # Figuras de la grilla elegida (mapa de hits + matriz U, planos de componentes, curvas de la etapa 1, traza): necesita
 # selection.json de make som-stage1 y se niega a correr si la regla cambio o no hay grilla elegida.
-som-figures: prepare
+som-figures: pca
 	$(PY) analysis/som_figures.py
 
 # Regiones, perfiles en unidades originales y contraste con PC1/PC2 de la grilla elegida: necesita selection.json de
 # make som-stage1 y se niega a correr si la regla cambio o no hay grilla elegida.
-som-profiles: prepare
+som-profiles: pca
 	$(PY) analysis/som_profiles.py
 
 # Oja en C con 10 seeds (analysis/series_oja.json), comparacion con PC1, dispersion, convergencia y evidencia del
@@ -149,6 +154,7 @@ RESULTS_SENTINELS := \
 	$(PREP)/creadores_zscore.csv \
 	$(RES)/eda/audit_table.md \
 	$(RES)/pca/audited/decision.json \
+	$(RES)/corr_prune/sensitivity.json \
 	$(RES)/som/series_som_stage1/selection.json \
 	$(RES)/som/series_som_stage2/robustness.json \
 	$(RES)/som/figures/map.svg \
@@ -183,8 +189,16 @@ $(RES)/eda/audit_table.md: | .venv/.installed
 $(RES)/pca/audited/decision.json: | $(PREP)/creadores_zscore.csv
 	$(PY) analysis/pca.py
 
+# Sensibilidad de la PCA al umbral de correlacion; lee datos/prepared/.
+$(RES)/corr_prune/sensitivity.json: | $(PREP)/creadores_zscore.csv
+	$(PY) analysis/corr_prune.py
+
+# Entrada del SOM: los scores de las componentes de la PCA sin redundantes (los escribe pca.py).
+$(PREP)/creadores_pca_scores.csv: | $(RES)/pca/pruned/decision.json
+	@test -f $@ || $(PY) analysis/pca.py
+
 # Etapa 1 del SOM (140 corridas) con la regla commiteada; si falta el centinela y la regla cambio, el driver se niega.
-$(RES)/som/series_som_stage1/selection.json: | $(PREP)/creadores_zscore.csv
+$(RES)/som/series_som_stage1/selection.json: | $(PREP)/creadores_pca_scores.csv
 	$(PY) analysis/som_stage.py run analysis/series_som_stage1.json --select
 
 # Etapa 2 del SOM (robustez del schedule sobre la k elegida).

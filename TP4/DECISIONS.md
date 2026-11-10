@@ -176,11 +176,11 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 **Dónde:** [01-CONTEXT.md](.planning/phases/01-fundaci-n-auditor-a-de-datos-y-pca/01-CONTEXT.md) · [fragmento 01 §4](deliverables/01-datos-pca.md)
 
-### F1 D-12 — PCA por autovalores con regla de decisión escrita antes del scree
+### F1 D-12 — PCA por autovalores con regla de decisión escrita antes de mirar los autovalores
 
-**Qué:** la PCA se hace sobre la matriz de correlación (= covarianza del z-score) por autovalores, verificada con `np.linalg.eigh`. El criterio de 80 % de varianza acumulada fija k; Kaiser (autovalor > 1) funciona como control, y si difieren se reporta la discrepancia.
+**Qué:** la PCA se hace sobre la matriz de correlación (= covarianza del z-score) por autovalores, verificada con `np.linalg.eigh`. El criterio de 80 % de varianza acumulada fija k; ese umbral es una convención del equipo, porque la teoría del curso da la proporción de varianza de cada componente pero no fija un umbral.
 
-**Por qué:** la regla se escribió antes de mirar el scree para no elegir k a posteriori.
+**Por qué:** la regla se escribió antes de mirar los autovalores para no elegir k a posteriori.
 
 **Dónde:** [01-CONTEXT.md](.planning/phases/01-fundaci-n-auditor-a-de-datos-y-pca/01-CONTEXT.md) · [fragmento 01 §5](deliverables/01-datos-pca.md)
 
@@ -191,6 +191,16 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 **Por qué:** respetar el enunciado (los métodos usan todas las variables) sin ampliar el alcance de la Fase 2.
 
 **Dónde:** [01-CONTEXT.md](.planning/phases/01-fundaci-n-auditor-a-de-datos-y-pca/01-CONTEXT.md) · [fragmento 01 §5 y §6](deliverables/01-datos-pca.md)
+
+### F1 D-14 — Sensibilidad de la PCA a podar por correlación (corrección posterior a la entrega)
+
+**Qué:** además de las 5 dependencias exactas (F1 D-08), se probó podar por umbral de correlación sobre las 26 variables auditadas. La regla es iterativa: en cada umbral se toma el par con mayor |r| ≥ τ y sale la variable de ese par con mayor |r| medio con las demás (empate: la de columna mayor), hasta que ningún par llega a τ. Se calculó la PCA para τ = 0,95; 0,90; 0,85; 0,80; 0,70; 0,60 y 0,50 (`make corr-prune`, `analysis/corr_prune.py`) y la tabla va en la slide `pca-prune`. No se rehizo el SOM, Oja ni las campañas con ningún τ: el umbral que se use para rehacer el ejercicio 1 (0,70 u 0,80) se decide aparte.
+
+**Por qué:** la corrección recibida fue que sacar solo las variables triviales no alcanza como criterio. El umbral no sale de la teoría del curso: es una decisión del equipo. Se justifica con la convención de |r| ≥ 0,8 como correlación fuerte (el mismo `STRONG_THRESHOLD` del EDA) y con el condicionamiento de la matriz (el número de condición baja de unos 856 con 0,95 a unos 108 con 0,80). A 0,80 `price_usd` sale con |r| = 0,822 con `followers`, así que ese resultado no es robusto en el borde. Un umbral muy bajo deja pocas variables y se pierde información real, no redundancia: con 0,50 no queda tamaño ni engagement por mil y PC1 baja al 27,8 %.
+
+**Umbral elegido (2026-10-30):** |r| ≥ 0,80. Con él salen 14 de las 31 variables (las 5 exactas y 9 por correlación) y quedan 17; la slide `eda` muestra la matriz de correlación como números, el umbral y las variables que salen. Todavía no se rehízo la PCA, el SOM, Oja ni las campañas con esas 17: hasta entonces el resto del deck usa el conjunto auditado de 26.
+
+**Dónde:** [`analysis/corr_prune.py`](analysis/corr_prune.py) · slide `pca-prune` · F1 D-08 y D-10 siguen valiendo para el conjunto auditado de 26.
 
 ## Fase 2 — Kohonen (SOM)
 
@@ -228,7 +238,7 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 ### F2 D-05 — Inicialización con muestras del conjunto de entrenamiento
 
-**Qué:** los prototipos arrancan en muestras del conjunto de entrenamiento (SOM-01). La distancia es euclídea sobre las 26 variables auditadas con z-score.
+**Qué:** los prototipos arrancan en muestras del conjunto de entrenamiento (SOM-01): cada neurona toma un creador al azar, sin repetir mientras alcancen. La distancia es euclídea sobre los scores de PC1 a PC7 de la PCA de las 17 variables, sin reescalar (F2 D-16).
 
 **Por qué:** es la recomendación de las slides para evitar unidades muertas.
 
@@ -290,9 +300,9 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 **Dónde:** [02-CONTEXT.md](.planning/phases/02-kohonen-som/02-CONTEXT.md) · [fragmento 02 §2](deliverables/02-kohonen.md)
 
-### F2 D-13 — Estabilidad entre seeds por Spearman de distancias en la grilla
+### F2 D-13 — Estabilidad entre seeds por correlación de Pearson de distancias en la grilla
 
-**Qué:** para cada seed se arma la matriz de 50×50 de distancias en la grilla entre las BMU de cada par de creadores; la estabilidad es el promedio del Spearman entre las matrices de todos los pares de seeds (45 pares con 10 seeds).
+**Qué:** para cada seed se arma la matriz de 50×50 de distancias en la grilla entre las BMU de cada par de creadores; la estabilidad es el promedio de la correlación de Pearson entre las matrices de todos los pares de seeds (45 pares con 10 seeds). Desde el 2026-11-01 se usa la correlación de Pearson, que sí se vio en clase (ver F2 D-17).
 
 **Por qué:** es invariante a rotación y reflexión del mapa y comparable entre k.
 
@@ -302,7 +312,7 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 **Qué:** si ninguna k pasa los filtros, se quita solo el filtro de TE, se aplica el resto de la regla sin cambios y el informe dice explícitamente que ninguna grilla cumplió TE ≤ 0,05. La ocupación no se relaja nunca.
 
-**Por qué:** dejar escrito de antemano qué se hace cuando la regla no encuentra ganadora, sin retocarla después. Es lo que pasó: etapa 2 no robusta y una sola región.
+**Por qué:** dejar escrito de antemano qué se hace cuando la regla no encuentra ganadora, sin retocarla después. Es lo que pasó al reaplicar la regla sobre los scores de las 7 componentes (F2 D-16): ninguna k pasó los tres filtros, se quitó el de TE y quedó k = 5 con TE medio 0,064; y una sola región.
 
 **Dónde:** [02-CONTEXT.md](.planning/phases/02-kohonen-som/02-CONTEXT.md) · [fragmento 02 §2 y §3](deliverables/02-kohonen.md)
 
@@ -313,6 +323,22 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 **Por qué:** "elegir la grilla del SOM por menor QE" está fuera de alcance en REQUIREMENTS: premia la grilla más grande.
 
 **Dónde:** [02-CONTEXT.md](.planning/phases/02-kohonen-som/02-CONTEXT.md) · [fragmento 02 §2, §3 y §5](deliverables/02-kohonen.md)
+
+### F2 D-16 — El SOM se vuelve a entrenar con los scores de las 7 componentes de la PCA
+
+**Qué:** el 2026-11-01 se rehízo el ejercicio de Kohonen usando como entrada solo las componentes principales que juntan el 83,4 % de la varianza en la PCA de las 17 variables que quedan con |r| < 0,8 (F1 D-14): los scores de PC1 a PC7 sin reescalar, en `datos/prepared/creadores_pca_scores.csv` (los escribe `make pca`). La regla de elección de grilla no cambió (mismo texto entre marcadores, mismo `analysis/som_select.py`, mismos umbrales); cambió el dato de entrada, que quedó en `analysis/series_som_stage1.json` (clave `input`) y en el config base, y se commiteó antes de correr (commit `6d5e454`). Salió k = 5 otra vez, pero ninguna grilla cumplió el TE máximo, así que se aplicó F2 D-14; la etapa 2 da robusta (las 10 variantes pasan los filtros de ocupación); sigue habiendo una sola región; y el mapa sigue a PC1 (R² 0,938) y a PC2 (R² 0,439).
+
+**Por qué:** pedido del equipo. Los scores sin reescalar mantienen la geometría de la PCA: la distancia entre dos creadores es la del espacio de las 17 variables proyectado sobre las 7 componentes. Que el mapa siga a PC1 y PC2 no es una validación independiente porque son dos de sus entradas, y el QE y el QE-LOO nuevos no son comparables con los del mapa de 26 variables (la unidad cambió). La fuga del QE-LOO se agranda: el z-score, la PCA y el umbral se ajustaron con los 50 creadores.
+
+**Dónde:** [fragmento 02 §2.1 y §3 a §6](deliverables/02-kohonen.md) · `analysis/pca.py` (`som_input`, `write_som_input`) · `analysis/som_figures.py` y `analysis/som_profiles.py` (los planos de variables son medias crudas y las aristas de la matriz U se llevan al espacio de las variables con los autovectores)
+
+### F2 D-17 — La estabilidad y los contrastes del SOM usan la correlación de Pearson
+
+**Qué:** el 2026-11-01 se sacó del trabajo una medida de correlación que no se vio en clase y que se usaba en tres lugares del SOM: la estabilidad entre seeds (F2 D-13), el contraste de Mantel entre las distancias de la grilla y las del plano PC1-PC2 y el contraste por aristas de la matriz U. Los tres pasan a la correlación de Pearson. En Oja y en la sensibilidad de la PCA ese estadístico era solo un número extra y se sacó sin reemplazo (queda Pearson). El texto de la regla de la sección 2 de `deliverables/02-kohonen.md` cambió solo en la definición de esos estadísticos; se commiteó antes de volver a correr las etapas 1 y 2, las figuras y los perfiles.
+
+**Por qué:** esa medida no se vio en clase y no se puede usar sin justificarlo muy bien. La correlación de Pearson es la de la matriz de correlación de la PCA y es el estadístico habitual de Mantel. La elección de k no depende de este estadístico (la deciden los filtros de ocupación y el QE-LOO), así que no cambia la grilla elegida; cambian los valores de estabilidad, el medoide de las figuras puede cambiar de seed y los contrastes de Mantel y por aristas dan otros números.
+
+**Dónde:** [fragmento 02 §2, §2.1 y §3 a §6](deliverables/02-kohonen.md) · `analysis/som.py` (`pearson_corr`, `seed_correlation_matrix`)
 
 ## Fase 3 — Oja y decisiones de campaña
 
@@ -350,7 +376,7 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 ### F3 D-05 — La comparación Oja vs PC1 se calcula en Python
 
-**Qué:** Python lee `weights.csv`, `index.csv` y las cargas y scores de `analysis/results/pca/audited/` y reporta |cos| y cos con signo entre w y v1, Pearson y Spearman entre el índice y el score de PC1, y overlap@5 y overlap@10. Un pytest exige |cos(w, v1)| > 0,99 en la corrida smoke. No hay eigen-solver en C.
+**Qué:** Python lee `weights.csv`, `index.csv` y las cargas y scores de `analysis/results/pca/audited/` y reporta |cos| y cos con signo entre w y v1, Pearson entre el índice y el score de PC1, y overlap@5 y overlap@10. Un pytest exige |cos(w, v1)| > 0,99 en la corrida smoke. No hay eigen-solver en C.
 
 **Por qué:** la validación contra la PCA por autovalores queda independiente de la implementación de Oja.
 

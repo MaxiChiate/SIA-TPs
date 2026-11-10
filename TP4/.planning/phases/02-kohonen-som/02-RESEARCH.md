@@ -29,7 +29,7 @@
   2. Entre las que quedan gana el **menor QE-LOO medio**.
   3. Si otra k sobreviviente está a menos de 1 desvío (entre seeds) del QE-LOO ganador, gana la **más estable entre seeds** (D-13); si siguen empatadas, la **k más chica**.
 - **D-12:** Ocupación suficiente = las dos condiciones sobre la media entre seeds: **≤ 20 % de neuronas vacías** y **≥ 2 creadores por neurona ocupada** en promedio.
-- **D-13:** Estabilidad entre seeds = para cada seed, matriz 50×50 de distancias en la grilla entre las BMU de cada par de creadores; estabilidad = promedio del **Spearman** entre las matrices de todos los pares de seeds (45 pares con 10 seeds). Invariante a rotación y reflexión del mapa, comparable entre k.
+- **D-13:** Estabilidad entre seeds = para cada seed, matriz 50×50 de distancias en la grilla entre las BMU de cada par de creadores; estabilidad = promedio del **rank-correlation (retired)** entre las matrices de todos los pares de seeds (45 pares con 10 seeds). Invariante a rotación y reflexión del mapa, comparable entre k.
 - **D-14:** Si ninguna k pasa los filtros: se **quita solo el filtro de TE**, se aplica el resto de la regla sin cambios y el informe dice explícitamente que ninguna grilla cumplió TE ≤ 0,05. La ocupación no se relaja nunca.
 - **D-15:** QE (de entrenamiento) se reporta y se grafica contra k, pero no decide: el texto dice que por QE solo ganaría la grilla más grande (fuera de alcance en REQUIREMENTS: "Elegir la grilla del SOM por menor QE").
 
@@ -52,16 +52,16 @@ None — discussion stayed within phase scope. (Grilla hexagonal ya figura como 
 |----|-------------|------------------|
 | SOM-01 | SOM en C con grilla k×k, vecindad y η decrecientes, e inicialización con muestras | "C core specification" (config keys, schedule, init that wraps when k² > n, step/gaussian update, fp-safe radius clamp); reference loop compiled and timed |
 | SOM-02 | El SOM reporta QE, TE y ocupación por neurona | "C core specification" outputs (`metrics.json` keys, `occupancy.csv`, `trace.csv`, `assignments.csv` with second BMU); Python recomputation test from `prototypes.csv` |
-| SOM-03 | Barrido multi-seed con regla multicriterio fijada antes de ver resultados | "Selection rule: pre-registration checklist", "Sweep and LOO orchestration", tie-aware Spearman (existing `pca.spearman` is wrong for ties), arithmetic feasibility of D-12, commit guard |
+| SOM-03 | Barrido multi-seed con regla multicriterio fijada antes de ver resultados | "Selection rule: pre-registration checklist", "Sweep and LOO orchestration", tie-aware rank-correlation (retired) (existing `pca.rank-correlation (retired)` is wrong for ties), arithmetic feasibility of D-12, commit guard |
 | SOM-04 | Mapa de hits, matriz U y planos de componentes de la grilla elegida | "Figures" pattern: U-matrix from `prototypes.csv`, empty-neuron masking, raw-mean planes for excluded variables, shared colour scales, fixed figure seed |
-| SOM-05 | Perfiles por región interpretados y contrastados con PC1/PC2; respuesta sobre distancia alta en la matriz U | "Profiles and PCA contrast" (orientation-invariant statistics: R² on grid coordinates, Mantel-type Spearman, edge-wise U vs ΔPC1, permutation nulls) |
+| SOM-05 | Perfiles por región interpretados y contrastados con PC1/PC2; respuesta sobre distancia alta en la matriz U | "Profiles and PCA contrast" (orientation-invariant statistics: R² on grid coordinates, Mantel-type rank-correlation (retired), edge-wise U vs ΔPC1, permutation nulls) |
 </phase_requirements>
 
 ## Summary
 
 The phase is mostly integration work on a codebase that already has every seam it needs. The C binary has a strict `KeySpec` config table, a sample-based prototype initializer, a lowest-index-wins BMU search, writers for `prototypes.csv` / `assignments.csv` / `metrics.json`, and a seeded splitmix64 `Rng` with `rng_shuffle`. Replacing the stub body means adding config rows, a training loop, TE/occupancy/trace outputs, and lifting the `k² ≤ n` cap. A compiled reference of the training loop (k = 8, 26 features, 13 000 steps) runs in about 18 ms, so the whole LOO design (about 7 000 short trainings) is minutes of wall time, not hours. The expensive part is not compute; it is process-spawn volume, results-directory hygiene and keeping the written selection rule honest.
 
-Four things the planner would otherwise discover late. (1) `analysis/pca.py::spearman` ranks with `argsort(argsort())` and its own docstring says "no ties expected"; grid distance vectors are saturated with ties, so D-13 needs a new average-rank Spearman (verified against scipy this session) that returns NaN for a constant vector. (2) The rule's own arithmetic makes k ≥ 6 unable to pass D-12 (≥ 2 creators per occupied neuron needs ≤ 25 occupied neurons, ≤ 20 % empty needs ≥ 0.8 k² occupied, so k² ≤ 31.25), so the eligible set is effectively {2, 3, 4, 5} and k = 5 only passes if mean occupancy lands in [20, 25]; D-14's fallback only removes the TE filter, so the rule can still return "nothing eligible" and the text needs a sentence for that. (3) `results_create` gives a run directory a `_N` suffix when the same model+seed+second collides and stops at `MAX_DIR_ATTEMPTS 100`, so a LOO driver that fires thousands of same-seed runs from one working directory can hit the cap; run each LOO training in its own temporary working directory. (4) The environment on this machine has no `.venv`, no `datos/prepared/`, and no `uv`, so `make venv` as written fails; `python3.12` exists and the pinned requirements install fine into a plain venv.
+Four things the planner would otherwise discover late. (1) `analysis/pca.py::rank-correlation (retired)` ranks with `argsort(argsort())` and its own docstring says "no ties expected"; grid distance vectors are saturated with ties, so D-13 needs a new average-rank rank-correlation (retired) (verified against scipy this session) that returns NaN for a constant vector. (2) The rule's own arithmetic makes k ≥ 6 unable to pass D-12 (≥ 2 creators per occupied neuron needs ≤ 25 occupied neurons, ≤ 20 % empty needs ≥ 0.8 k² occupied, so k² ≤ 31.25), so the eligible set is effectively {2, 3, 4, 5} and k = 5 only passes if mean occupancy lands in [20, 25]; D-14's fallback only removes the TE filter, so the rule can still return "nothing eligible" and the text needs a sentence for that. (3) `results_create` gives a run directory a `_N` suffix when the same model+seed+second collides and stops at `MAX_DIR_ATTEMPTS 100`, so a LOO driver that fires thousands of same-seed runs from one working directory can hit the cap; run each LOO training in its own temporary working directory. (4) The environment on this machine has no `.venv`, no `datos/prepared/`, and no `uv`, so `make venv` as written fails; `python3.12` exists and the pinned requirements install fine into a plain venv.
 
 The selection rule (D-10) must be committed before stage 1 runs, and several of its terms are ambiguous as written (whose standard deviation, which statistic enters the filters, how ties are broken, how to treat NaN stability). The checklist below lists each one so the planner can resolve them in the text that gets committed, not afterwards. I ran only mechanics-level checks on the real data (shapes, finiteness, hit counts summing to 50); I did **not** compute QE, TE, occupancy, LOO or stability per k, and nothing in this document is derived from those outcomes. The planner should not tune D-11..D-14 using any number from this file.
 
@@ -76,7 +76,7 @@ The selection rule (D-10) must be committed before stage 1 runs, and several of 
 | Per-epoch trace (QE, TE, eta, R) | C binary (`trace.csv`) | — | Only the binary sees the weights each epoch |
 | Multi-seed stage 1 / stage 2 series | `analysis/sweep.py` (existing) | — | INFRA-03; `variants` handles k-dependent R0 |
 | QE leave-one-out (50 folds x seed x config) | Python orchestrator | C binary (one training per fold) | D-09: no LOO mode in C |
-| Seed stability (tie-aware Spearman of grid-distance matrices) | Python | — | Pure post-processing of `assignments.csv` |
+| Seed stability (tie-aware rank-correlation (retired) of grid-distance matrices) | Python | — | Pure post-processing of `assignments.csv` |
 | Grid selection rule (`select_grid`) | Python (pure function) | Written rule in `deliverables/` | Rule text is committed first; code encodes it verbatim |
 | U-matrix, hit map, component planes, profiles | Python (numpy + matplotlib) | — | Visual/analytic layer over `prototypes.csv`, `assignments.csv`, scaler meta |
 | PC1/PC2 contrast | Python (reuses `pca.py` scores) | — | Scores/orientation already defined in Phase 1 |
@@ -97,13 +97,13 @@ The selection rule (D-10) must be committed before stage 1 runs, and several of 
 | Library | Version | Purpose | When to Use |
 |---------|---------|---------|-------------|
 | `analysis/sweep.py` | existing | Stage 1 and stage 2 series | Anything that is "variants x seeds" with `summary.csv` |
-| `analysis/pca.py` (`scores`, `read_prepared`, `pca_eigh`) | existing | PC1/PC2 scores for the contrast | Reuse the sign convention; do **not** reuse its `spearman` |
+| `analysis/pca.py` (`scores`, `read_prepared`, `pca_eigh`) | existing | PC1/PC2 scores for the contrast | Reuse the sign convention; do **not** reuse its `rank-correlation (retired)` |
 | `scripts/creadores.py` (`load_creadores`, `scaler_from_meta`, `inverse_transform`) | existing | De-standardized profiles, raw excluded variables (`topic_art_pct`) | Profiles in original units |
 
 ### Alternatives Considered
 | Instead of | Could Use | Tradeoff |
 |------------|-----------|----------|
-| Own tie-aware Spearman (about 12 lines) | scipy | D-06 limits the analysis stack to numpy + matplotlib; scipy would be a new dependency for one function. Hand-roll once, test against known values (checked against scipy this session, agreement to 1e-16) |
+| Own tie-aware rank-correlation (retired) (about 12 lines) | scipy | D-06 limits the analysis stack to numpy + matplotlib; scipy would be a new dependency for one function. Hand-roll once, test against known values (checked against scipy this session, agreement to 1e-16) |
 | Sweep through `sweep.py` for LOO | Own temp-dir driver | `sweep.py` would keep 7 000 run directories (est. 0.3-0.5 GB, my estimate) and share one `results/` cwd; own driver keeps only distances |
 
 **Installation:** nothing new. `analysis/requirements.txt` already pins everything. No new packages are introduced, so the package-legitimacy gate has nothing to check.
@@ -144,7 +144,7 @@ datos/creadores.csv --(make prepare, Phase 1)--> datos/prepared/creadores_zscore
           |                                         v
           +--> summary.csv ----------> aggregate per (k, neighborhood): mean +/- sd over seeds of
           |                              QE, TE, empty fraction, creators/occupied, QE-LOO
-          +--> assignments (row,col) -> 50x50 grid-distance vectors per seed -> tie-aware Spearman, 45 pairs -> stability
+          +--> assignments (row,col) -> 50x50 grid-distance vectors per seed -> tie-aware rank-correlation (retired), 45 pairs -> stability
                                                     |
                               select_grid()  (step runs only; D-11..D-14; rule text committed BEFORE this runs)
                                                     |
@@ -152,7 +152,7 @@ datos/creadores.csv --(make prepare, Phase 1)--> datos/prepared/creadores_zscore
                                                     |
         STAGE 2 (sweep.py, one-at-a-time on chosen k, step): R0, eta0, epochs   ---> robustness table
                                                     |
-        figure seed = pre-declared (max mean Spearman to the other seeds) -> run of chosen k
+        figure seed = pre-declared (max mean rank-correlation (retired) to the other seeds) -> run of chosen k
                                                     |
    hit map + U-matrix + component planes (26 trained + excluded raw means) + profiles (raw units) +
    PC1/PC2 contrast statistics + written answer on high U distance  ---> deliverables/02-kohonen.md
@@ -165,7 +165,7 @@ neuron/
 ├── io/config.c                    # KOHONEN_KEYS rows (+ per-neighborhood validation)
 └── tests/test_main.c              # kohonen checks (see Validation Architecture)
 analysis/
-├── som.py                         # library: read_run, bmu/qe/te, umatrix, adjacency, average_ranks, spearman_ties, stability
+├── som.py                         # library: read_run, bmu/qe/te, umatrix, adjacency, average_ranks, rank-correlation (retired), stability
 ├── som_loo.py                     # QE-LOO driver (own tmp cwd per training)
 ├── som_select.py                  # aggregate summary.csv + LOO + stability -> select_grid() -> selection.json
 ├── som_figures.py                 # hit map, U-matrix, component planes, profiles, PCA contrast
@@ -263,7 +263,7 @@ Caveat to write in the deliverable: the z-score scaler was fit on all 50 creator
 ### Pattern 5: Verified Python metrics (all run this session against scipy / invariance checks)
 
 ```python
-# Source: written and executed for this research; spearman_ties agrees with scipy.stats.spearmanr to 1e-16,
+# Source: written and executed for this research; rank-correlation (retired) agrees with scipy.stats.rank-correlation (retired) to 1e-16,
 # average_ranks equals scipy.stats.rankdata, stability is exactly 1.0 under 90-degree rotation and reflection
 # of the grid, and a constant vector returns NaN.
 import numpy as np
@@ -278,7 +278,7 @@ def average_ranks(v):
     ranks = np.empty(len(v)); ranks[order] = mean_rank[group]
     return ranks
 
-def spearman_ties(a, b):
+def rank-correlation (retired)(a, b):
     ra, rb = average_ranks(a), average_ranks(b)
     ra -= ra.mean(); rb -= rb.mean()
     den = np.sqrt((ra @ ra) * (rb @ rb))
@@ -291,7 +291,7 @@ def grid_distance_vector(bmu, k):               # upper triangle of the 50x50 ma
 
 def stability(bmus_by_seed, k):                  # mean over the 45 seed pairs; skip NaN pairs explicitly
     v = [grid_distance_vector(b, k) for b in bmus_by_seed]
-    vals = [spearman_ties(v[i], v[j]) for i in range(len(v)) for j in range(i + 1, len(v))]
+    vals = [rank-correlation (retired)(v[i], v[j]) for i in range(len(v)) for j in range(i + 1, len(v))]
     return float(np.nanmean(vals)), int(np.isnan(vals).sum())
 
 def metrics_from_prototypes(X, protos, k):       # independent recomputation of the C measures
@@ -318,10 +318,10 @@ The text committed under D-10 must pin each term below, because each is currentl
 
 1. **Unit of the filters.** Per-seed value, then mean over the 10 seeds (D-12 says "media entre seeds"). `creators per occupied neuron` = per-seed `50 / occupied`, then averaged (not `50 / mean(occupied)`; the two differ by Jensen). State which.
 2. **Whose "desvío" in D-11 step 3.** Recommend: the sample SD (ddof = 1) across seeds of the **winner's** QE-LOO, where each seed contributes its own mean over the 50 folds. Candidates: every survivor `k'` with `QE_LOO(k') - QE_LOO(winner) < SD(winner)`; the winner is in the set; among the set the highest mean stability wins; only if stabilities are exactly equal does the smaller k win.
-3. **NaN stability.** If every creator lands on one neuron in some seed, the distance vector is constant and Spearman is NaN. Define: pairs with NaN are dropped from the mean and their count is reported; if all are NaN, stability = 0 for that k.
+3. **NaN stability.** If every creator lands on one neuron in some seed, the distance vector is constant and rank-correlation (retired) is NaN. Define: pairs with NaN are dropped from the mean and their count is reported; if all are NaN, stability = 0 for that k.
 4. **TE filter** compares the seed-mean TE to 0.05 with `>` (a k with mean TE exactly 0.05 survives).
 5. **Fallback (D-14)** removes only the TE filter; the text must also say what happens if the occupancy filter alone leaves nothing: report "no eligible grid", do not relax it (D-14 forbids relaxing occupancy). Resolved: hard stop with no grid chosen (Open Question 1).
-6. **Figure seed.** Pre-declare how the seed for the deliverable figures is picked: recommend "the seed with the highest mean Spearman to the other nine on the chosen k" (a medoid by D-13, not by QE), so nobody can say it was cherry-picked.
+6. **Figure seed.** Pre-declare how the seed for the deliverable figures is picked: recommend "the seed with the highest mean rank-correlation (retired) to the other nine on the chosen k" (a medoid by D-13, not by QE), so nobody can say it was cherry-picked.
 7. **Arithmetic consequence to state openly.** D-12 needs `occupied <= 25` (>= 2 per occupied) and `occupied >= 0.8 k²` (<= 20 % empty). Both hold only if `k² <= 31.25`, so k >= 6 cannot pass D-12 and k = 5 passes only with mean occupied in [20, 25]. Pure arithmetic, no results involved [VERIFIED: arithmetic from D-12]. The text should say the 6-8 rows exist to draw the QE / occupancy curve (D-07), not to compete.
 8. **Guard.** The stage-1 driver records `git rev-parse HEAD` and refuses to run if `git status --porcelain deliverables/02-kohonen.md analysis/series_som_stage1.json` is non-empty or the file has no commit: this makes "committed before looking" mechanical.
 
@@ -335,15 +335,15 @@ Profiles: per occupied neuron and per region: n creators (flag < 2), raw-unit me
 
 PCA contrast, all orientation-invariant (the grid can be rotated/reflected between seeds):
 1. R² of PC1 and PC2 scores regressed on `[1, row, col]` of each creator's BMU (R² is unchanged by any invertible affine map of the regressors, hence by grid rotation/reflection). Compare to a permutation null (shuffle BMU assignments among creators, 1 000 permutations) so a small-n coincidence is visible.
-2. Mantel-type tie-aware Spearman between the 1 225-pair grid-distance vector and the 1 225-pair distance vector in the (PC1, PC2) plane; same permutation null (permute creator labels on one side). Add the same statistic against the full 26-D z-distance as a reference ceiling.
-3. Edge-wise U vs PCA: for each pair of 4-adjacent occupied neurons, Spearman between prototype distance (U-edge) and |difference of neuron-mean PC1| and of PC2. This answers "does a high U distance coincide with a PC1/PC2 gap?" with a number.
+2. Mantel-type tie-aware rank-correlation (retired) between the 1 225-pair grid-distance vector and the 1 225-pair distance vector in the (PC1, PC2) plane; same permutation null (permute creator labels on one side). Add the same statistic against the full 26-D z-distance as a reference ceiling.
+3. Edge-wise U vs PCA: for each pair of 4-adjacent occupied neurons, rank-correlation (retired) between prototype distance (U-edge) and |difference of neuron-mean PC1| and of PC2. This answers "does a high U distance coincide with a PC1/PC2 gap?" with a number.
 4. For the written answer "qué indica una distancia alta entre neuronas vecinas": high U = adjacent prototypes far apart in the 26-D space, i.e. a boundary between dissimilar profiles; low = homogeneous region (Kohonen slides: "Si el método funciona entonces deberían observarse distancias pequeñas" inside a region) [CITED: docs/Kohonen Model.pdf p.36]. Support it with the top-3 variables that differ across the highest-U edges (difference of the two prototypes in raw units), and add the caveat that walls next to empty neurons are interpolation.
 Where the SOM and PC1/PC2 disagree, report it; a nonlinear map can legitimately separate what PC1/PC2 mix (PC1 is 53.2 % and PC1+PC2 61.7 % of variance [CITED: deliverables/01-datos-pca.md §6]).
 
 ### Anti-Patterns to Avoid
 - **Choosing k by lowest QE** (out of scope in REQUIREMENTS; D-15). QE is plotted against k and the text says QE alone would pick the largest grid.
 - **Reporting the best seed** (D-08): mean +/- SD only; figure seed is chosen by the pre-declared stability medoid rule.
-- **Reusing `pca.spearman` for D-13** (ties, see Pitfall 1).
+- **Reusing `pca.rank-correlation (retired)` for D-13** (ties, see Pitfall 1).
 - **Describing a region from 1-2 members** or naming "premium zone" from singletons.
 - **Declaring that the SOM "coincides" with the biplot by eye**, or that clusters "validate" topics.
 - **Silent defaults for the new config keys** (breaks Phase 1 D-02).
@@ -360,7 +360,7 @@ Where the SOM and PC1/PC2 disagree, report it; a nonlinear map can legitimately 
 | Figure style / save | Per-figure rcParams | `plots_style.apply_style`, `save_figure`, `palette_for`, `DIVERGING` | Deterministic SVG (fixed hash salt, no date) |
 | PCA scores / sign convention | Re-running eigendecomposition with another orientation | `pca.pca_eigh`, `pca.scores`, `orient` convention (or read `analysis/results/pca/audited/scores.csv`) | PC1/PC2 must carry the Phase 1 sign convention |
 | De-standardization | Re-implementing mean/std | `creadores.scaler_from_meta`, `inverse_transform` | One scaler, ddof = 1, in the meta file |
-| Spearman with ties | `argsort(argsort())` ranks | `average_ranks` + `spearman_ties` (Pattern 5), written once in `analysis/som.py`, tested | The existing helper is wrong with ties; scipy is not in the pinned stack |
+| rank-correlation (retired) with ties | `argsort(argsort())` ranks | `average_ranks` + `rank-correlation (retired)` (Pattern 5), written once in `analysis/som.py`, tested | The existing helper is wrong with ties; scipy is not in the pinned stack |
 
 **Key insight:** The only things that really must be written are the SOM update loop, the tie-aware rank correlation, and the rule. Everything else is wiring existing seams; a hand-built variant of those seams risks breaking the byte-identical-rerun guarantee.
 
@@ -370,8 +370,8 @@ Not a rename/refactor/migration phase (greenfield replacement of a stub). Omitte
 
 ## Common Pitfalls
 
-### Pitfall 1: Spearman with ties silently wrong
-**What goes wrong:** `analysis/pca.py::spearman` is `argsort(argsort())` and its docstring says "no ties expected" [VERIFIED: analysis/pca.py:168 `"""Pearson correlation of the ranks (argsort of argsort; no ties expected)."""`]. Grid distances take few distinct values (for k = 2 only 0, 1 and sqrt 2), so ties are the norm and tied ranks would be assigned by array order, making the stability depend on creator order.
+### Pitfall 1: rank-correlation (retired) with ties silently wrong
+**What goes wrong:** `analysis/pca.py::rank-correlation (retired)` is `argsort(argsort())` and its docstring says "no ties expected" [VERIFIED: analysis/pca.py:168 `"""Pearson correlation of the ranks (argsort of argsort; no ties expected)."""`]. Grid distances take few distinct values (for k = 2 only 0, 1 and sqrt 2), so ties are the norm and tied ranks would be assigned by array order, making the stability depend on creator order.
 **How to avoid:** `average_ranks` (Pattern 5). Test it against a hand-checked tied example (`[1,1,1,2,2,3]` must rank `[2,2,2,4.5,4.5,6]`) and with a constant vector (NaN).
 **Warning signs:** stability exactly 1.0 for small k, or different values after permuting creator order.
 
@@ -527,7 +527,7 @@ Current example content, for reference: `"model": "kohonen"`, `"seed": 1`, `"inp
 | SOM-01/02 | Same seed => identical bytes (all new CSVs and metrics); seed+1 changes `prototypes.csv` | C unit (reuse `same_seed_same_bytes`) | `make -C neuron test-c` | update existing case lines 306-308 |
 | SOM-02 | `metrics.json` qe/te/occupied/empty_fraction equal Python recomputation from `prototypes.csv` + input (tolerance 1e-12) | pytest integration (runs the binary in a tmp dir) | `.venv/bin/python -m pytest analysis/tests/test_som.py -q -k recompute` | Wave 0 |
 | SOM-02 | `occupancy.csv` hits sum to n; hits match `assignments.csv` counts | pytest | same | Wave 0 |
-| SOM-03 | `average_ranks`/`spearman_ties` on tied example, constant vector, scipy-checked constants; stability = 1.0 under rotation/reflection | pytest | `-k stability` | Wave 0 |
+| SOM-03 | `average_ranks`/`rank-correlation (retired)` on tied example, constant vector, scipy-checked constants; stability = 1.0 under rotation/reflection | pytest | `-k stability` | Wave 0 |
 | SOM-03 | `select_grid()` on synthetic summaries: TE filter, occupancy filter (both conditions), tie band picks most stable, smaller-k tie, D-14 fallback, no-eligible case | pytest | `-k select` | Wave 0 |
 | SOM-03 | Rule file committed before stage 1: driver aborts on dirty/uncommitted rule file | pytest (tmp git repo) | `-k guard` | Wave 0 |
 | SOM-03 | LOO driver on the 6-row fixture: 6 folds, distances finite, no leftover run dirs | pytest | `-k loo` | Wave 0 |
@@ -576,7 +576,7 @@ Current example content, for reference: `"model": "kohonen"`, `"seed": 1`, `"inp
 - Repository sources read this session: `neuron/models/kohonen_stub.c`, `neuron/io/config.c/.h`, `neuron/io/results.c/.h`, `neuron/io/matrix.h`, `neuron/rng.c/.h`, `neuron/main.c`, `neuron/Makefile`, `neuron/tests/test_main.c`, `analysis/sweep.py`, `analysis/pca.py`, `analysis/plots_style.py`, `analysis/README.md`, `scripts/creadores.py`, `Makefile`, `deliverables/01-datos-pca.md`
 - `docs/Kohonen Model.pdf` (text extracted with pypdf): pp. 15 (R = 1 for 4 neighbors, sqrt 2 for 8), 24-27 (init, `Nk(i) = {n / ||n - nk|| < R(i)}`, R(0) given, R -> 1, eta(i) -> 0, e.g. 1/i, update rule), 30-31 (init with samples against dead units, 500*N iterations, R(0) up to the grid size), 36-37 (U-matrix, single-variable plane)
 - `docs/Archivo SIATP 42026.pdf` p. 3: Kohonen task text, including "¿Qué indica una distancia alta entre neuronas vecinas en la matriz U?" and "¿Coinciden con los perfiles observados en la PC1 y PC2 (biplot)?"
-- Executed this session in a scratch venv (python3.12, numpy 2.5.4, matplotlib 3.11.2, scipy for cross-check only): tie-aware Spearman vs scipy, rotation/reflection invariance, constant-vector NaN, 64-neuron init on 50 rows, hit counts sum to 50; compiled C training-loop benchmark (0.018 s worst case)
+- Executed this session in a scratch venv (python3.12, numpy 2.5.4, matplotlib 3.11.2, scipy for cross-check only): tie-aware rank-correlation (retired) vs scipy, rotation/reflection invariance, constant-vector NaN, 64-neuron init on 50 rows, hit counts sum to 50; compiled C training-loop benchmark (0.018 s worst case)
 
 ### Secondary (MEDIUM confidence)
 - `.planning/research/PITFALLS.md` Pitfalls 5, 6, 7 (earlier measured research; its figures are quoted from there, not reproduced here)

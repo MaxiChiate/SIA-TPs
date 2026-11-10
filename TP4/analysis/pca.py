@@ -1,4 +1,4 @@
-"""PCA of the correlation matrix by eigenvalues, with scree, loadings, biplot and sensitivity (DATA-04, DATA-05).
+"""PCA of the correlation matrix by eigenvalues, with eigenvalues plot, loadings, biplot and sensitivity (DATA-04, DATA-05).
 
 Run from TP4/ with `make pca` (or `.venv/bin/python analysis/pca.py`). It reads the prepared z-scored
 matrices of datos/prepared/ (the same files the C models read) and writes, for the audited 26-variable
@@ -8,8 +8,8 @@ sensitivity.json and sensitivity.md.
 
 The method is the one written in section 5 of deliverables/01-datos-pca.md before this module existed
 (D-12): PCA of the correlation matrix by `np.linalg.eigh`, k = smallest number of components whose
-cumulative variance reaches 80 %, Kaiser (eigenvalue > 1) as a control, and each eigenvector oriented so
-its largest-magnitude coefficient is positive. Phase 3 (Oja) reuses that orientation.
+cumulative variance reaches 80 % (a convention of the team, not a course rule), and each eigenvector oriented
+so its largest-magnitude coefficient is positive. Phase 3 (Oja) reuses that orientation.
 
 numpy and matplotlib only (D-06): no scikit-learn, no scipy, no dataframe library.
 """
@@ -30,7 +30,7 @@ sys.path.insert(0, str(TP_DIR / "scripts"))
 sys.path.insert(0, str(TP_DIR / "analysis"))
 
 import plots_style  # noqa: E402
-from creadores import PREPARED_DIR, load_creadores, load_meta  # noqa: E402
+from creadores import PREPARED_DIR, load_creadores, load_meta, zscore_csv_text  # noqa: E402
 
 DEFAULT_OUT_DIR = TP_DIR / "analysis" / "results" / "pca"
 
@@ -49,6 +49,11 @@ VARIANTS = (
         "SENSIBILIDAD (31 columnas, no es el conjunto auditado)",
     ),
 )
+
+# The audited set after dropping the variables that leave by correlation at the team's threshold (analysis/corr_prune.py):
+# not a prepared file, its z-score columns are those of the audited matrix. Folder and label of its figure titles.
+PRUNED_FOLDER = "pruned"
+PRUNED_LABEL = "Sin redundantes por correlación (|r| ≥ 0,80)"
 
 # Raw topic shares that colour the biplot (all four, including the dropped topic_art_pct).
 TOPICS = (
@@ -107,11 +112,6 @@ def k_by_variance(result: PcaResult, threshold: float = VARIANCE_THRESHOLD) -> i
     return int(np.argmax(result.cumulative >= threshold)) + 1
 
 
-def kaiser_count(result: PcaResult) -> int:
-    """Number of eigenvalues greater than 1 (control criterion, D-12)."""
-    return int(np.sum(result.eigenvalues > 1.0))
-
-
 def scores(result: PcaResult, z: np.ndarray) -> np.ndarray:
     """Coordinates of each creator on the components: z @ V."""
     return np.asarray(z, dtype=np.float64) @ result.eigenvectors
@@ -154,19 +154,10 @@ def read_prepared(stem: str, prepared_dir: Path = PREPARED_DIR):
     return list(header), z, meta
 
 
-def _ranks(values: np.ndarray) -> np.ndarray:
-    return np.argsort(np.argsort(values)).astype(np.float64)
-
-
 def _pearson(a: np.ndarray, b: np.ndarray) -> float:
     a = a - a.mean()
     b = b - b.mean()
     return float(a @ b / np.sqrt((a @ a) * (b @ b)))
-
-
-def spearman(a: np.ndarray, b: np.ndarray) -> float:
-    """Pearson correlation of the ranks (argsort of argsort; no ties expected)."""
-    return _pearson(_ranks(np.asarray(a, dtype=np.float64)), _ranks(np.asarray(b, dtype=np.float64)))
 
 
 # ----------------------------------------------------------------------------------------------
@@ -221,7 +212,6 @@ def write_tables(out: Path, result: PcaResult, z: np.ndarray, meta: dict) -> Non
 def decision(result: PcaResult, variant: str) -> dict:
     """The decision.json payload: the section-5 rule applied as written."""
     k80 = k_by_variance(result)
-    kaiser = kaiser_count(result)
     load = loadings(result)
     top = {}
     for c in range(3):
@@ -232,8 +222,6 @@ def decision(result: PcaResult, variant: str) -> dict:
         "n_variables": len(result.features),
         "eigenvalue_sum": float(result.eigenvalues.sum()),
         "k_80": k80,
-        "kaiser": kaiser,
-        "rule_agrees": bool(k80 == kaiser),
         "explained_pc1": float(result.explained[0]),
         "explained_pc2": float(result.explained[1]),
         "cumulative_pc2": float(result.cumulative[1]),
@@ -248,11 +236,11 @@ def decision(result: PcaResult, variant: str) -> dict:
 # ----------------------------------------------------------------------------------------------
 
 
-def plot_scree(result: PcaResult, dec: dict, title: str, out: Path) -> None:
+def plot_eigenvalues(result: PcaResult, dec: dict, title: str, out: Path) -> None:
     """Eigenvalues (top) and cumulative variance (bottom) on a shared component axis.
 
-    Two panels instead of a twin y-axis: each has one scale, and the Kaiser line (eigenvalue 1) and the
-    80 % line each sit on the panel whose unit they use.
+    Two panels instead of a twin y-axis: each has one scale, and the 80 % line sits on the panel
+    whose unit it uses.
     """
     plt = plots_style.apply_style()
     p = len(result.eigenvalues)
@@ -270,20 +258,16 @@ def plot_scree(result: PcaResult, dec: dict, title: str, out: Path) -> None:
 
     colors = [orange if i + 1 == k80 else blue for i in range(p)]
     top.bar(x, result.eigenvalues, color=colors, width=0.7, edgecolor=plots_style.SURFACE, linewidth=1)
-    top.axhline(1.0, color=plots_style.TEXT_SECONDARY, linewidth=1, linestyle="--")
-    top.annotate("Kaiser (autovalor = 1)", (p + 0.4, 1.0), xytext=(0, 4), textcoords="offset points",
-                 va="bottom", ha="right", color=plots_style.TEXT_SECONDARY, fontsize=plots_style.fontsize(9))
     top.set_ylabel("autovalor")
-    agree = "coinciden" if dec["rule_agrees"] else "NO coinciden"
     if slide:  # the slide has its own title: panel titles only, the reading note in two short lines
         top.set_title("Autovalores", fontsize=plots_style.fontsize(12), loc="left")
-        top.text(0.99, 0.93, f"k para 80 % = {k80} (barra naranja)\nKaiser: {dec['kaiser']} ({agree})",
+        top.text(0.99, 0.93, f"k para 80 % = {k80} (barra naranja)",
                  transform=top.transAxes, ha="right", va="top", fontsize=plots_style.fontsize(9),
                  color=plots_style.TEXT_PRIMARY)
     else:
-        top.set_title(f"{title}\nScree: autovalores y varianza acumulada", fontsize=12, loc="left")
+        top.set_title(f"{title}\nAutovalores y varianza acumulada", fontsize=12, loc="left")
         top.text(0.99, 0.93,
-                 f"k para 80 % = {k80} (barra naranja)   |   Kaiser: {dec['kaiser']}   |   {agree}",
+                 f"k para 80 % = {k80} (barra naranja)",
                  transform=top.transAxes, ha="right", va="top", fontsize=9, color=plots_style.TEXT_PRIMARY)
 
     bottom.plot(x, result.cumulative * 100, color=blue, linewidth=2, marker="o", markersize=5,
@@ -311,7 +295,7 @@ def plot_scree(result: PcaResult, dec: dict, title: str, out: Path) -> None:
             ax.set_xticks(x)
             ax.set_xticklabels([str(i) if i % 2 == 1 else "" for i in x], fontsize=plots_style.fontsize(8))
     fig.tight_layout()
-    plots_style.save_figure(fig, out / "scree")
+    plots_style.save_figure(fig, out / "eigenvalues_variance")
 
 
 def plot_loadings(result: PcaResult, dec: dict, title: str, out: Path) -> None:
@@ -446,11 +430,10 @@ def sensitivity(audited: PcaResult, a_scores: np.ndarray, all31: PcaResult, s_sc
         out[f"abs_cos_pc{c + 1}"] = float(abs(audited.eigenvectors[:, c] @ sub))
     for c in (0, 1):
         out[f"pearson_pc{c + 1}"] = _pearson(a_scores[:, c], s_scores[:, c])
-        out[f"spearman_pc{c + 1}"] = spearman(a_scores[:, c], s_scores[:, c])
 
     def summary(dec: dict) -> dict:
         return {key: dec[key] for key in
-                ("n_variables", "k_80", "kaiser", "explained_pc1", "explained_pc2", "null_eigenvalues")}
+                ("n_variables", "k_80", "explained_pc1", "explained_pc2", "null_eigenvalues")}
 
     return {"common_variables": len(common), "audited": summary(dec_a),
             "all31_sensitivity": summary(dec_s), **out}
@@ -468,20 +451,18 @@ def sensitivity_markdown(comp: dict) -> str:
         f"| Variables | {a['n_variables']} | {s['n_variables']} |",
         f"| Autovalores nulos (abs < {NULL_EIGENVALUE:g}) | {a['null_eigenvalues']} | {s['null_eigenvalues']} |",
         f"| Componentes para el 80 % | {a['k_80']} | {s['k_80']} |",
-        f"| Componentes con autovalor > 1 (Kaiser) | {a['kaiser']} | {s['kaiser']} |",
         f"| % de varianza de PC1 | {a['explained_pc1'] * 100:.2f} | {s['explained_pc1'] * 100:.2f} |",
         f"| % de varianza de PC2 | {a['explained_pc2'] * 100:.2f} | {s['explained_pc2'] * 100:.2f} |",
         "",
         f"Comparación sobre las {comp['common_variables']} variables comunes "
         "(autovectores de 31 columnas restringidos y renormalizados):",
         "",
-        "| Componente | abs(cos) entre autovectores | Pearson de scores | Spearman de scores |",
-        "|---|---|---|---|",
+        "| Componente | abs(cos) entre autovectores | Pearson de scores |",
+        "|---|---|---|",
     ]
     for c in (1, 2):
         lines.append(
-            f"| PC{c} | {comp[f'abs_cos_pc{c}']:.6f} | {comp[f'pearson_pc{c}']:.6f} | "
-            f"{comp[f'spearman_pc{c}']:.6f} |"
+            f"| PC{c} | {comp[f'abs_cos_pc{c}']:.6f} | {comp[f'pearson_pc{c}']:.6f} |"
         )
     return "\n".join(lines) + "\n"
 
@@ -494,18 +475,112 @@ def sensitivity_markdown(comp: dict) -> str:
 def _figure_variants(folder: str):
     """The figure variants to draw for a data set (D-08): report then slide for the audited set, report only
     for the all-31 sensitivity set. Not this module's VARIANTS, which are the data sets."""
-    return plots_style.iter_variants() if folder == "audited" else ["report"]
+    return plots_style.iter_variants() if folder in ("audited", PRUNED_FOLDER) else ["report"]
+
+
+def pruned_data(features: list[str], z: np.ndarray, meta: dict):
+    """The audited z-score matrix restricted to the variables that stay after the correlation pruning."""
+    import corr_prune  # here and not at the top: corr_prune imports this module
+
+    keep, _ = corr_prune.prune(z, corr_prune.CHOSEN_THRESHOLD)
+    kept = [features[i] for i in keep]
+    return kept, z[:, keep], {**meta, "features": kept, "variant": PRUNED_FOLDER}
+
+
+SOM_INPUT_STEM = "creadores_pca_scores"
+
+
+def som_input(prepared_dir: Path = PREPARED_DIR) -> dict:
+    """What the Kohonen map is trained on: the scores, not rescaled, on the first k components (k = the smallest
+    number reaching VARIANCE_THRESHOLD) of the PCA of the variables that stay after the correlation pruning.
+
+    Not rescaled on purpose: the Euclidean distance between two creators in these k columns is the one of the
+    pruned z-score space projected on the k components, so the map keeps the geometry of the PCA.
+    Returns the pruned PCA and the matrix; `meta` is what write_som_input saves next to the CSV."""
+    features, z, meta = read_prepared("creadores_zscore", prepared_dir)
+    kept, z_kept, kept_meta = pruned_data(features, z, meta)
+    result = pca_eigh(z_kept, kept)
+    k = k_by_variance(result)
+    matrix = scores(result, z_kept)[:, :k]
+    names = _component_names(len(kept))[:k]
+    saved = {
+        "variant": "pca_scores",
+        "note": f"Scores sin reescalar de las primeras {k} componentes principales ({result.cumulative[k - 1]:.4f} "
+                f"de la varianza) de la PCA de las {len(kept)} variables que quedan con |r| < "
+                f"{corr_prune_threshold():.2f}: entrada del SOM de Kohonen",
+        "source": "datos/prepared/creadores_zscore.csv",
+        "n_rows": int(matrix.shape[0]),
+        "features": names,
+        "scaled": False,
+        "k": int(k),
+        "variance_threshold": VARIANCE_THRESHOLD,
+        "pca_variables": kept,
+        "eigenvalues": [float(v) for v in result.eigenvalues],
+        "cumulative": [float(v) for v in result.cumulative],
+        "creator_id": list(meta["creator_id"]),
+        "name": list(meta["name"]),
+    }
+    return {"result": result, "z": z_kept, "variables": kept, "scores": matrix, "names": names, "meta": saved,
+            "z_meta": meta}
+
+
+def corr_prune_threshold() -> float:
+    import corr_prune  # lazy: corr_prune imports this module
+
+    return corr_prune.CHOSEN_THRESHOLD
+
+
+def write_som_input(prepared_dir: Path = PREPARED_DIR) -> tuple[Path, Path]:
+    """Write {SOM_INPUT_STEM}.csv (header = PC names, repr floats like the other prepared matrices) and .meta.json."""
+    data = som_input(prepared_dir)
+    prepared_dir = Path(prepared_dir)
+    csv_path = prepared_dir / f"{SOM_INPUT_STEM}.csv"
+    meta_path = prepared_dir / f"{SOM_INPUT_STEM}.meta.json"
+    lines = [",".join(data["names"])]
+    lines += [",".join(repr(float(v)) for v in row) for row in data["scores"]]
+    csv_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    meta_path.write_text(json.dumps(data["meta"], indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return csv_path, meta_path
+
+
+PRUNED_INPUT_STEM = "creadores_zscore_pruned"
+
+
+def write_pruned_input(prepared_dir: Path = PREPARED_DIR) -> tuple[Path, Path]:
+    """Write {PRUNED_INPUT_STEM}.csv and .meta.json: the z-score matrix of the variables that stay after the
+    correlation pruning (the same columns of the audited matrix), the input of Oja's neuron. The meta keeps the
+    scaler (mean and std of the kept variables) so a new creator can be mapped to the same space."""
+    prepared_dir = Path(prepared_dir)
+    features, z, meta = read_prepared("creadores_zscore", prepared_dir)
+    kept, z_kept, kept_meta = pruned_data(features, z, meta)
+    position = [features.index(name) for name in kept]
+    saved = {
+        **kept_meta,
+        "variant": PRUNED_FOLDER,
+        "note": f"Z-scores de las {len(kept)} variables que quedan con |r| < {corr_prune_threshold():.2f}: "
+                "entrada de la regla de Oja",
+        "source": "datos/prepared/creadores_zscore.csv",
+        "mean": [float(meta["mean"][i]) for i in position],
+        "std": [float(meta["std"][i]) for i in position],
+    }
+    csv_path = prepared_dir / f"{PRUNED_INPUT_STEM}.csv"
+    meta_path = prepared_dir / f"{PRUNED_INPUT_STEM}.meta.json"
+    csv_path.write_text(zscore_csv_text(kept, z_kept), encoding="utf-8")
+    meta_path.write_text(json.dumps(saved, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return csv_path, meta_path
 
 
 def run_variant(stem: str, folder: str, title: str, out_dir: Path):
     features, z, meta = read_prepared(stem)
+    if folder == PRUNED_FOLDER:
+        features, z, meta = pruned_data(features, z, meta)
     result = pca_eigh(z, features)
     out = out_dir / folder
     out.mkdir(parents=True, exist_ok=True)
     dec = decision(result, str(meta["variant"]))
     write_tables(out, result, z, meta)
     for _ in _figure_variants(folder):
-        plot_scree(result, dec, title, out)
+        plot_eigenvalues(result, dec, title, out)
     plot_loadings(result, dec, title, out)
     for _ in _figure_variants(folder):
         plot_biplot(result, z, meta, title, out)
@@ -518,16 +593,18 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Correlation PCA by eigenvalues and 31-column sensitivity.")
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR,
                         help="output folder (default: analysis/results/pca)")
+    parser.add_argument("--prepared-dir", type=Path, default=PREPARED_DIR,
+                        help="where the SOM input (PCA scores) is written (default: datos/prepared)")
     args = parser.parse_args(argv)
     out_dir: Path = args.out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
 
     runs = {}
-    for stem, folder, title in VARIANTS:
+    for stem, folder, title in (*VARIANTS, ("creadores_zscore", PRUNED_FOLDER, PRUNED_LABEL)):
         result, z, dec, out = run_variant(stem, folder, title, out_dir)
         runs[folder] = (result, z, dec)
-        print(f"{folder}: k_80 = {dec['k_80']}, Kaiser = {dec['kaiser']}, "
-              f"agree = {dec['rule_agrees']}, null eigenvalues = {dec['null_eigenvalues']} -> {out}")
+        print(f"{folder}: k_80 = {dec['k_80']}, "
+              f"null eigenvalues = {dec['null_eigenvalues']} -> {out}")
 
     a_result, a_z, a_dec = runs["audited"]
     s_result, s_z, s_dec = runs["all31_sensitivity"]
@@ -536,6 +613,10 @@ def main(argv: list[str] | None = None) -> int:
                                               encoding="utf-8")
     (out_dir / "sensitivity.md").write_text(sensitivity_markdown(comp), encoding="utf-8")
     print(f"sensitivity -> {out_dir / 'sensitivity.json'}, {out_dir / 'sensitivity.md'}")
+    csv_path, _ = write_som_input(args.prepared_dir)
+    print(f"som input -> {csv_path}")
+    pruned_path, _ = write_pruned_input(args.prepared_dir)
+    print(f"oja input -> {pruned_path}")
     return 0
 
 

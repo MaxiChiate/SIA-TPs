@@ -73,7 +73,9 @@ def test_figures_deterministic(results, tmp_path):
             assert path_a.read_bytes() == path_b.read_bytes()
 
 
-SLIDE_STEMS = ("letters", "overlaps", "recall_noise", "capacity_p4", "capacity_by_p", "spurious")
+SLIDE_STEMS = ("letters", "overlaps", "recall_noise", "spurious_energy", "capacity_p4", "capacity_by_p", "spurious")
+# these slide variants are taller than the common slide box (a single panel, or three panels, at a larger size)
+OWN_ASPECT = {"recall_noise": 11.5 / 5.0, "spurious_energy": 11.5 / 6.4}
 
 
 def svg_aspect(path):
@@ -91,7 +93,7 @@ def test_slide_variants_of_the_letter_figures(results, tmp_path):
         svg = out / "slide" / f"{stem}.svg"
         assert svg.stat().st_size > 0, stem
         assert (out / "slide" / f"{stem}.png").stat().st_size > 0, stem
-        assert abs(svg_aspect(svg) - target) < 0.02, stem
+        assert abs(svg_aspect(svg) - OWN_ASPECT.get(stem, target)) < 0.02, stem
     for stem in set(STEMS) - set(SLIDE_STEMS):  # max_overlap_hist, cross_terms, energy
         assert not (out / "slide" / f"{stem}.svg").exists(), stem
         assert (out / f"{stem}.svg").exists(), stem

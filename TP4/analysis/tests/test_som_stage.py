@@ -78,7 +78,7 @@ def test_run_stage_fixture(tmp_path):
     assert len(read_csv(out / "loo.csv")) == 3 * 2 * 6
     assert len(read_csv(out / "loo_by_seed.csv")) == 6
     stability = read_csv(out / "stability.csv")
-    assert list(stability[0]) == ["label", "seed_a", "seed_b", "spearman"] and len(stability) == 3
+    assert list(stability[0]) == ["label", "seed_a", "seed_b", "correlation"] and len(stability) == 3
     assert {row["label"] for row in stability} == {"k2-step", "k3-step", "k2-gaussian"}
 
     selection = json.loads((out / "selection.json").read_text())

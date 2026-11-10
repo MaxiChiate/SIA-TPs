@@ -58,7 +58,7 @@ guardas (la regla pre-registrada y el código de selección están commiteados y
 la regla cambió; `make results` no las saltea. Si una guarda se niega, el camino es discutir el cambio de la regla, nunca editar
 la regla en el lugar ni tocar el hash para que corra.
 
-Pasos individuales (cada uno escribe en `analysis/results/`): `make eda`, `make pca`, `make som-stage1`, `make som-stage2`,
+Pasos individuales (cada uno escribe en `analysis/results/`): `make eda`, `make pca`, `make corr-prune`, `make som-stage1`, `make som-stage2`,
 `make som-figures`, `make som-profiles`, `make oja`, `make campaigns`, `make maintenance`, `make letters`,
 `make hopfield-letters`, `make hopfield-figures`, `make qr`, `make hopfield-qr`, `make hopfield-qr-limits`,
 `make hopfield-qr-figures`, `make hopfield-qr-masked` y `make hopfield-qr-masked-figures`. Algunos arrastran sus prerrequisitos: `make campaigns` y `make maintenance` vuelven a correr la etapa 1
@@ -74,17 +74,23 @@ comando. Las filas salen del manifiesto `analysis/deliverables_manifest.py` y `m
 |---|---|---|---|---|
 | `analysis/results/eda/distributions.svg` | `01-datos-pca.md` §2 | `make eda` | datos/creadores.csv (analysis/eda.py, sin config) | sin seed (determinista) |
 | `analysis/results/eda/correlation.svg` (y `slide/`) | `01-datos-pca.md` §2 | `make eda` | datos/creadores.csv (analysis/eda.py, sin config) | sin seed (determinista) |
-| `analysis/results/pca/audited/scree.svg` (y `slide/`) | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
+| `analysis/results/pca/audited/eigenvalues_variance.svg` (y `slide/`) | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
 | `analysis/results/pca/audited/loadings.svg` | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
 | `analysis/results/pca/audited/biplot.svg` (y `slide/`) | `01-datos-pca.md` §6 | `make pca` | datos/prepared/creadores_zscore.csv (make prepare) | sin seed (determinista) |
-| `analysis/results/som/figures/map.svg` (y `slide/`) | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
-| `analysis/results/som/figures/planes_main.svg` | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
-| `analysis/results/som/figures/planes_appendix.svg` | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
-| `analysis/results/som/figures/trace.svg` | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
+| `analysis/results/pca/pruned/eigenvalues_variance.svg` (y `slide/`) | `01-datos-pca.md` §6.2 | `make pca` | datos/prepared/creadores_zscore.csv sin las variables que salen con \|r\| ≥ 0,80 (make prepare, analysis/corr_prune.py) | sin seed (determinista) |
+| `analysis/results/pca/pruned/biplot.svg` (y `slide/`) | `01-datos-pca.md` §6.2 | `make pca` | datos/prepared/creadores_zscore.csv sin las variables que salen con \|r\| ≥ 0,80 (make prepare, analysis/corr_prune.py) | sin seed (determinista) |
+| `analysis/results/som/figures/map.svg` (y `slide/`) | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json (entrada: datos/prepared/creadores_pca_scores.csv, make pca) | 10 (figure_seed de selection.json) |
+| `analysis/results/som/figures/planes_main.svg` | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json (entrada: datos/prepared/creadores_pca_scores.csv, make pca) | 10 (figure_seed de selection.json) |
+| `analysis/results/som/figures/planes_appendix.svg` | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json (entrada: datos/prepared/creadores_pca_scores.csv, make pca) | 10 (figure_seed de selection.json) |
+| `analysis/results/som/figures/trace.svg` | `02-kohonen.md` §5 | `make som-figures` | analysis/series_som_stage1.json (entrada: datos/prepared/creadores_pca_scores.csv, make pca) | 10 (figure_seed de selection.json) |
 | `analysis/results/som/figures/stage1_curves.svg` (y `slide/`) | `02-kohonen.md` §3 | `make som-figures` | analysis/series_som_stage1.json | 1-10 (las seeds de la serie; la media y el desvío entre ellas) |
-| `analysis/results/som/profiles/regions.svg` (y `slide/`) | `02-kohonen.md` §6.1 | `make som-profiles` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
-| `analysis/results/som/profiles/zones.svg` (y `slide/`) | `02-kohonen.md` §6.2 | `make som-profiles` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
-| `analysis/results/som/profiles/pc_planes.svg` (y `slide/`) | `02-kohonen.md` §6.4 | `make som-profiles` | analysis/series_som_stage1.json | 4 (figure_seed de selection.json) |
+| `analysis/results/som/figures/effect_k.svg` (y `slide/`) | `02-kohonen.md` §3 | `make som-figures` | analysis/series_som_stage1.json | 1-10 (las seeds de la serie; la media y el desvío entre ellas) |
+| `analysis/results/som/figures/effect_eta0.svg` (y `slide/`) | `02-kohonen.md` §3 | `make som-figures` | analysis/series_som_stage2.json | 1-10 (las seeds de la serie; la media y el desvío entre ellas) |
+| `analysis/results/som/figures/effect_radius0.svg` (y `slide/`) | `02-kohonen.md` §3 | `make som-figures` | analysis/series_som_stage2.json | 1-10 (las seeds de la serie; la media y el desvío entre ellas) |
+| `analysis/results/som/figures/te_by_k.svg` (y `slide/`) | `02-kohonen.md` §3 | `make som-figures` | analysis/series_som_stage1.json | 1-10 (las seeds de la serie; la media y el desvío entre ellas) |
+| `analysis/results/som/profiles/regions.svg` (y `slide/`) | `02-kohonen.md` §6.1 | `make som-profiles` | analysis/series_som_stage1.json (entrada: datos/prepared/creadores_pca_scores.csv, make pca) | 10 (figure_seed de selection.json) |
+| `analysis/results/som/profiles/zones.svg` (y `slide/`) | `02-kohonen.md` §6.2 | `make som-profiles` | analysis/series_som_stage1.json (entrada: datos/prepared/creadores_pca_scores.csv, make pca) | 10 (figure_seed de selection.json) |
+| `analysis/results/som/profiles/pc_planes.svg` (y `slide/`) | `02-kohonen.md` §6.4 | `make som-profiles` | analysis/series_som_stage1.json (entrada: datos/prepared/creadores_pca_scores.csv, make pca) | 10 (figure_seed de selection.json) |
 | `analysis/results/oja/convergence.svg` | `03-oja-campanas.md` §1 | `make oja` | analysis/series_oja.json | 1 (la seed que produce las figuras; la serie corre las seeds 1-10) |
 | `analysis/results/oja/oja_vs_pc1.svg` (y `slide/`) | `03-oja-campanas.md` §2 | `make oja` | analysis/series_oja.json | 1 (la seed que produce las figuras; la serie corre las seeds 1-10) |
 | `analysis/results/campaigns/shortlists_biplot.svg` (y `slide/`) | `03-oja-campanas.md` §5.6 | `make campaigns` | deliverables/03-oja-campanas.md sección 4 (analysis/campaigns_select.py) | 1 (índice de Oja) y 4 (mapa del SOM) |
@@ -98,6 +104,7 @@ comando. Las filas salen del manifiesto `analysis/deliverables_manifest.py` y `m
 | `analysis/results/hopfield/figures/capacity_p4.svg` (y `slide/`) | `04-hopfield-letras.md` §6 | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
 | `analysis/results/hopfield/figures/capacity_by_p.svg` (y `slide/`) | `04-hopfield-letras.md` §6 | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
 | `analysis/results/hopfield/figures/spurious.svg` (y `slide/`) | `04-hopfield-letras.md` §7 | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
+| `analysis/results/hopfield/figures/spurious_energy.svg` (y `slide/`) | `04-hopfield-letras.md` §7 (energía) | `make hopfield-figures` | deliverables/04-hopfield-letras.md sección 3 (analysis/hopfield_select.py) | 1-10 |
 | `analysis/results/hopfield/qr/figures/qr.svg` (y `slide/`) | `05-hopfield-qr.md` §2 | `make hopfield-qr-figures` | deliverables/05-hopfield-qr.md sección 3 (analysis/hopfield_qr_select.py) | sin seed (los 5 QR son fijos) |
 | `analysis/results/hopfield/qr/figures/overlaps.svg` (y `slide/`) | `05-hopfield-qr.md` §2 | `make hopfield-qr-figures` | deliverables/05-hopfield-qr.md sección 3 (analysis/hopfield_qr_select.py) | sin seed (los 5 QR son fijos) |
 | `analysis/results/hopfield/qr/figures/energy_trace.svg` (y `slide/`) | `05-hopfield-qr.md` §4 | `make hopfield-qr-figures` | deliverables/05-hopfield-qr.md sección 3 (analysis/hopfield_qr_select.py) | 1 (ENERGY_TRACE_SEED de analysis/hopfield_qr.py) |
@@ -114,7 +121,8 @@ Las tablas principales y el comando que las escribe (todas bajo `analysis/result
 | Tabla | Qué es | Comando |
 |---|---|---|
 | `eda/audit_table.md` | Auditoría de las 31 variables: cuáles entran y por qué | `make eda` |
-| `pca/audited/decision.json` | Autovalores, regla de Kaiser y 80 % acumulado, componentes retenidas | `make pca` |
+| `pca/audited/decision.json` | Autovalores, 80 % acumulado, componentes retenidas | `make pca` |
+| `corr_prune/sensitivity.json` | Sensibilidad de la PCA a podar por umbral de |r| (variables que quedan, k, PC1, autovalor mínimo, condición); tabla de la slide `pca-prune` | `make corr-prune` |
 | `som/series_som_stage1/selection.json` | Grilla elegida por la regla fijada de antemano (etapa 1) | `make som-stage1` |
 | `som/series_som_stage2/robustness.json` | Robustez del schedule sobre la grilla elegida (etapa 2) | `make som-stage2` |
 | `campaigns/shortlists.csv` | Lista de creadores por campaña con la regla commiteada | `make campaigns` |
@@ -132,7 +140,7 @@ no se arma si un número citado de los fragmentos cambió.
 
 `make deliverables` deja listo, sin publicar, lo siguiente (no se versiona):
 
-- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 28 slides), los PNG de las figuras
+- `analysis/results/slides/`: el deck (`project/deck.json` y `project/slides/*.html`, 31 slides), los PNG de las figuras
   (`assets/`) y `notes.md` (el guion). Lo arma `analysis/slides.py`; `make slides` corre solo ese paso.
 - `analysis/results/informe/informe.html`: el informe, una página autocontenida. Lo arma `analysis/informe.py`; `make informe`
   corre solo ese paso.

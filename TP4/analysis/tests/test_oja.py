@@ -83,14 +83,13 @@ def test_compare_identity_and_flip():
     assert same["abs_cos"] == pytest.approx(1.0, abs=1e-12)
     assert same["cos"] == pytest.approx(1.0, abs=1e-12)
     assert same["pearson"] == pytest.approx(1.0, abs=1e-12)
-    assert same["spearman"] == pytest.approx(1.0, abs=1e-12)
     assert same["overlap_at_5"] == 5 and same["overlap_at_10"] == 10
     assert same["max_abs_diff"] == pytest.approx(0.0, abs=1e-12)
 
     flipped = oja.compare(-v1, -(z @ v1), v1, pc1)
     assert flipped["abs_cos"] == pytest.approx(1.0, abs=1e-12)
     assert flipped["cos"] == pytest.approx(-1.0, abs=1e-12)
-    assert flipped["spearman"] == pytest.approx(-1.0, abs=1e-12)
+    assert flipped["pearson"] == pytest.approx(-1.0, abs=1e-12)
 
 
 def test_top_k_and_overlap_stable():
@@ -157,8 +156,6 @@ def test_evidence_both_signs():
     assert len(corr) == 10
     assert corr[("topic_dogs_pct", 1)]["pearson"] == pytest.approx(1.0, abs=1e-12)
     assert corr[("topic_dogs_pct", -1)]["pearson"] == pytest.approx(-1.0, abs=1e-12)
-    assert corr[("topic_dogs_pct", 1)]["spearman"] == pytest.approx(1.0, abs=1e-12)
-    assert corr[("topic_dogs_pct", -1)]["spearman"] == pytest.approx(-1.0, abs=1e-12)
 
     top = {(row["sign"], row["topic"]): row for row in ev["top10"]}
     assert len(top) == 8

@@ -17,7 +17,7 @@
 - [x] **DATA-01**: El loader verifica n=50 filas y 33 columnas, y falla si no coinciden
 - [x] **DATA-02**: EDA de distribuciones y correlaciones, con tabla de auditoría de variables que documenta las 5 dependencias lineales exactas y la regla de selección
 - [x] **DATA-03**: Z-score en Python con scaler guardado (`.meta.json`) para mapear creadores nuevos
-- [x] **DATA-04**: PCA por autovalores con scree, loadings y biplot, y justificación escrita de reducir o no la dimensionalidad
+- [x] **DATA-04**: PCA por autovalores con eigenvalues plot, loadings y biplot, y justificación escrita de reducir o no la dimensionalidad
 - [x] **DATA-05**: Corrida de sensibilidad con las 31 columnas, etiquetada, comparada contra el conjunto auditado
 
 ### Kohonen

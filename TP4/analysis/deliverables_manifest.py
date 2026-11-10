@@ -76,7 +76,7 @@ QUESTIONS = (
     Question(
         "Q1.2",
         "Justificar si se realiza una reducción de dimensionalidad y cómo se interpretan las componentes.",
-        "1.1", 1, ("f1-s5", "f1-s6", "f1-s6-1", "f1-s7"),
+        "1.1", 1, ("f1-s5", "f1-s6", "f1-s6-1", "f1-s6-2", "f1-s7"),
     ),
     Question(
         "Q1.3",
@@ -235,15 +235,22 @@ FIGURES = (
     Figure(
         key="eda_correlation", path="eda/correlation.svg", make_target="eda",
         config=_EDA[0], seed=_EDA[1], fragment=1, anchor="f1-s2",
-        alt="Matriz de correlación de Pearson entre las 31 variables",
+        alt="Matriz de correlación de Pearson entre las variables del conjunto de datos",
         caption="Correlación de Pearson entre todas las variables del conjunto de datos.",
         slide=True,
     ),
     Figure(
-        key="pca_scree", path="pca/audited/scree.svg", make_target="pca",
+        key="pca_eigenvalues", path="pca/audited/eigenvalues_variance.svg", make_target="pca",
         config=_PCA[0], seed=_PCA[1], fragment=1, anchor="f1-s6",
-        alt="Autovalores con la línea de Kaiser y varianza acumulada con la línea del 80 %",
-        caption="Scree de la PCA de las variables auditadas, con la regla de decisión fijada de antemano.",
+        alt="Autovalores y varianza acumulada con la línea del 80 %",
+        caption="Autovalores y varianza acumulada de la PCA de las variables auditadas, con la regla de decisión fijada de antemano.",
+        slide=False,
+    ),
+    Figure(
+        key="pca17_eigenvalues", path="pca/pruned/eigenvalues_variance.svg", make_target="pca",
+        config=_PCA[0], seed=_PCA[1], fragment=1, anchor="f1-s6-2",
+        alt="Autovalores y varianza acumulada de la PCA sin las variables redundantes por correlación",
+        caption="Autovalores y varianza acumulada de la PCA de las variables que quedan con el umbral de correlación.",
         slide=True,
     ),
     Figure(
@@ -258,6 +265,13 @@ FIGURES = (
         config=_PCA[0], seed=_PCA[1], fragment=1, anchor="f1-s6",
         alt="Biplot de PC1 y PC2 con los creadores coloreados por su tema dominante",
         caption="Los creadores en PC1 y PC2, coloreados por tema, con las cargas de las variables.",
+        slide=False,
+    ),
+    Figure(
+        key="pca17_biplot", path="pca/pruned/biplot.svg", make_target="pca",
+        config=_PCA[0], seed=_PCA[1], fragment=1, anchor="f1-s6-2",
+        alt="Biplot de PC1 y PC2 sin las variables redundantes por correlación, con los creadores coloreados por tema",
+        caption="Los creadores en PC1 y PC2 de la PCA sin redundantes, coloreados por tema, con las cargas de las variables.",
         slide=True,
     ),
     Figure(
@@ -294,6 +308,38 @@ FIGURES = (
         fragment=2, anchor="f2-s3",
         alt="Seis paneles de las medidas de la etapa 1 contra el tamaño de la grilla, para vecindad escalón y gaussiana",
         caption="Por qué el error de cuantización solo no decide la grilla.",
+        slide=False,
+    ),
+    Figure(
+        key="som_effect_k", path="som/figures/effect_k.svg", make_target="som-figures",
+        config=_SOM[0], seed="1-10 (las seeds de la serie; la media y el desvío entre ellas)",
+        fragment=2, anchor="f2-s3",
+        alt="Tres paneles contra el tamaño de la grilla k: error topográfico, porcentaje de neuronas vacías y creadores por neurona ocupada",
+        caption="Qué pasa con la ocupación y la distancia al variar k.",
+        slide=True,
+    ),
+    Figure(
+        key="som_effect_eta0", path="som/figures/effect_eta0.svg", make_target="som-figures",
+        config="analysis/series_som_stage2.json", seed="1-10 (las seeds de la serie; la media y el desvío entre ellas)",
+        fragment=2, anchor="f2-s3",
+        alt="Dos paneles contra la tasa de aprendizaje inicial: distancia a la neurona ganadora y U media",
+        caption="Qué pasa con las mismas medidas al variar η0, con k = 5.",
+        slide=True,
+    ),
+    Figure(
+        key="som_effect_radius0", path="som/figures/effect_radius0.svg", make_target="som-figures",
+        config="analysis/series_som_stage2.json", seed="1-10 (las seeds de la serie; la media y el desvío entre ellas)",
+        fragment=2, anchor="f2-s3",
+        alt="Dos paneles contra el radio inicial: distancia a la neurona ganadora y U media",
+        caption="Qué pasa con las mismas medidas al variar R0, con k = 5.",
+        slide=True,
+    ),
+    Figure(
+        key="som_te_by_k", path="som/figures/te_by_k.svg", make_target="som-figures",
+        config=_SOM[0], seed="1-10 (las seeds de la serie; la media y el desvío entre ellas)",
+        fragment=2, anchor="f2-s3",
+        alt="Barras del error topográfico contra el tamaño de la grilla k, con el límite de la regla",
+        caption="El error topográfico de cada k contra el límite de la regla.",
         slide=True,
     ),
     Figure(
@@ -301,7 +347,7 @@ FIGURES = (
         config=_SOM[0], seed=_SOM[1], fragment=2, anchor="f2-s6-1",
         alt="Mapa de Kohonen con las regiones que resultan de la regla fijada de antemano",
         caption="Las regiones de la grilla elegida.",
-        slide=True,
+        slide=False,
     ),
     Figure(
         key="som_zones", path="som/profiles/zones.svg", make_target="som-profiles",
@@ -334,7 +380,7 @@ FIGURES = (
     Figure(
         key="campaigns_biplot", path="campaigns/shortlists_biplot.svg", make_target="campaigns",
         config=_CAMPAIGNS[0], seed=_CAMPAIGNS[1], fragment=3, anchor="f3-s5-6",
-        alt="Biplot de PC1 y PC2 con las listas de cada campaña marcadas",
+        alt="Biplot de PC1 y PC2 con las listas de campaña marcadas (en la slide, solo la de fútbol)",
         caption="Las listas de cada campaña sobre PC1 y PC2.",
         slide=True,
     ),
@@ -383,9 +429,16 @@ FIGURES = (
     Figure(
         key="letters_energy", path="hopfield/figures/energy.svg", make_target="hopfield-figures",
         config=_LETTERS_ENERGY[0], seed=_LETTERS_ENERGY[1], fragment=4, anchor="f4-s5",
-        alt="Energía de la red en cada actualización de ensayos fijados de antemano, un panel por letra y nivel de ruido",
+        alt="Energía de la red en cada actualización de ensayos fijados de antemano, por letra y nivel de ruido",
         caption="Energía por actualización en ensayos fijados de antemano.",
         slide=False,
+    ),
+    Figure(
+        key="letters_spurious_energy", path="hopfield/figures/spurious_energy.svg", make_target="hopfield-figures",
+        config=_LETTERS_SEEDS[0], seed=_LETTERS_SEEDS[1], fragment=4, anchor="f4-s7",
+        alt="Energía en cada actualización de tres ensayos con la misma consulta que terminan en un inverso, una mezcla y otro estado",
+        caption="Energía por actualización de los tres estados espurios elegidos por la regla.",
+        slide=True,
     ),
     Figure(
         key="letters_capacity_p4", path="hopfield/figures/capacity_p4.svg", make_target="hopfield-figures",

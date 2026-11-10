@@ -120,3 +120,28 @@ def test_plot_regions_slide_with_more_regions_than_palette_slots(tmp_path):
         som_profiles.plot_regions(result, hits, k, [], "Muchas regiones", "caption", tmp_path / "many")
     assert_both_variants(tmp_path, "many")
     assert plots_style.variant() == "report"
+
+
+def test_plot_te_by_k_in_both_variants(tmp_path):
+    rows = [{"grid_k": str(k), "te_mean": str(0.2 / k), "te_sd": "0.01", "empty_fraction_mean": str(0.1 * (k - 2)),
+             "creators_per_occupied_mean": str(10.0 / k)} for k in (2, 3, 4, 5)]
+    thresholds = {"te_max": 0.05, "empty_max": 0.2, "creators_min": 2.0}
+    for _ in plots_style.iter_variants():
+        som_figures.plot_te_by_k(rows, 4, thresholds, tmp_path / "te_by_k")
+    assert_both_variants(tmp_path, "te_by_k")
+    assert plots_style.variant() == "report"
+
+
+def test_plot_effect_with_the_u_matrix_in_both_variants(tmp_path):
+    rows = [{"eta0": str(v), "empty_fraction_mean": "0.07", "empty_fraction_sd": "0.01", "te_mean": "0.06",
+             "te_sd": "0.02", "creators_per_occupied_mean": "2.1", "creators_per_occupied_sd": "0.05",
+             "u_mean_mean": "1.6", "u_mean_sd": "0.04", "qe_mean": "1.9", "qe_sd": "0.03"} for v in (0.1, 0.5, 0.9)]
+    thresholds = {"te_max": 0.05, "empty_max": 0.2, "creators_min": 2.0}
+    for _ in plots_style.iter_variants():
+        som_figures.plot_effect(rows, "eta0", "η0", 0.5, thresholds, tmp_path / "effect_eta0",
+                                measures=som_figures.SCHEDULE_MEASURES)
+    # the effect figures are taller than the default slide size (they fill the slide), so only the files are checked
+    for suffix in (".svg", ".png"):
+        assert (tmp_path / f"effect_eta0{suffix}").stat().st_size > 0
+        assert (tmp_path / "slide" / f"effect_eta0{suffix}").stat().st_size > 0
+    assert plots_style.variant() == "report"

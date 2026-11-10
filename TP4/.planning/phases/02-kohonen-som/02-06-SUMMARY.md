@@ -6,7 +6,7 @@ tags: [som, regions, profiles, pca-contrast, permutation, u-matrix, pytest]
 
 requires:
   - phase: 02-kohonen-som
-    provides: "02-04 selection.json (chosen k = 5, figure seed 4, figure_run) and require_same_rule; 02-05 adjacent_pairs, edge_distances, umatrix and som_figures.plot_planes; 02-02 som.py run reader and tie-aware Spearman"
+    provides: "02-04 selection.json (chosen k = 5, figure seed 4, figure_run) and require_same_rule; 02-05 adjacent_pairs, edge_distances, umatrix and som_figures.plot_planes; 02-02 som.py run reader and tie-aware rank-correlation (retired)"
 provides:
   - "analysis/som_profiles.py: regions (committed 75th-percentile cut, 4-adjacency components, MIN_MEMBERS = 2), profiles, grid_r2, permutation_pvalue, r2_null, mantel_null, edge_contrast, high_u_edges, disagreements, plot_regions, main; make som-profiles"
   - "analysis/results/som/profiles/: regions.csv, region_profiles.csv, neuron_profiles.csv, pca_contrast.json, high_u_edges.csv, disagreements.csv, regions and pc_planes figures (SVG+PNG), byte-identical on rerun"
@@ -41,7 +41,7 @@ key-decisions:
   - "The committed region rule yields a single region (R1, 50 creators) on the chosen map: 10 of 40 adjacent pairs exceed the 2,60 threshold, 5 of them touch an empty neuron and the other 5 do not disconnect the 22 occupied neurons. Reported as it came out; the percentile was not touched (it is pre-registered)"
   - "With one region, the agency reading (6.3) uses neuron profiles with at least 2 creators as description of the continuum, labelled as neurons, not regions; neurons with 1 creator stay flagged and unread"
   - "Disagreement pairs are defined as: plane distance at most the 25th percentile and largest grid distance (plano_cerca_grilla_lejos), and grid distance at most 1 with the largest plane distance (plano_lejos_grilla_cerca); ties by creator index"
-  - "The edge-wise Spearman is reported without a p-value because the committed rule declares no null for it"
+  - "The edge-wise rank-correlation (retired) is reported without a p-value because the committed rule declares no null for it"
 
 requirements-completed: [SOM-05]
 
@@ -91,12 +91,12 @@ status: complete
 
 ## Accomplishments
 
-- **Task 1 (TDD).** `som_profiles` functions with six tests: the synthetic 3 x 3 map gives the two expected regions (30 and 1 creators, only the first interpretable, empty neurons -1), raw-unit profiles match a hand computation, `grid_r2` is equal within 1e-12 under rotation and reflection of the grid, the nulls are identical for the same seed, the edge contrast gives Spearman 1,0 on a map built to match PC1 and excludes edges with an empty neuron, and the high-U edges report delta raw = delta z times std.
+- **Task 1 (TDD).** `som_profiles` functions with six tests: the synthetic 3 x 3 map gives the two expected regions (30 and 1 creators, only the first interpretable, empty neurons -1), raw-unit profiles match a hand computation, `grid_r2` is equal within 1e-12 under rotation and reflection of the grid, the nulls are identical for the same seed, the edge contrast gives rank-correlation (retired) 1,0 on a map built to match PC1 and excludes edges with an empty neuron, and the high-U edges report delta raw = delta z times std.
 - **Task 2.** `plot_regions`, `main`, the `som-profiles` Makefile target. Outputs under `analysis/results/som/profiles/`; two runs give identical hashes; `main` calls `require_same_rule` first and refuses with no chosen grid.
 - **Task 3.** Section 6 (6.1 to 6.5) and section 7 of the report, and the SOM section plus two series rows in `analysis/README.md`.
 - **Findings (figure run, k = 5, seed 4).**
   - Regions: threshold 2,60 cuts 10 of 40 adjacent pairs (5 touch an empty neuron; the other 5 are (1,4)-(2,4) 3,67, (2,3)-(2,4) 2,99, (2,1)-(2,2) 2,98, (2,1)-(3,1) 2,88, (3,1)-(3,2) 2,66); the 22 occupied neurons stay connected: one region R1, 50 creators, profile of the average creator (221 587 followers, 52,6 % Argentine audience, USD 1 701).
-  - PC1/PC2: R2 PC1 0,961 (p = 0,001), R2 PC2 0,055 (p = 0,267), Mantel grid vs plane rho 0,599 (p = 0,001), grid vs 26-D z rho 0,635 (reference), edge-wise Spearman 0,481 (PC1) and 0,271 (PC2) over 29 edges (11 excluded).
+  - PC1/PC2: R2 PC1 0,961 (p = 0,001), R2 PC2 0,055 (p = 0,267), Mantel grid vs plane rho 0,599 (p = 0,001), grid vs 26-D z rho 0,635 (reference), edge-wise rank-correlation (retired) 0,481 (PC1) and 0,271 (PC2) over 29 edges (11 excluded).
   - Highest U edges among occupied neurons: (1,4)-(2,4) price +USD 2 116, followers +251 127, reach +97 110; (2,3)-(2,4) the same three variables; (2,1)-(2,2) entertainment share +34,4 points, review share -10,4, caption words -43,2. All three have a single-creator neuron at one end.
 
 ## Task Commits

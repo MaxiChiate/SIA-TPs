@@ -146,7 +146,7 @@ Recent decisions affecting current work:
 - [Phase 06]: DECISIONS.md: F4 D-04b has its own entry; F5 D-11 names sub-items D-11a..D-11d inside the parent entry
 - [Phase 06]: 06-04: informe top heading drops its own 'Fase n —' when prefixed 'Detalle técnico (Fase n)'; numbers in generated text only via facts.fill data-fact spans; figures only as SVG data URIs on a SURFACE card
 - [Phase 06]: 06-05: SLIDE_FIGSIZE is the recorded figure_area (12.8 x 4.85 in, about 2.6:1), slide text via plots_style.fontsize, slide PNG at 250 dpi
-- [Phase 06]: 06-06: slide variants of PCA scree/biplot (audited only), Oja index vs PC1 and campaign shortlists; campaign SOM slide as a row of four; report SVGs byte-identical to baseline
+- [Phase 06]: 06-06: slide variants of PCA eigenvalue plot/biplot (audited only), Oja index vs PC1 and campaign shortlists; campaign SOM slide as a row of four; report SVGs byte-identical to baseline
 - [Phase 06]: 06-07: spurious (letters), energy_trace and shift (QR) use a different grid in the slide variant; energy panels of spurious stay in the report
 - [Phase 06]: 06-07: QR recovery slide keeps the three panels (Hebb, pinv, Hamming) with one legend under them (D-04 comparison)
 - [Phase 06]: 06-08: camp.<campaign>.* facts use the objective the informe recommends (RECOMMENDED_OBJECTIVE), checked against the committed pairs

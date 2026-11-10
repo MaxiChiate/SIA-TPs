@@ -43,7 +43,7 @@ Esta sección fija el protocolo del experimento; los resultados se agregan despu
 
 ## 4. Hebb: estabilidad y curva de ruido
 
-El criterio de éxito es el de la sección 3: solo cuenta el match exacto de los 1369 píxeles. El veredicto registrado en `verdict.json`, aplicando el umbral D-02 a la recuperación medida, es `hebb_fails = true`: «Hebb fails if exact recovery at noise 0 < 100% (D-02); measured 0.00%» — y de hecho la tasa exacta es 0 % en los 11 niveles de ruido (`recall.csv`, `recovery_table.csv`), incluido el nivel 0: los 5 QR **no son puntos fijos de Hebb ni sin ruido**. Con la consulta sin ruido la red igual ejecuta 2 pasos (uno con cambios y uno de confirmación) y cambia 143 píxeles en promedio (`mean_flips` = 143,0 de `recall.csv`) antes de converger.
+El criterio de éxito es el de la sección 3: solo cuenta el match exacto de los 1369 píxeles. El veredicto registrado en `verdict.json`, aplicando el umbral D-02 a la recuperación medida, es `hebb_fails = true`: con la recuperación exacta a ruido 0 de 0,00 %, por debajo del 100 % que fija el umbral D-02; de hecho la tasa exacta es 0 % en los 11 niveles de ruido (`recall.csv`, `recovery_table.csv`), incluido el nivel 0: los 5 QR **no son puntos fijos de Hebb ni sin ruido**. Con la consulta sin ruido la red igual ejecuta 2 pasos (uno con cambios y uno de confirmación) y cambia 143 píxeles en promedio (`mean_flips` = 143,0 de `recall.csv`) antes de converger.
 
 **El atractor común.** El estado final no depende del nivel de ruido: `mean_final_overlap` (0,791) y `mean_final_energy` (−2 974 672) son los mismos en los 11 niveles, y el 100 % de los ensayos termina clasificado como «otro» (`other_rate` = 1,0 en toda la grilla) — nunca almacenado, inverso ni mezcla. `qr_limits/majority.json` (figura `majority.svg`) identifica ese atractor: es la mayoría píxel a píxel de los 5 QR (signo de la suma por píxel), y difiere de los 5 QR almacenados por una distancia de Hamming siempre positiva — 225 píxeles de beverages y de dessert, 103 de specials, 91 de wine y 71 de food (de 1369) — nunca cero. El promedio de |0,671; 0,671; 0,896; 0,8495; 0,867| (los productos escalares de ese atractor con cada QR) da 0,791, el mismo número que `mean_final_overlap`: confirma de forma independiente que la red converge siempre a este único atractor, sin importar cuál de los 5 QR ni cuánto ruido tenga la consulta.
 
@@ -53,7 +53,7 @@ El criterio de éxito es el de la sección 3: solo cuenta el match exacto de los
 
 ## 5. Pseudo-inversa frente a Hebb y a la línea base de Hamming
 
-`verdict.json` registra `pinv_works = true`: «pinv works if exact recovery at noise 0 == 100% (D-02); measured 100.00%» — los 5 QR son puntos fijos exactos de pseudo-inversa (`pinv_stored_fixed_noise0 = 5`); con la consulta sin ruido la red converge en 1 paso (el de confirmación) y 0 flips (`recall.csv`, `mean_sweeps` = 1,0, `mean_flips` = 0,0), muy distinto de los 143 flips de Hebb en el mismo nivel.
+`verdict.json` registra `pinv_works = true`: con la recuperación exacta a ruido 0 de 100,00 %, que cumple el umbral D-02: los 5 QR son puntos fijos exactos de pseudo-inversa (5 de 5); con la consulta sin ruido la red converge en 1 paso (el de confirmación) y 0 flips (`recall.csv`, `mean_sweeps` = 1,0, `mean_flips` = 0,0), muy distinto de los 143 flips de Hebb en el mismo nivel.
 
 **`recovery.svg` y `recovery_table.csv`: recuperación exacta por nivel, las 3 reglas.**
 

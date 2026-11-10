@@ -93,7 +93,7 @@ raíz de TP4:
 
 | Archivo | Qué hace |
 |---|---|
-| `som.py` | Lee una corrida del binario y calcula lo común: QE, TE, rangos con empates (Spearman), estabilidad entre seeds, adyacencia de la grilla y matriz U |
+| `som.py` | Lee una corrida del binario y calcula lo común: QE, TE, la correlación de Pearson, estabilidad entre seeds, adyacencia de la grilla y matriz U |
 | `som_loo.py` | QE de leave-one-out de cada variante (reentrena sin un creador y mide el QE de ese creador) |
 | `som_select.py` | La regla de elección de grilla como código; su sha256 queda en `selection.json` |
 | `som_stage.py` | Maneja las dos etapas y se niega a correr si la regla no está commiteada o cambió |

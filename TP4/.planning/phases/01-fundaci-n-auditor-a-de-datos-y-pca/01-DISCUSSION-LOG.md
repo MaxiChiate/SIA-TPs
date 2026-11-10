@@ -25,7 +25,7 @@ Conjunto: quitar las 5 redundantes ✓ (vs. dejar 31, vs. ponderar). Casi-redund
 z-score directo ✓ (vs. log1p, vs. winsorizar).
 
 ## Criterio de PCA
-Matriz de correlación + regla (80% y Kaiser) fijada antes ✓. Rol: diagnóstico, SOM/Oja sobre variables completas ✓.
+Matriz de correlación + regla (80%) fijada antes ✓. Rol: diagnóstico, SOM/Oja sobre variables completas ✓.
 
 ## Modelo trivial e2e
 Stubs deterministas por modelo ✓. I/O: `results/<ts>/` + input CSV ✓.

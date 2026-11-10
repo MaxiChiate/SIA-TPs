@@ -7,8 +7,8 @@ The region rule and the contrast statistics are the ones committed in section 2 
 (**Regiones.** and **Contraste con PC1/PC2.**) before any result was looked at: regions are the 4-adjacency
 connected components of the occupied neurons after cutting every adjacent pair whose prototype distance exceeds
 the 75th percentile of all adjacent-pair distances; a region with fewer than 2 creators is "no interpretable".
-The contrast is R^2 of PC1 and PC2 on the BMU (row, col), a tie-aware Mantel-type Spearman between grid distances
-and PC1-PC2 plane distances (the 26-D z distance as reference), and the edge-wise Spearman between U-matrix edges
+The contrast is R^2 of PC1 and PC2 on the BMU (row, col), a Mantel-type Pearson correlation between grid distances
+and PC1-PC2 plane distances (the 26-D z distance as reference), and the edge-wise Pearson correlation between U-matrix edges
 and the PC1 and PC2 gaps, with 1 000 permutations from a generator seeded with 2026. Only the grid chosen by
 the rule is profiled (D-14), and main refuses to start when the rule sha256 differs from the one stage 1 recorded.
 numpy, matplotlib (through plots_style) and the standard library only (Phase 1 D-06).
@@ -156,7 +156,7 @@ def plane_distance_vector(points) -> np.ndarray:
 
 def mantel_null(bmu, k: int, plane_points, rng, n: int = N_PERMUTATIONS) -> np.ndarray:
     """Mantel-type null: the grid-distance vector stays fixed, the creator order of plane_points is permuted and
-    the tie-aware Spearman between the two distance vectors is recomputed."""
+    the Pearson correlation between the two distance vectors is recomputed."""
     plane_points = np.asarray(plane_points, dtype=np.float64)
     grid = som.grid_distance_vector(bmu, k)
     full = np.sqrt(np.sum((plane_points[:, None, :] - plane_points[None, :, :]) ** 2, axis=2))
@@ -164,7 +164,7 @@ def mantel_null(bmu, k: int, plane_points, rng, n: int = N_PERMUTATIONS) -> np.n
     out = np.empty(n, dtype=np.float64)
     for index in range(n):
         order = rng.permutation(len(plane_points))
-        out[index] = som.spearman_ties(grid, full[order][:, order][i, j])
+        out[index] = som.pearson_corr(grid, full[order][:, order][i, j])
     return out
 
 
@@ -179,7 +179,7 @@ def _neuron_means(hits, bmu, values) -> np.ndarray:
 
 
 def edge_contrast(protos, hits, bmu, k: int, pc) -> dict:
-    """Edge-wise Spearman between the prototype distance of every adjacent pair of occupied neurons and the gap
+    """Edge-wise Pearson correlation between the prototype distance of every adjacent pair of occupied neurons and the gap
     of the neuron-mean PC1, and of PC2, between its two neurons. Pairs touching an empty neuron are excluded
     and counted."""
     hits = np.asarray(hits)
@@ -191,7 +191,7 @@ def edge_contrast(protos, hits, bmu, k: int, pc) -> dict:
     result = {"n_edges": len(keep), "n_excluded": len(pairs) - len(keep)}
     for name, neuron_mean in zip(("rho_pc1", "rho_pc2"), means):
         gaps = [abs(neuron_mean[pairs[i][0]] - neuron_mean[pairs[i][1]]) for i in keep]
-        result[name] = som.spearman_ties(distances[keep], gaps)
+        result[name] = som.pearson_corr(distances[keep], gaps)
     return result
 
 
@@ -384,12 +384,13 @@ def plot_zones(zones: list[dict], k: int, title: str, caption: str, out_stem) ->
         face = colors.get(zone["topic"], plots_style.TEXT_SECONDARY)
         ax.add_patch(Rectangle((col - 0.5, row - 0.5), 1, 1, facecolor=face, edgecolor=plots_style.SURFACE,
                                linewidth=2.0))
-        ax.text(col, row - 0.24, f"n = {zone['n']}", ha="center", va="center",
-                fontsize=plots_style.fontsize(6.5), color="white")
-        ax.text(col, row + 0.02, _thousands(zone["median_followers"]), ha="center", va="center",
-                fontsize=plots_style.fontsize(9), fontweight="bold", color="white")
-        ax.text(col, row + 0.27, f"USD {zone['median_price']:.0f}", ha="center", va="center",
-                fontsize=plots_style.fontsize(6.5), color="white")
+        if not slide:  # the slide keeps two lines per cell: the creators per neuron are on the slide of the map
+            ax.text(col, row - 0.24, f"n = {zone['n']}", ha="center", va="center",
+                    fontsize=plots_style.fontsize(6.5), color="white")
+        ax.text(col, row - 0.1 if slide else row + 0.02, _thousands(zone["median_followers"]), ha="center",
+                va="center", fontsize=plots_style.fontsize(9.5 if slide else 9), fontweight="bold", color="white")
+        ax.text(col, row + 0.22 if slide else row + 0.27, f"USD {zone['median_price']:.0f}", ha="center",
+                va="center", fontsize=plots_style.fontsize(6.6 if slide else 6.5), color="white")
     som_figures._grid_axes(ax, k)
     ax.set_aspect("equal")
     handles = [Patch(facecolor=colors[label], label=f"tema dominante: {label}") for label in order]
@@ -397,7 +398,8 @@ def plot_zones(zones: list[dict], k: int, title: str, caption: str, out_stem) ->
         handles.append(Patch(facecolor=plots_style.TEXT_SECONDARY, label=TIE_LABEL))
     handles.append(Patch(facecolor=plots_style.SURFACE, hatch="////", edgecolor=som_figures.HATCH_COLOR,
                          label="neurona vacía"))
-    note = "cada celda: n creadores, mediana de\nfollowers (grande) y de precio por post"
+    note = ("cada celda: mediana de followers\n(grande) y de precio por post" if slide
+            else "cada celda: n creadores, mediana de\nfollowers (grande) y de precio por post")
     if slide:
         legend_ax.legend(handles=handles, loc="center left", ncol=1, frameon=False,
                          fontsize=plots_style.fontsize(10), title=note, title_fontsize=plots_style.fontsize(9),
@@ -453,15 +455,22 @@ def main(argv: list[str] | None = None) -> int:
     run = som.read_run(TP_DIR / selection["figure_run"])
     if run.k != k:
         raise SystemExit(f"figure run has grid_k {run.k}, selection.json chose k = {k}")
-    features, z, meta = pca.read_prepared("creadores_zscore")
-    if list(run.features) != list(features):
-        raise SystemExit("figure run features differ from the prepared z-scored columns")
+    data = pca.som_input()
+    features, meta = list(data["names"]), data["meta"]
+    if list(run.features) != features:
+        raise SystemExit("figure run features differ from the PCA score columns the map is trained on (run `make pca`)")
     raw = load_creadores()
     if list(raw.ids) != list(meta["creator_id"]):
-        raise SystemExit("datos/creadores.csv and the prepared z-scored matrix list different creators")
+        raise SystemExit("datos/creadores.csv and the PCA score matrix list different creators")
     names = list(meta["name"])
-    std = scaler_from_meta(meta).std
-    pc = pca.scores(pca.pca_eigh(z, features), z)[:, :2]
+    # the map is trained on scores: its prototypes are brought back to the z space of the variables that stay by the
+    # eigenvectors of the retained components (orthonormal columns, so the distances between prototypes do not change)
+    z = data["z"]
+    variables = list(data["variables"])
+    scaler = scaler_from_meta(data["z_meta"])
+    std = np.array([scaler.std[scaler.features.index(name)] for name in variables])
+    prototypes_z = run.prototypes @ data["result"].eigenvectors[:, : len(features)].T
+    pc = data["scores"][:, :2]
     bmu = run.bmu
     rows_, cols_ = bmu // k, bmu % k
 
@@ -475,9 +484,9 @@ def main(argv: list[str] | None = None) -> int:
     for c in (0, 1):
         p_r2.append(permutation_pvalue(r2[c], r2_null(pc[:, c], rows_, cols_, rng)))
     grid_vector = som.grid_distance_vector(bmu, k)
-    mantel_plane = som.spearman_ties(grid_vector, plane_distance_vector(pc))
+    mantel_plane = som.pearson_corr(grid_vector, plane_distance_vector(pc))
     p_mantel = permutation_pvalue(mantel_plane, mantel_null(bmu, k, pc, rng))
-    mantel_z26 = som.spearman_ties(grid_vector, plane_distance_vector(z))
+    mantel_vars = som.pearson_corr(grid_vector, plane_distance_vector(z))
     edges = edge_contrast(run.prototypes, run.hits, bmu, k, pc)
 
     out.mkdir(parents=True, exist_ok=True)
@@ -509,7 +518,8 @@ def main(argv: list[str] | None = None) -> int:
 
     contrast = {
         "r2_pc1": r2[0], "p_r2_pc1": p_r2[0], "r2_pc2": r2[1], "p_r2_pc2": p_r2[1],
-        "mantel_plane_rho": mantel_plane, "p_mantel_plane": p_mantel, "mantel_z26_rho": mantel_z26,
+        "mantel_plane_rho": mantel_plane, "p_mantel_plane": p_mantel, "mantel_vars_rho": mantel_vars,
+        "n_variables": len(variables),
         "edge_rho_pc1": edges["rho_pc1"], "edge_rho_pc2": edges["rho_pc2"],
         "n_edges": edges["n_edges"], "n_excluded_edges": edges["n_excluded"],
         "threshold": result.threshold, "n_regions": int(len(result.sizes)),
@@ -520,7 +530,7 @@ def main(argv: list[str] | None = None) -> int:
     (out / "pca_contrast.json").write_text(json.dumps(contrast, indent=2) + "\n", encoding="utf-8")
 
     # high-U edges
-    top = high_u_edges(run.prototypes, run.hits, k, features, std)
+    top = high_u_edges(prototypes_z, run.hits, k, variables, std)
     _write_csv(out / "high_u_edges.csv",
                ["edge_rank", "neuron_a", "neuron_b", "distance", "variable", "delta_z", "delta_raw"],
                [[e["rank"], e["neuron_a"], e["neuron_b"], e["distance"], v["variable"], v["delta_z"], v["delta_raw"]]

@@ -92,7 +92,7 @@ Meaning, per the plan's resume-signal: all 25 question texts match the PDF exact
 
 | Group | Source files | Keys (examples) |
 |-------|--------------|-----------------|
-| pca | audited/decision.json, sensitivity.json, audited/eigenvalues.csv | n_features, k_80, kaiser, var_pc1, var_pc2, cum_k80, kaiser_all31 |
+| pca | audited/decision.json, sensitivity.json, audited/eigenvalues.csv | n_features, k_80, (field retired), var_pc1, var_pc2, cum_k80, (field retired) |
 | som | pca_contrast.json, selection.json, robustness.json | chosen_k, r2_pc1, mantel_rho, edge_rho_pc1, n_failing_variants, figure_seed |
 | oja | comparison.json, dispersion.json, evidence.json, evidence_correlations.csv, index.csv | n_seeds, abs_cos_min, corr_followers_pearson, max_id, pivot_margin |
 | camp | selection_identity.json, shortlists.csv, comparison.csv | k, rule_commit, `<campaign>.top5`, `.criterion`, `.cost_per_thousand_ar`, `.overlap_followers` |

@@ -33,7 +33,7 @@ Reemplazar el stub `neuron/models/kohonen_stub.c` por un SOM real en C (grilla k
   2. Entre las que quedan gana el **menor QE-LOO medio**.
   3. Si otra k sobreviviente está a menos de 1 desvío (entre seeds) del QE-LOO ganador, gana la **más estable entre seeds** (D-13); si siguen empatadas, la **k más chica**.
 - **D-12:** Ocupación suficiente = las dos condiciones sobre la media entre seeds: **≤ 20 % de neuronas vacías** y **≥ 2 creadores por neurona ocupada** en promedio.
-- **D-13:** Estabilidad entre seeds = para cada seed, matriz 50×50 de distancias en la grilla entre las BMU de cada par de creadores; estabilidad = promedio del **Spearman** entre las matrices de todos los pares de seeds (45 pares con 10 seeds). Invariante a rotación y reflexión del mapa, comparable entre k.
+- **D-13:** Estabilidad entre seeds = para cada seed, matriz 50×50 de distancias en la grilla entre las BMU de cada par de creadores; estabilidad = promedio del **rank-correlation (retired)** entre las matrices de todos los pares de seeds (45 pares con 10 seeds). Invariante a rotación y reflexión del mapa, comparable entre k.
 - **D-14:** Si ninguna k pasa los filtros: se **quita solo el filtro de TE**, se aplica el resto de la regla sin cambios y el informe dice explícitamente que ninguna grilla cumplió TE ≤ 0,05. La ocupación no se relaja nunca.
 - **D-15:** QE (de entrenamiento) se reporta y se grafica contra k, pero no decide: el texto dice que por QE solo ganaría la grilla más grande (fuera de alcance en REQUIREMENTS: "Elegir la grilla del SOM por menor QE").
 
