@@ -64,11 +64,27 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 ### KD-6 — Protocolo de los 5 QR pre-registrado y commiteado antes de correr la red
 
-**Qué:** el protocolo de los 5 QR se pre-registró y se commiteó con guardia sha256 sobre el protocolo y los 5 PNG (F5 D-01 y D-02) antes de correr la red. Resultado en la Fase 5: Hebb 0 % de recuperación exacta incluso a ruido cero (QR correlacionados, parecido medio 0,67); la pseudo-inversa da 100 % a ruido 0 y lo sostiene hasta 0,30; el vecino más cercano por Hamming casi la iguala hasta ruido 0,40.
+**Qué:** el protocolo de los 5 QR se pre-registró y se commiteó con guardia sha256 sobre el protocolo y los 5 PNG (F5 D-01 y D-02) antes de correr la red. Resultado en la Fase 5: Hebb 0 % de recuperación exacta incluso a ruido cero (QR correlacionados, producto escalar normalizado medio 0,67); la pseudo-inversa da 100 % a ruido 0 y lo sostiene hasta 0,30; el vecino más cercano por Hamming casi la iguala hasta ruido 0,40.
 
 **Por qué:** que el hallazgo "Hebb falla" no pueda verse como elegido a posteriori; el umbral de veredicto se fija antes de ver resultados.
 
 **Dónde:** [PROJECT.md](.planning/PROJECT.md) (tabla Key Decisions) · [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) (F5 D-01 y D-02) · [fragmento 05 §3](deliverables/05-hopfield-qr.md)
+
+### KD-8 — Hopfield solo con la actualización síncrona de la teórica, re-registrado después de los resultados
+
+**Qué:** la dinámica de Hopfield es solo la actualización síncrona de la teórica (diapositiva 23), S_i(t+1) = sign(Σ_j w_ij S_j(t)), con detección de ciclos de período 2; se quitó la asincrónica (una neurona por vez), que era la referencia de los protocolos de letras y QR. Los dos protocolos se re-registraron el 2026-10-31 (texto entre marcadores y módulo de la regla en el mismo commit, `6a4bbd2`) y todo Hopfield se volvió a correr. El cambio se hizo después de ver los resultados de los dos modos (informe del 2026-10-26; código anterior en el commit `0e72a77`), y los fragmentos lo declaran. Resultado: con letras la recuperación exacta del set separado es 1,000, 0,904 y 0,336 con 3, 6 y 9 píxeles invertidos, y aparecen ciclos desde 4; con los QR, Hebb sigue en 0 % y la pseudo-inversa en 100 % hasta ruido 0,30. En estas corridas la energía no subió nunca, aunque en síncrono la teoría no lo garantiza.
+
+**Por qué:** es la única dinámica que da la teórica; para el modo de actualización la regla deja de ser anterior a los resultados, y eso queda escrito en vez de ocultarse.
+
+**Dónde:** [PROJECT.md](.planning/PROJECT.md) (tabla Key Decisions) · [fragmento 04 §1, §3 y §5](deliverables/04-hopfield-letras.md) · [fragmento 05 §1, §3 y §4](deliverables/05-hopfield-qr.md)
+
+### KD-9 — Experimento posterior: Hebb sobre la parte variable de los 3 QR menos parecidos
+
+**Qué:** después de ver el 0 % de Hebb sobre los 5 QR se agregó un segundo experimento, rotulado como posterior y fuera del protocolo preregistrado (no cambia ningún veredicto de `verdict.json`). La red guarda solo los 414 píxeles que no son iguales en los 5 QR (los 955 comunes se completan desde la plantilla) y solo el trío de menor |producto escalar normalizado| máximo entre pares sobre el QR completo (beverages, dessert y wine; desempate por la media). Corre en el binario de C con Hebb y la misma grilla, ensayos y seeds del protocolo (`make hopfield-qr-masked`, `analysis/hopfield_qr_masked.py`), con la línea base de Hamming sobre los mismos patrones y una ablación a ruido 0. Resultado: solo con los dos pasos juntos los QR son puntos fijos (3 de 3; 0 de 5 con máscara sola y 0 de 3 con el trío solo); Hebb recupera el 100 % hasta ruido 0,15 y 76,9 % en 0,40, y Hamming sigue por encima.
+
+**Por qué:** muestra que el fallo de Hebb es del crosstalk y no de la dinámica: bajando la correlación, la misma regla recupera. Se declara posterior porque la máscara y el criterio del trío se eligieron después de ver el resultado y de una exploración previa; achica el problema (menos QR, plantilla común conocida) y no lo resuelve para los 5.
+
+**Dónde:** [fragmento 05 §7](deliverables/05-hopfield-qr.md) · `analysis/results/hopfield/qr_masked/` (decisión del usuario del 2026-11-01)
 
 ## Fase 1 — Datos, auditoría de variables y PCA
 
@@ -484,7 +500,7 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 **Qué:** se dibuja un abecedario completo de 26 letras (A-Z) de 5×5 en un archivo de texto legible (por ejemplo `datos/letters/alphabet_5x5.txt`; una letra por bloque, filas con `*` = +1 y `.` = −1, en orden row-major). Un script de Python lo convierte a una matriz ±1 (una fila por letra, 25 columnas) que lee el binario de C. La J del enunciado (`docs/Archivo SIATP 42026.pdf`, §2.2) se transcribe tal cual y un pytest verifica que la codificación coincide con la del enunciado (Pitfall 14).
 
-**Por qué:** los parecidos, la regla de selección de F4 D-03, el barrido de capacidad y las figuras dependen de estos bitmaps; una vez commiteada la regla, cambiar un bitmap obliga a rehacerla (costosa de revertir).
+**Por qué:** los productos escalares, la regla de selección de F4 D-03, el barrido de capacidad y las figuras dependen de estos bitmaps; una vez commiteada la regla, cambiar un bitmap obliga a rehacerla (costosa de revertir).
 
 **Dónde:** [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) · [fragmento 04 §2 y §3](deliverables/04-hopfield-letras.md)
 
@@ -498,7 +514,7 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 ### F4 D-03 — Dos sets de 4 letras lado a lado: separado y correlacionado
 
-**Qué:** se muestran el set separado (el subconjunto de 4 del alfabeto con menor max |parecido| fuera de la diagonal, con parecido = ξ^a·ξ^b / N) y el set correlacionado (el de mayor max |parecido|), que se espera que falle y sirve para explicar el término de cruce. Las dos reglas, con desempate escrito, se evalúan sobre los C(26, 4) = 14 950 subconjuntos y dependen solo de los bitmaps, no de la red. El set separado es el set principal de la demo de recuperación y del estado espurio. Con N impar no existe ortogonalidad exacta (Pitfall 14b): se habla de "|parecido| chico".
+**Qué:** se muestran el set separado (el subconjunto de 4 del alfabeto con menor max |producto escalar normalizado| fuera de la diagonal, con producto escalar normalizado = ξ^a·ξ^b / N) y el set correlacionado (el de mayor max |producto escalar normalizado|), que se espera que falle y sirve para explicar el crosstalk. Las dos reglas, con desempate escrito, se evalúan sobre los C(26, 4) = 14 950 subconjuntos y dependen solo de los bitmaps, no de la red. El set separado es el set principal de la demo de recuperación y del estado espurio. Con N impar no existe ortogonalidad exacta (Pitfall 14b): se habla de "|producto escalar normalizado| chico".
 
 **Por qué:** mostrar con evidencia la diferencia entre letras casi ortogonales y letras correlacionadas, sin elegir las letras para que la demo salga bien.
 
@@ -522,17 +538,17 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 ### F4 D-05 — Capacidad: exhaustiva para p = 4, muestreada para p = 1 a 8
 
-**Qué:** los 14 950 subconjuntos de 4 letras se almacenan (Hebb, W entera) y para cada uno se mide la fracción de patrones que son puntos fijos estables (y, a un nivel de ruido fijo, la tasa de recuperación), graficada contra el max |parecido|. Para p = 1 a 8 (confirmado por el usuario en la planificación; si la estabilidad no cae a cerca de 0 en p = 8, se extiende con una regla escrita en la regla de F4 D-04, no a mano) se toma una muestra al azar con seed de subconjuntos por p y se grafica la fracción estable contra p, marcando 0,138N ≈ 3,45 solo como orden de magnitud (Pitfall 26), nunca como umbral.
+**Qué:** los 14 950 subconjuntos de 4 letras se almacenan (Hebb, W entera) y para cada uno se mide la fracción de patrones que son puntos fijos estables (y, a un nivel de ruido fijo, la tasa de recuperación), graficada contra el max |producto escalar normalizado|. Para p = 1 a 8 (confirmado por el usuario en la planificación; si la estabilidad no cae a cerca de 0 en p = 8, se extiende con una regla escrita en la regla de F4 D-04, no a mano) se toma una muestra al azar con seed de subconjuntos por p y se grafica la fracción estable contra p, marcando 0,138N ≈ 3,45 solo como orden de magnitud (Pitfall 26), nunca como umbral.
 
 **Por qué:** a N = 25 el comportamiento depende de qué letras se eligen, así que la capacidad se mide y no se deduce de 0,138N.
 
 **Dónde:** [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) · [fragmento 04 §3 y §6](deliverables/04-hopfield-letras.md)
 
-### F4 D-06 — Matriz de parecidos y término de cruce de los dos sets
+### F4 D-06 — Matriz de productos escalares y crosstalk de los dos sets
 
-**Qué:** la matriz de parecidos de 4×4 y el término de cruce de cada patrón se reportan para los dos sets de F4 D-03, y además un histograma de max |parecido| sobre los 14 950 sets de 4 ubica a ambos dentro de la distribución.
+**Qué:** la matriz de productos escalares de 4×4 y el crosstalk de cada patrón se reportan para los dos sets de F4 D-03, y además un histograma de max |producto escalar normalizado| sobre los 14 950 sets de 4 ubica a ambos dentro de la distribución.
 
-**Por qué:** explicar la diferencia de comportamiento entre los dos sets a través del término de cruce y mostrar qué tan extremos son dentro de todos los posibles.
+**Por qué:** explicar la diferencia de comportamiento entre los dos sets a través del crosstalk y mostrar qué tan extremos son dentro de todos los posibles.
 
 **Dónde:** [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) · [fragmento 04 §3 y §4](deliverables/04-hopfield-letras.md)
 ## Fase 5 — Hopfield: QR
@@ -555,7 +571,7 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 ### F5 D-03 — Éxito = match exacto de los 1369 píxeles, más la curva continua de |m|
 
-**Qué:** el criterio de éxito es el match exacto de los 1369 píxeles (|m| = 1 con el objetivo) como veredicto binario, y además se reporta la curva continua del parecido final |m| promedio por nivel de ruido. Este criterio entra en el protocolo de F5 D-01.
+**Qué:** el criterio de éxito es el match exacto de los 1369 píxeles (|m| = 1 con el objetivo) como veredicto binario, y además se reporta la curva continua del producto escalar normalizado final |m| promedio por nivel de ruido. Este criterio entra en el protocolo de F5 D-01.
 
 **Por qué:** ver qué tan cerca queda Hebb aunque nunca acierte exacto.
 
@@ -619,7 +635,7 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 ### F5 D-11 — Limitaciones del caso de uso demostradas empíricamente (sub-ítems D-11a a D-11d)
 
-**Qué:** se demuestran con figura o número, además del texto: **D-11a**, correlación entre QR (matriz de parecidos 5×5, fracción de píxeles idénticos en los 5 y distancia mínima de Hamming entre pares, causa raíz del fallo de Hebb); **D-11b**, sensibilidad a corrimientos (mover un QR 1 o 2 píxeles y mostrar que la recuperación pixel-wise se rompe, en un tríptico antes, desplazado y recuperado); **D-11c**, equivalencia con lookup (cubierta por la curva de Hamming de F5 D-08). El cuarto punto, **D-11d**, la corrección de errores propia del QR, queda solo en texto (F5 D-10); el `CONTEXT.md` lo menciona al cerrar la decisión sin ponerle letra, y acá se lo nombra así para completar la lista. El fragmento cita `D-11a`; el glosario enlaza un ID con letra que no tiene entrada propia a esta entrada madre.
+**Qué:** se demuestran con figura o número, además del texto: **D-11a**, correlación entre QR (matriz de productos escalares 5×5, fracción de píxeles idénticos en los 5 y distancia mínima de Hamming entre pares, causa raíz del fallo de Hebb); **D-11b**, sensibilidad a corrimientos (mover un QR 1 o 2 píxeles y mostrar que la recuperación pixel-wise se rompe, en un tríptico antes, desplazado y recuperado); **D-11c**, equivalencia con lookup (cubierta por la curva de Hamming de F5 D-08). El cuarto punto, **D-11d**, la corrección de errores propia del QR, queda solo en texto (F5 D-10); el `CONTEXT.md` lo menciona al cerrar la decisión sin ponerle letra, y acá se lo nombra así para completar la lista. El fragmento cita `D-11a`; el glosario enlaza un ID con letra que no tiene entrada propia a esta entrada madre.
 
 **Por qué:** que las limitaciones se apoyen en números medidos sobre los datos reales y no solo en argumentos.
 
@@ -652,7 +668,7 @@ Cada entrada tiene tres líneas: **Qué** (lo decidido, fiel a la línea del `CO
 
 ### F6 D-04 — Los resultados poco favorables van de frente
 
-**Qué:** los resultados poco favorables tienen slide propia con título-conclusión y una línea del porqué: una sola región en el SOM (R1 = 50) con la regla fijada, etapa 2 «no robusta», Hebb con 0 % de recuperación exacta en los QR (parecido medio 0,67) y el lookup de Hamming 1-NN que iguala o supera a la pseudo-inversa con ruido alto.
+**Qué:** los resultados poco favorables tienen slide propia con título-conclusión y una línea del porqué: una sola región en el SOM (R1 = 50) con la regla fijada, etapa 2 «no robusta», Hebb con 0 % de recuperación exacta en los QR (producto escalar normalizado medio 0,67) y el lookup de Hamming 1-NN que iguala o supera a la pseudo-inversa con ruido alto.
 
 **Por qué:** es coherente con la Key Decision de PROJECT.md (ver KD-4) de reportar el resultado de la regla tal cual.
 
@@ -761,7 +777,7 @@ Los títulos completos y el análisis de cada trampa están en `.planning/resear
 
 **Qué:** con la regla de Hebb estándar, los 5 QR no son ni siquiera puntos fijos de la red: una consulta sin ruido ya cambia. La regla 0,138N ("5/1369, muy por debajo del límite") se deriva para patrones aleatorios independientes y no dice nada de patrones correlacionados.
 
-**Por qué:** el proyecto hizo de la estabilidad a ruido cero el primer test de cada corrida, reportó el fallo de Hebb como hallazgo (no como error), midió la causa raíz (parecidos de 0,58 a 0,86; 69,8 % de píxeles idénticos en los 5 QR) y mostró la pseudo-inversa como segundo experimento claramente rotulado.
+**Por qué:** el proyecto hizo de la estabilidad a ruido cero el primer test de cada corrida, reportó el fallo de Hebb como hallazgo (no como error), midió la causa raíz (productos escalares de 0,58 a 0,86; 69,8 % de píxeles idénticos en los 5 QR) y mostró la pseudo-inversa como segundo experimento claramente rotulado.
 
 **Dónde:** [fragmento 05 §3, §5](deliverables/05-hopfield-qr.md) · [05-CONTEXT.md](.planning/phases/05-hopfield-con-qr/05-CONTEXT.md) (F5 D-01, D-02, D-06, D-07)
 
@@ -777,7 +793,7 @@ Los títulos completos y el análisis de cada trampa están en `.planning/resear
 
 **Qué:** usar 0,138N = 3,45 como umbral duro con N = 25, buscar ortogonalidad exacta (imposible con N impar, el producto punto es siempre impar) o elegir las letras que hacen lucir la demo sin decirlo.
 
-**Por qué:** el proyecto muestra la matriz de parecidos y el término de cruce, hace un experimento de capacidad exhaustivo para p = 4 y muestreado para p = 1 a 8, y compara lado a lado un set separado y uno correlacionado elegidos por una regla fijada antes de correr la red.
+**Por qué:** el proyecto muestra la matriz de productos escalares y el crosstalk, hace un experimento de capacidad exhaustivo para p = 4 y muestreado para p = 1 a 8, y compara lado a lado un set separado y uno correlacionado elegidos por una regla fijada antes de correr la red.
 
 **Dónde:** [fragmento 04 §3](deliverables/04-hopfield-letras.md) · [04-CONTEXT.md](.planning/phases/04-hopfield-n-cleo-y-letras/04-CONTEXT.md) (F4 D-01, D-03, D-04, D-05)
 
@@ -825,7 +841,7 @@ Responde las [secciones 4 y 7 del fragmento 01](deliverables/01-datos-pca.md) (d
 
 Responde la [sección 7 del fragmento 04](deliverables/04-hopfield-letras.md); la sección 3 lo cita al fijar el diseño de los experimentos.
 
-### HOP-04 — Preparación de los 5 QR de 37×37 a ±1 con aserción de que son 0/255 puros, y matriz de parecidos
+### HOP-04 — Preparación de los 5 QR de 37×37 a ±1 con aserción de que son 0/255 puros, y matriz de productos escalares
 
 Responde la [sección 2 del fragmento 05](deliverables/05-hopfield-qr.md) (decisión relacionada: F5 D-11).
 

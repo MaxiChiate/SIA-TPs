@@ -210,7 +210,7 @@ static void test_config_strict_validation(void) {
               "\"grid_k\": 3, \"neighborhood\": \"step\", \"radius0\": 1.5, \"radius_final\": 1, "
               "\"eta0\": 0.5, \"eta_final\": 0.01, \"epochs\": 5}"));
   check(loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"" PATTERNS_MIX "\", "
-              "\"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"async\", \"max_sweeps\": 100, "
+              "\"task\": \"recall\", \"rule\": \"hebb\", \"max_sweeps\": 100, "
               "\"trials\": 2, \"noise_levels\": [0.0, 0.5], \"subset\": [0, 1, 2, 3], \"trace_trials\": 1}"));
 
   check(!loads("{\"model\": \"oja\", \"seed\": 1, \"input\": \"x.csv\", \"bogus\": 1}"));
@@ -230,15 +230,19 @@ static void test_config_strict_validation(void) {
   check(!loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"x.csv\", \"noise_levels\": []}"));
   // The valid Hopfield case with no task, with a fractional trials and with a key of another model
   check(!loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"" PATTERNS_MIX "\", "
-               "\"rule\": \"hebb\", \"update\": \"async\", \"max_sweeps\": 100, "
+               "\"rule\": \"hebb\", \"max_sweeps\": 100, "
                "\"trials\": 2, \"noise_levels\": [0.0, 0.5], \"subset\": [0, 1, 2, 3], \"trace_trials\": 1}"));
   check(!loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"" PATTERNS_MIX "\", "
-               "\"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"async\", \"max_sweeps\": 100, "
+               "\"task\": \"recall\", \"rule\": \"hebb\", \"max_sweeps\": 100, "
                "\"trials\": 2.5, \"noise_levels\": [0.0, 0.5], \"subset\": [0, 1, 2, 3], \"trace_trials\": 1}"));
   check(!loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"" PATTERNS_MIX "\", "
-               "\"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"async\", \"max_sweeps\": 100, "
+               "\"task\": \"recall\", \"rule\": \"hebb\", \"max_sweeps\": 100, "
                "\"trials\": 2, \"noise_levels\": [0.0, 0.5], \"subset\": [0, 1, 2, 3], \"trace_trials\": 1, "
                "\"grid_k\": 3}"));
+  // The update is always synchronous: an "update" key is unknown and refused
+  check(!loads("{\"model\": \"hopfield\", \"seed\": 1, \"input\": \"" PATTERNS_MIX "\", "
+               "\"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"sync\", \"max_sweeps\": 100, "
+               "\"trials\": 2, \"noise_levels\": [0.0, 0.5], \"subset\": [0, 1, 2, 3], \"trace_trials\": 1}"));
   check(!loads("{\"model\": \"oja\", \"seed\": "));
   check(!loads("[1, 2]"));
 
@@ -333,10 +337,10 @@ static void test_same_seed_same_bytes(void) {
                        "\"grid_k\": 3, \"neighborhood\": \"step\", \"radius0\": 1.5, \"radius_final\": 1, "
                        "\"eta0\": 0.5, \"eta_final\": 0.01, \"epochs\": 5}",
                        "prototypes.csv");
-  // The noisy queries and the async orders come from the seed, so trials.csv changes with it
+  // The noisy queries come from the seed, so trials.csv changes with it
   same_seed_same_bytes("hopfield",
                        "{\"model\": \"hopfield\", \"seed\": 5, \"input\": \"" PATTERNS_MIX "\", "
-                       "\"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"async\", \"max_sweeps\": 100, "
+                       "\"task\": \"recall\", \"rule\": \"hebb\", \"max_sweeps\": 100, "
                        "\"trials\": 3, \"noise_levels\": [0.0, 0.24], \"subset\": [0, 1, 2, 3], "
                        "\"trace_trials\": 1}",
                        "trials.csv");
@@ -553,8 +557,8 @@ static int metrics_number(const char * dir, const char * key, double * out) {
 
 
 // The config fragment of a Hopfield run on the synthetic fixture; every argument is a string literal
-#define HOP_FRAGMENT(task, rule, update, sweeps, trials, noise, extra) \
-  "\"input\": \"" PATTERNS_MIX "\", \"task\": \"" task "\", \"rule\": \"" rule "\", \"update\": \"" update "\", " \
+#define HOP_FRAGMENT(task, rule, sweeps, trials, noise, extra) \
+  "\"input\": \"" PATTERNS_MIX "\", \"task\": \"" task "\", \"rule\": \"" rule "\", " \
   "\"max_sweeps\": " sweeps ", \"trials\": " trials ", \"noise_levels\": " noise extra
 #define HOP_SUBSET ", \"subset\": [0, 1, 2, 3], \"trace_trials\": 1"
 
@@ -578,7 +582,7 @@ static int hopfield_run_accepts(const char * fragment) {
 static void test_hopfield_run(void) {
   char path[PATH_MAX_TEST];
   write_tmp("hop_run.json",
-            "{\"model\": \"hopfield\", \"seed\": 3, " HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0, 0.24]",
+            "{\"model\": \"hopfield\", \"seed\": 3, " HOP_FRAGMENT("recall", "hebb", "100", "4", "[0.0, 0.24]",
                                                                       HOP_SUBSET) "}",
             path);
   Config config;
@@ -635,67 +639,48 @@ static void test_hopfield_run(void) {
   check(csv_value(file, 0, 3, &v) && v == -1);
   check(csv_value(file, 0, 4, &v) && v == 0);
   check(csv_value(file, 0, 5, &v) && v == -304);
-  check(csv_value(file, 25, 0, &v) && v == 0);  // step 0 and one quiet sweep of 25 visits
-  check(csv_value(file, 26, 0, &v) && v != 0);
+  check(csv_value(file, 1, 0, &v) && v == 0);  // step 0 and one quiet synchronous step
+  check(csv_value(file, 1, 4, &v) && v == 0);
+  check(csv_value(file, 2, 0, &v) && v != 0);
 
   double metric = -1;
   check(metrics_number(dir, "energy_increases", &metric) && metric == 0);
   check(metrics_number(dir, "stored_fixed", &metric) && metric == 4);
   check(metrics_number(dir, "recall_rate", &metric) && metric >= 0.5);
 
-  // The same config with the synchronous update
-  write_tmp("hop_sync.json",
-            "{\"model\": \"hopfield\", \"seed\": 3, " HOP_FRAGMENT("recall", "hebb", "sync", "100", "4", "[0.0, 0.24]",
-                                                                      HOP_SUBSET) "}",
-            path);
-  check(load_quiet(path, &config));
-  check(run_into(&config, config.seed, "hop_sync", dir));
-  config_free(&config);
-  snprintf(file, sizeof(file), "%s/trials.csv", dir);
-  check(count_data_lines(file) == 32);
-  for (int a = 0; a < 4; a++) {
-    for (int t = 0; t < 4; t++) {
-      int row = a * 8 + t;
-      double sweeps = 0;
-      double correct = 0;
-      check(csv_value(file, row, 7, &sweeps) && sweeps == 1);
-      check(csv_value(file, row, 18, &correct) && correct == 1);
-    }
-  }
   same_seed_same_bytes("hopfield_sync",
-                       "{\"model\": \"hopfield\", \"seed\": 5, " HOP_FRAGMENT("recall", "hebb", "sync", "100", "3",
+                       "{\"model\": \"hopfield\", \"seed\": 5, " HOP_FRAGMENT("recall", "hebb", "100", "3",
                                                                                  "[0.0, 0.24]", HOP_SUBSET) "}",
                        "trials.csv");
 
   // Refusals
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]", HOP_SUBSET)) == 1);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "100", "4", "[0.0]", HOP_SUBSET)) == 1);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "100", "4", "[0.0]",
                                           ", \"subset\": [0, 6], \"trace_trials\": 1")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "100", "4", "[0.0]",
                                           ", \"subset\": [1, 1], \"trace_trials\": 1")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "100", "4", "[0.0]",
                                           ", \"subset\": [0.5], \"trace_trials\": 1")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "100", "4", "[0.0]",
                                           ", \"trace_trials\": 1")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "100", "4", "[0.0]",
                                           ", \"subset\": [0, 1, 2, 3]")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "100", "4", "[0.0]",
                                           ", \"subset\": [0, 1, 2, 3], \"trace_trials\": 5")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "100", "4", "[0.0]",
                                           ", \"subset\": [0, 1, 2, 3], \"trace_trials\": -1")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "0", "4", "[0.0]", HOP_SUBSET)) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "10001", "4", "[0.0]", HOP_SUBSET)) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "0", "[0.0]", HOP_SUBSET)) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "hex", "100", "4", "[0.0]", HOP_SUBSET)) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "pinv", "async", "100", "4", "[0.0]", HOP_SUBSET)) == 1);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "bogus", "async", "100", "4", "[0.0]", HOP_SUBSET)) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("bogus", "hebb", "async", "100", "4", "[0.0]", HOP_SUBSET)) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0, 1.5]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "0", "4", "[0.0]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "10001", "4", "[0.0]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "100", "0", "[0.0]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "pinv", "100", "4", "[0.0]", HOP_SUBSET)) == 1);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "bogus", "100", "4", "[0.0]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("bogus", "hebb", "100", "4", "[0.0]", HOP_SUBSET)) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "100", "4", "[0.0, 1.5]", HOP_SUBSET)) == 0);
   char zeros[PATH_MAX_TEST];
   write_tmp("hop_zeros.csv", "a,b\n1,0\n-1,1\n", zeros);
   char fragment[1024];
   snprintf(fragment, sizeof(fragment),
-           "\"input\": \"%s\", \"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"async\", "
+           "\"input\": \"%s\", \"task\": \"recall\", \"rule\": \"hebb\", "
            "\"max_sweeps\": 100, \"trials\": 4, \"noise_levels\": [0.0], \"subset\": [0, 1], \"trace_trials\": 1",
            zeros);
   check(hopfield_run_accepts(fragment) == 0);
@@ -704,7 +689,7 @@ static void test_hopfield_run(void) {
   // every stored pattern an exact fixed point (stored.csv fixed == 1 for all), where the same fixture leaves at
   // least one non-fixed under hebb
   write_tmp("hop_pinv.json",
-            "{\"model\": \"hopfield\", \"seed\": 3, " HOP_FRAGMENT("recall", "pinv", "async", "100", "4", "[0.0]",
+            "{\"model\": \"hopfield\", \"seed\": 3, " HOP_FRAGMENT("recall", "pinv", "100", "4", "[0.0]",
                                                                       HOP_SUBSET) "}",
             path);
   check(load_quiet(path, &config));
@@ -726,7 +711,7 @@ static void test_hopfield_run(void) {
             "-1,1,1,-1,-1,1,-1,1\n",
             path);
   snprintf(rule_fragment, sizeof(rule_fragment),
-           "\"input\": \"%s\", \"task\": \"recall\", \"rule\": \"hebb\", \"update\": \"async\", "
+           "\"input\": \"%s\", \"task\": \"recall\", \"rule\": \"hebb\", "
            "\"max_sweeps\": 100, \"trials\": 4, \"noise_levels\": [0.0], \"subset\": [0, 1, 2], \"trace_trials\": 1",
            path);
   {
@@ -758,7 +743,7 @@ static void test_hopfield_run(void) {
             dup_csv);
   char dup_fragment[1024];
   snprintf(dup_fragment, sizeof(dup_fragment),
-           "\"input\": \"%s\", \"task\": \"recall\", \"rule\": \"pinv\", \"update\": \"async\", "
+           "\"input\": \"%s\", \"task\": \"recall\", \"rule\": \"pinv\", "
            "\"max_sweeps\": 100, \"trials\": 4, \"noise_levels\": [0.0], \"subset\": [0, 1, 2], \"trace_trials\": 1",
            dup_csv);
   check(hopfield_run_accepts(dup_fragment) == 0);
@@ -768,7 +753,7 @@ static void test_hopfield_run(void) {
 // Config text of a capacity run on the synthetic fixture
 #define CAP_CONFIG(seed, p, n_subsets, trials) \
   "{\"model\": \"hopfield\", \"seed\": " seed ", " \
-  HOP_FRAGMENT("capacity", "hebb", "async", "100", trials, "[0.12]", ", \"p\": " p ", \"n_subsets\": " n_subsets) "}"
+  HOP_FRAGMENT("capacity", "hebb", "100", trials, "[0.12]", ", \"p\": " p ", \"n_subsets\": " n_subsets) "}"
 
 // Runs the config text and leaves the run directory in dir
 static void capacity_run(const char * name, const char * text, char dir[]) {
@@ -877,30 +862,30 @@ static void test_hopfield_capacity(void) {
   same_seed_same_bytes("hopfield_capacity_sampled", CAP_CONFIG("4", "3", "10", "2"), "capacity.csv");
 
   // Refusals
-  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "100", "2", "[0.12]",
                                           ", \"p\": 3, \"n_subsets\": 19")) == 1);
-  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "100", "2", "[0.12]",
                                           ", \"p\": 3, \"n_subsets\": 20")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "100", "2", "[0.12]",
                                           ", \"p\": 0, \"n_subsets\": 0")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "100", "2", "[0.12]",
                                           ", \"p\": 7, \"n_subsets\": 0")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "100", "2", "[0.12]",
                                           ", \"p\": 3, \"n_subsets\": -1")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "100", "2", "[0.12]",
                                           ", \"p\": 3, \"n_subsets\": 10001")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12, 0.2]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "100", "2", "[0.12, 0.2]",
                                           ", \"p\": 3, \"n_subsets\": 0")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "100", "2", "[0.12]",
                                           ", \"p\": 3, \"n_subsets\": 0, \"subset\": [0, 1]")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "100", "2", "[0.12]",
                                           ", \"p\": 3, \"n_subsets\": 0, \"trace_trials\": 0")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "100", "2", "[0.12]",
                                           ", \"n_subsets\": 0")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "async", "100", "2", "[0.12]", ", \"p\": 3")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("capacity", "hebb", "100", "2", "[0.12]", ", \"p\": 3")) == 0);
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "100", "4", "[0.0]",
                                           HOP_SUBSET ", \"p\": 2")) == 0);
-  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "async", "100", "4", "[0.0]",
+  check(hopfield_run_accepts(HOP_FRAGMENT("recall", "hebb", "100", "4", "[0.0]",
                                           HOP_SUBSET ", \"n_subsets\": 0")) == 0);
 }
 
@@ -970,71 +955,48 @@ static void test_hopfield_core(void) {
   check(tie_next[0] == -1);
   {
     double s[3] = { -1, 1, 1 };
-    double h[3];
-    int order[3] = { 0, 1, 2 };
-    Rng rng = rng_new(1);
+    double scratch[6];
     HopfieldTrace trace = { NULL, 0, 0, 1000, 0 };
     HopfieldOutcome out;
-    check(hopfield_async_run(wt, 3, s, h, order, &rng, 10, &trace, &out));
-    int found = 0;
-    for (long long r = 0; r < trace.rows && !found; r++) {
-      const double * line = trace.data + r * HOPFIELD_TRACE_WIDTH;
-      if (line[3] == 0) {
-        found = 1;
-        check(line[4] == 0); // the first visit of neuron 0 changes nothing
-      }
-    }
-    check(found);
-    check(out.converged);
+    check(hopfield_sync_run(wt, 3, s, scratch, 10, &trace, &out));
+    check(s[0] == -1); // neuron 0 sees h = 0 at every step and keeps its state
+    check(out.converged || out.cycle == 2);
     hopfield_trace_free(&trace);
   }
 
-  // (d) incremental energy against the energy from scratch, monotone in async
+  // (d) synchronous runs from random states: each one ends in a fixed point or a two-cycle, a converged final state
+  // is a fixed point of sign(W s), and every logged energy is the from-scratch energy of the state at that step
   {
     Rng rng = rng_new(11);
     HopfieldTrace trace = { NULL, 0, 0, 100000, 0 };
-    int all_converged = 1;
-    int all_monotone = 1;
-    int all_replayed = 1;
+    int all_ended = 1;
     int all_fixed = 1;
+    int all_energy = 1;
     for (int run = 0; run < 200; run++) {
       double s[25];
-      double start[25];
+      double scratch[50];
       double h[25];
-      int order[25];
-      for (int j = 0; j < 25; j++) {
-        s[j] = rng_uniform(&rng) < 0.5 ? -1 : 1;
-        start[j] = s[j];
-        order[j] = j;
-      }
+      for (int j = 0; j < 25; j++) s[j] = rng_uniform(&rng) < 0.5 ? -1 : 1;
+      double e0 = hopfield_energy(w, 25, s);
       trace.rows = 0;
       HopfieldOutcome out;
-      check(hopfield_async_run(w, 25, s, h, order, &rng, 100, &trace, &out));
-      all_converged = all_converged && out.converged && out.cycle == 0 && out.energy_increases == 0;
-
-      double replay[25];
-      memcpy(replay, start, sizeof(replay));
-      for (long long r = 0; r < trace.rows; r++) {
-        const double * line = trace.data + r * HOPFIELD_TRACE_WIDTH;
-        if (r > 0) {
-          const double * before = line - HOPFIELD_TRACE_WIDTH;
-          if (line[5] > before[5] + 1e-9) all_monotone = 0;
-          if (line[4] == 1 && !(line[5] <= before[5] - 1)) all_monotone = 0;
-          if (line[4] == 1) replay[(int) line[3]] = -replay[(int) line[3]];
-        }
-        if (fabs(hopfield_energy(w, 25, replay) - line[5]) > 1e-9) all_replayed = 0;
+      check(hopfield_sync_run(w, 25, s, scratch, 100, &trace, &out));
+      all_ended = all_ended && (out.converged || out.cycle == 2);
+      all_energy = all_energy && trace.rows == out.sweeps + 1 && fabs(trace.data[5] - e0) < 1e-9
+                   && fabs(out.e_final - hopfield_energy(w, 25, s)) < 1e-9
+                   && fabs(trace.data[(trace.rows - 1) * HOPFIELD_TRACE_WIDTH + 5] - out.e_final) < 1e-9;
+      if (out.converged) {
+        hopfield_fields(w, 25, s, h);
+        for (int i = 0; i < 25; i++) all_fixed = all_fixed && (h[i] == 0 || (h[i] > 0) == (s[i] > 0));
       }
-      hopfield_fields(w, 25, s, h);
-      for (int i = 0; i < 25; i++) all_fixed = all_fixed && (h[i] == 0 || (h[i] > 0) == (s[i] > 0));
     }
-    check(all_converged);
-    check(all_monotone);
-    check(all_replayed);
+    check(all_ended);
     check(all_fixed);
+    check(all_energy);
     hopfield_trace_free(&trace);
   }
 
-  // (e) the synchronous two-cycle against the asynchronous convergence
+  // (e) the synchronous two-cycle
   {
     double w2[4] = { 0, -1, -1, 0 };
     double s[2] = { 1, 1 };
@@ -1043,14 +1005,6 @@ static void test_hopfield_core(void) {
     check(hopfield_sync_run(w2, 2, s, scratch, 100, NULL, &out));
     check(out.cycle == 2 && out.converged == 0 && out.sweeps == 2);
     check(s[0] == 1 && s[1] == 1);
-
-    double a[2] = { 1, 1 };
-    double h[2];
-    int order[2] = { 0, 1 };
-    Rng rng = rng_new(2);
-    check(hopfield_async_run(w2, 2, a, h, order, &rng, 100, NULL, &out));
-    check(out.converged == 1 && out.cycle == 0);
-    check(a[0] == -a[1]);
   }
 
   // (f) the classifier
@@ -1090,8 +1044,8 @@ static void test_hopfield_core(void) {
   }
 
   // (h) the pseudo-inverse rule (D-06/D-07) on a small CORRELATED pm-one fixture (not the QR): hebb leaves some
-  // patterns unstable, pinv makes every one an exact fixed point with the diagonal left non-zero; async dynamics
-  // under pinv never raise the energy and the incremental formula matches the from-scratch energy at every step;
+  // patterns unstable, pinv makes every one an exact fixed point with the diagonal left non-zero; synchronous
+  // runs under pinv from one-flip queries end in a fixed point or a two-cycle with the from-scratch final energy;
   // a singular Gram (two identical rows) is reported, not inverted
   {
     static const double CORR[24] = {
@@ -1126,10 +1080,9 @@ static void test_hopfield_core(void) {
     check(diag_nonzero);
 
     Rng rng = rng_new(13);
-    HopfieldTrace trace = { NULL, 0, 0, 100000, 0 };
-    int all_converged = 1;
-    int all_monotone = 1;
-    int all_replayed = 1;
+    int all_ended = 1;
+    int all_energy = 1;
+    int recovered = 0;
     for (int run = 0; run < 100; run++) {
       double s[8];
       int a = run % 3;
@@ -1137,32 +1090,16 @@ static void test_hopfield_core(void) {
       int flip = (int) (rng_uniform(&rng) * 8);
       if (flip >= 8) flip = 7;
       s[flip] = -s[flip];
-      double start[8];
-      memcpy(start, s, sizeof(start));
-      double h[8];
-      int order[8];
-      for (int j = 0; j < 8; j++) order[j] = j;
-      trace.rows = 0;
+      double scratch[16];
       HopfieldOutcome out;
-      check(hopfield_async_run(wp, 8, s, h, order, &rng, 100, &trace, &out));
-      all_converged = all_converged && out.converged && out.energy_increases == 0;
-
-      double replay[8];
-      memcpy(replay, start, sizeof(replay));
-      for (long long r = 0; r < trace.rows; r++) {
-        const double * line = trace.data + r * HOPFIELD_TRACE_WIDTH;
-        if (r > 0) {
-          const double * before = line - HOPFIELD_TRACE_WIDTH;
-          if (line[5] > before[5] + 1e-9) all_monotone = 0;
-          if (line[4] == 1) replay[(int) line[3]] = -replay[(int) line[3]];
-        }
-        if (fabs(hopfield_energy(wp, 8, replay) - line[5]) > 1e-9) all_replayed = 0;
-      }
+      check(hopfield_sync_run(wp, 8, s, scratch, 100, NULL, &out));
+      all_ended = all_ended && (out.converged || out.cycle == 2);
+      all_energy = all_energy && fabs(out.e_final - hopfield_energy(wp, 8, s)) < 1e-9;
+      if (out.converged && memcmp(s, CORR + a * 8, sizeof(s)) == 0) recovered++;
     }
-    check(all_converged);
-    check(all_monotone);
-    check(all_replayed);
-    hopfield_trace_free(&trace);
+    check(all_ended);
+    check(all_energy);
+    check(recovered > 0);
 
     // two identical stored rows (0 and 2 of CORR, with row 1 kept distinct): the Gram is singular
     double dup[24];

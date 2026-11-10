@@ -109,17 +109,14 @@ def test_energy_trace_slide_layout_on_synthetic_rows(tmp_path):
 
 
 def recovery_rows():
-    """Hand-made rows of the recovery figure: hebb and pinv with both updates (dynamical cost), hamming as a
-    single no-update line, over four noise levels."""
+    """Hand-made rows of the recovery figure: hebb, pinv (dynamical cost) and hamming, over four noise levels."""
     rows = []
     for rule in ("hebb", "pinv", "hamming"):
-        updates = ("none",) if rule == "hamming" else ("async", "sync")
-        for update in updates:
-            for index, noise in enumerate((0.0, 0.1, 0.3, 0.5)):
-                rows.append({"rule": rule, "update": update, "noise": str(noise), "n_trials": "5",
-                             "recall_rate": str(max(0.0, 1.0 - 2.0 * noise)), "recall_sd_seeds": "0.05",
-                             "mean_final_overlap": str(max(0.0, 0.9 - noise)), "mean_sweeps": str(2 + index),
-                             "mean_final_energy": str(-100.0 + 10 * index)})
+        for index, noise in enumerate((0.0, 0.1, 0.3, 0.5)):
+            rows.append({"rule": rule, "noise": str(noise), "n_trials": "5",
+                         "recall_rate": str(max(0.0, 1.0 - 2.0 * noise)), "recall_sd_seeds": "0.05",
+                         "mean_final_overlap": str(max(0.0, 0.9 - noise)), "mean_sweeps": str(2 + index),
+                         "mean_final_energy": str(-100.0 + 10 * index)})
     return rows
 
 

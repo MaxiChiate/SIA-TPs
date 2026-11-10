@@ -25,7 +25,6 @@ BASE = {
     "model": "hopfield",
     "seed": 3,
     "rule": "hebb",
-    "update": "async",
     "max_sweeps": 100,
     "trials": 4,
 }
@@ -208,9 +207,8 @@ def test_check_recall_pinv_run(tmp_path, patterns):
 
 # ---------- recall ----------
 
-@pytest.mark.parametrize("update", ["async", "sync"])
-def test_check_recall(tmp_path, patterns, update):
-    run_dir = run_recall(tmp_path, update=update)
+def test_check_recall(tmp_path, patterns):
+    run_dir = run_recall(tmp_path)
     summary = hopfield.check_recall(run_dir, patterns)
     assert summary == {"trials": 48, "traced": 48}
 

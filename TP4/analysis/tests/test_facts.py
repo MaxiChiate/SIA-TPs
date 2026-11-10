@@ -159,10 +159,9 @@ def write_results(root, *, robust=False):
     write_json(root / "hopfield/letters/orthogonality.json", {
         "n_pixels": 25, "separated": {"min_margin": [18, 18, 18, 18], "stored_energies": [-264, -264, -264, -264]}, "correlated": {"min_margin": [4, -30, -34, -34]},
     })
-    write_csv(root / "hopfield/letters/recall.csv", ["set", "update", "noise", "flipped", "recall_rate"], [
-        ["separated", "async", 0.12, 3, 0.99667], ["separated", "async", 0.24, 6, 0.847],
-        ["separated", "async", 0.36, 9, 0.3233], ["separated", "sync", 0.12, 3, 1.0],
-        ["correlated", "async", 0.12, 3, 0.25], ["correlated", "async", 0.24, 6, 0.25],
+    write_csv(root / "hopfield/letters/recall.csv", ["set", "noise", "flipped", "recall_rate"], [
+        ["separated", 0.12, 3, 0.99667], ["separated", 0.24, 6, 0.847], ["separated", 0.36, 9, 0.3233],
+        ["correlated", 0.12, 3, 0.25], ["correlated", 0.24, 6, 0.25],
     ])
     write_json(root / "hopfield/letters/capacity.json", {
         "p4_n_stable_counts": {"0": 284, "1": 1687, "2": 2653, "3": 3073, "4": 7253},
@@ -177,7 +176,7 @@ def write_results(root, *, robust=False):
         "picks": {"inverse": {"match_letters": ["R"]}, "mixture": {"e_final": -208.0}, "other": {"e_final": -200.0}},
     })
     write_json(root / "hopfield/qr/verdict.json", {
-        "hebb_exact_recovery_noise0_async": 0.0, "pinv_exact_recovery_noise0_async": 1.0,
+        "hebb_exact_recovery_noise0": 0.0, "pinv_exact_recovery_noise0": 1.0,
     })
     write_json(root / "hopfield/qr/qr_facts.json", {"n_pixels": 1369, "identical_fraction": 0.6976, "min_pair_hamming": 96})
     write_json(root / "hopfield/qr/overlaps.json", {
@@ -192,6 +191,20 @@ def write_results(root, *, robust=False):
     write_json(root / "hopfield/qr_limits/shift.json", {"shifts": [
         {"shift": 1, "query_hamming": 741, "recovered_hamming": 1034}, {"shift": 2, "query_hamming": 699, "recovered_hamming": 1198},
     ]})
+    write_json(root / "hopfield/qr_masked/selection.json", {
+        "n_pixels": 1369, "n_varying": 414, "n_common": 955, "chosen": [0, 1, 4],
+        "chosen_names": ["beverages", "dessert", "wine"], "masked_all_max_abs_overlap": 0.536,
+        "ranking": [{"subset": [0, 1, 4], "max_abs_overlap": 0.757, "mean_abs_overlap": 0.637}],
+    })
+    write_json(root / "hopfield/qr_masked/overlaps.json", {"max_abs_overlap": 0.401, "mean_abs_overlap": 0.333})
+    write_json(root / "hopfield/qr_masked/ablation.json", {
+        "full_all": {"stored_fixed": 0, "n_patterns": 5}, "masked_all": {"stored_fixed": 0, "n_patterns": 5},
+        "full_subset": {"stored_fixed": 0, "n_patterns": 3}, "masked_subset": {"stored_fixed": 3, "n_patterns": 3},
+    })
+    write_csv(root / "hopfield/qr_masked/recovery_table.csv", ["level", "hebb", "hamming"], [
+        [0.0, 1.0, 1.0], [0.15, 1.0, 1.0], [0.3, 0.951, 1.0], [0.4, 0.769, 1.0], [0.45, 0.592, 0.962],
+        [0.5, 0.019, 0.233],
+    ])
     return root
 
 
@@ -435,6 +448,19 @@ def _pinv_above_hamming(root):
     ])
 
 
+def _masked_hebb_above_hamming(root):
+    write_csv(root / "hopfield/qr_masked/recovery_table.csv", ["level", "hebb", "hamming"], [
+        [0.0, 1.0, 1.0], [0.3, 1.0, 0.9], [0.4, 0.769, 1.0], [0.45, 0.592, 0.962], [0.5, 0.019, 0.233],
+    ])
+
+
+def _masked_five_also_fixed(root):
+    write_json(root / "hopfield/qr_masked/ablation.json", {
+        "full_all": {"stored_fixed": 0, "n_patterns": 5}, "masked_all": {"stored_fixed": 5, "n_patterns": 5},
+        "full_subset": {"stored_fixed": 0, "n_patterns": 3}, "masked_subset": {"stored_fixed": 3, "n_patterns": 3},
+    })
+
+
 def _occupancy_fails(root):
     write_csv(root / "som/series_som_stage2/robustness.csv",
               ["label", "radius0", "eta0", "epochs", "te_mean", "empty_fraction_mean", "creators_per_occupied_mean",
@@ -465,6 +491,7 @@ def _price_falls_towards_the_bottom_right(root):
 
 @pytest.mark.parametrize("damage, sentence", [
     (_pinv_above_hamming, "lookup de Hamming"), (_occupancy_fails, "ocupación"),
+    (_masked_hebb_above_hamming, "sigue por encima"), (_masked_five_also_fixed, "los dos pasos"),
     (_decided_by_another_measure, "QE-LOO"), (_a_wall_due_to_followers, "followers ni a precio"),
     (_price_falls_towards_the_bottom_right, "price_usd"),
 ])

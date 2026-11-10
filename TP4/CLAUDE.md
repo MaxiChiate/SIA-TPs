@@ -83,12 +83,13 @@ analysis/                        # README.md explica las series y los drivers
   oja.py, campaigns.py, campaigns_select.py, maintenance_demo.py   # Oja vs PC1, listas por campaña, demo de mantenimiento
   hopfield.py, hopfield_letters.py, hopfield_select.py, hopfield_figures.py     # Hopfield sobre las letras
   hopfield_qr.py, hopfield_qr_limits.py, hopfield_qr_select.py, hopfield_qr_figures.py   # Hopfield sobre los 5 QR
+  hopfield_qr_masked.py, hopfield_qr_masked_figures.py   # experimento posterior: Hebb sobre la parte variable de 3 QR (KD-9)
   plots_style.py                 # estilo común y variantes de figura (informe y slide)
-  deliverables_manifest.py       # fuente única: 39 figuras, 25 preguntas del enunciado, fragmentos
-  facts.py                       # los números del texto salen de los JSON/CSV; `facts.py check` fija 68 frases de los fragmentos
+  deliverables_manifest.py       # fuente única: 41 figuras, 25 preguntas del enunciado, fragmentos
+  facts.py                       # los números del texto salen de los JSON/CSV; `facts.py check` fija 80 frases de los fragmentos
   informe.py                     # arma analysis/results/informe/informe.html
   corr_prune.py                  # sensibilidad de la PCA a podar por umbral de |r| (tabla de la slide pca-prune; no rehace SOM ni Oja)
-  slides.py                      # arma analysis/results/slides/ (30 slides, PNG y guion)
+  slides.py                      # arma analysis/results/slides/ (31 slides, PNG y guion)
   tests/                         # pytest; incluye test_repro_docs.py, que cuida README.md, CLAUDE.md y DECISIONS.md
 deliverables/                    # un fragmento por fase (01 a 05): lo que se entrega por escrito, congelado por guardas sha256
 DECISIONS.md                     # decisiones para la defensa y fuente del glosario del informe
@@ -126,7 +127,9 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 - **Reglas pre-registradas y commiteadas antes de ver resultados**, con guarda sha256 en cada driver: la regla de elección de
   grilla del SOM (commit `ea7a0b1`), la de las campañas (`a6212e8`), la de las letras (`23c3563`) y el protocolo de los 5 QR. No se
-  editan en el lugar: un cambio pasa por discusión.
+  editan en el lugar: un cambio pasa por discusión. Las letras y los QR se re-registraron juntos el 2026-10-31 (commit `6a4bbd2`,
+  KD-8) para quedarse solo con la actualización síncrona; la guarda acepta un re-registro solo si el módulo de la regla y el texto
+  entre marcadores cambian en el mismo commit.
 - **Los resultados se reportan como salieron**, incluso los desfavorables: una sola región en el mapa del SOM, ninguna grilla que cumpla el TE máximo,
   Hebb con 0 % de recuperación exacta aun sin ruido en los QR, y el lookup de Hamming que iguala o supera a la pseudo-inversa con
   ruido alto.
@@ -140,7 +143,7 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Entrega
 
-- **Slides**: 30 slides armadas por `make deliverables` en `analysis/results/slides/` (el repo no tiene la slide de método; el deck empieza con portada y EDA). El Artifact publicado tiene además slides que armó la persona dueña a mano o yo directo en el Artifact y que **no están en el repo**: `289f728e` ("Ejercicio 1"), `0732067f` (EDA: z-score, 5 triviales, umbral), `bc794b98` ("Kohonen"), `oja-intro` ("Regla de Oja") y `pca-eigenvalue-table` (tabla de los 17 autovalores). El orden del deck publicado manda: `project/deck.json` del Artifact no se pisa con el que arma el repo.
+- **Slides**: 31 slides armadas por `make deliverables` en `analysis/results/slides/` (el repo no tiene la slide de método; el deck empieza con portada y EDA). El Artifact publicado tiene además slides que armó la persona dueña a mano o yo directo en el Artifact y que **no están en el repo**: `289f728e` ("Ejercicio 1"), `0732067f` (EDA: z-score, 5 triviales, umbral), `bc794b98` ("Kohonen"), `oja-intro` ("Regla de Oja") y `pca-eigenvalue-table` (tabla de los 17 autovalores). El orden del deck publicado manda: `project/deck.json` del Artifact no se pisa con el que arma el repo.
 - **Cómo se publica el deck** (a mano, con la herramienta Artifact): (1) subir como asset los PNG que cambiaron (`analysis/results/slides/assets/`) y anotar sus `/_blob/…`; (2) armar `slides.py --out <carpeta> --asset-map <json>` con esas URLs; (3) **leer del Artifact** `project/deck.json` y las slides que se van a pisar (la persona dueña edita desde la página y las versiones cambian solas); (4) publicar **solo las slides que cambiaron** (y `deck.json` solo si cambia el orden, editando la copia leída). Nunca mandar el `deck.json` que arma el repo.
 - **Informe**: `analysis/results/informe/informe.html`, publicado como Artifact HTML (D-15).
 - Slides: https://claude.ai/artifact/CxnuCZKwF55r2tUMPWXBSN (las URLs `9YjSx…` y `32SjY…` de antes ya no existen; el 2026-10-28 se reemplazó el contenido de este deck por las slides del repo)
@@ -157,9 +160,23 @@ Las 25 preguntas textuales, con su sección del enunciado y la sección que las 
 
 ## Pendientes
 
-- **Regenerar el informe** (`make deliverables`) con los números de las 17 variables y republicarlo, con el OK del usuario.
-- **Push**: los commits posteriores a `a0cb312` (sacar Spearman, hiperparámetros del SOM) están solo locales.
-- **Volver a exportar el PDF del deck** desde su Artifact (lo hace la persona dueña): el exportado antes no tiene los cambios de esta tanda.
+- **Experimento posterior de QR con máscara (2026-11-01, KD-9)**: Hebb sobre los 414 píxeles que cambian entre los 5 QR y
+  solo el trío menos parecido (beverages, dessert, wine), rotulado como no preregistrado. Nuevo §7 del fragmento 05 (Cómo
+  reproducir pasó a §8), slide `qr-mascara` (el deck pasa a 31 tras el merge con main), hallazgo en el informe y 2 figuras. El informe y las slides
+  locales están armados; falta republicar los dos a la misma url y copiar la slide nueva a mano al Google Slides.
+
+- **Hopfield solo síncrono (2026-10-31, KD-8)**: se quitó la actualización asíncrona del código, de los protocolos (re-registrados,
+  declarado en los fragmentos 04 y 05) y de los textos; todo Hopfield se volvió a correr. Cambian números del fragmento 04
+  (recuperación, capacidad por recuperación, estado espurio: ahora el más común es el otro, con 318 ciclos de 1200) y del 05
+  (pinv 99,8 / 96,1 / 61 % en 0,35 / 0,40 / 0,45). La energía no subió en ninguna corrida. El informe local está armado; falta
+  republicarlo y el deck a la misma url, copiar a mano al Google Slides los cambios (slides `letras-ruido`, `espurio`,
+  `qr-energia`, `qr-hamming` y las figuras de Hopfield) y volver a exportar el PDF.
+
+- **Conclusión de QR reescrita (2026-10-31)**: el informe explica el 0 % de Hebb como el caso de falla de la teoría (QR
+  demasiado parecidos → crosstalk → atractor espurio que combina los cinco) y presenta la pseudo-inversa como los pesos que
+  sí recuperan (`FINDINGS` de `informe.py` y párrafo "Conclusión" al inicio de la §6 del fragmento 05, fuera del bloque
+  congelado). Además, "solapamiento" pasó a "producto escalar" y "término de cruce" a "crosstalk". Sin números nuevos. El
+  informe local está armado; falta republicarlo a la misma url y copiar a mano al Google Slides los cambios de vocabulario.
 
 - **Revisión del deck contra el enunciado (F6 D-16, 2026-10-27)**: 3 slides nuevas (`eda`, `som-zonas`, `letras-capacidad`) y 4
   reescritas (`som-not-robust`, `camp-futbol`, `ej1-conclusiones`, `qr-energia`). El deck que se presenta ahora es un Google

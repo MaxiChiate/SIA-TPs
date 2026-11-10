@@ -117,6 +117,10 @@ SOURCES: dict[str, tuple[str, str]] = {
     "qr.recovery": ("hopfield/qr/recovery_table.csv", "hopfield-qr"),
     "qr.majority": ("hopfield/qr_limits/majority.json", "hopfield-qr-limits"),
     "qr.shift": ("hopfield/qr_limits/shift.json", "hopfield-qr-limits"),
+    "qrm.selection": ("hopfield/qr_masked/selection.json", "hopfield-qr-masked"),
+    "qrm.overlaps": ("hopfield/qr_masked/overlaps.json", "hopfield-qr-masked"),
+    "qrm.ablation": ("hopfield/qr_masked/ablation.json", "hopfield-qr-masked"),
+    "qrm.recovery": ("hopfield/qr_masked/recovery_table.csv", "hopfield-qr-masked"),
 }
 
 # The objective the informe recommends for each campaign (section 5 of deliverables/03-oja-campanas.md): the
@@ -597,8 +601,8 @@ def _letters_facts(results_dir: Path) -> dict[str, str]:
 
     def recall_row(name: str, flipped: int) -> dict[str, str]:
         return _first(
-            recall, lambda r: r["set"] == name and r["update"] == "async" and int(r["flipped"]) == flipped,
-            f"async recall row of the {name} set with {flipped} flipped pixels", "hopfield-letters",
+            recall, lambda r: r["set"] == name and int(r["flipped"]) == flipped,
+            f"recall row of the {name} set with {flipped} flipped pixels", "hopfield-letters",
         )
 
     def recall_rate(name: str, flipped: int) -> str:
@@ -699,8 +703,8 @@ def _qr_facts(results_dir: Path) -> dict[str, str]:
         "qr.max_abs_overlap": dec(overlaps["max_abs_overlap"], 2),
         "qr.identical_fraction": pct(pair_facts["identical_fraction"], 1),
         "qr.min_pair_hamming": integer(pair_facts["min_pair_hamming"]),
-        "qr.hebb_exact_noise0": pct_short(verdict["hebb_exact_recovery_noise0_async"], 1),
-        "qr.pinv_exact_noise0": pct_short(verdict["pinv_exact_recovery_noise0_async"], 1),
+        "qr.hebb_exact_noise0": pct_short(verdict["hebb_exact_recovery_noise0"], 1),
+        "qr.pinv_exact_noise0": pct_short(verdict["pinv_exact_recovery_noise0"], 1),
         "qr.pinv_last_full_noise": dec(max(pinv_full), 2),
         "qr.noise_high": dec(QR_HIGH_NOISE, 2),
         "qr.pinv_at_high": pct_short(high["pinv"], 1),
@@ -725,6 +729,48 @@ def _qr_facts(results_dir: Path) -> dict[str, str]:
     return values
 
 
+# Noise levels the texts of the masked experiment (KD-9) name.
+QRM_REPORTED_LEVELS = (0.30, 0.40, 0.45, 0.50)
+
+
+def _qr_masked_facts(results_dir: Path) -> dict[str, str]:
+    """The post-hoc masked experiment (KD-9): mask size, chosen triple, ablation and recovery."""
+    selection = read_source(results_dir, "qrm.selection")
+    overlaps = read_source(results_dir, "qrm.overlaps")
+    ablation = read_source(results_dir, "qrm.ablation")
+    table = read_csv_source(results_dir, "qrm.recovery")
+    chosen = selection["ranking"][0]
+    full = [float(row["level"]) for row in table if abs(float(row["hebb"]) - 1.0) < 1e-12]
+    hamming_full = [float(row["level"]) for row in table if abs(float(row["hamming"]) - 1.0) < 1e-12]
+    names = selection["chosen_names"]
+    values = {
+        "qrm.n_varying": integer(selection["n_varying"]),
+        "qrm.n_common": integer(selection["n_common"]),
+        "qrm.n_pixels": integer(selection["n_pixels"]),
+        "qrm.n_chosen": str(len(names)),
+        "qrm.chosen_names": ", ".join(names[:-1]) + " y " + names[-1],
+        "qrm.full_max_abs_overlap": dec(chosen["max_abs_overlap"], 2),
+        "qrm.full_mean_abs_overlap": dec(chosen["mean_abs_overlap"], 2),
+        "qrm.max_abs_overlap": dec(overlaps["max_abs_overlap"], 2),
+        "qrm.mean_abs_overlap": dec(overlaps["mean_abs_overlap"], 2),
+        "qrm.masked_all_max_abs_overlap": dec(selection["masked_all_max_abs_overlap"], 2),
+        "qrm.hebb_last_full_noise": dec(max(_nonempty(full, "level where masked Hebb recovers every QR",
+                                                      "hopfield-qr-masked")), 2),
+        "qrm.hamming_last_full_noise": dec(max(_nonempty(hamming_full, "level where the masked lookup recovers "
+                                                         "every QR", "hopfield-qr-masked")), 2),
+        "qrm.noise_mid": dec(0.40, 2),
+        "qrm.hebb_exact_noise0": pct_short(_row_at(table, "level", 0.0)["hebb"], 1),
+    }
+    for key, item in ablation.items():
+        values[f"qrm.fixed_{key}"] = f"{item['stored_fixed']} de {item['n_patterns']}"
+    for level in QRM_REPORTED_LEVELS:
+        row = _row_at(table, "level", level)
+        label = f"{level:.2f}".replace(".", "_")
+        values[f"qrm.hebb_at_{label}"] = pct_short(row["hebb"], 1)
+        values[f"qrm.hamming_at_{label}"] = pct_short(row["hamming"], 1)
+    return values
+
+
 def check_claims(results_dir: Path = RESULTS_DIR) -> None:
     """Stop the build when a result no longer supports a sentence that the slides or the informe state as plain text.
 
@@ -733,6 +779,14 @@ def check_claims(results_dir: Path = RESULTS_DIR) -> None:
     """
     results_dir = Path(results_dir)
     failed: list[str] = []
+    masked = read_csv_source(results_dir, "qrm.recovery")
+    if any(float(row["hebb"]) > float(row["hamming"]) for row in masked):
+        failed.append("QR con máscara: «la línea base de Hamming sigue por encima» (masked Hebb > Hamming at some level)")
+    ablation = read_source(results_dir, "qrm.ablation")
+    if any(ablation[key]["stored_fixed"] == ablation[key]["n_patterns"] for key in ("full_all", "masked_all",
+                                                                                    "full_subset")) or \
+            ablation["masked_subset"]["stored_fixed"] != ablation["masked_subset"]["n_patterns"]:
+        failed.append("QR con máscara: «hacen falta los dos pasos» (the ablation no longer shows it)")
     table = read_csv_source(results_dir, "qr.recovery")
     if any(float(row["pinv"]) > float(row["hamming"]) for row in table):
         failed.append("QR: «un lookup de Hamming iguala o supera a la pseudo-inversa» (pinv > Hamming at some level)")
@@ -797,6 +851,7 @@ def load_facts(results_dir: Path = RESULTS_DIR) -> dict[str, str]:
     values: dict[str, str] = {}
     for part in (
         _eda_facts, _pca_facts, _pca17_facts, _prune_facts, _som_facts, _oja_facts, _campaign_facts, _maintenance_facts, _letters_facts, _qr_facts,
+        _qr_masked_facts,
     ):
         values.update(part(Path(results_dir)))
     return values
@@ -874,11 +929,11 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (4, "Hay {letters.p4_stable_0}, {letters.p4_stable_1}, {letters.p4_stable_2}, {letters.p4_stable_3} y {letters.p4_stable_4} subconjuntos con 0, 1, 2, 3 y 4 letras estables"),
     (4, "{letters.p4_stable_4} ({letters.p4_all_stable_fraction}) las tienen todas estables y la fracción estable media es {letters.p4_mean_stable_fraction}"),
     (4, "almacenado {letters.spur_stored} ({letters.spur_stored_pct}), inverso {letters.spur_inverse} ({letters.spur_inverse_pct}), mezcla {letters.spur_mixture} ({letters.spur_mixture_pct}) y otro {letters.spur_other} ({letters.spur_other_pct})"),
-    (4, "seguida por el {letters.spurious_class}, la mezcla y el otro"),
+    (4, "la clase más común es la del {letters.spurious_class}"),
     (4, "({letters.spur_total} de {letters.spur_trials}, {letters.spur_total_pct})"),
     (4, "{letters.draft_matching_glyphs} de sus {letters.alphabet_size} glifos coinciden con los del borrador"),
     # 5: Hopfield, QR
-    (5, "el máximo |parecido| entre pares es {qr.max_abs_overlap}"),
+    (5, "el máximo |producto escalar normalizado| entre pares es {qr.max_abs_overlap}"),
     (5, "y la media es {qr.mean_abs_overlap}; todos"),
     (5, "el {qr.identical_fraction} de los {qr.n_pixels} píxeles es idéntico en los {qr.n_qr} QR a la vez"),
     (5, "la distancia de Hamming mínima entre un par es {qr.min_pair_hamming}"),
@@ -893,6 +948,18 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (5, "{qr.hamming_at_0_45} contra {qr.pinv_at_0_45} en el nivel 0,45, y {qr.hamming_at_0_50} contra {qr.pinv_at_0_50} en el nivel 0,50"),
     (5, "la distancia de Hamming de la consulta a la fuente ya es {qr.shift1_query_hamming} de {qr.n_pixels}"),
     (5, "queda a {qr.shift1_recovered_hamming} píxeles"),
+    (5, "(producto escalar normalizado medio {qr.mean_abs_overlap} y máximo {qr.max_abs_overlap}; el {qr.identical_fraction} de los píxeles es igual en los {qr.n_qr})"),
+    (5, "la mayoría píxel a píxel, a entre {qr.majority_hamming_min} y {qr.majority_hamming_max} píxeles de cada QR"),
+    (5, "recupera el QR consultado en el {qr.pinv_exact_noise0} de los casos hasta ruido {qr.pinv_last_full_noise}"),
+    (5, "quedan {qrm.n_varying} de {qrm.n_pixels}, y los {qrm.n_common} comunes"),
+    (5, "{qrm.chosen_names}, con máximo {qrm.full_max_abs_overlap} y media {qrm.full_mean_abs_overlap} sobre el QR completo"),
+    (5, "ese trío baja a máximo {qrm.max_abs_overlap} y media {qrm.mean_abs_overlap}"),
+    (5, "k = lround(nivel × {qrm.n_varying})"),
+    (5, "son punto fijo de Hebb {qrm.fixed_full_all}; con los 5 QR en la parte variable, {qrm.fixed_masked_all} (el producto escalar máximo sigue en {qrm.masked_all_max_abs_overlap}"),
+    (5, "con los 3 QR completos, {qrm.fixed_full_subset}; con los 3 QR en la parte variable, {qrm.fixed_masked_subset}"),
+    (5, "el {qr.identical_fraction} de píxeles iguales en los 5"),
+    (5, "Hebb recupera el {qrm.hebb_exact_noise0} hasta el nivel {qrm.hebb_last_full_noise}, {qrm.hebb_at_0_30} en 0,30, {qrm.hebb_at_0_40} en 0,40, {qrm.hebb_at_0_45} en 0,45 y {qrm.hebb_at_0_50} en 0,50"),
+    (5, "{qrm.hamming_at_0_40} hasta {qrm.hamming_last_full_noise}, {qrm.hamming_at_0_45} en 0,45 y {qrm.hamming_at_0_50} en 0,50"),
 )
 
 

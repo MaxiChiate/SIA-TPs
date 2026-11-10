@@ -21,7 +21,8 @@ Only range and consistency checks (not recomputed, since the final state of an u
 
 The recall rates that recall.csv and the recall figures aggregate therefore rest on the C-written columns for all
 but the traced trials. The check never replays the random number generator: what the C code drew (which pixels were
-flipped, the order of the async visits) is read back from the saved queries and traces and replayed as data.
+flipped) is read back from the saved queries and traces and replayed as data. The dynamics are the course's
+synchronous update (slide 23): every neuron takes sign(W s) from the whole previous state.
 
 Notation: P is the p x N matrix of stored patterns (+-1). Two rules build W: `hebb` gives W = P^T P with a zero
 diagonal, exact integers; `pinv` gives W = P^T (P P^T)^-1 P (D-06), the pseudo-inverse / projection rule, real-valued
@@ -329,57 +330,6 @@ def _check_stored(run_dir: Path, P: np.ndarray, W: np.ndarray, subset: list[int]
     return int((wrong == 0).sum())
 
 
-def _replay_async(W, query, trace_rows, n, max_sweeps, file, first_row):
-    """Replays the saved visits from the query: the field, the new state and the energy of every row are recomputed.
-    Returns (final state, flips, sweeps, converged, rises)."""
-    W = np.asarray(W, dtype=np.float64)
-    diag = np.diag(W)  # 0 for hebb; the self term subtracted below so the incremental energy matches a non-zero
-    # diagonal under pinv (mirrors hopfield_async_run's corrected formula in hopfield_core.c)
-    s = query.astype(np.float64)
-    e = energy(W, s)
-    rises = 0
-    flips = 0
-    sweeps = 0
-    seen = set()
-    last_sweep_flips = 0
-    for k, row in enumerate(trace_rows[1:], start=1):
-        r = first_row + k
-        _step, sweep, neuron, changed, shown = (float(v) for v in row[1:6])
-        _expect(file, r, "step", row[1], k)
-        sweep = int(sweep)
-        neuron = int(neuron)
-        if sweep != sweeps:
-            if sweep != sweeps + 1 or len(seen) not in (0, n):
-                _fail(file, r, "sweep", sweep, sweeps + 1)
-            if sweeps > 0 and last_sweep_flips == 0:
-                _fail(file, r, "sweep", sweep, "no sweep after a sweep without flips")
-            sweeps = sweep
-            seen = set()
-            last_sweep_flips = 0
-        if not 0 <= neuron < n or neuron in seen:
-            _fail(file, r, "neuron", neuron, "a neuron not visited yet in this sweep")
-        seen.add(neuron)
-        h = float(W[neuron] @ s)
-        new = s[neuron] if h == 0 else (1.0 if h > 0 else -1.0)
-        did_change = int(new != s[neuron])
-        _expect(file, r, "changed", changed, did_change)
-        if did_change:
-            e = e + 2 * s[neuron] * h - 2 * diag[neuron]
-            s[neuron] = new
-            flips += 1
-            last_sweep_flips += 1
-        _expect(file, r, "energy", shown, e, ENERGY_TOLERANCE)
-        _expect(file, r, "energy", shown, energy(W, s), ENERGY_TOLERANCE)
-        if shown > float(trace_rows[k - 1][5]) + ENERGY_TOLERANCE:
-            rises += 1
-    if len(seen) not in (0, n):
-        raise HopfieldCheckError(f"{file} row {first_row + len(trace_rows) - 1}, column sweep: an unfinished sweep")
-    converged = int(sweeps > 0 and last_sweep_flips == 0)
-    if sweeps > max_sweeps:
-        raise HopfieldCheckError(f"{file}: {sweeps} sweeps, max_sweeps {max_sweeps}")
-    return s, flips, sweeps, converged, rises
-
-
 def _replay_sync(W, query, trace_rows, max_sweeps, file, first_row):
     """Replays the saved synchronous steps. Returns (final state, flips, steps, converged, cycle, rises)."""
     s = query.copy()
@@ -429,7 +379,6 @@ def check_recall(run_dir, patterns) -> dict:
     trials_per_cell = int(config["trials"])
     trace_trials = int(config["trace_trials"])
     max_sweeps = int(config["max_sweeps"])
-    sync = config["update"] == "sync"
     rule = config["rule"]
     P = patterns[subset]
     p, n = P.shape
@@ -470,8 +419,8 @@ def check_recall(run_dir, patterns) -> dict:
         hamming = value(r, "hamming_final")
         _expect(file, r, f"m_{a}", value(r, f"m_{a}"), (n - 2 * hamming) / n, 1e-12)
         cycle = int(value(r, "cycle"))
-        if (not sync and cycle != 0) or cycle not in (0, 2) or (cycle == 2 and converged == 1):
-            _fail(file, r, "cycle", cycle, "0 for async, 0 or 2 (not converged) for sync")
+        if cycle not in (0, 2) or (cycle == 2 and converged == 1):
+            _fail(file, r, "cycle", cycle, "0, or 2 and not converged")
 
     # Traced trials: the trace, the query and the final state of every one are replayed
     traced_ids = [r for r, (_a, _l, t) in enumerate(cells) if t < trace_trials]
@@ -511,13 +460,9 @@ def check_recall(run_dir, patterns) -> dict:
         _expect("trace.csv", first, "neuron", block[0, 3], -1)
         _expect("trace.csv", first, "energy", block[0, 5], value(r, "e_start"), ENERGY_TOLERANCE)
 
-        if sync:
-            replayed, flips, steps, converged, cycle, rises = _replay_sync(W, query, block, max_sweeps,
-                                                                           "trace.csv", first)
-            _expect(file, r, "cycle", value(r, "cycle"), cycle)
-        else:
-            replayed, flips, steps, converged, rises = _replay_async(W, query, block, n, max_sweeps, "trace.csv",
-                                                                     first)
+        replayed, flips, steps, converged, cycle, rises = _replay_sync(W, query, block, max_sweeps, "trace.csv",
+                                                                       first)
+        _expect(file, r, "cycle", value(r, "cycle"), cycle)
         total_rises += rises
         for j in range(n):
             if replayed[j] != final[j]:
@@ -550,8 +495,6 @@ def check_recall(run_dir, patterns) -> dict:
     for r in range(n_trials):
         if r in traced:
             continue
-        if not sync and value(r, "e_final") > value(r, "e_start") + ENERGY_TOLERANCE:
-            _fail(file, r, "e_final", float(value(r, "e_final")), "at most e_start (async energy never rises)")
         if value(r, "flips") > value(r, "updates"):
             _fail(file, r, "flips", float(value(r, "flips")), "at most updates")
 
@@ -579,8 +522,6 @@ def check_recall(run_dir, patterns) -> dict:
     wanted["max_abs_overlap"] = float(max((overlaps[a, b] for a in range(p) for b in range(a + 1, p)), default=0.0))
     for key, number in wanted.items():
         _expect("metrics.json", "-", key, metrics[key], number, RATE_TOLERANCE)
-    if not sync:
-        _expect("metrics.json", "-", "energy_increases", metrics["energy_increases"], 0)
-    elif trace_trials == trials_per_cell:
+    if trace_trials == trials_per_cell:
         _expect("metrics.json", "-", "energy_increases", metrics["energy_increases"], total_rises)
     return {"trials": n_trials, "traced": len(traced_ids)}

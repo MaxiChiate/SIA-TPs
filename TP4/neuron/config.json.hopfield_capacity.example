@@ -4,7 +4,6 @@
   "input": "tests/fixtures/patterns_mix.csv",
   "task": "capacity",
   "rule": "hebb",
-  "update": "async",
   "max_sweeps": 100,
   "trials": 10,
   "noise_levels": [0.12],

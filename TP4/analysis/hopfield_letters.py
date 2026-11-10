@@ -50,10 +50,10 @@ import sweep  # noqa: E402
 
 RESULTS_SUBDIR = Path("hopfield") / "letters"
 SET_NAMES = ("separated", "correlated")
-RECALL_COLUMNS = ["set", "update", "noise", "flipped", "n_trials", "recall_rate", "recall_sd_seeds",
+RECALL_COLUMNS = ["set", "noise", "flipped", "n_trials", "recall_rate", "recall_sd_seeds",
                   "wrong_stored_rate", "inverse_rate", "mixture_rate", "other_rate", "cycle_rate", "mean_sweeps",
                   "mean_flips", "mean_final_overlap"]
-PATTERN_COLUMNS = ["set", "update", "letter", "noise", "flipped", "n_trials", "recall_rate"]
+PATTERN_COLUMNS = ["set", "letter", "noise", "flipped", "n_trials", "recall_rate"]
 # The network code is not covered by the pre-registration guard. Its identity is recorded in run.json (WR-02) and
 # hopfield_figures.py refuses to draw if one of these files changed since the run. Paths relative to the TP4 root.
 CODE_FILES = ("neuron/models/hopfield.c", "neuron/models/hopfield_core.c", "neuron/models/hopfield_core.h",
@@ -71,7 +71,6 @@ class Design:
     recall_levels: tuple
     recall_trials: int
     seeds: tuple
-    updates: tuple
     trace_trials: int
     capacity_p: int
     capacity_level: float
@@ -83,7 +82,6 @@ class Design:
     spurious_levels: tuple
     spurious_trials: int
     spurious_seeds: tuple
-    spurious_update: str
 
 
 def default_design() -> Design:
@@ -97,7 +95,6 @@ def default_design() -> Design:
         recall_levels=tuple(select.RECALL_LEVELS),
         recall_trials=select.RECALL_TRIALS,
         seeds=tuple(select.SEEDS),
-        updates=tuple(select.UPDATES),
         trace_trials=select.TRACE_TRIALS,
         capacity_p=select.CAPACITY_P,
         capacity_level=select.CAPACITY_LEVEL,
@@ -109,7 +106,6 @@ def default_design() -> Design:
         spurious_levels=tuple(select.SPURIOUS_LEVELS),
         spurious_trials=select.SPURIOUS_TRIALS,
         spurious_seeds=tuple(select.SPURIOUS_SEEDS),
-        spurious_update=select.SPURIOUS_UPDATE,
     )
 
 
@@ -162,7 +158,7 @@ def _input_path(design: Design) -> str:
 def _recall_base(design: Design, subset: list[int]) -> dict:
     return {
         "model": "hopfield", "seed": 1, "input": _input_path(design), "task": "recall", "rule": "hebb",
-        "update": "async", "max_sweeps": design.max_sweeps, "trials": design.recall_trials,
+        "max_sweeps": design.max_sweeps, "trials": design.recall_trials,
         "noise_levels": list(design.recall_levels), "subset": subset, "trace_trials": design.trace_trials,
     }
 
@@ -171,7 +167,7 @@ def _capacity_base(design: Design) -> dict:
     """Built from scratch: sweep.plan cannot delete keys and the capacity task refuses subset and trace_trials."""
     return {
         "model": "hopfield", "seed": 1, "input": _input_path(design), "task": "capacity", "rule": "hebb",
-        "update": "async", "max_sweeps": design.max_sweeps, "trials": design.capacity_trials,
+        "max_sweeps": design.max_sweeps, "trials": design.capacity_trials,
         "noise_levels": [design.capacity_level], "p": design.capacity_p, "n_subsets": 0,
     }
 
@@ -181,10 +177,8 @@ def _make_series(name: str, out: Path, base: dict, variants: list[sweep.Variant]
                         varied=None, variants=variants, seeds=list(seeds), workers=os.cpu_count() or 1)
 
 
-def recall_series(design: Design, sets: dict, out: Path, set_names=SET_NAMES, updates=None) -> sweep.Series:
-    updates = design.updates if updates is None else updates
-    variants = [sweep.Variant(f"{name}-{update}", {"subset": [int(i) for i in sets[name]], "update": update})
-                for name in set_names for update in updates]
+def recall_series(design: Design, sets: dict, out: Path, set_names=SET_NAMES) -> sweep.Series:
+    variants = [sweep.Variant(name, {"subset": [int(i) for i in sets[name]]}) for name in set_names]
     return _make_series("recall", out, _recall_base(design, [int(i) for i in sets[set_names[0]]]), variants,
                         design.seeds)
 
@@ -221,58 +215,51 @@ def run_series(series: sweep.Series, out: Path, patterns, workers=None, kind="re
 
 # ---------- aggregation ----------
 
-def _set_and_update(task: sweep.Task) -> tuple[str, str]:
-    name, update = task.label.split("-", 1)
-    return name, update
-
-
-def aggregate_recall(design: Design, ran: list[Ran], out: Path, set_names=SET_NAMES, updates=None) -> dict:
+def aggregate_recall(design: Design, ran: list[Ran], out: Path, set_names=SET_NAMES) -> dict:
     """recall.csv and recall_by_pattern.csv: pooled over the seeds, from the trials.csv of every run."""
-    updates = design.updates if updates is None else updates
     cells: dict = {}
     for item in ran:
         header, table = hopfield.read_table(item.dir / "trials.csv")
-        cells.setdefault(_set_and_update(item.task), []).append((header, table))
+        cells.setdefault(item.task.label, []).append((header, table))
 
     summary, by_pattern = [], []
     for name in set_names:
-        for update in updates:
-            tables = cells[(name, update)]
-            for level in design.recall_levels:
-                per_seed, parts = [], []
-                for header, table in tables:
-                    column = {c: i for i, c in enumerate(header)}
-                    part = table[np.abs(table[:, column["noise"]] - level) < 1e-9]
-                    parts.append((column, part))
-                    per_seed.append(float(part[:, column["correct"]].mean()))
-                column = parts[0][0]
-                data = np.concatenate([part for _c, part in parts])
-                klass = data[:, column["class"]]
-                pattern = data[:, column["pattern"]]
-                own = np.take_along_axis(data[:, [column[f"m_{b}"] for b in range(sum(
-                    1 for c in column if c.startswith("m_")))]], pattern.astype(int)[:, None], axis=1)
-                summary.append({
-                    "set": name, "update": update, "noise": float(level),
-                    "flipped": int(data[0, column["flipped"]]), "n_trials": int(data.shape[0]),
-                    "recall_rate": float(data[:, column["correct"]].mean()),
-                    "recall_sd_seeds": float(np.std(per_seed)),
-                    "wrong_stored_rate": float(((klass == hopfield.CLASS_STORED)
-                                                & (data[:, column["match_a"]] != pattern)).mean()),
-                    "inverse_rate": float((klass == hopfield.CLASS_INVERSE).mean()),
-                    "mixture_rate": float((klass == hopfield.CLASS_MIXTURE).mean()),
-                    "other_rate": float((klass == hopfield.CLASS_OTHER).mean()),
-                    "cycle_rate": float((data[:, column["cycle"]] > 0).mean()),
-                    "mean_sweeps": float(data[:, column["sweeps"]].mean()),
-                    "mean_flips": float(data[:, column["flips"]].mean()),
-                    "mean_final_overlap": float(own.mean()),
+        tables = cells[name]
+        for level in design.recall_levels:
+            per_seed, parts = [], []
+            for header, table in tables:
+                column = {c: i for i, c in enumerate(header)}
+                part = table[np.abs(table[:, column["noise"]] - level) < 1e-9]
+                parts.append((column, part))
+                per_seed.append(float(part[:, column["correct"]].mean()))
+            column = parts[0][0]
+            data = np.concatenate([part for _c, part in parts])
+            klass = data[:, column["class"]]
+            pattern = data[:, column["pattern"]]
+            own = np.take_along_axis(data[:, [column[f"m_{b}"] for b in range(sum(
+                1 for c in column if c.startswith("m_")))]], pattern.astype(int)[:, None], axis=1)
+            summary.append({
+                "set": name, "noise": float(level),
+                "flipped": int(data[0, column["flipped"]]), "n_trials": int(data.shape[0]),
+                "recall_rate": float(data[:, column["correct"]].mean()),
+                "recall_sd_seeds": float(np.std(per_seed)),
+                "wrong_stored_rate": float(((klass == hopfield.CLASS_STORED)
+                                            & (data[:, column["match_a"]] != pattern)).mean()),
+                "inverse_rate": float((klass == hopfield.CLASS_INVERSE).mean()),
+                "mixture_rate": float((klass == hopfield.CLASS_MIXTURE).mean()),
+                "other_rate": float((klass == hopfield.CLASS_OTHER).mean()),
+                "cycle_rate": float((data[:, column["cycle"]] > 0).mean()),
+                "mean_sweeps": float(data[:, column["sweeps"]].mean()),
+                "mean_flips": float(data[:, column["flips"]].mean()),
+                "mean_final_overlap": float(own.mean()),
+            })
+            for source_row in sorted({int(v) for v in data[:, column["source_row"]]}):
+                mine = data[data[:, column["source_row"]] == source_row]
+                by_pattern.append({
+                    "set": name, "letter": design.letters[source_row],
+                    "noise": float(level), "flipped": int(mine[0, column["flipped"]]),
+                    "n_trials": int(mine.shape[0]), "recall_rate": float(mine[:, column["correct"]].mean()),
                 })
-                for source_row in sorted({int(v) for v in data[:, column["source_row"]]}):
-                    mine = data[data[:, column["source_row"]] == source_row]
-                    by_pattern.append({
-                        "set": name, "update": update, "letter": design.letters[source_row],
-                        "noise": float(level), "flipped": int(mine[0, column["flipped"]]),
-                        "n_trials": int(mine.shape[0]), "recall_rate": float(mine[:, column["correct"]].mean()),
-                    })
     _write_csv(out / "recall.csv", RECALL_COLUMNS, summary)
     _write_csv(out / "recall_by_pattern.csv", PATTERN_COLUMNS, by_pattern)
     return {"recall_rows": len(summary), "recall_by_pattern_rows": len(by_pattern)}
@@ -438,10 +425,9 @@ def spurious_series(design: Design, sets: dict, out: Path, seed: int) -> sweep.S
     """Very noisy queries of the separated set, every trial traced, one seed."""
     subset = [int(i) for i in sets["separated"]]
     base = _recall_base(design, subset)
-    base.update({"update": design.spurious_update, "noise_levels": list(design.spurious_levels),
+    base.update({"noise_levels": list(design.spurious_levels),
                  "trials": design.spurious_trials, "trace_trials": design.spurious_trials})
-    variants = [sweep.Variant(f"separated-{design.spurious_update}",
-                              {"subset": subset, "update": design.spurious_update})]
+    variants = [sweep.Variant("separated", {"subset": subset})]
     return _make_series(f"spurious_seed{seed}", out, base, variants, [seed])
 
 
@@ -517,7 +503,7 @@ def spurious_report(design: Design, sets: dict, patterns, out: Path, results_dir
         if not hopfield_select.spurious_needs_next_seed(rows):
             break
     report = {
-        "update": design.spurious_update, "levels": list(design.spurious_levels),
+        "update": hopfield_select.UPDATE, "levels": list(design.spurious_levels),
         "trials_per_level_and_letter": design.spurious_trials, "seeds_tried": seeds_tried,
         "counts_by_seed": counts, "converged_by_seed": converged_counts,
         "found_target": any(code in (2, 3) for code in picks),

@@ -1,5 +1,5 @@
-// Pure core of the discrete Hopfield network (see hopfield_core.h): Hebb training, fields, energy, the asynchronous
-// and synchronous dynamics with an optional per-step trace, the classifier of a final state and the stability margin.
+// Pure core of the discrete Hopfield network (see hopfield_core.h): Hebb training, fields, energy, the synchronous
+// dynamics with an optional per-step trace, the classifier of a final state and the stability margin.
 
 #include "hopfield_core.h"
 #include <math.h>
@@ -150,47 +150,6 @@ static double next_state(double h, double current) {
   if (h > 0) return 1;
   if (h < 0) return -1;
   return current;
-}
-
-
-int hopfield_async_run(const double w[], int n, double s[], double h[], int order[], Rng * rng, int max_sweeps,
-                       HopfieldTrace * trace, HopfieldOutcome * out) {
-  memset(out, 0, sizeof(*out));
-  hopfield_fields(w, n, s, h);
-  double energy = hopfield_energy(w, n, s);
-  out->e_start = energy;
-  long long step = 0;
-  if (trace != NULL && !hopfield_trace_append(trace, 0, 0, -1, 0, energy)) return 0;
-
-  for (int sweep = 1; sweep <= max_sweeps; sweep++) {
-    rng_shuffle(rng, order, n);
-    long long flips_before = out->flips;
-    for (int v = 0; v < n; v++) {
-      int i = order[v];
-      double next = next_state(h[i], s[i]);
-      int changed = next != s[i];
-      double previous = energy;
-      if (changed) {
-        // reduces to the strictly-negative Hebb formula when w_ii == 0; see hopfield_core.h for the derivation
-        energy += 2 * s[i] * h[i] - 2 * w[(size_t) i * n + i];
-        double delta = next - s[i];
-        for (int j = 0; j < n; j++) h[j] += w[(size_t) j * n + i] * delta;
-        s[i] = next;
-        out->flips++;
-      }
-      if (energy > previous + ENERGY_TOLERANCE) out->energy_increases++;
-      step++;
-      if (trace != NULL && !hopfield_trace_append(trace, (double) step, sweep, i, changed, energy)) return 0;
-    }
-    out->sweeps = sweep;
-    if (out->flips == flips_before) {
-      out->converged = 1;
-      break;
-    }
-  }
-  out->updates = (long long) out->sweeps * n;
-  out->e_final = energy;
-  return 1;
 }
 
 
