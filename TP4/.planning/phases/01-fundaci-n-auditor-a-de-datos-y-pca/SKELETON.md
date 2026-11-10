@@ -39,7 +39,7 @@ The tracer is plan 01-01 Task 1 (oja config → binary → run directory); every
 | 2 | 01-03 | `analysis/sweep.py` → `summary.csv`, failed runs recorded, `--dry-run` |
 | 2 | 01-04 | `datos/prepared/` (audited + all31), saved scaler, new-creator mapping, 5 pytest tests |
 | 3 | 01-05 | kohonen and hopfield stubs; oja and kohonen on `datos/prepared` |
-| 3 | 01-06 | EDA, audit table, `make prepare`/`make eda`, PCA rule written before the scree |
+| 3 | 01-06 | EDA, audit table, `make prepare`/`make eda`, PCA rule written before the eigenvalue plot |
 | 4 | 01-07 | One series per model, root `all`/`sweep`/`test`/`clean`, C test runner, `make debug` |
 | 5 | 01-08 | PCA, sensitivity run, written interpretation |
 

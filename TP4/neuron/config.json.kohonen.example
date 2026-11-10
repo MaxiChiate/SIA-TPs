@@ -1,7 +1,7 @@
 {
   "model": "kohonen",
   "seed": 1,
-  "input": "../datos/prepared/creadores_zscore.csv",
+  "input": "../datos/prepared/creadores_pca_scores.csv",
   "grid_k": 4,
   "neighborhood": "step",
   "radius0": 2.0,

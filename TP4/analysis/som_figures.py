@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+from matplotlib.ticker import MultipleLocator
 
 TP_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(TP_DIR / "scripts"))
@@ -34,6 +35,7 @@ import som_stage  # noqa: E402
 from creadores import load_creadores  # noqa: E402
 
 DEFAULT_STAGE1 = TP_DIR / "analysis" / "results" / "som" / "series_som_stage1"
+DEFAULT_STAGE2 = TP_DIR / "analysis" / "results" / "som" / "series_som_stage2"
 DEFAULT_OUT = TP_DIR / "analysis" / "results" / "som" / "figures"
 RULE_FILE = TP_DIR / "deliverables" / "02-kohonen.md"
 HATCH_COLOR = "#8a8984"
@@ -45,7 +47,8 @@ EXTRA_RAW = ("topic_art_pct", "content_showcase_pct")
 class Plane:
     name: str
     values: np.ndarray  # k x k
-    kind: str  # "z" (prototype value in z units) or "raw" (mean of the creators of each neuron)
+    kind: str  # "z" (prototype value in z units), "pc" (prototype weight on a component, own scale centred on 0)
+    #           or "raw" (mean of the creators of each neuron)
     unit: str
 
 
@@ -129,7 +132,9 @@ def plot_map(hits, U, k: int, title: str, caption: str, out_stem) -> None:
                           fontsize=plots_style.fontsize(11), color="white" if dark else plots_style.TEXT_PRIMARY)
     _hatch(left, empty)
     _grid_axes(left, k)
-    left.set_title("Creadores por neurona (celdas rayadas: vacías)", fontsize=plots_style.fontsize(10), loc="left")
+    slide = plots_style.variant() == "slide"
+    left.set_title("Creadores por neurona" + ("" if slide else " (celdas rayadas: vacías)"),
+                   fontsize=plots_style.fontsize(10), loc="left")
     bar = fig.colorbar(image, ax=left, fraction=0.046, pad=0.03)
     bar.set_label("creadores")
 
@@ -141,7 +146,8 @@ def plot_map(hits, U, k: int, title: str, caption: str, out_stem) -> None:
                        fontsize=plots_style.fontsize(8), color="white" if frac < 0.55 else plots_style.TEXT_PRIMARY)
     _hatch(right, empty)
     _grid_axes(right, k)
-    right.set_title("Matriz U (celdas rayadas: neuronas vacías)", fontsize=plots_style.fontsize(10), loc="left")
+    right.set_title("Matriz U" + ("" if slide else " (celdas rayadas: neuronas vacías)"),
+                    fontsize=plots_style.fontsize(10), loc="left")
     bar = fig.colorbar(image, ax=right, fraction=0.046, pad=0.03)
     bar.set_label("distancia media a los 4 vecinos (z)")
 
@@ -175,6 +181,13 @@ def plot_planes(planes: list[Plane], k: int, hits, title: str, caption: str, out
         if plane.kind == "z":
             cmap = plt.get_cmap(plots_style.DIVERGING).with_extremes(bad=plots_style.SURFACE)
             z_image = ax.imshow(values, cmap=cmap, vmin=-limit, vmax=limit, aspect="equal")
+        elif plane.kind == "pc":
+            own_limit = float(np.nanmax(np.abs(plane.values))) or 1.0
+            cmap = plt.get_cmap(plots_style.DIVERGING).with_extremes(bad=plots_style.SURFACE)
+            image = ax.imshow(values, cmap=cmap, vmin=-own_limit, vmax=own_limit, aspect="equal")
+            inset = ax.inset_axes([1.05, 0.0, 0.06, 1.0])
+            bar = fig.colorbar(image, cax=inset)
+            bar.ax.tick_params(labelsize=plots_style.fontsize(6))
         else:
             cmap = plt.get_cmap("YlGnBu").with_extremes(bad=plots_style.SURFACE)
             image = ax.imshow(values, cmap=cmap, aspect="equal")
@@ -187,6 +200,8 @@ def plot_planes(planes: list[Plane], k: int, hits, title: str, caption: str, out
         _grid_axes(ax, k, fontsize=7)
         if plane.kind == "z":
             ax.set_title(plane.name, fontsize=plots_style.fontsize(8), loc="left")
+        elif plane.kind == "pc":
+            ax.set_title(f"{plane.name}\n(peso del prototipo)", fontsize=plots_style.fontsize(8), loc="left")
         else:
             unit = f", {plane.unit}" if plane.unit else ""
             ax.set_title(f"{plane.name}\n(media cruda{unit})", fontsize=plots_style.fontsize(8), loc="left")
@@ -213,7 +228,7 @@ CURVE_PANELS = (
     ("te", "Error topográfico (TE)", 1.0),
     ("empty_fraction", "% de neuronas vacías", 100.0),
     ("creators_per_occupied", "Creadores por neurona ocupada", 1.0),
-    ("stability", "Estabilidad entre seeds (Spearman)", 1.0),
+    ("stability", "Estabilidad entre seeds (correlación)", 1.0),
 )
 
 
@@ -275,6 +290,134 @@ def plot_stage1_curves(rows: list[dict], selection: dict, out_stem) -> None:
     plots_style.save_figure(fig, out_stem)
 
 
+# ---------- effect of one hyperparameter ----------
+
+# The three measures of the rule: the topographic error (do neighbouring neurons stay neighbours on the grid), how many
+# neurons are empty and how many creators share an occupied one.
+EFFECT_PANELS = (
+    ("te", "Error topográfico", "límite: 0,05", 1.0),
+    ("empty_fraction", "% de neuronas vacías", "límite: 20 %", 100.0),
+    ("creators_per_occupied", "Creadores por neurona ocupada", "mínimo: 2", 1.0),
+    ("qe", "Distancia a la neurona ganadora", "media de los creadores", 1.0),
+    ("u_mean", "U media", "distancia entre neuronas vecinas", 1.0),
+)
+# eta0 and R0 slides: how far a creator is from its winning neuron and the mean of the U matrix, the two things a
+# schedule could move; the occupancy that decides k stays on the slide of k
+SCHEDULE_MEASURES = ("qe", "u_mean")
+# The same y range in the three figures, so a change of eta0 or R0 is read on the scale of the change of k.
+EFFECT_YLIM = {"te": (-0.01, 0.22), "empty_fraction": (-2.0, 50.0), "creators_per_occupied": (0.0, 13.0),
+               "u_mean": (1.4, 1.9), "qe": (1.7, 2.1)}
+# panels whose axis is zoomed on the range of the schedule variants: a tick every 0.1
+EFFECT_YSTEP = {"u_mean": 0.1, "qe": 0.1}
+
+
+def effect_rows(stage2_rows: list[dict], vary: str) -> list[dict]:
+    """The stage-2 rows that move `vary` (radius0 or eta0) plus the base one, sorted by that value."""
+    prefix = {"radius0": "radius0-", "eta0": "eta0-"}[vary]
+    chosen = [r for r in stage2_rows if r["label"] == "base" or r["label"].startswith(prefix)]
+    return sorted(chosen, key=lambda r: float(r[vary]))
+
+
+def _seeds_note(fig, rows: list[dict], what: str) -> None:
+    """What every point or bar is: the mean over the seeds of the series and the sd between them."""
+    seeds = rows[0].get("n_seeds") if rows else None
+    runs = f"{int(seeds)} entrenamientos" if seeds not in (None, "") else "varios entrenamientos"
+    lines = "las líneas negras" if what == "barra" else "las barras"
+    fig.text(0.995, 0.005, f"Cada {what} es la media de {runs} con distinta seed; {lines} son el desvío entre seeds",
+             ha="right", va="bottom", fontsize=plots_style.fontsize(8), color=plots_style.TEXT_SECONDARY)
+
+
+def plot_effect(rows: list[dict], x_key: str, x_label: str, base_x: float, thresholds: dict, out_stem,
+                measures: tuple[str, ...] = ("te", "empty_fraction", "creators_per_occupied")) -> None:
+    """Panels (topographic error, empty neurons, creators per neuron) against one hyperparameter, escalón only;
+    mean +/- sd over the 10 seeds, the dashed line is the limit of the rule, the vertical one the value we use."""
+    plt = plots_style.apply_style()
+    color = plots_style.palette_for(["escalón"])["escalón"]
+    limits = {"te": thresholds["te_max"], "empty_fraction": thresholds["empty_max"] * 100.0,
+              "creators_per_occupied": thresholds["creators_min"]}
+    panels = [panel for panel in EFFECT_PANELS if panel[0] in measures]
+    fig, axes = plt.subplots(1, len(panels), figsize=plots_style.figsize((11.5, 3.9), (12.8, 5.0)))
+    xs = [float(r[x_key]) for r in rows]
+    for ax, (measure, label, hint, scale) in zip(axes, panels):
+        mean = [float(r[f"{measure}_mean"]) * scale for r in rows]
+        sd = [float(r[f"{measure}_sd"]) * scale for r in rows]
+        ax.errorbar(xs, mean, yerr=sd, color=color, marker="o", markersize=5, linewidth=1.8, capsize=3)
+        if measure in limits:
+            ax.axhline(limits[measure], color=plots_style.TEXT_SECONDARY, linestyle="--", linewidth=1)
+        ax.axvline(base_x, color=plots_style.TEXT_PRIMARY, linewidth=1, alpha=0.5)
+        ax.set_ylim(*EFFECT_YLIM[measure])
+        if measure in EFFECT_YSTEP:
+            ax.yaxis.set_major_locator(MultipleLocator(EFFECT_YSTEP[measure]))
+        # the slide carries the title only; the report keeps the hint (what is better, the limit of the rule)
+        title = label if plots_style.variant() == "slide" else f"{label}\n({hint})"
+        ax.set_title(title, fontsize=plots_style.fontsize(9), loc="left")
+        ax.set_xlabel(x_label)
+        ax.set_xticks(xs)
+        ax.set_xticklabels([_fmt_tick(x) for x in xs])
+        ax.grid(True, axis="y")
+    _seeds_note(fig, rows, "punto")
+    fig.tight_layout(rect=(0, 0.045, 1, 1))
+    plots_style.save_figure(fig, out_stem)
+
+
+def add_u_mean(stage2_rows: list[dict], stage2: Path, out: Path) -> None:
+    """Mean of the U matrix of every stage-2 run (the mean distance between neighbouring prototypes over the
+    neurons), summarised over the seeds of each variant: u_mean_mean and u_mean_sd are added to the rows, and the
+    table is written to u_mean_stage2.csv."""
+    info = json.loads((stage2 / "stage.json").read_text(encoding="utf-8"))
+    sweep_dir = TP_DIR / info["sweep_dir"]
+    per_label: dict[str, list[float]] = {}
+    for row in _read_csv(sweep_dir / "summary.csv"):
+        run = som.read_run(sweep_dir / "runs" / row["run"])
+        per_label.setdefault(row["label"], []).append(float(som.umatrix(run.prototypes, run.k).mean()))
+    out.mkdir(parents=True, exist_ok=True)
+    with (out / "u_mean_stage2.csv").open("w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file, lineterminator="\n")
+        writer.writerow(["label", "radius0", "eta0", "epochs", "u_mean_mean", "u_mean_sd"])
+        for row in stage2_rows:
+            values = per_label[row["label"]]
+            row["u_mean_mean"] = str(float(np.mean(values)))
+            row["u_mean_sd"] = str(float(np.std(values, ddof=1)))
+            writer.writerow([row["label"], row["radius0"], row["eta0"], row["epochs"], repr(float(np.mean(values))),
+                             repr(float(np.std(values, ddof=1)))])
+
+
+def plot_te_by_k(step_rows: list[dict], chosen_k: int, thresholds: dict, out_stem) -> None:
+    """The topographic error against k (step, mean +/- sd over the 10 seeds) and the limit of the rule. A bar is
+    blue when the grid keeps the occupancy limits (empty neurons, creators per occupied neuron) and grey when it
+    does not, and the tick shows the percentage of empty neurons: the grids with a lower error are the ones that
+    fail the occupancy."""
+    plt = plots_style.apply_style()
+    colors = plots_style.palette_for(["cumple la ocupación"])
+    rows = sorted(step_rows, key=lambda r: int(r["grid_k"]))
+    ks = [int(r["grid_k"]) for r in rows]
+    passes = [float(r["empty_fraction_mean"]) <= thresholds["empty_max"]
+              and float(r["creators_per_occupied_mean"]) >= thresholds["creators_min"] for r in rows]
+    fig, ax = plt.subplots(figsize=plots_style.figsize((8.5, 4.2)))
+    ax.bar(ks, [float(r["te_mean"]) for r in rows], yerr=[float(r["te_sd"]) for r in rows],
+           color=[colors["cumple la ocupación"] if ok else plots_style.TEXT_SECONDARY for ok in passes],
+           capsize=3, width=0.7)
+    ax.axhline(thresholds["te_max"], color=plots_style.TEXT_PRIMARY, linestyle="--", linewidth=1)
+    ax.axvline(chosen_k, color=plots_style.TEXT_PRIMARY, linewidth=1, alpha=0.5)
+    ax.set_xticks(ks)
+    ax.set_xticklabels([f"{k}\n{float(r['empty_fraction_mean']) * 100:.1f} % vacías".replace(".", ",")
+                        for k, r in zip(ks, rows)])
+    ax.set_xlabel("k y % de neuronas vacías")
+    ax.set_ylabel("error topográfico")
+    handles = [plt.Rectangle((0, 0), 1, 1, color=colors["cumple la ocupación"]),
+               plt.Rectangle((0, 0), 1, 1, color=plots_style.TEXT_SECONDARY)]
+    ax.legend(handles, ["cumple los límites de ocupación", "no cumple los límites de ocupación"],
+              frameon=False, fontsize=plots_style.fontsize(9), loc="upper right")
+    ax.grid(True, axis="y")
+    _seeds_note(fig, rows, "barra")
+    fig.tight_layout(rect=(0, 0.045, 1, 1))
+    plots_style.save_figure(fig, out_stem)
+
+
+def _fmt_tick(value: float) -> str:
+    return f"{value:g}".replace(".", ",")
+
+
 # ---------- training trace ----------
 
 def plot_trace(trace, title: str, out_stem) -> None:
@@ -305,11 +448,11 @@ def _read_csv(path: Path) -> list[dict]:
 
 
 def _stability_sd(stage1: Path) -> dict[str, float]:
-    """SD (ddof 1) of the pairwise Spearman values of every configuration (stability.csv)."""
+    """SD (ddof 1) of the pairwise correlation values of every configuration (stability.csv)."""
     values: dict[str, list[float]] = {}
     for row in _read_csv(stage1 / "stability.csv"):
-        if row["spearman"] not in ("", "nan", "NaN"):
-            values.setdefault(row["label"], []).append(float(row["spearman"]))
+        if row["correlation"] not in ("", "nan", "NaN"):
+            values.setdefault(row["label"], []).append(float(row["correlation"]))
     return {label: float(np.std(v, ddof=1)) if len(v) > 1 else 0.0 for label, v in values.items()}
 
 
@@ -327,6 +470,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Figures of the Kohonen grid chosen by the pre-registered rule.")
     parser.add_argument("--stage1", type=Path, default=DEFAULT_STAGE1,
                         help="stage-1 results folder (default: analysis/results/som/series_som_stage1)")
+    parser.add_argument("--stage2", type=Path, default=DEFAULT_STAGE2,
+                        help="stage-2 results folder (default: analysis/results/som/series_som_stage2)")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT,
                         help="output folder (default: analysis/results/som/figures)")
     args = parser.parse_args(argv)
@@ -347,10 +492,11 @@ def main(argv: list[str] | None = None) -> int:
     run = som.read_run(TP_DIR / selection["figure_run"])
     if run.k != k:
         raise SystemExit(f"figure run has grid_k {run.k}, selection.json chose k = {k}")
-    features, z, meta = pca.read_prepared("creadores_zscore")
-    if list(run.features) != list(features):
-        raise SystemExit("figure run features differ from the prepared z-scored columns")
-    loads = pca.loadings(pca.pca_eigh(z, features))
+    data = pca.som_input()
+    features, meta = list(data["names"]), data["meta"]
+    if list(run.features) != features:
+        raise SystemExit("figure run features differ from the PCA score columns the map is trained on (run `make pca`)")
+    loads = pca.loadings(data["result"])
     raw = load_creadores()
     column = {name: i for i, name in enumerate(raw.columns)}
 
@@ -374,28 +520,29 @@ def main(argv: list[str] | None = None) -> int:
     # component planes
     prototypes = run.prototypes.reshape(k, k, -1)
 
-    def z_plane(name: str) -> Plane:
-        return Plane(name, prototypes[:, :, features.index(name)], "z", "z")
+    def pc_plane(name: str) -> Plane:
+        return Plane(name, prototypes[:, :, features.index(name)], "pc", "peso")
 
     def raw_plane(name: str, unit: str) -> Plane:
         return Plane(name, neuron_raw_means(run.bmu, k, raw.values[:, column[name]]), "raw", unit)
 
-    names = main_planes(loads, features)
-    main_set = [z_plane(name) for name in names] + [raw_plane(name, "%") for name in EXTRA_RAW]
+    names = main_planes(loads, data["variables"])
+    main_set = [raw_plane(name, _unit(name)) for name in names] + [raw_plane(name, "%") for name in EXTRA_RAW]
     plot_planes(main_set, k, run.hits,
-                f"Planos de componentes de SOM {k} x {k}: variables principales de PC1 y PC2",
-                f"{ident}. Primeras 4 variables: mayor |carga| en PC1; las siguientes 4: mayor |carga| en PC2 "
-                "(orientación de la Fase 1). Los planos z comparten una escala centrada en 0; los planos crudos "
-                "son la media de los creadores asignados a cada neurona y quedan en blanco si la neurona está "
-                "vacía. La orientación del mapa es arbitraria.", out / "planes_main", ncols=4)
-    dropped = [d["name"] for d in meta["dropped"]]
-    appendix = [z_plane(name) for name in features] + [raw_plane(name, _unit(name)) for name in dropped]
+                f"Planos de SOM {k} x {k}: variables principales de PC1 y PC2 (media cruda de cada neurona)",
+                f"{ident}. Primeras 4 variables: mayor |carga| en PC1 de la PCA de las {len(data['variables'])} variables; "
+                "las siguientes 4: mayor |carga| en PC2 (orientación de la Fase 1). El mapa se entrena con los scores "
+                "de las componentes, no con las variables: cada plano es la media cruda de los creadores asignados a "
+                "cada neurona y queda en blanco si la neurona está vacía. Las dos últimas son las variables que "
+                "salieron por ser combinación exacta de otras. La orientación del mapa es arbitraria.",
+                out / "planes_main", ncols=4)
+    appendix = [pc_plane(name) for name in features] + [raw_plane(name, _unit(name)) for name in raw.columns]
     plot_planes(appendix, k, run.hits,
-                f"Planos de componentes de SOM {k} x {k}: las {len(features)} variables entrenadas y las "
-                f"{len(dropped)} excluidas",
-                f"{ident}. Las variables entrenadas se muestran como valor del prototipo en unidades z (escala "
-                "común centrada en 0); las excluidas, como media cruda de los creadores de cada neurona. "
-                "Celdas rayadas: neuronas vacías. La orientación del mapa es arbitraria.",
+                f"Planos de SOM {k} x {k}: las {len(features)} componentes entrenadas y las {len(raw.columns)} "
+                "variables originales",
+                f"{ident}. Las componentes se muestran como el peso del prototipo (cada una con su escala centrada en "
+                "0); las variables originales, como media cruda de los creadores de cada neurona. Celdas rayadas: "
+                "neuronas vacías. La orientación del mapa es arbitraria.",
                 out / "planes_appendix", ncols=6)
 
     # stage-1 curves and trace
@@ -405,6 +552,19 @@ def main(argv: list[str] | None = None) -> int:
         row["stability_sd"] = str(sd.get(row["label"], 0.0))
     for _ in plots_style.iter_variants():
         plot_stage1_curves(rows, selection, out / "stage1_curves")
+    stage2_rows = _read_csv(args.stage2 / "aggregate.csv")
+    add_u_mean(stage2_rows, args.stage2, out)
+    base = next(r for r in stage2_rows if r["label"] == "base")
+    step_rows = sorted((r for r in rows if r["neighborhood"] == "step"), key=lambda r: int(r["grid_k"]))
+    for _ in plots_style.iter_variants():
+        plot_effect(step_rows, "grid_k", "k" if plots_style.variant() == "slide" else "k (lado de la grilla)", k, selection["thresholds"], out / "effect_k")
+        # the topographic error only justifies k: the eta0 and R0 figures show the occupancy
+        plot_effect(effect_rows(stage2_rows, "eta0"), "eta0", "tasa de aprendizaje inicial η0", float(base["eta0"]),
+                    selection["thresholds"], out / "effect_eta0", measures=SCHEDULE_MEASURES)
+        plot_effect(effect_rows(stage2_rows, "radius0"), "radius0", "radio inicial R0", float(base["radius0"]),
+                    selection["thresholds"], out / "effect_radius0", measures=SCHEDULE_MEASURES)
+    for _ in plots_style.iter_variants():
+        plot_te_by_k(step_rows, k, selection["thresholds"], out / "te_by_k")
     plot_trace(run.trace, f"Traza del entrenamiento de la corrida dibujada: k = {k}, seed {seed}", out / "trace")
 
     # who is in each neuron

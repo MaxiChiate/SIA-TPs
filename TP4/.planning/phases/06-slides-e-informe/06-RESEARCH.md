@@ -317,7 +317,7 @@ Order follows D-02: PCA, SOM, Oja, campaigns, letters, QR. Exercise 1 = 14 slide
 | 1 | Portada TP4 SIA Grupo 9 | - | |
 | 2 | Método: reglas fijadas antes de ver resultados, sha256, 10 seeds, nulos por permutación | - | |
 | 3 | Datos: las 5 dependencias exactas dejan 26 variables | `eda` audit table | |
-| 4 | PCA: no alcanza con 2 componentes | `pca/audited/scree` | |
+| 4 | PCA: no alcanza con 2 componentes | `pca/audited/eigenvalues_variance` | |
 | 5 | PC1 es escala y precio | `pca/audited/biplot` | |
 | 6 | La grilla se eligió por regla fijada, no por menor QE | `som/figures/stage1_curves` | |
 | 7 | Etapa 2: la elección no es robusta | table from `robustness.json` | yes |

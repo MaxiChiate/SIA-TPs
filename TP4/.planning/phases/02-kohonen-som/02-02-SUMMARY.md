@@ -2,14 +2,14 @@
 phase: 02-kohonen-som
 plan: 02
 subsystem: analysis
-tags: [som, numpy, cross-check, spearman, stability, leave-one-out, tdd]
+tags: [som, numpy, cross-check, rank-correlation (retired), stability, leave-one-out, tdd]
 
 requires:
   - phase: 02-kohonen-som
     provides: "02-01 Kohonen C core and run-file contract; 02-03 pre-registered rule (stability and figure-seed terms)"
 provides:
   - "analysis/som.py: SomRun, read_run, distances, metrics_from_prototypes, nearest_distance, run_binary"
-  - "Tie-aware Spearman, grid_distance_vector, seed_spearman_matrix, stability (value, nan_pairs), medoid_seed"
+  - "Tie-aware rank-correlation (retired), grid_distance_vector, rank-correlation (retired), stability (value, nan_pairs), medoid_seed"
   - "analysis/som_loo.py: write_folds, run_loo, main (QE leave-one-out CLI writing loo.csv, loo_by_seed.csv, folds/)"
   - "Numpy proof that the C qe, te, hits, bmu, bmu2 and occupancy summary are correct for both kernels (k^2 > n included)"
 affects: [02-04, 02-05, 02-06]
@@ -62,11 +62,11 @@ coverage:
         status: pass
     human_judgment: false
   - id: D3
-    description: "Tie-aware Spearman, orientation- and order-invariant stability with the NaN rule, and the figure-seed medoid"
+    description: "Tie-aware rank-correlation (retired), orientation- and order-invariant stability with the NaN rule, and the figure-seed medoid"
     requirement: SOM-03
     verification:
       - kind: unit
-        ref: "analysis/tests/test_som_stats.py (7 passed: ranks, spearman sqrt(0.9), grid distance, rotation/reflection, creator permutation, all-NaN, medoid)"
+        ref: "analysis/tests/test_som_stats.py (7 passed: ranks, rank-correlation (retired) sqrt(0.9), grid distance, rotation/reflection, creator permutation, all-NaN, medoid)"
         status: pass
     human_judgment: false
   - id: D4
@@ -88,7 +88,7 @@ status: complete
 
 # Phase 2 Plan 02: Numpy proof of the SOM measures, seed stability and QE-LOO Summary
 
-**analysis/som.py reads Kohonen run directories and reproduces qe, te, hits, both BMU columns and the occupancy summary of the C binary within 1e-12 for both kernels, adds a tie-aware Spearman seed stability with the committed NaN rule and the stability medoid, and analysis/som_loo.py runs QE leave-one-out with one temporary directory per training.**
+**analysis/som.py reads Kohonen run directories and reproduces qe, te, hits, both BMU columns and the occupancy summary of the C binary within 1e-12 for both kernels, adds a tie-aware rank-correlation (retired) seed stability with the committed NaN rule and the stability medoid, and analysis/som_loo.py runs QE leave-one-out with one temporary directory per training.**
 
 ## Performance
 
@@ -99,7 +99,7 @@ status: complete
 ## Accomplishments
 
 - **Task 1 (SOM-02 cross-check).** `metrics_from_prototypes` recomputes qe, te (diagonal winner/runner-up pairs count as errors, D-04), hits, bmu, bmu2 and the occupancy summary from the prototypes and the z matrix. For a step run (k = 8, 64 neurons on 50 creators, R 4 to 1) and a gaussian run (k = 4, R 2 to 0.5) every value equals the C output within 1e-12 and the BMU arrays match exactly; the last `trace.csv` row equals the final qe and te. This closes the numpy agreement that 02-01 deferred (its coverage item D6). `read_run` rejects a changed `occupancy.csv` header and a swapped `prototypes.csv` line, naming the file. The `series_smoke_kohonen` row of `analysis/README.md` now describes the trained SOM and its new summary columns.
-- **Task 2 (D-13).** `average_ranks`, `spearman_ties`, `grid_distance_vector`, `seed_spearman_matrix`, `stability` and `medoid_seed` implement the committed **Estabilidad.** and **Semilla de las figuras.** terms (Euclidean grid distance, NaN pairs dropped and counted, all NaN gives 0.0, smallest seed on medoid ties). Rotation by 90 degrees and reflection leave stability at 1.0, a permutation of the creators leaves it unchanged within 1e-12, and `spearman_ties([1,2,2,3],[1,3,2,4])` equals sqrt(0.9).
+- **Task 2 (D-13).** `average_ranks`, `rank-correlation (retired)`, `grid_distance_vector`, `rank-correlation (retired)`, `stability` and `medoid_seed` implement the committed **Estabilidad.** and **Semilla de las figuras.** terms (Euclidean grid distance, NaN pairs dropped and counted, all NaN gives 0.0, smallest seed on medoid ties). Rotation by 90 degrees and reflection leave stability at 1.0, a permutation of the creators leaves it unchanged within 1e-12, and `rank-correlation (retired)([1,2,2,3],[1,3,2,4])` equals sqrt(0.9).
 - **Task 3 (D-09).** `som_loo.py` trains one map per held-out creator per (variant, seed) in its own `TemporaryDirectory`, measures the held-out creator's nearest-prototype distance in Python, averages folds per seed into `loo_by_seed.csv` and leaves seed-to-config aggregation to `som_select.aggregate`. Fixture: 12 rows for 2 seeds x 6 folds, byte-identical `loo.csv` across worker counts 2 and 3, no `tmp/` or `results/` left. A CLI smoke on the fixture printed `loo -> .../loo.csv`.
 
 ## Task Commits
@@ -143,7 +143,7 @@ None. `run_binary` uses an argument list with `cwd` and no shell (T-02-05), temp
 ## Handoff to later plans
 
 - 02-04 can call `python analysis/som_loo.py analysis/series_som_stage1.json` (7 000 trainings, minutes) and feed `loo_by_seed.csv` (`label, variant, seed, n_folds, qe_loo`) to `som_select.aggregate`, which expects `label, seed, qe_loo`.
-- `som.stability(bmus_by_seed, k)` returns `(value, nan_pairs)`, the shape `stability_by_label[label]` expects; `som.seed_spearman_matrix` plus `som.medoid_seed(matrix, seeds)` give the pre-declared figure seed.
+- `som.stability(bmus_by_seed, k)` returns `(value, nan_pairs)`, the shape `stability_by_label[label]` expects; `som.rank-correlation (retired)` plus `som.medoid_seed(matrix, seeds)` give the pre-declared figure seed.
 - `som.read_run(run_dir).bmu` provides the per-seed BMU arrays; stability needs them in a fixed creator order, which `assignments.csv` guarantees.
 
 ## Self-Check: PASSED

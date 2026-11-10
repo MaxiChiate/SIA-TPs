@@ -1,4 +1,4 @@
-"""Tests of seed stability (D-13, tie-aware Spearman) and of the QE leave-one-out driver (D-09)."""
+"""Tests of seed stability (D-13, Pearson correlation) and of the QE leave-one-out driver (D-09)."""
 
 from __future__ import annotations
 
@@ -21,18 +21,14 @@ def reflect(bmu, k):
     return r * k + (k - 1 - c)
 
 
-def test_average_ranks_ties():
-    assert np.array_equal(som.average_ranks(np.array([1, 1, 1, 2, 2, 3])), [2, 2, 2, 4.5, 4.5, 6])
-    assert np.array_equal(som.average_ranks(np.array([3, 1, 2])), [3, 1, 2])
-
-
-def test_spearman_ties_known_values():
+def test_pearson_corr_known_values():
     a = np.array([0.3, 1.2, -0.7, 2.0])
-    assert abs(som.spearman_ties(a, a) - 1.0) < 1e-15
-    assert abs(som.spearman_ties(a, -a) + 1.0) < 1e-15
-    assert abs(som.spearman_ties([1, 2, 2, 3], [1, 3, 2, 4]) - math.sqrt(0.9)) < 1e-15
-    assert math.isnan(som.spearman_ties([5, 5, 5], [1, 2, 3]))
-    assert math.isnan(som.spearman_ties([1, 2, 3], [4, 4, 4]))
+    assert abs(som.pearson_corr(a, a) - 1.0) < 1e-15
+    assert abs(som.pearson_corr(a, -a) + 1.0) < 1e-15
+    assert abs(som.pearson_corr([1, 2, 3], [2, 4, 6]) - 1.0) < 1e-15
+    assert abs(som.pearson_corr([1, 2, 3, 4], [1, 3, 2, 4]) - 0.8) < 1e-15
+    assert math.isnan(som.pearson_corr([5, 5, 5], [1, 2, 3]))
+    assert math.isnan(som.pearson_corr([1, 2, 3], [4, 4, 4]))
 
 
 def test_grid_distance_vector():

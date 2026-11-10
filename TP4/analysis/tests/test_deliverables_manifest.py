@@ -74,8 +74,8 @@ def test_figure_make_targets_are_makefile_targets():
 
 def test_figure_keys_are_unique_and_counts_match():
     keys = [item.key for item in manifest.FIGURES]
-    assert len(keys) == len(set(keys)) == 32
-    assert sum(item.slide for item in manifest.FIGURES) == 23
+    assert len(keys) == len(set(keys)) == 39
+    assert sum(item.slide for item in manifest.FIGURES) == 26
 
 
 def test_figure_paths_are_svg_inside_result_folders():
@@ -86,7 +86,7 @@ def test_figure_paths_are_svg_inside_result_folders():
 
 def test_slide_path_puts_slide_folder_before_the_file_name():
     assert manifest.slide_path(manifest.figure("som_map")) == "som/figures/slide/map.svg"
-    assert manifest.slide_path(manifest.figure("pca_scree")) == "pca/audited/slide/scree.svg"
+    assert manifest.slide_path(manifest.figure("pca_eigenvalues")) == "pca/audited/slide/eigenvalues_variance.svg"
 
 
 def test_figure_lookup_rejects_unknown_key():

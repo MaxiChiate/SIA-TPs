@@ -7,8 +7,8 @@ D-19: the creator is synthetic (creator_id SYN001, name @sintetico_demo, `synthe
 sintético in every report line about it). It is built from the column medians of datos/creadores.csv with the five
 exact relations restored, it is written only under analysis/results/maintenance/ and it never enters
 datos/creadores.csv or any campaign list. It is mapped into the z-score space with scripts/map_creator.py and the
-saved datos/prepared/creadores_zscore.meta.json, placed on the best-matching neuron of the Phase 2 figure run of the
-chosen grid (k5-step), given its Oja index with the saved w of analysis/results/oja/weights.csv (D-02 sign), and
+saved datos/prepared/creadores_zscore.meta.json, projected on the retained principal components and placed on the best-matching neuron of
+the Phase 2 figure run of the chosen grid (k5-step), given its Oja index with the saved w of analysis/results/oja/weights.csv (D-02 sign), and
 D-18: the drift check flags retraining only when its BMU distance is above the largest training BMU distance.
 numpy and the standard library only (Phase 1 D-06).
 """
@@ -199,8 +199,10 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"figure run has grid_k {run.k}, selection.json chose k = {k}")
     meta = load_meta(META)
     features = list(meta["features"])
-    if list(run.features) != features:
-        raise SystemExit("figure run features differ from the saved scaler's features")
+    som_data = pca.som_input()
+    components = list(som_data["names"])
+    if list(run.features) != components:
+        raise SystemExit("figure run features differ from the PCA score columns the map is trained on (run `make pca`)")
 
     data = load_creadores()
     row = synthetic_creator(data)
@@ -211,16 +213,21 @@ def main(argv: list[str] | None = None) -> int:
     if not np.allclose(z, transform_new_creator(meta, row), rtol=0.0, atol=1e-12):
         raise SystemExit("the CLI mapping differs from creadores.transform_new_creator")
 
-    neuron, r, c, distance = bmu(z, run.prototypes, k)
+    # the map is trained on scores: the creator goes z (saved scaler) -> the variables that stay -> the retained components
+    position = [features.index(name) for name in som_data["variables"]]
+    scores = z[position] @ som_data["result"].eigenvectors[:, : len(components)]
+    neuron, r, c, distance = bmu(scores, run.prototypes, k)
     check = drift_check(distance, run.distance)
     training_indices = read_training_indices(OJA_INDEX)
-    oja_value = float(z @ read_weights(OJA_WEIGHTS, features))
+    # Oja's neuron is trained on the variables that stay, in the order of the pruned scaler
+    oja_value = float(z[position] @ read_weights(OJA_WEIGHTS, som_data["variables"]))
     result = {
         "synthetic": True,
         "creator_id": SYNTHETIC_ID,
         "name": SYNTHETIC_NAME,
         "raw": {key: value for key, value in row.items()},
         "z": {feature: float(v) for feature, v in zip(features, z)},
+        "scores": {name: float(v) for name, v in zip(components, scores)},
         "som_label": str(selection["chosen_label"]),
         "figure_seed": int(selection["figure_seed"]),
         "bmu": {"neuron": neuron, "row": r, "col": c, "distance": distance},

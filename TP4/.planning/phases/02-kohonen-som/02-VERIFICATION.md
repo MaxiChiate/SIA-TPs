@@ -67,7 +67,7 @@ No BLOCKER found. Every ROADMAP success criterion is backed by code and by artif
 | 3 | For the chosen grid, hit map, U-matrix and component planes exist | VERIFIED | `analysis/results/som/figures/`: `map.svg/png` (hits + U side by side, empty hatched, U scale 1.59-2.97 full range), `planes_main.*` (4 PC1 + 4 PC2 loading variables, plus topic_art/content_showcase raw means), `planes_appendix.*` (all 26 + 5 excluded), `stage1_curves.*`, `trace.*`. Viewed map.png, planes_main.png, stage1_curves.png: content matches the section 5 prose (3 empty neurons at (0,3), (1,2), (3,3); max 5 at (0,0)). |
 | 4 | Region profiles interpreted for the agency, contrasted with PC1/PC2 of the biplot, written answer to what a high U distance means | VERIFIED (see human item 1) | Section 6 of the deliverable: 6.1 regions, 6.2 raw-unit profiles, 6.3 agency reading, 6.4 PC1/PC2 contrast with pre-declared stats and permutation p, 6.5 U-matrix answer using `high_u_edges.csv`. I recomputed with numpy: R2(PC1 on BMU row,col) = 0.961324 and R2(PC2) = 0.055229, equal to `pca_contrast.json` (p = 0.001 and 0.267 from 1000 permutations, seed 2026). Caveat: the committed region rule yields one region (n_regions 1), so "by region" is carried by per-neuron profiles (neurons with <2 creators flagged). Honestly reported; routed to human. |
 
-**Score:** 4/4 truths verified (0 present-but-behavior-unverified). Plan-level must_haves (02-01..02-06) were also checked: seven strict Kohonen config keys, `occupancy.csv`/`trace.csv`, grid_k up to 32 (k=8 gives 64 occupancy rows), C-vs-numpy cross-check, tie-aware Spearman, LOO driver, guarded stage driver, deterministic SVGs, region rule and permutation seeds.
+**Score:** 4/4 truths verified (0 present-but-behavior-unverified). Plan-level must_haves (02-01..02-06) were also checked: seven strict Kohonen config keys, `occupancy.csv`/`trace.csv`, grid_k up to 32 (k=8 gives 64 occupancy rows), C-vs-numpy cross-check, tie-aware rank-correlation (retired), LOO driver, guarded stage driver, deterministic SVGs, region rule and permutation seeds.
 
 ### Deferred Items
 
@@ -79,7 +79,7 @@ None. Phase 3 (Oja, campaigns) consumes SOM regions but does not close any Phase
 |----------|----------|--------|---------|
 | `neuron/models/kohonen.c` | Real SOM trainer | VERIFIED | 450 lines, `kohonen_stub.c` gone (`ls neuron/models`: hopfield_stub.c, kohonen.c, models.c, models.h, oja_stub.c); dispatch in models.c. |
 | `neuron/io/config.c` | 7 strict Kohonen keys | VERIFIED | Tests for missing/typed/out-of-range keys pass. |
-| `analysis/som.py` | Reader, numpy recomputation, Spearman, stability, U-matrix | VERIFIED | Imports only numpy/stdlib; no sklearn/minisom/scipy. |
+| `analysis/som.py` | Reader, numpy recomputation, rank-correlation (retired), stability, U-matrix | VERIFIED | Imports only numpy/stdlib; no sklearn/minisom/scipy. |
 | `analysis/som_select.py`, `series_som_stage1.json`, rule section | Pre-registered rule | VERIFIED | Unchanged since `ea7a0b1`. |
 | `analysis/som_loo.py`, `som_stage.py` | LOO and guarded stages | VERIFIED | 7 000 LOO trainings recorded; stage2 series generated and committed. |
 | `analysis/som_figures.py`, `som_profiles.py` | Figures and profiles | VERIFIED | Outputs regenerate byte-identically. |

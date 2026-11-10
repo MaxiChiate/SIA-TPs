@@ -64,14 +64,14 @@ def deck(tmp_path):
 
 # ---------- outline (D-01, D-02, D-04, D-05, D-07) ----------
 
-def test_outline_has_27_unique_slides_in_method_order():
+def test_outline_has_30_unique_slides_in_method_order():
     ids = [slide.id for slide in slides.OUTLINE]
-    assert len(ids) == 27 and len(set(ids)) == 27
-    assert ids[:2] == ["portada", "metodo"]
+    assert len(ids) == 30 and len(set(ids)) == 30
+    assert ids[:2] == ["portada", "eda"]
     counts = {exercise: sum(1 for s in slides.OUTLINE if s.exercise == exercise) for exercise in (0, 1, 2)}
-    assert counts == {0: 2, 1: 16, 2: 9}
+    assert counts == {0: 1, 1: 20, 2: 9}
     assert [s.exercise for s in slides.OUTLINE] == sorted(s.exercise for s in slides.OUTLINE)
-    assert [s.id for s in slides.OUTLINE if s.exercise == 1][-1] == "ej1-conclusiones"
+    assert [s.id for s in slides.OUTLINE if s.exercise == 1][-1] == "camp-maintenance"
     assert ids[-1] == "ej2-conclusiones"
 
 
@@ -83,13 +83,12 @@ def test_outline_has_no_agenda_and_no_general_closing():
 
 def test_unfavorable_and_campaign_slides_exist_with_their_own_ids():
     ids = {slide.id for slide in slides.OUTLINE}
-    assert {"som-not-robust", "som-one-region", "qr-hebb-falla", "qr-lookup"} <= ids
+    assert {"som-robust", "qr-hebb-falla", "qr-lookup"} <= ids
     assert {"camp-futbol", "camp-table", "camp-followers", "camp-maintenance"} <= ids
 
 
 def test_unfavorable_titles_say_the_result_plainly():
-    assert "no es robusta" in by_id("som-not-robust").title
-    assert "una sola región" in by_id("som-one-region").title
+    assert "es robusta" in by_id("som-robust").title
     assert "Hebb" in by_id("qr-hebb-falla").title and "{qr.hebb_exact_noise0}" in by_id("qr-hebb-falla").title
     assert "Hamming" in by_id("qr-lookup").title and "pseudo-inversa" in by_id("qr-lookup").title
 
@@ -105,11 +104,11 @@ def test_every_figure_is_a_slide_figure_and_questions_cover_the_enunciado():
 def test_figures_placed_and_unplaced_are_exactly_the_slide_figures():
     placed = [slide.figure for slide in slides.OUTLINE if slide.figure is not None]
     assert all(isinstance(key, str) for key in placed)
-    assert len(placed) == 18 and len(set(placed)) == 18
+    assert len(placed) == 20 and len(set(placed)) == 20
     unplaced = set(slides.UNPLACED_SLIDE_FIGURES)
     slide_true = {item.key for item in manifest.FIGURES if item.slide}
     assert not (set(placed) & unplaced)
-    assert set(placed) | unplaced == slide_true and len(unplaced) == 5
+    assert set(placed) | unplaced == slide_true and len(unplaced) == 6
     assert all(str(reason).strip() for reason in slides.UNPLACED_SLIDE_FIGURES.values())
 
 
@@ -125,9 +124,8 @@ def test_qr_encoding_is_stated_as_this_works_choice_in_the_notes():
     assert "{qr.n_pixels}" in notes
 
 
-def test_pre_registration_tag_is_on_five_slides_at_least_and_never_on_the_method_slide():
+def test_pre_registration_tag_is_on_five_slides_at_least_and_only_that_tag_exists():
     assert sum(1 for slide in slides.OUTLINE if slide.tag == TAG) >= 5
-    assert by_id("metodo").tag is None
     assert {slide.tag for slide in slides.OUTLINE} <= {None, TAG}
 
 
@@ -137,19 +135,23 @@ def test_slide_figure_is_none_or_a_single_string():
 
 
 def test_text_only_slides_name_no_figure():
-    for slide_id in ("portada", "metodo", "som-not-robust", "oja-max", "camp-table", "camp-followers",
-                     "camp-maintenance", "ej1-conclusiones", "ej2-conclusiones"):
+    for slide_id in ("portada", "som-robust", "oja-max", "camp-table", "camp-followers",
+                     "camp-maintenance", "ej2-conclusiones"):
         assert by_id(slide_id).figure is None
 
 
-def test_campaign_table_rows_read_the_criterion_top5_and_cost_facts():
-    table = by_id("camp-table").table
-    assert table is not None
-    text = " ".join(" ".join(row) for row in table[1])
-    for campaign in ("perros", "maquillaje", "arte"):
-        for part in ("criterion", "top5", "cost_per_thousand_ar"):
+def test_campaign_table_rows_read_the_top5_and_cost_facts():
+    # the table names each criterion in words; the criterion means are in the notes
+    slide = by_id("camp-table")
+    assert slide.table is not None
+    text = " ".join(" ".join(row) for row in slide.table[1])
+    for campaign in ("futbol", "perros", "maquillaje", "arte"):
+        for part in ("top5", "cost_per_thousand_ar"):
             assert f"{{camp.{campaign}.{part}}}" in text
-    assert "{camp.futbol." not in text
+    for campaign in ("perros", "maquillaje", "arte"):
+        assert f"{{camp.{campaign}.criterion}}" in slide.notes
+    # same four rows, in the same order, as the table of camp-followers
+    assert [row[0] for row in slide.table[1]] == [row[0] for row in by_id("camp-followers").table[1]]
 
 
 def test_every_outline_number_is_a_fact_placeholder():
@@ -170,7 +172,7 @@ def test_no_title_body_or_note_makes_a_forbidden_claim():
 
 def test_build_deck_fills_every_template_and_every_note_has_two_to_four_sentences(deck):
     built, _ = deck
-    assert len(built) == 27
+    assert len(built) == 30
     for slide in built:
         for text in [slide["title"], *slide["body"], slide["notes"]]:
             assert "{" not in text and "}" not in text, slide["id"]
@@ -182,7 +184,7 @@ def test_build_deck_fills_every_template_and_every_note_has_two_to_four_sentence
 def test_build_deck_resolves_each_figure_to_its_slide_variant(deck):
     built, _ = deck
     with_figure = [slide for slide in built if slide["figure"] is not None]
-    assert len(with_figure) == 18
+    assert len(with_figure) == 20
     for slide in with_figure:
         expected = manifest.slide_path(manifest.figure(slide["figure"]))
         assert slide["figure_path"] == expected
@@ -209,19 +211,19 @@ def test_build_deck_stops_on_a_missing_slide_figure_and_names_the_make_target(tm
     assert item.make_target in str(stop.value) and manifest.slide_path(item) in str(stop.value)
 
 
-def test_build_deck_stops_when_the_outline_has_more_than_28_slides(tmp_path, monkeypatch):
+def test_build_deck_stops_when_the_outline_has_more_than_30_slides(tmp_path, monkeypatch):
     results = write_figures(tmp_path / "results")
     extra = replace(slides.OUTLINE[-1], id="extra-slide")
     monkeypatch.setattr(slides, "OUTLINE", (*slides.OUTLINE, extra, replace(extra, id="extra-slide-2")))
     with pytest.raises(SystemExit) as stop:
         slides.build_deck(fixture_facts(), results)
-    assert "28" in str(stop.value)
+    assert "30" in str(stop.value)
 
 
 def test_a_long_handle_list_stays_in_a_table_cell_and_the_notes(deck):
     built, _ = deck
     table = next(slide for slide in built if slide["id"] == "camp-table")["table"]
-    assert len(table["header"]) <= 4 and len(table["rows"]) == 3
+    assert len(table["header"]) <= 4 and len(table["rows"]) == 4
     assert any("@aaaaaaaaaaaaaaa" in cell for row in table["rows"] for cell in row)
 
 
@@ -256,14 +258,14 @@ def test_write_deck_writes_the_probed_tree(deck, tmp_path):
         assert page.startswith(f'<section id="{slide_id}" style="') and page.rstrip().endswith("</section>")
         assert page.count("<section") == 1 and page.count("<aside>") == 1
         assert page.rstrip().endswith("</aside></section>")
-    assert len(list((out / "project" / "slides").glob("*.html"))) == 27
+    assert len(list((out / "project" / "slides").glob("*.html"))) == 30
 
 
 def test_write_deck_copies_the_png_of_each_figure_and_lists_them(deck, tmp_path):
     out = write(deck, tmp_path / "out")
     built, _ = deck
     pngs = sorted(slide["png"] for slide in built if slide["png"])
-    assert sorted(path.name for path in (out / "assets").glob("*.png")) == pngs and len(pngs) == 18
+    assert sorted(path.name for path in (out / "assets").glob("*.png")) == pngs and len(pngs) == 20
     listed = json.loads((out / "deck.json").read_text(encoding="utf-8"))["assets"]
     assert sorted(item["png"] for item in listed) == pngs
     assert all(item["file"] == f"assets/{item['png']}" for item in listed)
@@ -339,7 +341,7 @@ def test_notes_md_is_the_presenter_script(deck, tmp_path):
     text = (out / "notes.md").read_text(encoding="utf-8")
     assert text.startswith("# Guion de la presentación")
     headings = re.findall(r"^## (\d+)\. (.+)$", text, flags=re.M)
-    assert [int(number) for number, _ in headings] == list(range(1, 28))
+    assert [int(number) for number, _ in headings] == list(range(1, 31))
     assert [title for _, title in headings] == [slide["title"] for slide in built]
     for slide in built:
         assert slide["notes"] in text
@@ -416,7 +418,7 @@ def test_main_prints_the_summary_line_and_writes_the_files(tmp_path, monkeypatch
     monkeypatch.setattr(slides.facts, "load_facts", lambda *_args, **_kwargs: fixture_facts())
     out = tmp_path / "out"
     assert slides.main(["--results", str(results), "--out", str(out)]) == 0
-    assert f"slides -> {out} (27 slides)" in capsys.readouterr().out
+    assert f"slides -> {out} (30 slides)" in capsys.readouterr().out
     assert (out / "deck.json").is_file() and (out / "notes.md").is_file()
 
 
@@ -456,18 +458,18 @@ def test_build_deck_stops_on_a_title_over_max_title_chars(tmp_path, monkeypatch)
     assert long_title.id in str(stop.value) and "título" in str(stop.value)
 
 
-def test_tables_have_at_most_4_columns_and_5_rows_and_bodies_at_most_3_lines():
+def test_tables_have_at_most_6_columns_and_7_rows_and_bodies_at_most_3_lines():
     for slide in slides.OUTLINE:
         assert len(slide.body) <= 3, slide.id
         if slide.table is not None:
             header, rows = slide.table
-            assert len(header) <= 4 and 1 <= len(rows) <= 5, slide.id
+            assert len(header) <= 6 and 1 <= len(rows) <= 7, slide.id
             assert all(len(row) == len(header) for row in rows), slide.id
 
 
 def test_build_deck_stops_on_a_table_or_body_over_the_limits(tmp_path, monkeypatch):
     results = write_figures(tmp_path / "results")
-    wide = replace(slides.OUTLINE[10], table=(("a", "b", "c", "d", "e"), (("1", "2", "3", "4", "5"),)))
+    wide = replace(slides.OUTLINE[10], table=(("a", "b", "c", "d", "e", "f", "g"), (("1", "2", "3", "4", "5", "6", "7"),)))
     monkeypatch.setattr(slides, "OUTLINE", (*slides.OUTLINE[:10], wide, *slides.OUTLINE[11:]))
     with pytest.raises(SystemExit) as stop:
         slides.build_deck(fixture_facts(), results)

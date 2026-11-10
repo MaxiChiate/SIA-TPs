@@ -35,7 +35,45 @@ sys.path.insert(0, str(TP_DIR / "analysis"))
 
 RESULTS_DIR = TP_DIR / "analysis" / "results"
 
+# The variables of the PCA in plain words, for the notes that read the loadings of PC1 and PC2.
+PCA_VARIABLE_WORDS: dict[str, str] = {
+    "followers": "seguidores",
+    "likes_per_1000": "me gusta por mil",
+    "non_follower_reach_pct": "alcance a no seguidores",
+    "estimated_argentina_reach": "alcance estimado en Argentina",
+    "shares_per_1000": "compartidos por mil",
+    "topic_football_pct": "tema fútbol",
+    "topic_makeup_pct": "tema maquillaje",
+    "monthly_posts": "publicaciones por mes",
+    "sponsored_posts_pct": "publicaciones patrocinadas",
+    "argentina_audience_pct": "audiencia argentina",
+    "topic_dogs_pct": "tema perros",
+    "content_review_pct": "contenido de reseñas",
+    "average_watch_time_seconds": "tiempo de visualización",
+    "content_tutorial_pct": "contenido tutorial",
+    "comments_per_1000": "comentarios por mil",
+    "profile_visits_per_1000": "visitas al perfil por mil",
+    "saves_per_1000": "guardados por mil",
+}
+OJA_ETA_FACTOR = 1.2  # eta0 = 1 / (1.2 lambda_1) is the convergence bound of the course (Regla de Oja y Sanger, p. 14)
+LOADING_MIN = 0.5  # a variable is named in the reading of a component when its loading is at least this in absolute value
+
+# The variables of the highest walls of the U matrix in plain words: (what changes, plural, unit of the change).
+WALL_VARIABLE_WORDS: dict[str, tuple[str, bool, str]] = {
+    "sponsored_posts_pct": ("la proporción de publicaciones patrocinadas", False, " puntos"),
+    "topic_dogs_pct": ("el tema perros", False, " puntos"),
+    "topic_football_pct": ("el tema fútbol", False, " puntos"),
+    "argentina_audience_pct": ("la audiencia argentina", False, " puntos"),
+    "non_follower_reach_pct": ("el alcance a no seguidores", False, " puntos"),
+    "content_review_pct": ("el contenido de reseñas", False, " puntos"),
+    "likes_per_1000": ("los me gusta por mil", True, ""),
+    "shares_per_1000": ("los compartidos por mil", True, ""),
+    "monthly_posts": ("las publicaciones por mes", True, ""),
+}
+
 # source name -> (path relative to the results directory, make step that writes it)
+VARIANCE_THRESHOLD = 0.80  # cumulative variance that fixes k (a team convention); the same value as pca.VARIANCE_THRESHOLD
+
 SOURCES: dict[str, tuple[str, str]] = {
     "eda.summary": ("eda/summary_stats.csv", "eda"),
     "eda.strong": ("eda/strong_correlations.csv", "eda"),
@@ -43,11 +81,17 @@ SOURCES: dict[str, tuple[str, str]] = {
     "pca.decision": ("pca/audited/decision.json", "pca"),
     "pca.sensitivity": ("pca/sensitivity.json", "pca"),
     "pca.eigenvalues": ("pca/audited/eigenvalues.csv", "pca"),
+    "pca17.decision": ("pca/pruned/decision.json", "pca"),
+    "pca17.eigenvalues": ("pca/pruned/eigenvalues.csv", "pca"),
+    "pca17.loadings": ("pca/pruned/loadings.csv", "pca"),
+    "prune.sensitivity": ("corr_prune/sensitivity.json", "corr-prune"),
     "som.contrast": ("som/profiles/pca_contrast.json", "som-profiles"),
     "som.selection": ("som/series_som_stage1/selection.json", "som-stage1"),
     "som.robustness": ("som/series_som_stage2/robustness.json", "som-stage2"),
     "som.robustness_table": ("som/series_som_stage2/robustness.csv", "som-stage2"),
+    "som.stage2_aggregate": ("som/series_som_stage2/aggregate.csv", "som-stage2"),
     "som.hits": ("som/figures/hits_members.csv", "som-figures"),
+    "som.u_mean": ("som/figures/u_mean_stage2.csv", "som-figures"),
     "som.high_u_edges": ("som/profiles/high_u_edges.csv", "som-profiles"),
     "som.neuron_profiles": ("som/profiles/neuron_profiles.csv", "som-profiles"),
     "som.zones": ("som/profiles/zones.csv", "som-profiles"),
@@ -218,15 +262,67 @@ def _pca_facts(results_dir: Path) -> dict[str, str]:
     return {
         "pca.n_features": integer(decision["n_variables"]),
         "pca.k_80": integer(k_80),
-        "pca.kaiser": integer(decision["kaiser"]),
         "pca.var_pc1": pct(decision["explained_pc1"], 1),
         "pca.var_pc2": pct(decision["explained_pc2"], 1),
         "pca.cum_k80": pct(eigenvalues[k_80 - 1]["cumulative"], 1),
         "pca.min_eigenvalue": dec(decision["min_eigenvalue"], 5),
-        "pca.kaiser_all31": integer(sensitivity["all31_sensitivity"]["kaiser"]),
         "pca.abs_cos_pc1": dec(sensitivity["abs_cos_pc1"], 5),
-        "pca.abs_spearman_pc1": dec(abs(sensitivity["spearman_pc1"]), 4),
+        "pca.abs_pearson_pc1": dec(abs(sensitivity["pearson_pc1"]), 4),
     }
+
+
+def _pca17_facts(results_dir: Path) -> dict[str, str]:
+    """The PCA of the variables that stay after the correlation pruning (pca/pruned/): pca17.<field>."""
+    decision = read_source(results_dir, "pca17.decision")
+    eigenvalues = read_csv_source(results_dir, "pca17.eigenvalues")
+    k_80 = int(decision["k_80"])
+    return {
+        "pca17.n_features": integer(decision["n_variables"]),
+        "pca17.k_80": integer(k_80),
+        "pca17.var_pc1": pct(decision["explained_pc1"], 1),
+        "pca17.var_pc2": pct(decision["explained_pc2"], 1),
+        "pca17.cum_pc2": pct(decision["cumulative_pc2"], 1),
+        "pca17.cum_k80": pct(eigenvalues[k_80 - 1]["cumulative"], 1),
+        "pca17.lambda1": dec(eigenvalues[0]["eigenvalue"], 2),
+        "pca17.eta_factor": dec(OJA_ETA_FACTOR, 1),
+        "pca17.eta_bound": dec(1.0 / (OJA_ETA_FACTOR * float(eigenvalues[0]["eigenvalue"])), 3),
+        **_loading_facts(read_csv_source(results_dir, "pca17.loadings")),
+    }
+
+
+def _loading_facts(rows: list[dict[str, str]]) -> dict[str, str]:
+    """pca17.pc<j>_pos and pca17.pc<j>_neg: the variables with a loading of LOADING_MIN or more on component j,
+    largest first, each with its loading (the two groups an axis opposes have opposite signs)."""
+    out = {}
+    for component in ("PC1", "PC2"):
+        loadings = [(row["variable"], float(row[component])) for row in rows]
+        for sign, name, reverse in ((1, "pos", True), (-1, "neg", False)):
+            chosen = sorted((item for item in loadings if sign * item[1] >= LOADING_MIN), key=lambda item: item[1],
+                            reverse=reverse)
+            items = [f"{PCA_VARIABLE_WORDS.get(variable, variable)} ({'+' if value > 0 else '−'}{dec(abs(value), 2)})"
+                     for variable, value in chosen]
+            out[f"pca17.{component.lower()}_{name}"] = (", ".join(items[:-1]) + " y " + items[-1]
+                                                       if len(items) > 1 else ", ".join(items))
+    out["pca17.loading_min"] = dec(LOADING_MIN, 1)
+    return out
+
+
+def _prune_facts(results_dir: Path) -> dict[str, str]:
+    """One row per threshold of the correlation-pruning sensitivity table: prune.r<i>.<field> (i from 1)."""
+    table = read_source(results_dir, "prune.sensitivity")
+    n_columns = len(read_csv_source(results_dir, "eda.summary"))
+    values = {"prune.n_audited": integer(table["n_audited"]), "prune.variance_threshold": pct(VARIANCE_THRESHOLD, 0)}
+    for index, row in enumerate(table["rows"], start=1):
+        prefix = f"prune.r{index}"
+        values[f"{prefix}.tau"] = dec(row["tau"], 2)
+        values[f"{prefix}.n"] = integer(row["n_kept"])
+        values[f"{prefix}.n_out"] = integer(len(row["dropped"]))
+        values[f"{prefix}.n_out_total"] = integer(n_columns - row["n_kept"])
+        values[f"{prefix}.k80"] = integer(row["k_80"])
+        values[f"{prefix}.pc1"] = pct(row["explained_pc1"], 1)
+        values[f"{prefix}.lmin"] = dec(row["min_eigenvalue"], 3)
+        values[f"{prefix}.cond"] = integer(round(row["condition_number"]))
+    return values
 
 
 def _number(value: float) -> str:
@@ -254,10 +350,12 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
         "som.r2_pc1_pct": pct(contrast["r2_pc1"], 1),
         "som.p_r2_pc1": dec(contrast["p_r2_pc1"], 3),
         "som.r2_pc2": dec(contrast["r2_pc2"], 3),
+        "som.r2_pc2_pct": pct(contrast["r2_pc2"], 1),
         "som.p_r2_pc2": dec(contrast["p_r2_pc2"], 3),
         "som.mantel_rho": dec(contrast["mantel_plane_rho"], 3),
         "som.p_mantel": dec(contrast["p_mantel_plane"], 3),
-        "som.mantel_z26_rho": dec(contrast["mantel_z26_rho"], 3),
+        "som.mantel_vars_rho": dec(contrast["mantel_vars_rho"], 3),
+        "som.n_vars": integer(contrast["n_variables"]),
         "som.edge_rho_pc1": dec(contrast["edge_rho_pc1"], 3),
         "som.edge_rho_pc2": dec(contrast["edge_rho_pc2"], 3),
         "som.n_edges": integer(contrast["n_edges"]),
@@ -277,7 +375,100 @@ def _som_facts(results_dir: Path) -> dict[str, str]:
             raise SystemExit(f"stage-2 variant {label!r} is not in robustness.csv; run `make results` (step som-stage2)")
         values[f"som.fail_{position}.variant"] = _variant_label(table[label], table["base"])
         values[f"som.fail_{position}.te"] = dec(table[label]["te_mean"], 3)
+    thresholds = selection["thresholds"]
+    chosen = next(row for row in selection["per_k"] if row["k"] == selection["chosen_k"])
+    stage2 = list(table.values())
+    values.update({
+        "som.te_max": dec(thresholds["te_max"], 2),
+        "som.empty_max": pct(thresholds["empty_max"], 0),
+        "som.creators_min": integer(thresholds["creators_min"]),
+        "som.te_filter_dropped": "sí" if selection["te_filter_dropped"] else "no",
+        "som.n_pass_all": integer(sum(1 for row in selection["per_k"]
+                                      if row["passes_te"] and row["passes_empty"] and row["passes_creators"])),
+        "som.chosen_te": dec(chosen["te_mean"], 3),
+        "som.chosen_empty": pct(chosen["empty_fraction_mean"], 1),
+        "som.chosen_creators": dec(chosen["creators_per_occupied_mean"], 2),
+        "som.chosen_qe_loo": dec(chosen["qe_loo_mean"], 3),
+        "som.chosen_stability": dec(chosen["stability"], 3),
+        "som.s2_te_min": dec(min(float(r["te_mean"]) for r in stage2), 3),
+        "som.s2_te_max": dec(max(float(r["te_mean"]) for r in stage2), 3),
+        "som.s2_empty_min": pct(min(float(r["empty_fraction_mean"]) for r in stage2), 1),
+        "som.s2_empty_max": pct(max(float(r["empty_fraction_mean"]) for r in stage2), 1),
+        "som.s2_creators_min": dec(min(float(r["creators_per_occupied_mean"]) for r in stage2), 2),
+        "som.s2_creators_max": dec(max(float(r["creators_per_occupied_mean"]) for r in stage2), 2),
+    })
+    # The slides of the effect of k, eta0 and R0: the topographic error, the empty neurons and the creators per
+    # occupied neuron, read from the same tables as the figures.
+    per_k = sorted(selection["per_k"], key=lambda row: row["k"])
+    first, last = per_k[0], per_k[-1]
+    following = next(row for row in per_k if row["k"] == selection["chosen_k"] + 1)
+    values.update({
+        "som.k_first": integer(first["k"]),
+        "som.k_last": integer(last["k"]),
+        "som.k_first_dist": dec(first["qe_mean"], 2),
+        "som.k_last_dist": dec(last["qe_mean"], 2),
+        "som.chosen_neurons": integer(selection["chosen_k"] ** 2),
+        "som.k_next_neurons": integer(following["k"] ** 2),
+        "som.k_next": integer(following["k"]),
+        "som.k_next_empty": pct(following["empty_fraction_mean"], 1),
+        "som.k_next_creators": dec(following["creators_per_occupied_mean"], 2),
+    })
+    u_by_label = {r["label"]: r["u_mean_mean"] for r in read_csv_source(results_dir, "som.u_mean")}
+    qe_by_label = {r["label"]: r["qe_mean"] for r in read_csv_source(results_dir, "som.stage2_aggregate")}
+    for name, vary, other in (("eta", "eta0", "radius0"), ("r0", "radius0", "eta0")):
+        # the variants that move only `vary` (the base one included)
+        moved = sorted((r for r in table.values()
+                        if float(r[other]) == float(table["base"][other])
+                        and float(r["epochs"]) == float(table["base"]["epochs"])),
+                       key=lambda r: float(r[vary]))
+        u_mean = [float(u_by_label[r["label"]]) for r in moved]
+        dist = [float(qe_by_label[r["label"]]) for r in moved]
+        empty = [float(r["empty_fraction_mean"]) for r in moved]
+        creators = [float(r["creators_per_occupied_mean"]) for r in moved]
+        values.update({
+            f"som.{name}_lo": _number(float(moved[0][vary])),
+            f"som.{name}_hi": _number(float(moved[-1][vary])),
+            f"som.{name}_values": "; ".join(_number(float(r[vary])) for r in moved),
+            f"som.{name}_dist_min": dec(min(dist), 2),
+            f"som.{name}_dist_max": dec(max(dist), 2),
+            f"som.{name}_u_min": dec(min(u_mean), 2),
+            f"som.{name}_u_max": dec(max(u_mean), 2),
+            f"som.{name}_empty_min": pct(min(empty), 1),
+            f"som.{name}_empty_max": pct(max(empty), 1),
+            f"som.{name}_creators_min": dec(min(creators), 2),
+            f"som.{name}_creators_max": dec(max(creators), 2),
+        })
+    # The three highest walls of the U matrix: the neurons they join, the variables that differ most and whether one
+    # of the two neurons holds a single creator.
+    hits = {int(row["neuron"]): int(row["hits"]) for row in read_csv_source(results_dir, "som.hits")}
+    wall_rows = read_csv_source(results_dir, "som.high_u_edges")
+    k = int(selection["chosen_k"])
+    single = 0
+    for rank in (1, 2, 3):
+        rows = [row for row in wall_rows if int(row["edge_rank"]) == rank]
+        a, b = int(rows[0]["neuron_a"]), int(rows[0]["neuron_b"])
+        alone = min(hits[a], hits[b]) == 1
+        single += int(alone)
+        values[f"som.wall_{rank}.cells"] = f"({a // k},{a % k}) y ({b // k},{b % k})"
+        values[f"som.wall_{rank}.vars"] = ", ".join(row["variable"] for row in rows)
+        values[f"som.wall_{rank}.path"] = f"de la neurona ({a // k},{a % k}) a la ({b // k},{b % k})"
+        values[f"som.wall_{rank}.dist"] = dec(rows[0]["distance"], 2)
+        parts = []
+        for row in rows:
+            words, plural, unit = WALL_VARIABLE_WORDS.get(row["variable"], (row["variable"], False, ""))
+            up = float(row["delta_raw"]) > 0
+            verb = ("suben" if plural else "sube") if up else ("bajan" if plural else "baja")
+            parts.append(f"{verb} {words} en {dec(abs(float(row['delta_raw'])), 1)}{unit}")
+        values[f"som.wall_{rank}.changes"] = (", ".join(parts[:-1]) + " y " + parts[-1]) if len(parts) > 1 else parts[0]
+        values[f"som.wall_{rank}.single"] = "sí" if alone else "no"
+    values["som.n_walls_single"] = str(single)
     base = table["base"]
+    base_config = next(row for row in read_csv_source(results_dir, "som.stage2_aggregate") if row["label"] == "base")
+    values.update({
+        "som.neighborhood": {"step": "escalón", "gaussian": "gaussiana"}[base_config["neighborhood"]],
+        "som.base_radius_final": _number(base_config["radius_final"]),
+        "som.base_eta_final": _number(base_config["eta_final"]),
+    })
     variants = [label for label in table if label != "base"]
     passing = [label for label in variants if label not in robustness["failing_variants"]]
     values.update({
@@ -316,6 +507,10 @@ def _oja_facts(results_dir: Path) -> dict[str, str]:
     return {
         "oja.n_seeds": integer(dispersion["n_seeds"]),
         "oja.n_creators": str(len(index)),
+        "oja.eta0": dec(comparison["eta0"], 3),
+        "oja.eta_final": dec(comparison["eta_final"], 4),
+        "oja.epochs": integer(comparison["epochs"]),
+        "oja.updates": integer(float(comparison["epochs"]) * len(index)),
         "oja.n_abs_cos_above": integer(dispersion["n_abs_cos_above"]),
         "oja.abs_cos_min": dec(dispersion["min_pairwise_abs_cos"], 7),
         "oja.abs_cos_mean": dec(dispersion["mean_pairwise_abs_cos"], 7),
@@ -324,7 +519,6 @@ def _oja_facts(results_dir: Path) -> dict[str, str]:
         "oja.pivot_margin": dec(dispersion["pivot_margin"]["margin"], 5),
         "oja.max_abs_diff": dec(comparison["max_abs_diff"], 4),
         "oja.corr_followers_pearson": dec(followers["pearson"], 3),
-        "oja.corr_followers_spearman": dec(followers["spearman"], 3),
         "oja.max_id": str(top["creator_id"]),
         "oja.max_name": str(top["name"]),
         "oja.max_topic": str(top["dominant_topic"]),
@@ -445,6 +639,10 @@ def _letters_facts(results_dir: Path) -> dict[str, str]:
         "letters.correlated_set": str(selection["correlated"]["letters"]),
         "letters.separated_max_overlap": dec(max_overlap("separated"), 2),
         "letters.correlated_max_overlap": dec(max_overlap("correlated"), 2),
+        "letters.stored_energy": integer(orthogonality["separated"]["stored_energies"][0]),
+        "letters.spur_inverse_of": str(spurious["picks"]["inverse"]["match_letters"][0]),
+        "letters.spur_mixture_energy": integer(spurious["picks"]["mixture"]["e_final"]),
+        "letters.spur_other_energy": integer(spurious["picks"]["other"]["e_final"]),
         "letters.separated_min_margin": integer(min(orthogonality["separated"]["min_margin"])),
         "letters.separated_n_stable": str(sum(1 for margin in orthogonality["separated"]["min_margin"] if margin >= 0)),
         "letters.correlated_n_stable": str(sum(1 for margin in orthogonality["correlated"]["min_margin"] if margin >= 0)),
@@ -545,19 +743,50 @@ def check_claims(results_dir: Path = RESULTS_DIR) -> None:
     if selection.get("decided_by") != "qe_loo":
         failed.append("SOM: «entre las grillas que pasan gana el menor QE-LOO» (selection.json decided_by is not qe_loo)")
     hits = {int(row["neuron"]): int(row["hits"]) for row in read_csv_source(results_dir, "som.hits")}
-    edges = {
-        int(row["edge_rank"]): (int(row["neuron_a"]), int(row["neuron_b"]))
-        for row in read_csv_source(results_dir, "som.high_u_edges")
-    }
-    if any(rank not in edges or min(hits[n] for n in edges[rank]) != 1 for rank in (1, 2, 3)):
-        failed.append("SOM: «en las tres paredes más altas hay una neurona con un solo creador»")
+    wall_rows = read_csv_source(results_dir, "som.high_u_edges")
+    if selection.get("te_filter_dropped") is not True or any(
+            row["passes_te"] and row["passes_empty"] and row["passes_creators"] for row in selection["per_k"]):
+        failed.append("SOM: «ninguna grilla cumple los tres filtros y la regla quita el de TE» "
+                      "(a grid passes all three, or the TE filter was not dropped)")
+    wall_vars = {row["variable"] for row in wall_rows}
+    if not ("sponsored_posts_pct" in wall_vars and "non_follower_reach_pct" in wall_vars
+            and any(name.endswith("_per_1000") for name in wall_vars)):
+        failed.append("SOM: «las paredes altas separan por patrocinio, engagement y alcance» "
+                      "(sponsored_posts_pct, a *_per_1000 and non_follower_reach_pct are not all among the wall variables)")
+    if wall_vars & {"followers", "price_usd"}:
+        failed.append("SOM: «las paredes más altas de la matriz U no se deben a followers ni a precio» "
+                      f"(they do: {sorted(wall_vars & {'followers', 'price_usd'})})")
     k = int(selection["chosen_k"])
     profiles = read_csv_source(results_dir, "som.neuron_profiles")
-    diagonal = [int(row["group"]) // k + int(row["group"]) % k for row in profiles]
+    diagonal = [int(row["group"]) % k - int(row["group"]) // k for row in profiles]
     for column in ("price_usd", "followers"):
         if statistics.correlation(diagonal, [float(row[column]) for row in profiles]) <= 0:
-            failed.append(f"SOM: «chicos y baratos arriba a la izquierda, grandes y caros abajo a la derecha» "
-                          f"({column} does not grow with row + col)")
+            failed.append(f"SOM: «chicos y baratos abajo a la izquierda, grandes y caros arriba a la derecha» "
+                          f"({column} does not grow with col - row)")
+    zones = [row for row in read_csv_source(results_dir, "som.zones") if int(row["n"]) >= 2]
+    by_topic: dict[str, list[float]] = {}
+    for row in zones:
+        by_topic.setdefault(row["topic"], []).append(float(row["median_followers"]))
+    if max(by_topic.get("perros", [float("inf")])) >= 100_000:
+        failed.append("SOM: «las zonas de perros son de creadores chicos» (a dogs zone has 100 mil followers or more)")
+    football = by_topic.get("fútbol", [])
+    if not football or min(football) >= 100_000 or max(football) <= 300_000:
+        failed.append("SOM: «fútbol aparece entre creadores chicos y entre grandes» (its zones do not span 100 mil to 300 mil)")
+    makeup = by_topic.get("maquillaje", [])
+    if not makeup or min(makeup) <= 300_000:
+        failed.append("SOM: «las zonas de maquillaje son de creadores grandes» (a makeup zone has 300 mil followers or fewer)")
+    rows = {row["tau"]: row for row in read_source(results_dir, "prune.sensitivity")["rows"]}
+    prune_drops = {tau: {item["dropped"] for item in row["dropped"]} for tau, row in rows.items()}
+    if rows[0.9]["kept"] != rows[0.85]["kept"]:
+        failed.append("PRUNE: «con 0,85 queda el mismo conjunto que con 0,90» (the kept sets differ)")
+    if "price_usd" not in prune_drops[0.8] or "price_usd" in prune_drops[0.85]:
+        failed.append("PRUNE: «con 0,80 sale price_usd y con 0,85 no» (price_usd changed side)")
+    if "followers" not in prune_drops[0.7] or "followers" in prune_drops[0.8]:
+        failed.append("PRUNE: «followers sale recién con 0,70» (followers changed side)")
+    if not {"followers", "estimated_argentina_reach"} <= set(rows[0.8]["kept"]):
+        failed.append("PRUNE: «followers y el alcance estimado quedan apenas por debajo del umbral» (one of them leaves with 0,80)")
+    if any(name in rows[0.5]["kept"] for name in ("followers", "estimated_argentina_reach", "comments_per_1000")):
+        failed.append("PRUNE: «con 0,50 no queda tamaño ni engagement por mil» (a size or engagement variable stays)")
     if failed:
         raise SystemExit("a sentence of the slides or the informe no longer holds:\n- " + "\n- ".join(failed))
 
@@ -567,7 +796,7 @@ def load_facts(results_dir: Path = RESULTS_DIR) -> dict[str, str]:
     check_claims(Path(results_dir))
     values: dict[str, str] = {}
     for part in (
-        _eda_facts, _pca_facts, _som_facts, _oja_facts, _campaign_facts, _maintenance_facts, _letters_facts, _qr_facts,
+        _eda_facts, _pca_facts, _pca17_facts, _prune_facts, _som_facts, _oja_facts, _campaign_facts, _maintenance_facts, _letters_facts, _qr_facts,
     ):
         values.update(part(Path(results_dir)))
     return values
@@ -594,32 +823,31 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     # 1: datos y PCA
     (1, "El conjunto auditado queda en {pca.n_features} variables"),
     (1, "Componentes para el 80 % de la varianza: {pca.k_80}"),
-    (1, "Componentes con autovalor > 1 (Kaiser): {pca.kaiser}"),
     (1, "La PCA muestra que {pca.k_80} componentes de {pca.n_features} retendrían {pca.cum_k80} de la varianza"),
+    (1, "La PCA de esas {pca17.n_features} variables necesita {pca17.k_80} componentes para pasar el 80 % ({pca17.cum_k80}); PC1 explica {pca17.var_pc1} y PC2 {pca17.var_pc2}, frente a {pca.var_pc1} y {pca.var_pc2} con las {pca.n_features}"),
     (1, "PC1 ({pca.var_pc1})"),
     (1, "PC2 ({pca.var_pc2})"),
-    (1, "Kaiser pasa de {pca.kaiser} a {pca.kaiser_all31}"),
-    (1, "(abs(cos) {pca.abs_cos_pc1}) ni como orden de los creadores (Spearman en valor absoluto {pca.abs_spearman_pc1})"),
+    (1, "(abs(cos) {pca.abs_cos_pc1}) ni como proyección de los creadores (|Pearson| de los scores {pca.abs_pearson_pc1})"),
     (1, "ningún autovalor nulo, el menor es {pca.min_eigenvalue}"),
     # 2: Kohonen
     (2, "- Grilla elegida: k = {som.chosen_k}"),
     (2, "R² de PC1 sobre la grilla: {som.r2_pc1} (p = {som.p_r2_pc1})"),
     (2, "R² de PC2 sobre la grilla: {som.r2_pc2} (p = {som.p_r2_pc2})"),
     (2, "Mantel grilla vs plano PC1-PC2: rho = {som.mantel_rho} (p = {som.p_mantel})"),
-    (2, "Mantel grilla vs distancia en las 26 variables (referencia): rho = {som.mantel_z26_rho}"),
+    (2, "Mantel grilla vs distancia en las {som.n_vars} variables (referencia): rho = {som.mantel_vars_rho}"),
     (2, "explica el {som.r2_pc1_pct} de la variación de PC1"),
     (2, "con seed {som.figure_seed}, que es el medoide de estabilidad"),
-    (2, "rho de Spearman {som.edge_rho_pc1} y con la de PC2 con {som.edge_rho_pc2} ({som.n_edges} aristas; las otras {som.n_excluded_edges} tocan"),
+    (2, "rho de Pearson {som.edge_rho_pc1} y con la de PC2 con {som.edge_rho_pc2} ({som.n_edges} aristas; las otras {som.n_excluded_edges} tocan"),
     (2, "con {som.n_permutations} permutaciones de un generador sembrado con 2026"),
     # 3: Oja y campañas
-    (3, "Pearson {oja.corr_followers_pearson} y Spearman {oja.corr_followers_spearman} con `followers`"),
-    (3, "(Spearman de {oja.corr_followers_spearman} con `followers` con el signo de D-02)"),
+    (3, "Pearson {oja.corr_followers_pearson} con `followers`"),
+    (3, "(Pearson de {oja.corr_followers_pearson} con `followers` con el signo de D-02)"),
     (3, "Seeds con abs(cos(w, v1)) > 0,99: {oja.n_abs_cos_above} de {oja.n_seeds}."),
     (3, "abs(cos) entre pares de seeds: mínimo {oja.abs_cos_min}, media {oja.abs_cos_mean}."),
     (3, "pivote de todas: {oja.pivot}."),
     (3, "Los dos más grandes de PC1 difieren en {oja.pivot_margin} en valor absoluto"),
     (3, "Máximo con el signo de D-02: {oja.max_id} ({oja.max_name}), tema dominante {oja.max_topic}, {oja.max_followers} followers"),
-    (3, "Máximo con el signo opuesto: {oja.max_opposite_id} ({oja.max_opposite_name}), tema dominante fútbol, {oja.max_opposite_followers} followers"),
+    (3, "Máximo con el signo opuesto: {oja.max_opposite_id} ({oja.max_opposite_name}), tema dominante {oja.max_opposite_topic}, {oja.max_opposite_followers} followers"),
     (3, "Commit de la regla: {camp.rule_commit}"),
     (3, "Las dos líneas base usan k = {camp.k} igual que las listas propias"),
     (3, "fútbol / profundidad — propia: {camp.futbol.top5}"),
@@ -650,14 +878,14 @@ DRIFT_PINS: tuple[tuple[int, str], ...] = (
     (4, "({letters.spur_total} de {letters.spur_trials}, {letters.spur_total_pct})"),
     (4, "{letters.draft_matching_glyphs} de sus {letters.alphabet_size} glifos coinciden con los del borrador"),
     # 5: Hopfield, QR
-    (5, "el máximo |solapamiento| entre pares es {qr.max_abs_overlap}"),
+    (5, "el máximo |parecido| entre pares es {qr.max_abs_overlap}"),
     (5, "y la media es {qr.mean_abs_overlap}; todos"),
     (5, "el {qr.identical_fraction} de los {qr.n_pixels} píxeles es idéntico en los {qr.n_qr} QR a la vez"),
     (5, "la distancia de Hamming mínima entre un par es {qr.min_pair_hamming}"),
     (5, "{qr.n_noise_levels} niveles de 0 a 0,5 en pasos de 0,05"),
     (5, "{qr.trials} ensayos por nivel y seeds 1 a {qr.n_seeds}"),
     (5, "la tasa exacta es {qr.hebb_exact_noise0} en los {qr.n_noise_levels} niveles de ruido"),
-    (5, "(`pinv_stored_fixed_noise0_async = {qr.n_qr}`)"),
+    (5, "puntos fijos exactos de pseudo-inversa ({qr.n_qr} de {qr.n_qr})"),
     (5, "por entre {qr.majority_hamming_min} y {qr.majority_hamming_max} píxeles"),
     (5, "pinv sostiene el {qr.pinv_exact_noise0} de recuperación exacta hasta el nivel {qr.pinv_last_full_noise}"),
     (5, "cae apenas a {qr.pinv_at_0_35} en 0,35, a {qr.pinv_at_0_40} en 0,40, a {qr.pinv_at_0_45} en 0,45 y colapsa a {qr.pinv_at_0_50} en 0,50"),

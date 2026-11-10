@@ -8,7 +8,7 @@ requires:
   - phase: 06-slides-e-informe
     provides: "06-05: plots_style variant API (iter_variants, figsize, rect, fontsize, caption, suptitle) and the sha256 baseline approach"
 provides:
-  - "Slide variants (PNG + SVG) of the audited PCA scree and biplot, the Oja index vs PC1 figure and the two campaign shortlist figures, under <figure dir>/slide/"
+  - "Slide variants (PNG + SVG) of the audited PCA eigenvalue plot and biplot, the Oja index vs PC1 figure and the two campaign shortlist figures, under <figure dir>/slide/"
   - "campaigns.py off som_figures._caption: captions and suptitles go through plots_style"
   - "analysis/tests/test_variants_ej1.py (4 tests on synthetic data)"
 affects: [06-08, 06-10]
@@ -36,7 +36,7 @@ key-files:
     - analysis/campaigns.py
 
 key-decisions:
-  - "Slide layouts: PCA scree side by side (not stacked); biplot legend outside the axes; Oja plot square with legend and statistics on its right; campaign biplot keeps the 2 x 2 panels with the legend of each panel to its right (own lists by name); campaign SOM grids in one row of four"
+  - "Slide layouts: PCA eigenvalue plot side by side (not stacked); biplot legend outside the axes; Oja plot square with legend and statistics on its right; campaign biplot keeps the 2 x 2 panels with the legend of each panel to its right (own lists by name); campaign SOM grids in one row of four"
   - "Exercise 1 report baseline kept in analysis/results/variant_baseline/ej1.sha256 (10 SVGs, not versioned); all 10 still match after the changes"
 
 patterns-established:
@@ -51,7 +51,7 @@ status: complete
 
 # Phase 6 Plan 06: Slide variants of the Exercise 1 figures Summary
 
-**PCA scree and biplot (audited set), Oja index vs PC1 and the two campaign shortlist figures now also draw a slide variant from the same plot code, with all 10 Exercise 1 report SVGs byte-identical to the HEAD baseline and the campaign rule untouched.**
+**PCA eigenvalue plot and biplot (audited set), Oja index vs PC1 and the two campaign shortlist figures now also draw a slide variant from the same plot code, with all 10 Exercise 1 report SVGs byte-identical to the HEAD baseline and the campaign rule untouched.**
 
 ## Performance
 
@@ -62,15 +62,15 @@ status: complete
 ## Accomplishments
 
 - Baseline taken with the unedited HEAD code (`make pca`, `make oja`, `.venv/bin/python analysis/campaigns.py`), after checking that a second run reproduces the same hashes. 10 SVGs in `analysis/results/variant_baseline/ej1.sha256`.
-- `analysis/results/pca/audited/slide/{scree,biplot}`, `analysis/results/oja/slide/oja_vs_pc1`, `analysis/results/campaigns/slide/{shortlists_biplot,shortlists_som}` exist (SVG and 3200x1212 PNG). No slide file for loadings, convergence or the all31 folder.
+- `analysis/results/pca/audited/slide/{eigenvalues_variance,biplot}`, `analysis/results/oja/slide/oja_vs_pc1`, `analysis/results/campaigns/slide/{shortlists_biplot,shortlists_som}` exist (SVG and 3200x1212 PNG). No slide file for loadings, convergence or the all31 folder.
 - `campaigns.py` has no non-comment reference to `som_figures._caption` (2 at HEAD); `campaigns_select.py`, `deliverables/` and `analysis/series_oja.json` unchanged; the rule guard still passed on every run.
 - `campaigns.py` was always invoked directly with `.venv/bin/python`, never through `make campaigns` (T-06-15).
-- All slide PNGs were looked at and iterated: scree ticks every other component and the k note moved off the 80 % line; biplot label stacking gap enlarged for the larger type; campaign legends moved beside their panels so they no longer hide points.
+- All slide PNGs were looked at and iterated: eigenvalue plot ticks every other component and the k note moved off the 80 % line; biplot label stacking gap enlarged for the larger type; campaign legends moved beside their panels so they no longer hide points.
 - `make test`: 277 pytest passed (273 plus 4 new), 1282 checks, 0 failed.
 
 ## Task Commits
 
-1. **Task 1: PCA scree and biplot, Oja index vs PC1, test file** - `506f3e7` (feat)
+1. **Task 1: PCA eigenvalue plot and biplot, Oja index vs PC1, test file** - `506f3e7` (feat)
 2. **Task 2: campaign shortlist figures, off som_figures._caption** - `a732fb4` (feat)
 
 ## Verification

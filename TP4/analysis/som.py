@@ -3,7 +3,7 @@
 The C binary (neuron/models/kohonen.c) writes qe, te and the occupancy summary. Nothing downstream trusts
 those numbers until this module reproduces them from prototypes.csv and the input matrix: `read_run` parses
 a run directory, `metrics_from_prototypes` recomputes the measures, and the tests compare both within 1e-12.
-Seed stability (D-13, tie-aware Spearman of grid-distance vectors) and the stability medoid live here too,
+Seed stability (D-13, Pearson correlation of grid-distance vectors) and the stability medoid live here too,
 and `run_binary` is the one place that launches the binary from Python (analysis/som_loo.py uses it).
 
 numpy and the standard library only (Phase 1 D-06, REQUIREMENTS Out of Scope): no SOM or machine-learning
@@ -181,30 +181,14 @@ def run_binary(config: dict, cwd: Path) -> Path:
 
 # ---------- seed stability (D-13) ----------
 
-def average_ranks(v) -> np.ndarray:
-    """1-based ranks where a group of equal values shares the mean of its positions: [1,1,1,2,2,3] gives
-    [2,2,2,4.5,4.5,6]. pca.py's argsort-of-argsort rank is wrong with ties (RESEARCH Pitfall 1)."""
-    v = np.asarray(v, dtype=np.float64)
-    order = np.argsort(v, kind="stable")
-    ranks = np.empty(len(v), dtype=np.float64)
-    start = 0
-    while start < len(v):
-        end = start
-        while end + 1 < len(v) and v[order[end + 1]] == v[order[start]]:
-            end += 1
-        ranks[order[start:end + 1]] = (start + end) / 2.0 + 1.0
-        start = end + 1
-    return ranks
-
-
-def spearman_ties(a, b) -> float:
-    """Pearson correlation of the average ranks; NaN when either rank vector is constant."""
-    ra, rb = average_ranks(a), average_ranks(b)
-    ra, rb = ra - ra.mean(), rb - rb.mean()
-    denominator = math.sqrt(float(np.sum(ra * ra)) * float(np.sum(rb * rb)))
+def pearson_corr(a, b) -> float:
+    """Pearson correlation of two vectors; NaN when either one is constant."""
+    a, b = np.asarray(a, dtype=np.float64), np.asarray(b, dtype=np.float64)
+    a, b = a - a.mean(), b - b.mean()
+    denominator = math.sqrt(float(np.sum(a * a)) * float(np.sum(b * b)))
     if denominator == 0.0:
         return float("nan")
-    return float(np.sum(ra * rb)) / denominator
+    return float(np.sum(a * b)) / denominator
 
 
 def grid_distance_vector(bmu, k: int) -> np.ndarray:
@@ -216,21 +200,21 @@ def grid_distance_vector(bmu, k: int) -> np.ndarray:
     return np.sqrt((rows[i] - rows[j]) ** 2 + (cols[i] - cols[j]) ** 2)
 
 
-def seed_spearman_matrix(bmus_by_seed, k: int) -> np.ndarray:
-    """s x s symmetric matrix of spearman_ties between the seeds' grid-distance vectors; diagonal NaN."""
+def seed_correlation_matrix(bmus_by_seed, k: int) -> np.ndarray:
+    """s x s symmetric matrix of pearson_corr between the seeds' grid-distance vectors; diagonal NaN."""
     vectors = [grid_distance_vector(bmu, k) for bmu in bmus_by_seed]
     s = len(vectors)
     matrix = np.full((s, s), np.nan)
     for a in range(s):
         for b in range(a + 1, s):
-            matrix[a, b] = matrix[b, a] = spearman_ties(vectors[a], vectors[b])
+            matrix[a, b] = matrix[b, a] = pearson_corr(vectors[a], vectors[b])
     return matrix
 
 
 def stability(bmus_by_seed, k: int) -> tuple[float, int]:
-    """(mean over seed pairs of the Spearman, number of NaN pairs). NaN pairs are dropped from the mean and
+    """(mean over seed pairs of the correlation, number of NaN pairs). NaN pairs are dropped from the mean and
     counted; if every pair is NaN the value is 0.0 (term of the committed rule)."""
-    matrix = seed_spearman_matrix(bmus_by_seed, k)
+    matrix = seed_correlation_matrix(bmus_by_seed, k)
     upper = matrix[np.triu_indices(len(matrix), 1)]
     finite = upper[~np.isnan(upper)]
     nan_pairs = int(len(upper) - len(finite))
@@ -240,7 +224,7 @@ def stability(bmus_by_seed, k: int) -> tuple[float, int]:
 
 
 def medoid_seed(matrix, seeds):
-    """The seed with the highest mean Spearman to the other seeds (NaN ignored; a row with no finite entry
+    """The seed with the highest mean correlation to the other seeds (NaN ignored; a row with no finite entry
     counts as -inf); the smallest seed on exact ties. This is the pre-declared figure seed (D-13)."""
     matrix = np.asarray(matrix, dtype=np.float64)
     best_seed, best_value = None, -math.inf

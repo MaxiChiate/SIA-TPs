@@ -13,7 +13,7 @@
 | `neuron/config.json.oja.example` | config | - | `neuron/config.json.kohonen.example` | exact |
 | `neuron/Makefile` (source rename) | config | - | existing rule for `kohonen.c` | exact |
 | `neuron/tests/test_main.c` (oja cases) | test | - | existing oja/kohonen cases (lines 205-216, 306) | exact |
-| `analysis/oja.py` (Oja vs PC1, evidence table, seed dispersion, convergence figure) | utility | transform | `analysis/pca.py` (`read_prepared`, `orient`, `spearman`) + `analysis/som_figures.py` | role-match |
+| `analysis/oja.py` (Oja vs PC1, evidence table, seed dispersion, convergence figure) | utility | transform | `analysis/pca.py` (`read_prepared`, `orient`, `rank-correlation (retired)`) + `analysis/som_figures.py` | role-match |
 | `analysis/campaigns_select.py` (rule as code, `rule_digest`/`rule_guard` reuse) | utility | transform | `analysis/som_select.py` | exact |
 | `analysis/campaigns.py` (shortlists, baselines, metrics) | service | batch/transform | `analysis/som_profiles.py` (reads SOM + raw + PCA, writes tables) | role-match |
 | `analysis/maintenance_demo.py` (synthetic creator, BMU, index, drift) | utility | request-response | `scripts/map_creator.py` + `scripts/creadores.py::transform_new_creator` | role-match |
@@ -84,7 +84,7 @@ Existing oja cases at 205-216 (valid load, unknown key, duplicate key, missing s
 
 **Analog:** `analysis/pca.py`. Reuse rather than rewrite:
 - `read_prepared("creadores_zscore")` (130-155) returns `(features, Z, meta)`; `meta["creator_id"]`, `meta["name"]`.
-- `orient`, `spearman`, `_pearson` (77-83, 157-174) for cosine sign conventions, Pearson and Spearman (D-05). overlap@k via `np.argsort`.
+- `orient`, `rank-correlation (retired)`, `_pearson` (77-83, 157-174) for cosine sign conventions, Pearson and rank-correlation (retired) (D-05). overlap@k via `np.argsort`.
 - Header pattern for any analysis module: `from __future__ import annotations`, `TP_DIR = Path(__file__).resolve().parent.parent`, `sys.path.insert(0, str(TP_DIR / "scripts"))` and `"analysis"` (som_select.py 23-25; som_figures.py 27-29). numpy only, no pandas; figures via `plots_style` (`save_figure`, deterministic SVG).
 - Reference PC1 from `analysis/results/pca/audited/` (`loadings.csv`, scores), produced by `make pca` (directory is untracked and generated: target must depend on `pca`).
 - Tests: |cos(w, v1)| > 0.99 on a smoke run (D-05), tests style as in `analysis/tests/test_pca.py`.

@@ -44,7 +44,7 @@ RESULTS_DIR = TP_DIR / "analysis" / "results"
 STAGE1_NAME = Path(som_select.STAGE1_SERIES).stem
 HEX40 = re.compile(r"[0-9a-f]{40}")
 IDENTITY_KEYS = ("rule_commit", "rule_sha256", "select_commit", "select_sha256")
-STABILITY_COLUMNS = ["label", "seed_a", "seed_b", "spearman"]
+STABILITY_COLUMNS = ["label", "seed_a", "seed_b", "correlation"]
 ROBUSTNESS_COLUMNS = ["label", "radius0", "eta0", "epochs", "te_mean", "empty_fraction_mean",
                       "creators_per_occupied_mean", "passes_te", "passes_empty", "passes_creators", "passes",
                       "qe_loo_mean", "qe_loo_sd", "stability"]
@@ -186,13 +186,13 @@ def run_stage(series_path, results_root=RESULTS_DIR, select=False, check_rule=Tr
         by_seed = {task.seed: task for task in tasks if task.label == variant.label}
         bmus = [som.read_run(sweep_dir / "runs" / by_seed[seed].name).bmu for seed in seeds]
         k = int(by_seed[seeds[0]].config["grid_k"])
-        matrix = som.seed_spearman_matrix(bmus, k)
+        matrix = som.seed_correlation_matrix(bmus, k)
         stability_by_label[variant.label] = som.stability(bmus, k)
         medoids[variant.label] = som.medoid_seed(matrix, seeds)
         for a in range(len(seeds)):
             for b in range(a + 1, len(seeds)):
                 stability_rows.append({"label": variant.label, "seed_a": seeds[a], "seed_b": seeds[b],
-                                       "spearman": float(matrix[a, b])})
+                                       "correlation": float(matrix[a, b])})
     _write_csv(out / "stability.csv", STABILITY_COLUMNS, stability_rows)
 
     with (sweep_dir / "summary.csv").open(newline="", encoding="utf-8") as file:

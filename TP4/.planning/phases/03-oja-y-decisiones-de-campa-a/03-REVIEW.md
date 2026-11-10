@@ -133,7 +133,7 @@ No correctness bug, security vulnerability or data-loss risk was found, so there
 ### IN-07: NaN or inf can leak into JSON or reports
 
 **File:** `analysis/oja.py:193-205, 408-409, 633`; `analysis/campaigns.py:85-111, 229-231`
-**Issue:** `som.spearman_ties` returns NaN when a rank vector is constant, and `json.dumps` writes it as the invalid token `NaN` in `comparison.json`. In `campaigns.list_metrics`, a member with zero Argentine reach gives an infinite criterion for `costo_por_mil`, so `criterion_mean` is `inf` and `_decimal` prints "inf" (only NaN is mapped to "n/d"). Neither happens on the current data.
+**Issue:** `som.rank-correlation (retired)` returns NaN when a rank vector is constant, and `json.dumps` writes it as the invalid token `NaN` in `comparison.json`. In `campaigns.list_metrics`, a member with zero Argentine reach gives an infinite criterion for `costo_por_mil`, so `criterion_mean` is `inf` and `_decimal` prints "inf" (only NaN is mapped to "n/d"). Neither happens on the current data.
 **Fix:** Pass `allow_nan=False` to `json.dumps` (or map NaN to `None`), and treat `math.isinf` like NaN in `_decimal`.
 
 ### IN-08: Frozen file: git output depends on the user's git configuration

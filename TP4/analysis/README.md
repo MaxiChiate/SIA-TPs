@@ -93,7 +93,7 @@ raíz de TP4:
 
 | Archivo | Qué hace |
 |---|---|
-| `som.py` | Lee una corrida del binario y calcula lo común: QE, TE, rangos con empates (Spearman), estabilidad entre seeds, adyacencia de la grilla y matriz U |
+| `som.py` | Lee una corrida del binario y calcula lo común: QE, TE, la correlación de Pearson, estabilidad entre seeds, adyacencia de la grilla y matriz U |
 | `som_loo.py` | QE de leave-one-out de cada variante (reentrena sin un creador y mide el QE de ese creador) |
 | `som_select.py` | La regla de elección de grilla como código; su sha256 queda en `selection.json` |
 | `som_stage.py` | Maneja las dos etapas y se niega a correr si la regla no está commiteada o cambió |
@@ -125,9 +125,9 @@ La red de Hopfield se estudia sobre las 26 letras de 5 × 5 con la regla de elec
 |---|---|
 | `scripts/letters.py` y `scripts/prepare_letters.py` | Leen `datos/letters/alphabet_5x5.txt` (26 letras de 5 × 5, `*` = +1 y `.` = −1) y escriben `datos/prepared/alphabet_pm1.csv` con su `.meta.json` (`make letters`) |
 | `hopfield_select.py` | La regla de la sección 3 como código: los dos sets de letras, las constantes del diseño, la identidad de la regla (`rule_identity`) y la guardia `require_same_rule`; `python analysis/hopfield_select.py identity` termina con código 0 si la regla no cambió |
-| `hopfield.py` | Control con numpy de las salidas de C. Recalcula en todas las corridas los pesos, `stored.csv`, los solapamientos y las columnas de estabilidad de la capacidad (solapamientos, letras estables, fracción estable, margen mínimo), y repite paso a paso los ensayos trazados (el primero de cada letra y nivel de recuperación: 2080 de 62 400; y los 1200 de la búsqueda de espurios). De los demás ensayos de recuperación (clase, convergencia, barridos, píxeles invertidos, `correct`) y de la `recall_rate` y la `mean_sweeps` de la capacidad solo comprueba rangos y consistencia; esas columnas son las que escribió C |
+| `hopfield.py` | Control con numpy de las salidas de C. Recalcula en todas las corridas los pesos, `stored.csv`, los parecidos y las columnas de estabilidad de la capacidad (parecidos, letras estables, fracción estable, margen mínimo), y repite paso a paso los ensayos trazados (el primero de cada letra y nivel de recuperación: 2080 de 62 400; y los 1200 de la búsqueda de espurios). De los demás ensayos de recuperación (clase, convergencia, barridos, píxeles invertidos, `correct`) y de la `recall_rate` y la `mean_sweeps` de la capacidad solo comprueba rangos y consistencia; esas columnas son las que escribió C |
 | `hopfield_letters.py` | Driver con guardia: arma en código las series de recuperación, capacidad (p = 4 y por p, con la extensión escrita en la regla) y estado espurio a partir de las constantes congeladas, corre el binario, pasa cada corrida por `hopfield.py` (con el alcance de la fila anterior), registra en `run.json` la identidad del código de la red (`code_identity`) y agrega los resultados |
-| `hopfield_figures.py` | Las nueve figuras: glifos, solapamientos, histograma del solapamiento máximo en valor absoluto, margen por píxel, recuperación frente al ruido, energía, capacidad con p = 4, capacidad por p y estado espurio |
+| `hopfield_figures.py` | Las nueve figuras: glifos, parecidos, histograma del parecido máximo en valor absoluto, margen por píxel, recuperación frente al ruido, energía, capacidad con p = 4, capacidad por p y estado espurio |
 
 | Target | Escribe |
 |---|---|

@@ -23,7 +23,8 @@ make run CONFIG=config.json.kohonen.example   # compila si hace falta y corre
 Los configs de ejemplo (`config.json.kohonen.example`, `config.json.oja.example`, `config.json.hopfield.example`) se
 copian a `config.json` para usarlos como propios (`config.json` no se versiona); `config.json.hopfield_capacity.example`
 es el de la tarea `capacity`. Los de kohonen y oja leen
-`../datos/prepared/creadores_zscore.csv` (50 x 26, los z-scores de los creadores auditados), que genera
+`../datos/prepared/creadores_zscore.csv` (50 x 26, los z-scores de los creadores auditados; el de oja usa
+`creadores_zscore_pruned.csv`, las 17 columnas que quedan con el umbral de correlación, que escribe `make pca`), que genera
 `make prepare` (o un `make` solo) en `TP4/` y **no se versiona**: un clone nuevo no lo tiene hasta que se genera. El
 de hopfield (`config.json.hopfield.example` y `config.json.hopfield_capacity.example`) leen
 `tests/fixtures/patterns_mix.csv` (seis patrones sintéticos de 25 píxeles en ±1, sin relación con las letras).

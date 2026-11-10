@@ -37,42 +37,85 @@ def write_results(root, *, robust=False):
     write_csv(root / "som/profiles/zones.csv",
               ["neuron", "row", "col", "n", "topic", "median_followers", "median_price"],
               [[0, 0, 0, 5, "perros", 17062.0, 84.77], [1, 0, 1, 1, "perros", 5000.0, 10.0],
-               [19, 3, 4, 3, "maquillaje", 638718.0, 6310.69], [18, 3, 3, 0, "", "nan", "nan"]])
+               [19, 3, 4, 3, "maquillaje", 638718.0, 6310.69], [18, 3, 3, 0, "", "nan", "nan"],
+               [2, 0, 2, 2, "fútbol", 50000.0, 500.0], [3, 0, 3, 2, "fútbol", 450000.0, 3000.0]])
     write_json(root / "pca/audited/decision.json", {
-        "n_variables": 26, "k_80": 3, "kaiser": 2, "explained_pc1": 0.5322, "explained_pc2": 0.0851,
+        "n_variables": 26, "k_80": 3, "explained_pc1": 0.5322, "explained_pc2": 0.0851,
         "min_eigenvalue": 0.00046018,
     })
     write_json(root / "pca/sensitivity.json", {
-        "all31_sensitivity": {"kaiser": 7}, "abs_cos_pc1": 0.9999752, "spearman_pc1": -0.99817,
+        "all31_sensitivity": {}, "abs_cos_pc1": 0.9999752, "pearson_pc1": -0.99917,
     })
     write_csv(root / "pca/audited/eigenvalues.csv", ["component", "eigenvalue", "explained", "cumulative"],
               [["PC1", 13.8, 0.5322, 0.5322], ["PC2", 2.2, 0.0851, 0.6173], ["PC3", 1.8, 0.0714, 0.8312]])
+    prune_rows = [
+        {"tau": tau, "n_kept": n, "kept": kept, "dropped": [{"dropped": d, "partner": "x", "abs_r": 0.9} for d in dropped],
+         "k_80": k, "explained_pc1": pc1, "min_eigenvalue": lmin, "condition_number": cond}
+        for tau, n, kept, dropped, k, pc1, lmin, cond in (
+            (0.95, 22, ["followers", "estimated_argentina_reach", "comments_per_1000"], [], 6, 0.482, 0.0124, 856.4),
+            (0.9, 20, ["followers", "estimated_argentina_reach", "comments_per_1000"], [], 6, 0.453, 0.0188, 483.0),
+            (0.85, 20, ["followers", "estimated_argentina_reach", "comments_per_1000"], [], 6, 0.453, 0.0188, 483.0),
+            (0.8, 17, ["followers", "estimated_argentina_reach", "comments_per_1000"], ["price_usd"], 7, 0.4, 0.0629, 108.0),
+            (0.7, 15, ["estimated_argentina_reach", "comments_per_1000"], ["price_usd", "followers"], 7, 0.365, 0.1149, 48.0),
+            (0.6, 12, ["comments_per_1000"], ["price_usd", "followers"], 6, 0.304, 0.1347, 27.0),
+            (0.5, 9, ["monthly_posts"], ["price_usd", "followers"], 5, 0.278, 0.2192, 11.0),
+        )
+    ]
+    write_json(root / "pca/pruned/decision.json", {
+        "n_variables": 17, "k_80": 7, "explained_pc1": 0.4004, "explained_pc2": 0.1167, "cumulative_pc2": 0.5171,
+    })
+    write_csv(root / "pca/pruned/eigenvalues.csv", ["component", "eigenvalue", "explained", "cumulative"],
+              [[f"PC{i + 1}", 1.0, 0.1, 0.1 * (i + 1) + 0.134] for i in range(8)])
+    write_csv(root / "pca/pruned/loadings.csv", ["variable", "PC1", "PC2"],
+              [["followers", 0.87, -0.18], ["saves_per_1000", -0.85, 0.13], ["sponsored_posts_pct", 0.07, 0.72],
+               ["argentina_audience_pct", -0.12, -0.64], ["monthly_posts", 0.15, 0.06]])
+    write_json(root / "corr_prune/sensitivity.json", {"n_audited": 26, "rows": prune_rows})
     write_json(root / "som/profiles/pca_contrast.json", {
         "r2_pc1": 0.9613, "p_r2_pc1": 0.000999, "r2_pc2": 0.0552, "p_r2_pc2": 0.2667,
-        "mantel_plane_rho": 0.599, "p_mantel_plane": 0.000999, "mantel_z26_rho": 0.6349,
+        "mantel_plane_rho": 0.599, "p_mantel_plane": 0.000999, "mantel_vars_rho": 0.6349, "n_variables": 17,
         "edge_rho_pc1": 0.4808, "edge_rho_pc2": 0.2714, "n_edges": 29, "n_excluded_edges": 11,
         "n_regions": 1, "n_permutations": 1000,
     })
     write_json(root / "som/series_som_stage1/selection.json", {
-        "outcome": "chosen", "chosen_k": 5, "qe_train_argmin_k": 8, "figure_seed": 4, "decided_by": "qe_loo",
+        "outcome": "chosen", "chosen_k": 5, "chosen_label": "k5-step", "qe_train_argmin_k": 8, "figure_seed": 4,
+        "decided_by": "qe_loo", "te_filter_dropped": True,
+        "thresholds": {"te_max": 0.05, "empty_max": 0.2, "creators_min": 2.0},
+        "per_k": [
+            {"k": k, "label": f"k{k}-step", "passes_te": k >= 6, "passes_empty": k <= 5, "passes_creators": k <= 5,
+             "qe_mean": 2.0, "qe_loo_mean": 2.3, "qe_loo_sd": 0.01, "te_mean": 0.064 if k == 5 else 0.03,
+             "empty_fraction_mean": 0.072 if k == 5 else 0.3, "creators_per_occupied_mean": 2.16 if k == 5 else 1.5,
+             "stability": 0.644}
+            for k in range(2, 9)
+        ],
     })
     write_json(root / "som/series_som_stage2/robustness.json", {
         "robust": robust, "failing_variants": [] if robust else ["a", "b"], "te_checked": True,
     })
     write_csv(root / "som/series_som_stage2/robustness.csv",
-              ["label", "radius0", "eta0", "epochs", "te_mean", "passes_empty", "passes_creators"], [
-        ["base", 2.5, 0.5, 260, 0.046, True, True], ["a", 5.0, 0.5, 260, 0.05600000000000001, True, True],
-        ["b", 2.5, 0.25, 260, 0.06, True, True], ["c", 2.5, 0.5, 50, 0.052, True, True],
+              ["label", "radius0", "eta0", "epochs", "te_mean", "empty_fraction_mean", "creators_per_occupied_mean",
+               "passes_empty", "passes_creators", "qe_loo_mean"], [
+        ["base", 2.5, 0.5, 260, 0.046, 0.072, 2.16, True, True, 2.34],
+        ["a", 5.0, 0.5, 260, 0.05600000000000001, 0.084, 2.18, True, True, 2.35],
+        ["b", 2.5, 0.25, 260, 0.06, 0.076, 2.17, True, True, 2.35],
+        ["c", 2.5, 0.5, 50, 0.052, 0.108, 2.25, True, True, 2.36],
     ])
+    write_csv(root / "som/series_som_stage2/aggregate.csv", ["label", "neighborhood", "radius_final", "eta_final", "qe_mean"],
+              [["base", "step", 1.0, 0.01, 1.90], ["a", "step", 1.0, 0.01, 1.92], ["b", "step", 1.0, 0.01, 1.91],
+               ["c", "step", 1.0, 0.01, 1.92]])
     # 5 x 5 map: the three highest walls each touch a neuron with one creator, and size and price grow towards the
-    # bottom right (the sentences check_claims guards)
+    # top right (the sentences check_claims guards)
     write_csv(root / "som/figures/hits_members.csv", ["neuron", "row", "col", "hits", "creators"],
               [[n, n // 5, n % 5, 1 if n in (9, 11, 13) else 2, ""] for n in range(25)])
-    write_csv(root / "som/profiles/high_u_edges.csv", ["edge_rank", "neuron_a", "neuron_b", "distance", "variable"],
-              [[1, 9, 14, 3.67, "price_usd"], [2, 13, 14, 2.99, "price_usd"], [3, 11, 12, 2.98, "content_entertainment_pct"]])
+    write_csv(root / "som/figures/u_mean_stage2.csv", ["label", "radius0", "eta0", "epochs", "u_mean_mean", "u_mean_sd"],
+              [["base", 2.5, 0.5, 260, 1.64, 0.04], ["a", 5.0, 0.5, 260, 1.65, 0.04],
+               ["b", 2.5, 0.25, 260, 1.65, 0.05], ["c", 2.5, 0.5, 50, 1.61, 0.05]])
+    write_csv(root / "som/profiles/high_u_edges.csv",
+              ["edge_rank", "neuron_a", "neuron_b", "distance", "variable", "delta_z", "delta_raw"],
+              [[1, 9, 14, 3.67, "sponsored_posts_pct", -1.3, -26.1], [2, 13, 14, 2.99, "likes_per_1000", 0.9, 6.8],
+               [3, 11, 12, 2.98, "non_follower_reach_pct", -0.9, -17.0]])
     write_csv(root / "som/profiles/neuron_profiles.csv", ["group", "n", "followers", "price_usd"],
-              [[n, 2, 10000 * (1 + n // 5 + n % 5), 100 * (1 + n // 5 + n % 5)] for n in range(25)])
-    write_json(root / "oja/comparison.json", {"max_abs_diff": 0.00197})
+              [[n, 2, 10000 * (5 + n % 5 - n // 5), 100 * (5 + n % 5 - n // 5)] for n in range(25)])
+    write_json(root / "oja/comparison.json", {"max_abs_diff": 0.00197, "eta0": 0.001, "eta_final": 0.0001, "epochs": 500})
     write_json(root / "oja/dispersion.json", {
         "n_seeds": 10, "n_abs_cos_above": 10, "min_pairwise_abs_cos": 0.99999932, "mean_pairwise_abs_cos": 0.99999978,
         "worst_seed": 6, "pivots": ["average_caption_words"], "pivot_margin": {"margin": 0.0027477},
@@ -81,8 +124,8 @@ def write_results(root, *, robust=False):
         "+1": {"creator_id": "INF031", "name": "@mundo", "dominant_topic": "perros", "followers": 17062, "index": 6.703},
         "-1": {"creator_id": "INF045", "name": "@futbol", "dominant_topic": "fútbol", "followers": 493194, "index": 6.26},
     }})
-    write_csv(root / "oja/evidence_correlations.csv", ["target", "sign", "pearson", "spearman"],
-              [["followers", "+1", -0.87868, -0.92105], ["followers", "-1", 0.87868, 0.92105]])
+    write_csv(root / "oja/evidence_correlations.csv", ["target", "sign", "pearson"],
+              [["followers", "+1", -0.87868], ["followers", "-1", 0.87868]])
     write_csv(root / "oja/index.csv", ["creator_id", "name", "oja_index"], [["INF001", "@a", 1.0], ["INF002", "@b", 2.0]])
     write_json(root / "campaigns/selection_identity.json", {
         "rule_commit": "a6212e89cdc654021cfda02d9d16237c8c21c332", "k": 5,
@@ -114,7 +157,7 @@ def write_results(root, *, robust=False):
         "correlated": {"letters": "HMNW", "pairs": [{"overlap": 0.68}, {"overlap": 0.84}]},
     })
     write_json(root / "hopfield/letters/orthogonality.json", {
-        "n_pixels": 25, "separated": {"min_margin": [18, 18, 18, 18]}, "correlated": {"min_margin": [4, -30, -34, -34]},
+        "n_pixels": 25, "separated": {"min_margin": [18, 18, 18, 18], "stored_energies": [-264, -264, -264, -264]}, "correlated": {"min_margin": [4, -30, -34, -34]},
     })
     write_csv(root / "hopfield/letters/recall.csv", ["set", "update", "noise", "flipped", "recall_rate"], [
         ["separated", "async", 0.12, 3, 0.99667], ["separated", "async", 0.24, 6, 0.847],
@@ -131,6 +174,7 @@ def write_results(root, *, robust=False):
     write_json(root / "hopfield/letters/spurious.json", {
         "levels": [0.4, 0.44, 0.48], "seeds_tried": [1],
         "counts_by_seed": {"1": {"stored": 463, "inverse": 334, "mixture": 254, "other": 149}},
+        "picks": {"inverse": {"match_letters": ["R"]}, "mixture": {"e_final": -208.0}, "other": {"e_final": -200.0}},
     })
     write_json(root / "hopfield/qr/verdict.json", {
         "hebb_exact_recovery_noise0_async": 0.0, "pinv_exact_recovery_noise0_async": 1.0,
@@ -250,10 +294,10 @@ def test_load_facts_names_make_results_and_the_step_for_any_missing_file(tmp_pat
 
 def test_load_facts_reads_the_values_of_every_phase(tmp_path):
     values = facts.load_facts(write_results(tmp_path))
-    assert values["pca.k_80"] == "3" and values["pca.kaiser"] == "2" and values["pca.n_features"] == "26"
+    assert values["pca.k_80"] == "3" and values["pca.n_features"] == "26"
     assert values["pca.var_pc1"] == "53,2 %" and values["pca.cum_k80"] == "83,1 %"
     assert values["som.mantel_rho"] == "0,599" and values["som.n_failing_variants"] == "2"
-    assert values["oja.corr_followers_pearson"] == "-0,879" and values["oja.corr_followers_spearman"] == "-0,921"
+    assert values["oja.corr_followers_pearson"] == "-0,879"
     assert values["oja.max_id"] == "INF031" and values["oja.max_followers"] == "17062"
     assert values["camp.rule_commit"] == "a6212e8" and values["camp.k"] == "5"
     assert values["maint.bmu"] == "(fila 3, col 1)" and values["maint.retrain"] == "no hace falta re-entrenar"
@@ -345,8 +389,8 @@ def test_recovery_table_that_does_not_end_at_the_last_named_level_stops(tmp_path
 
 
 def _drop_followers_row(root):
-    write_csv(root / "oja/evidence_correlations.csv", ["target", "sign", "pearson", "spearman"],
-              [["followers", "-1", 0.87868, 0.92105]])
+    write_csv(root / "oja/evidence_correlations.csv", ["target", "sign", "pearson"],
+              [["followers", "-1", 0.87868]])
 
 
 def _drop_followers_global_rows(root):
@@ -393,29 +437,35 @@ def _pinv_above_hamming(root):
 
 def _occupancy_fails(root):
     write_csv(root / "som/series_som_stage2/robustness.csv",
-              ["label", "radius0", "eta0", "epochs", "te_mean", "passes_empty", "passes_creators"],
-              [["base", 2.5, 0.5, 260, 0.046, True, True], ["a", 5.0, 0.5, 260, 0.056, False, True],
-               ["b", 2.5, 0.25, 260, 0.06, True, True]])
+              ["label", "radius0", "eta0", "epochs", "te_mean", "empty_fraction_mean", "creators_per_occupied_mean",
+               "passes_empty", "passes_creators", "qe_loo_mean"],
+              [["base", 2.5, 0.5, 260, 0.046, 0.072, 2.16, True, True, 2.34],
+               ["a", 5.0, 0.5, 260, 0.056, 0.3, 2.1, False, True, 2.35],
+               ["b", 2.5, 0.25, 260, 0.06, 0.076, 2.17, True, True, 2.35]])
 
 
 def _decided_by_another_measure(root):
     write_json(root / "som/series_som_stage1/selection.json",
-               {"outcome": "chosen", "chosen_k": 5, "qe_train_argmin_k": 8, "figure_seed": 4, "decided_by": "qe"})
+               {"outcome": "chosen", "chosen_k": 5, "chosen_label": "k5-step", "qe_train_argmin_k": 8, "figure_seed": 4,
+                "decided_by": "qe", "te_filter_dropped": True,
+                "thresholds": {"te_max": 0.05, "empty_max": 0.2, "creators_min": 2.0}, "per_k": []})
 
 
-def _high_walls_between_full_neurons(root):
-    write_csv(root / "som/figures/hits_members.csv", ["neuron", "row", "col", "hits", "creators"],
-              [[n, n // 5, n % 5, 2, ""] for n in range(25)])
+def _a_wall_due_to_followers(root):
+    write_csv(root / "som/profiles/high_u_edges.csv",
+              ["edge_rank", "neuron_a", "neuron_b", "distance", "variable", "delta_z", "delta_raw"],
+              [[1, 9, 14, 3.67, "followers", 1.0, 5000.0], [2, 13, 14, 2.99, "likes_per_1000", 0.9, 6.8],
+               [3, 11, 12, 2.98, "non_follower_reach_pct", -0.9, -17.0]])
 
 
 def _price_falls_towards_the_bottom_right(root):
     write_csv(root / "som/profiles/neuron_profiles.csv", ["group", "n", "followers", "price_usd"],
-              [[n, 2, 10000 * (1 + n // 5 + n % 5), 100 * (9 - n // 5 - n % 5)] for n in range(25)])
+              [[n, 2, 10000 * (5 + n % 5 - n // 5), 100 * (9 - (5 + n % 5 - n // 5))] for n in range(25)])
 
 
 @pytest.mark.parametrize("damage, sentence", [
     (_pinv_above_hamming, "lookup de Hamming"), (_occupancy_fails, "ocupación"),
-    (_decided_by_another_measure, "QE-LOO"), (_high_walls_between_full_neurons, "un solo creador"),
+    (_decided_by_another_measure, "QE-LOO"), (_a_wall_due_to_followers, "followers ni a precio"),
     (_price_falls_towards_the_bottom_right, "price_usd"),
 ])
 def test_check_claims_stops_when_a_result_falsifies_a_sentence(tmp_path, damage, sentence):

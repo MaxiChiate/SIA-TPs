@@ -68,15 +68,15 @@ The defects are in result reporting and in input validation at the edges. The mo
 ### WR-01: Sensitivity report mixes signed and absolute agreement measures
 
 **File:** `analysis/pca.py:414-435` and `analysis/pca.py:457-464`
-**Issue:** `sensitivity()` reports `abs_cos_pc*` as an absolute value but `pearson_pc*` and `spearman_pc*` signed. The two runs orient their eigenvectors independently (largest-magnitude coefficient positive), and in the 31-column run that coefficient belongs to another variable. The sign of PC1 therefore flips between runs. Running the code gives `abs_cos_pc1 = 0.99998` and `pearson_pc1 = -0.9992` in `sensitivity.json` and `sensitivity.md`. A reader of the generated table sees that PC1 is both nearly identical and almost perfectly anti-correlated. `deliverables/01-datos-pca.md:179` explains the flip in prose, but the generated artifacts (the ones the report and slides will be rebuilt from) carry no note, and a signed number invites misreading.
+**Issue:** `sensitivity()` reports `abs_cos_pc*` as an absolute value but `pearson_pc*` and `rank-correlation (retired)*` signed. The two runs orient their eigenvectors independently (largest-magnitude coefficient positive), and in the 31-column run that coefficient belongs to another variable. The sign of PC1 therefore flips between runs. Running the code gives `abs_cos_pc1 = 0.99998` and `pearson_pc1 = -0.9992` in `sensitivity.json` and `sensitivity.md`. A reader of the generated table sees that PC1 is both nearly identical and almost perfectly anti-correlated. `deliverables/01-datos-pca.md:179` explains the flip in prose, but the generated artifacts (the ones the report and slides will be rebuilt from) carry no note, and a signed number invites misreading.
 **Fix:** Make the comparison sign-invariant, or align the sign before comparing:
 ```python
 for c in (0, 1):
     sign = np.sign(audited.eigenvectors[:, c] @ sub) or 1.0
     out[f"pearson_pc{c + 1}"] = abs(_pearson(a_scores[:, c], s_scores[:, c]))
-    out[f"spearman_pc{c + 1}"] = abs(spearman(a_scores[:, c], s_scores[:, c]))
+    out[f"rank-correlation (retired){c + 1}"] = abs(rank-correlation (retired)(a_scores[:, c], s_scores[:, c]))
 ```
-Name the keys `abs_pearson_pc*` and `abs_spearman_pc*`, or keep the signed values and add a "sign flipped" column to `sensitivity.md`.
+Name the keys `abs_pearson_pc*` and `rank-correlation (retired)*`, or keep the signed values and add a "sign flipped" column to `sensitivity.md`.
 
 ### WR-02: A swept or fixed `seed` in a series is silently ignored
 
@@ -142,7 +142,7 @@ if (!model->run(&config, &rng, &results)) {
 **Issue:** `strtod` skips leading whitespace, but `separator_ok` requires `*end == ',' ` or `'\0'` with no tolerance for trailing spaces. A row like `1.0, 2.0 ` fails with "expected N numeric columns", which points at the wrong cause. The header is trimmed (`trimmed_copy`) and rows are not, so the two are inconsistent. Python writes no spaces, so nothing breaks today. The Phase 4 QR files may be produced by a different script.
 **Fix:** Skip trailing `isspace` characters after `strtod` before testing the separator, and say "unexpected character '%c' at column %d" in the message.
 
-### IN-05: `plot_scree` reads a private palette slot
+### IN-05: `plot_eigenvalues` reads a private palette slot
 
 **File:** `analysis/pca.py:262`
 **Issue:** `plots_style._SERIES[1]` reaches into a private constant, while the blue is obtained through `palette_for`. The orange will break silently if the palette is reordered.
