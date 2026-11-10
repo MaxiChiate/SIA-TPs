@@ -384,6 +384,9 @@ int main(int argc, char * argv[]) {
   load_datasets(&config, &train, &validation);
   int n_inputs = shared_n_inputs(train, validation);
   int n_outputs = shared_n_outputs(train, validation);
+  if (config.latent_dim > 0 && n_outputs != n_inputs) {
+    die("an autoencoder reconstructs its input: the dataset has %d inputs but %d zetas", n_inputs, n_outputs);
+  }
 
   int sizes[CONFIG_HIDDEN_LAYERS_MAX + 2];
   int n_layers = layer_sizes(&config, n_inputs, n_outputs, sizes);

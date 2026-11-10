@@ -25,7 +25,9 @@ static const Field FIELDS[] = {
   { "eta",                FIELD_DOUBLE,    offsetof(Config, eta), 0, 0 },
   { "epochs",             FIELD_INT,       offsetof(Config, epochs), 0, 0 },
   { "batch_size",         FIELD_INT,       offsetof(Config, batch_size), 0, 0 },
-  { "hidden_layers",      FIELD_INT_ARRAY, offsetof(Config, hidden_layers), offsetof(Config, n_hidden_layers), 0 },
+  { "hidden_layers",      FIELD_INT_ARRAY, offsetof(Config, hidden_layers), offsetof(Config, n_hidden_layers), 1 },
+  { "encoder_layers",     FIELD_INT_ARRAY, offsetof(Config, encoder_layers), offsetof(Config, n_encoder_layers), 1 },
+  { "latent_dim",         FIELD_INT,       offsetof(Config, latent_dim), 0, 1 },
   { "tolerance",          FIELD_DOUBLE,    offsetof(Config, tolerance), 0, 1 },
   { "seed",               FIELD_UINT,      offsetof(Config, seed), 0, 0 },
   { "shuffle",            FIELD_BOOL,      offsetof(Config, shuffle), 0, 1 },
@@ -253,6 +255,52 @@ static int check_validation_source(const Parser * parser, const int seen[]) {
 }
 
 
+static int all_positive(const int sizes[], int n) {
+  for (int i = 0; i < n; i++) {
+    if (sizes[i] <= 0) return 0;
+  }
+  return 1;
+}
+
+
+// The network is either hidden_layers or an autoencoder (encoder_layers + latent_dim, the decoder mirroring the
+// encoder). The autoencoder is built as hidden_layers = encoder, latent, encoder reversed: nothing else needs
+// to know the difference.
+static int check_architecture(const Parser * parser, Config * config, const int seen[]) {
+  int has_hidden = was_given(seen, "hidden_layers");
+  int has_latent = was_given(seen, "latent_dim");
+  int has_encoder = was_given(seen, "encoder_layers");
+
+  if (!has_latent) {
+    if (has_encoder) return parse_error(parser, "\"encoder_layers\" goes with \"latent_dim\"");
+    if (!has_hidden) {
+      return parse_error(parser, "give \"hidden_layers\" or, for an autoencoder, \"encoder_layers\" and "
+                                 "\"latent_dim\"");
+    }
+    return 1;
+  }
+
+  if (has_hidden) return parse_error(parser, "\"hidden_layers\" doesn't go with the autoencoder keys");
+  if (!has_encoder) return parse_error(parser, "missing key \"encoder_layers\" (use [] for none)");
+  if (config->latent_dim <= 0) return parse_error(parser, "\"latent_dim\" must be positive");
+  if (!all_positive(config->encoder_layers, config->n_encoder_layers)) {
+    return parse_error(parser, "every entry of \"encoder_layers\" must be positive");
+  }
+
+  int n_encoder = config->n_encoder_layers;
+  int n = 2 * n_encoder + 1;
+  if (n > CONFIG_HIDDEN_LAYERS_MAX) return parse_error(parser, "too many layers between inputs and outputs");
+
+  for (int i = 0; i < n_encoder; i++) {
+    config->hidden_layers[i] = config->encoder_layers[i];
+    config->hidden_layers[n - 1 - i] = config->encoder_layers[i];
+  }
+  config->hidden_layers[n_encoder] = config->latent_dim;
+  config->n_hidden_layers = n;
+  return 1;
+}
+
+
 static const OptimizerKeys * find_optimizer(const char * name) {
   for (int i = 0; i < N_OPTIMIZERS; i++) {
     if (strcmp(OPTIMIZERS[i].name, name) == 0) return &OPTIMIZERS[i];
@@ -379,7 +427,8 @@ static int parse_object(Parser * parser, Config * config) {
     }
   }
 
-  return check_validation_source(parser, seen) && check_optimizer(parser, config, seen);
+  return check_validation_source(parser, seen) && check_architecture(parser, config, seen)
+      && check_optimizer(parser, config, seen);
 }
 
 

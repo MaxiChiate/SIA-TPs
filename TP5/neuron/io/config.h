@@ -11,8 +11,16 @@ typedef struct {
   double eta;
   int epochs;
   int batch_size;
-  int hidden_layers[CONFIG_HIDDEN_LAYERS_MAX]; // neurons per hidden layer; empty = simple perceptron
+  int hidden_layers[CONFIG_HIDDEN_LAYERS_MAX]; // neurons per hidden layer; empty = simple perceptron.
+                                               // With the autoencoder keys it's filled in by config_load:
+                                               // encoder_layers, latent_dim, encoder_layers reversed
   int n_hidden_layers;
+  // Autoencoder, as an alternative to hidden_layers: the two go together. The decoder mirrors the encoder, so
+  // the network is inputs - encoder_layers - latent_dim - encoder_layers reversed - outputs (the dataset's
+  // zetas, as many as inputs).
+  int encoder_layers[CONFIG_HIDDEN_LAYERS_MAX]; // neurons per layer between the inputs and the latent code
+  int n_encoder_layers;
+  int latent_dim;                               // neurons in the latent code layer; 0 = not an autoencoder
   double tolerance; // stop once the train MSE drops below it; 0 (the default) never stops early.
                     // Ignored with a discrete activation, which stops at zero misclassified samples
   unsigned int seed;
@@ -38,7 +46,8 @@ typedef struct {
 
 // Reads a flat JSON object with the Config fields as keys. Every key is required except the optional
 // ones, which default to zero / "". Exactly one of validation_dataset and validation_split must be given,
-// and split_seed goes with validation_split. The optimizer comes with exactly the hyperparameters it reads.
+// and split_seed goes with validation_split. The architecture is either hidden_layers or the autoencoder
+// keys (encoder_layers, latent_dim), never both. The optimizer comes with exactly the hyperparameters it reads.
 // Returns 1 on success; on failure prints the reason to stderr and returns 0.
 int config_load(const char * path, Config * config);
 

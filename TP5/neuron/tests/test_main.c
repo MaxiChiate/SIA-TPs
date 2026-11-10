@@ -336,6 +336,19 @@ static void test_xor_multilayer_converges(void) {
 }
 
 
+// Autoencoder: 4 one-hot patterns squeezed through a 2-neuron latent layer come back out
+static void test_autoencoder_learns_identity(void) {
+  const double patterns[] = {1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1};
+  int sizes[] = {4, 3, 2, 3, 4};
+  OptimizerConfig adam = { .name = "adam", .eta = 0.01, .beta1 = 0.9, .beta2 = 0.999, .epsilon = 1e-8 };
+  Network network = new_network_with(4, sizes, "logistic", &adam, 1);
+  check(network_n_inputs(network) == 4 && network_n_outputs(network) == 4);
+  network_train(network, patterns, patterns, 4, 5000, 4, NULL, NULL, NULL);
+  check(network_error(network, patterns, patterns, 4).max_abs_error < 0.3);
+  network_free(network);
+}
+
+
 static void test_same_seed_same_result(void) {
   int sizes[] = {2, 3, 1};
   Network a = new_network(2, sizes, "tanh", 0.1, 9), b = new_network(2, sizes, "tanh", 0.1, 9);
@@ -850,6 +863,46 @@ static void test_config_loading(void) {
 }
 
 
+// CONFIG_BASE without hidden_layers, with the given architecture keys instead
+static int load_config_with_architecture(const char * architecture, Config * config) {
+  char text[1024];
+  snprintf(text, sizeof(text), "{\"train_dataset\":\"a\",\"validation_dataset\":\"b\",\"activation\":\"tanh\","
+           "\"eta\":0.1,\"epochs\":10,\"batch_size\":2,\"seed\":4%s}", architecture);
+  write_tmp(text);
+  return config_load(TMP_FILE, config);
+}
+
+static void test_autoencoder_config(void) {
+  Config config;
+  // hidden_layers = encoder, latent, encoder reversed
+  check(load_config_with_architecture(",\"encoder_layers\":[20,10],\"latent_dim\":2", &config));
+  check(config.n_hidden_layers == 5);
+  check(config.hidden_layers[0] == 20 && config.hidden_layers[1] == 10 && config.hidden_layers[2] == 2);
+  check(config.hidden_layers[3] == 10 && config.hidden_layers[4] == 20);
+  check(config.n_encoder_layers == 2 && config.latent_dim == 2);
+
+  // An odd number of encoder layers mirrors too, and the latent code may be wider than 2
+  check(load_config_with_architecture(",\"encoder_layers\":[8,6,4],\"latent_dim\":3", &config));
+  check(config.n_hidden_layers == 7 && config.hidden_layers[3] == 3);
+  check(config.hidden_layers[4] == 4 && config.hidden_layers[5] == 6 && config.hidden_layers[6] == 8);
+  check(load_config_with_architecture(",\"encoder_layers\":[],\"latent_dim\":2", &config));
+  check(config.n_hidden_layers == 1 && config.hidden_layers[0] == 2);
+
+  // hidden_layers alone still means not an autoencoder
+  check(load_config_with("", &config) && config.latent_dim == 0 && config.n_encoder_layers == 0);
+
+  fprintf(stderr, "  (expected errors follow)\n");
+  check(!load_config_with(",\"encoder_layers\":[4],\"latent_dim\":2", &config)); // + hidden_layers
+  check(!load_config_with_architecture("", &config)); // no architecture at all
+  check(!load_config_with_architecture(",\"encoder_layers\":[4]", &config)); // no latent_dim
+  check(!load_config_with_architecture(",\"latent_dim\":2", &config)); // no encoder_layers
+  check(!load_config_with_architecture(",\"encoder_layers\":[4],\"latent_dim\":0", &config));
+  check(!load_config_with_architecture(",\"encoder_layers\":[4,0],\"latent_dim\":2", &config));
+  check(!load_config_with_architecture(",\"encoder_layers\":[4],\"latent_dim\":2,\"decoder_layers\":[4]", &config)); // gone
+  check(!load_config_with_architecture(",\"encoder_layers\":[1,1,1,1,1,1,1,1],\"latent_dim\":2", &config)); // 17 layers
+}
+
+
 // Each optimizer with exactly the hyperparameters it reads
 static const char * OPTIMIZER_CONFIGS[][2] = {
   { "gd",       ",\"optimizer\":\"gd\"" },
@@ -948,6 +1001,7 @@ int main(void) {
     { "AND with sign converges", test_and_with_sign_converges },
     { "y = x with lineal converges", test_line_with_lineal_converges },
     { "XOR [2,3,2,1] converges", test_xor_multilayer_converges },
+    { "autoencoder learns identity", test_autoencoder_learns_identity },
     { "same seed, same result", test_same_seed_same_result },
     { "shuffled training", test_shuffled_training },
     { "relu network learns", test_relu_network_learns },
@@ -967,6 +1021,7 @@ int main(void) {
     { "dataset loading", test_dataset_loading },
     { "dataset split", test_dataset_split },
     { "config loading", test_config_loading },
+    { "autoencoder config", test_autoencoder_config },
     { "optimizer config", test_optimizer_config },
     { "weights.csv write/read roundtrip", test_weights_file_roundtrip },
   };

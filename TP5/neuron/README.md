@@ -24,6 +24,34 @@ Ejemplos con un dataset de 2 entradas (`x1,x2,zeta`):
 
 La notación lista las neuronas por capa: entradas, ocultas y salida.
 
+### Autoencoder
+
+Un autoencoder es esta misma red entrenada para devolver su entrada, con una capa angosta en el medio (el
+**código latente**). En vez de `hidden_layers` se da:
+
+| Clave            | Descripción                                                                  |
+|------------------|------------------------------------------------------------------------------|
+| `encoder_layers` | Neuronas de cada capa entre las entradas y el latente, p. ej. `[20, 10]`; `[]` si no hay |
+| `latent_dim`     | Neuronas de la capa latente, p. ej. `2`                                      |
+
+Van juntas y no se mezclan con `hidden_layers`. El decoder es el espejo del encoder: el config carga
+`hidden_layers` = encoder, latente, encoder al revés, así que el resto del código (red, entrenamiento,
+resultados) no distingue un autoencoder de cualquier otro multicapa. Con `[35, 20, 10]` y `2` sobre las letras de
+`src/font.h` la red es 35-35-20-10-2-10-20-35-35.
+
+Como la salida reconstruye la entrada, el dataset necesita tantas ζ como entradas (si no, error al arrancar).
+`scripts/font_to_csv.py` arma ese CSV desde `src/font.h` (35 píxeles en {0, 1} y los mismos 35 como `zeta_*`):
+
+```sh
+python3 ../scripts/font_to_csv.py     # escribe data/font.csv
+cp config.json.autoencoder.example config.json
+./build/neuron config.json
+```
+
+Hay una sola `activation` para toda la red; con `logistic` la salida queda en (0, 1) como los píxeles. Ver
+`config.json.autoencoder.example`: con él (Adam, η = 0.001, 30000 épocas, unos 10 s) las 32 letras salen con a lo
+sumo 1 píxel incorrecto, que es el objetivo del enunciado.
+
 ## Requisitos
 
 `gcc` y `make`.
@@ -108,7 +136,7 @@ opcionales, y una clave desconocida es un error:
 | `eta`                | número | Tasa de aprendizaje, mayor a 0                     |
 | `epochs`             | entero | Épocas de entrenamiento, mayor o igual a 0. Con 0 solo evalúa: necesita `initial_weights` |
 | `batch_size`         | entero | Muestras por update: 1 online, ≥ N batch, en el medio mini-batch |
-| `hidden_layers`      | lista  | Neuronas por capa oculta, p. ej. `[2]`; `[]` es perceptrón simple |
+| `hidden_layers`      | lista  | Neuronas por capa oculta, p. ej. `[2]`; `[]` es perceptrón simple. Va este **o** `encoder_layers` + `latent_dim` ([Autoencoder](#autoencoder)) |
 | `tolerance`          | número | Opcional. Corta el entrenamiento cuando el MSE de train baja de este valor; sin ella (o 0) corre todas las épocas. Con `sign` se corta solo al clasificar bien todo el train |
 | `seed`               | entero | Semilla de los pesos iniciales (uniformes en [-0.5, 0.5]) y del shuffle |
 | `shuffle`            | bool   | Opcional (`true`/`false`). Mezcla las muestras de train al empezar cada época, con `seed`; sin ella (o `false`) van siempre en el orden del CSV |
