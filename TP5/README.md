@@ -12,6 +12,9 @@ TP5/
   scripts/font_to_csv.py      font.h -> neuron/data/font.csv
   scripts/wrong_pixels.py     píxeles incorrectos por letra de una corrida
   scripts/latent_plot.py      gráfico del espacio latente de una corrida (latent.png y .svg)
+  scripts/noisy_font.py       dataset de denoising: letras con ruido de entrada y la letra limpia como ζ
+  scripts/study_1b.py         estudio de 1.b (latente, ruido de entrenamiento, test final)
+  scripts/denoise_figure.py   figura de 1.b: limpia, entrada ruidosa y salida (docs/denoising.png)
   scripts/seed_sweep.py       un config con varias semillas: cuántas cumplen el objetivo y el MSE
   scripts/generate_letters.py letras nuevas decodificando puntos entre dos letras (generated.png y .svg)
   neuron/                     la red; su README documenta todas las claves del config
@@ -117,6 +120,61 @@ llega, y la base llega en 9 de 10; una capa más no mejora el cumplimiento y cas
 funcionan con η chico y divergen con η grande; RMSProp y Adam aguantan un rango de η más ancho. Adam dio el menor MSE medio
 (0,0005 con η = 0,001) y cumplió con sus tres η. Con 5 semillas, 5/5 contra 4/5 no es una diferencia que se pueda sostener.
 
+## Denoising autoencoder (1.b)
+
+Es la misma red y el mismo binario, con otros datos: la entrada es la letra con ruido y la ζ es la letra limpia
+(`scripts/noisy_font.py`). El ruido invierte cada píxel con probabilidad p, de forma independiente. Los números salen de
+`scripts/study_1b.py` y quedan en `docs/estudio_1b.csv`; se mide cuántos píxeles de la salida (binarizada en 0,5)
+difieren de la letra limpia, contra los que ya diferían en la entrada. Entrenamiento, validación y test usan
+realizaciones de ruido distintas (semillas 1, 1000 y 2000): se eligió con validación y el test se corrió una sola vez.
+
+**Arquitectura.** Encoder 35-20, latente de 10, decoder espejo (35-20-**10**-20-35), `tanh`, Adam con η = 0,001, 300 épocas
+con batches de 32 sobre 3200 muestras ruidosas (100 por letra), 3 semillas por fila (validación, p = 0,1):
+
+| Latente | 2 | 5 | 10 | 20 | 35 |
+|---|---|---|---|---|---|
+| Píxeles mal en la salida (la entrada tiene 3,58) | 1,61 | 0,98 | 0,85 | 0,75 | 0,69 |
+
+Con un latente de 2, que alcanzaba en 1.a para memorizar las 32 letras, no alcanza para limpiar ruido: queda en 1,61. A
+partir de 10 la mejora es chica (0,16 píxeles entre 10 y 35), así que se eligió 10, que sigue comprimiendo (10 < 20) y
+obliga a la red a aprender la forma de las letras en lugar de copiar la entrada. Es una elección de criterio: 20 y 35
+dieron algo mejor.
+
+**Ruido de entrenamiento** (validación, latente 10, 3 semillas; píxeles mal en la salida):
+
+| Entrenado con | p = 0,05 | 0,1 | 0,2 | 0,3 |
+|---|---|---|---|---|
+| entrada sin limpiar | 1,76 | 3,60 | 6,90 | 10,43 |
+| p = 0,05 | 0,23 | 1,49 | 6,16 | 11,72 |
+| p = 0,1 | 0,16 | 0,83 | 4,30 | 9,66 |
+| p = 0,2 | 0,29 | 0,71 | 3,24 | 7,60 |
+| mezcla 0,05 / 0,1 / 0,2 | 0,17 | 0,81 | 3,73 | 8,78 |
+
+Entrenar con un solo nivel especializa a la red. La mezcla queda cerca del mejor en cada columna y es la que se eligió; con
+p = 0,2 se gana a ruido alto (0,2 y 0,3) pero se pierde a ruido bajo.
+
+**Test** (semilla de ruido 2000, 640 muestras por nivel, 5 semillas de entrenamiento). El control es la misma red entrenada
+solo con letras limpias (30000 épocas):
+
+| p | Entrada | Denoising: píxeles mal | letras perfectas | Control: píxeles mal | letras perfectas |
+|---|---|---|---|---|---|
+| 0 | 0 | 0,00 | 100% | 0,01 | 99% |
+| 0,05 | 1,67 | 0,14 | 97% | 6,50 | 22% |
+| 0,1 | 3,43 | 0,69 | 88% | 9,76 | 6% |
+| 0,15 | 5,19 | 1,96 | 72% | 12,13 | 3% |
+| 0,2 | 7,03 | 3,91 | 53% | 13,60 | 2% |
+| 0,3 | 10,53 | 8,82 | 21% | 16,26 | 1% |
+| 0,4 | 13,92 | 12,54 | 7% | 18,35 | 1% |
+
+El denoising limpia bien hasta p = 0,1 (88% de las letras sin ningún píxel mal), a p = 0,2 recupera algo más de la mitad
+y a p = 0,3 casi no ayuda. El control, que nunca vio ruido, deja *más* píxeles mal que la entrada: con el cuello de botella
+reconstruye letras del conjunto, no la que le llega. `docs/denoising.png` (`.venv/bin/python scripts/denoise_figure.py`)
+muestra algunos ejemplos.
+
+Límites: el ruido de entrenamiento son 100 realizaciones fijas por letra y la red las sobreajusta (el MSE de train es mucho
+menor que el de validación); no se probó generar ruido nuevo en cada época, otro tipo de ruido (gaussiano) ni otras
+arquitecturas que la de encoder 35-20.
+
 ## Arquitectura del autoencoder
 
 Se define en el JSON con dos claves:
@@ -154,4 +212,4 @@ autoencoder chico aprende a reconstruir su entrada.
 
 - 1.a.2: el estudio de arriba cubre arquitectura y optimizador sobre `tanh`. No se probó el tamaño del latente (el
   enunciado fija 2), `batch_size` ni `adaptive_eta` con `tanh`, y el único η de las arquitecturas es 0,001.
-- 1.b (denoising) y el ejercicio 2 (VAE).
+- Ejercicio 2 (VAE).
