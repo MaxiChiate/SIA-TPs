@@ -349,6 +349,39 @@ static void test_autoencoder_learns_identity(void) {
 }
 
 
+// The latent layer is the middle one, the encoder's output feeds the decoder, and decoding the code of a
+// sample gives what network_predict gives
+static void test_latent_and_decoder(void) {
+  int sizes[] = {4, 3, 2, 3, 4};
+  Network network = new_network(4, sizes, "logistic", 0.1, 1);
+  int latent = network_latent_layer(network);
+  check(network_n_layers(network) == 4);
+  check(latent == 2 && network_layer_size(network, latent) == 2);
+
+  double input[] = {1, 0, 0.5, 0.2}, code[2], predicted[4], decoded[4];
+  network_encode(network, input, latent, code);
+  network_predict(network, input, predicted);
+  network_decode(network, latent, code, decoded);
+  for (int i = 0; i < 4; i++) check_close(decoded[i], predicted[i], 1e-12);
+
+  // by hand: a net with one neuron per layer, tanh, known weights (bias first)
+  int sizes1[] = {1, 1, 1, 1};
+  Network line = new_network(3, sizes1, "tanh", 0.1, 1);
+  double w[] = {0.1, 0.5,  -0.2, 0.7,  0.3, -0.4};
+  set_weights(line, w);
+  double x = 0.8, c, out;
+  int middle = network_latent_layer(line); // 3 / 2 = 1
+  network_encode(line, &x, middle, &c);
+  check_close(c, tanh(0.1 + 0.5 * 0.8), 1e-12);
+  double free_point = 1.5; // not a code the encoder produced
+  network_decode(line, middle, &free_point, &out);
+  check_close(out, tanh(0.3 - 0.4 * tanh(-0.2 + 0.7 * 1.5)), 1e-12);
+
+  network_free(line);
+  network_free(network);
+}
+
+
 static void test_same_seed_same_result(void) {
   int sizes[] = {2, 3, 1};
   Network a = new_network(2, sizes, "tanh", 0.1, 9), b = new_network(2, sizes, "tanh", 0.1, 9);
@@ -1002,6 +1035,7 @@ int main(void) {
     { "y = x with lineal converges", test_line_with_lineal_converges },
     { "XOR [2,3,2,1] converges", test_xor_multilayer_converges },
     { "autoencoder learns identity", test_autoencoder_learns_identity },
+    { "latent code and decoder", test_latent_and_decoder },
     { "same seed, same result", test_same_seed_same_result },
     { "shuffled training", test_shuffled_training },
     { "relu network learns", test_relu_network_learns },

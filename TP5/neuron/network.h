@@ -38,6 +38,26 @@ void network_set_eta(Network network, double eta);
 // output must have room for network_n_outputs elements
 void network_predict(Network network, const double input[], double output[]);
 
+// Layers with neurons, the input layer doesn't count: layers are numbered 1..network_n_layers
+int network_n_layers(const Network network);
+
+// Neurons in layer (0 = the inputs, 1..n_layers = layers with neurons)
+int network_layer_size(const Network network, int layer);
+
+// Layer holding the latent code of an autoencoder built as encoder, latent, mirrored decoder, output
+// (config_load builds it that way): the middle one, n_layers / 2.
+int network_latent_layer(const Network network);
+
+// Outputs of layer (1..n_layers) for input; out has room for network_layer_size(layer) elements.
+// With layer = network_latent_layer(network) this is the encoder: input -> latent code.
+void network_encode(Network network, const double input[], int layer, double out[]);
+
+// Feeds activations (network_layer_size(from_layer) values, as network_encode gives them) into from_layer
+// and runs the layers after it; output gets network_n_outputs elements.
+// With from_layer = network_latent_layer(network) this is the decoder: latent code -> reconstruction.
+// Any point works, not only codes the encoder produced, which is how new samples are generated.
+void network_decode(Network network, int from_layer, const double code[], double output[]);
+
 // Averages are over every output value, n_samples * n_outputs (with one output, per sample)
 typedef struct {
   double energy;        // E = 1/2 * sum((zeta - O)^2), what training minimizes

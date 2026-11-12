@@ -157,6 +157,38 @@ void network_predict(Network network, const double input[], double output[]) {
 }
 
 
+int network_n_layers(const Network network) {
+  return network->n_layers;
+}
+
+
+int network_layer_size(const Network network, int layer) {
+  return network->sizes[layer];
+}
+
+
+int network_latent_layer(const Network network) {
+  return network->n_layers / 2;
+}
+
+
+void network_encode(Network network, const double input[], int layer, double out[]) {
+  forward(network, input);
+  memcpy(out, network->v[layer], network->sizes[layer] * sizeof(double));
+}
+
+
+void network_decode(Network network, int from_layer, const double code[], double output[]) {
+  memcpy(network->v[from_layer], code, network->sizes[from_layer] * sizeof(double));
+  for (int l = from_layer + 1; l <= network->n_layers; l++) {
+    for (int j = 0; j < network->sizes[l]; j++) {
+      network->v[l][j] = neuron_predict(network->layers[l][j], network->v[l-1], &network->h[l][j]);
+    }
+  }
+  memcpy(output, network->v[network->n_layers], network_n_outputs(network) * sizeof(double));
+}
+
+
 // Computes every delta first and only then accumulates Δw. The weights don't change until
 // apply_updates, so the hidden deltas always use the weights the forward pass used.
 static void backpropagate(Network network, const double input[], const double zeta[]) {
