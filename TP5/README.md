@@ -214,8 +214,11 @@ autoencoder chico aprende a reconstruir su entrada.
 - 1.a.2: el estudio de arriba cubre arquitectura y optimizador sobre `tanh`. No se probó el tamaño del latente (el
   enunciado fija 2), `batch_size` ni `adaptive_eta` con `tanh`, y el único η de las arquitecturas es 0,001.
 - Ejercicio 2 (VAE), con los dígitos de TP3 (12449 imágenes de 28x28; no hay ningún 8 y los 5 son solo 271).
-  Hecho: `scripts/digits_to_csv.py` (`--n 3000` arma un subconjunto) y, en `neuron/network.h`, `network_new_variational`:
-  una capa de medias y log-varianzas, la muestra z = media + exp(log-varianza / 2)·ε y el término KL con peso β, con
-  la retropropagación verificada contra el gradiente numérico (`make -C neuron test`). Falta conectarlo al config y a
-  `main.c` (claves, ε solo al entrenar, guardar medias y log-varianzas), el entrenamiento con los dígitos, las figuras
-  (espacio latente, grilla decodificada, muestras nuevas) y la comparación con el autoencoder común.
+  Hecho: `scripts/digits_to_csv.py` (`--n 3000` arma un subconjunto), `network_new_variational` en `neuron/network.h`
+  (capa de medias y log-varianzas, z = media + exp(log-varianza / 2)·ε y el término KL con peso β, con la
+  retropropagación verificada contra el gradiente numérico) y su conexión al config: la clave `variational_beta`
+  (ver `neuron/config.json.vae.example`, y `neuron/README.md`). Con ella `main.c` entrena el VAE, deja las medias y
+  log-varianzas en `latent.csv` y `--decode` decodifica z. En un VAE se guardan los pesos de la última época, no los de
+  menor MSE (ese MSE no incluye el KL). Falta entrenar con los dígitos y ver que aprende (cuidado con el desborde de
+  `exp()` de la log-varianza), las figuras (espacio latente, grilla decodificada, muestras nuevas), el barrido de β y la
+  comparación con el autoencoder común.

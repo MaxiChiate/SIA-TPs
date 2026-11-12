@@ -231,6 +231,12 @@ int network_latent_layer(const Network network) {
 }
 
 
+int network_latent_size(const Network network) {
+  int size = network->sizes[network_latent_layer(network)];
+  return network->variational_layer != 0 ? size / 2 : size;
+}
+
+
 void network_encode(Network network, const double input[], int layer, double out[]) {
   forward(network, input, 0);
   memcpy(out, network->v[layer], network->sizes[layer] * sizeof(double));

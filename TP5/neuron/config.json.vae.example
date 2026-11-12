@@ -1,0 +1,17 @@
+{
+  "train_dataset": "data/digits.csv",
+  "validation_dataset": "data/digits_val.csv",
+  "activation": "tanh",
+  "optimizer": "adam",
+  "adam_beta1": 0.9,
+  "adam_beta2": 0.999,
+  "optimizer_epsilon": 1e-8,
+  "eta": 0.001,
+  "epochs": 30,
+  "batch_size": 32,
+  "shuffle": true,
+  "encoder_layers": [128],
+  "latent_dim": 2,
+  "variational_beta": 0.1,
+  "seed": 1
+}

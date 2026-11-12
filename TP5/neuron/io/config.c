@@ -28,6 +28,7 @@ static const Field FIELDS[] = {
   { "hidden_layers",      FIELD_INT_ARRAY, offsetof(Config, hidden_layers), offsetof(Config, n_hidden_layers), 1 },
   { "encoder_layers",     FIELD_INT_ARRAY, offsetof(Config, encoder_layers), offsetof(Config, n_encoder_layers), 1 },
   { "latent_dim",         FIELD_INT,       offsetof(Config, latent_dim), 0, 1 },
+  { "variational_beta",   FIELD_DOUBLE,    offsetof(Config, variational_beta), 0, 1 },
   { "tolerance",          FIELD_DOUBLE,    offsetof(Config, tolerance), 0, 1 },
   { "seed",               FIELD_UINT,      offsetof(Config, seed), 0, 0 },
   { "shuffle",            FIELD_BOOL,      offsetof(Config, shuffle), 0, 1 },
@@ -270,7 +271,9 @@ static int check_architecture(const Parser * parser, Config * config, const int 
   int has_hidden = was_given(seen, "hidden_layers");
   int has_latent = was_given(seen, "latent_dim");
   int has_encoder = was_given(seen, "encoder_layers");
+  int has_beta = was_given(seen, "variational_beta");
 
+  if (has_beta && !has_latent) return parse_error(parser, "\"variational_beta\" goes with the autoencoder keys");
   if (!has_latent) {
     if (has_encoder) return parse_error(parser, "\"encoder_layers\" goes with \"latent_dim\"");
     if (!has_hidden) {
@@ -287,6 +290,8 @@ static int check_architecture(const Parser * parser, Config * config, const int 
     return parse_error(parser, "every entry of \"encoder_layers\" must be positive");
   }
 
+  if (has_beta && config->variational_beta < 0) return parse_error(parser, "\"variational_beta\" can't be negative");
+
   int n_encoder = config->n_encoder_layers;
   int n = 2 * n_encoder + 1;
   if (n > CONFIG_HIDDEN_LAYERS_MAX) return parse_error(parser, "too many layers between inputs and outputs");
@@ -295,7 +300,9 @@ static int check_architecture(const Parser * parser, Config * config, const int 
     config->hidden_layers[i] = config->encoder_layers[i];
     config->hidden_layers[n - 1 - i] = config->encoder_layers[i];
   }
-  config->hidden_layers[n_encoder] = config->latent_dim;
+  // a VAE's middle layer holds the means and the log-variances of the latent code
+  config->hidden_layers[n_encoder] = has_beta ? 2 * config->latent_dim : config->latent_dim;
+  config->variational = has_beta;
   config->n_hidden_layers = n;
   return 1;
 }

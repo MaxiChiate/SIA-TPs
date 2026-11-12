@@ -21,6 +21,11 @@ typedef struct {
   int encoder_layers[CONFIG_HIDDEN_LAYERS_MAX]; // neurons per layer between the inputs and the latent code
   int n_encoder_layers;
   int latent_dim;                               // neurons in the latent code layer; 0 = not an autoencoder
+  // Variational autoencoder: "variational_beta" (>= 0, the weight of the KL term; 0 is allowed) turns the
+  // autoencoder into a VAE. The layer in the middle then has 2 * latent_dim neurons (the means and the
+  // log-variances of the latent code, see network_new_variational) and variational is 1.
+  int variational;
+  double variational_beta;
   double tolerance; // stop once the train MSE drops below it; 0 (the default) never stops early.
                     // Ignored with a discrete activation, which stops at zero misclassified samples
   unsigned int seed;

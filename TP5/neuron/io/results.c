@@ -215,15 +215,22 @@ int results_write_predictions(const Results * results, int n_inputs, int n_outpu
 }
 
 
-int results_write_latent(const Results * results, int latent_dim, const double codes[], int n_samples) {
+int results_write_latent(const Results * results, int n_columns, const double codes[], int n_samples,
+                         int variational) {
   FILE * file = open_in_run_dir(results, "latent.csv");
   if (file == NULL) return 0;
 
-  write_output_names(file, "latent", latent_dim);
+  if (variational) {
+    write_output_names(file, "mean", n_columns / 2);
+    fputc(',', file);
+    write_output_names(file, "log_variance", n_columns / 2);
+  } else {
+    write_output_names(file, "latent", n_columns);
+  }
   fputc('\n', file);
   for (int i = 0; i < n_samples; i++) {
-    fprintf(file, "%.10g", codes[i * latent_dim]);
-    write_values(file, &codes[i * latent_dim + 1], latent_dim - 1);
+    fprintf(file, "%.10g", codes[i * n_columns]);
+    write_values(file, &codes[i * n_columns + 1], n_columns - 1);
     fputc('\n', file);
   }
 

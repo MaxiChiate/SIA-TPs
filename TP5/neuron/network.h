@@ -65,6 +65,10 @@ int network_layer_size(const Network network, int layer);
 // (2L neurons: means and log-variances).
 int network_latent_layer(const Network network);
 
+// Values of the latent code: network_layer_size of the latent layer, or half of it for a variational network
+// (its latent layer holds the means and the log-variances, the code itself is z)
+int network_latent_size(const Network network);
+
 // Outputs of layer (1..n_layers) for input; out has room for network_layer_size(layer) elements.
 // With layer = network_latent_layer(network) this is the encoder: input -> latent code.
 void network_encode(Network network, const double input[], int layer, double out[]);

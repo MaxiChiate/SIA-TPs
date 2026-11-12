@@ -192,6 +192,7 @@ typedef struct {
   double best_mse;     // lowest train MSE seen, and the weights and epoch it happened at
   int best_epoch;
   double * best_weights;
+  int keep_last;       // variational: the train MSE leaves the KL out, so the lowest one doesn't mean the best: keep the last
   ErrorMetrics * train_errors;
   ErrorMetrics * validation_errors;
   double * elapsed;    // seconds spent training up to each epoch; evaluating the errors is left out
@@ -244,7 +245,7 @@ static void report_progress(TrainingHistory * history, int epoch) {
 // The error doesn't fall monotonically, so training keeps the best weights it saw, not the last ones
 static void keep_if_best(TrainingHistory * history, int epoch, Network network) {
   double mse = history->train_errors[epoch].mse;
-  if (epoch > 0 && mse >= history->best_mse) return;
+  if (epoch > 0 && mse >= history->best_mse && !history->keep_last) return;
   history->best_mse = mse;
   history->best_epoch = epoch;
   network_get_weights(network, history->best_weights);
@@ -316,6 +317,7 @@ static TrainingHistory new_training_history(const Dataset train, const Dataset v
     .discrete = activation->discrete,
     .tolerance = config->tolerance,
     .best_weights = malloc(network_n_weights(network) * sizeof(double)),
+    .keep_last = config->variational,
     .train_errors = malloc((epochs + 1) * sizeof(ErrorMetrics)),
     .validation_errors = malloc((epochs + 1) * sizeof(ErrorMetrics)),
     .elapsed = malloc((epochs + 1) * sizeof(double)),
@@ -401,7 +403,8 @@ static void save_latent(Network network, const Dataset validation, const Results
     network_encode(network, &inputs[i * n_inputs], layer, &codes[i * latent_dim]);
   }
 
-  int ok = results_write_latent(results, latent_dim, codes, n_samples);
+  int variational = network_latent_size(network) != latent_dim; // the layer holds means and log-variances
+  int ok = results_write_latent(results, latent_dim, codes, n_samples, variational);
   free(codes);
   if (!ok) exit(EXIT_FAILURE);
 }
@@ -444,7 +447,7 @@ static double * read_points(const char * path, int latent_dim, int * n_points) {
 // aren't in the dataset
 static void save_generated(Network network, const char * points_path, const Results * results) {
   int layer = network_latent_layer(network);
-  int latent_dim = network_layer_size(network, layer);
+  int latent_dim = network_latent_size(network); // z, for a variational network
   int n_outputs = network_n_outputs(network);
   int n_points;
   double * points = read_points(points_path, latent_dim, &n_points);
@@ -482,7 +485,12 @@ int main(int argc, char * argv[]) {
 
   Rng rng = rng_new(config.seed);
   OptimizerConfig optimizer = optimizer_config(&config);
-  Network network = network_new(n_layers, sizes, activation, &optimizer, random_weight, &rng);
+  // The epsilon of a variational network: its own generator, so the noise doesn't change with the weights drawn
+  Rng noise = rng_new(config.seed ^ 0x9E3779B9u);
+  Network network = config.variational
+    ? network_new_variational(n_layers, sizes, config.n_encoder_layers + 1, config.variational_beta, &noise,
+                              activation, &optimizer, random_weight, &rng)
+    : network_new(n_layers, sizes, activation, &optimizer, random_weight, &rng);
   if (config.initial_weights[0] != '\0') load_initial_weights(config.initial_weights, network, n_layers, sizes);
   double * initial_weights = snapshot_weights(network);
 

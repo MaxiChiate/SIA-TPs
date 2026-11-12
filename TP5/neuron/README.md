@@ -33,6 +33,7 @@ Un autoencoder es esta misma red entrenada para devolver su entrada, con una cap
 |------------------|------------------------------------------------------------------------------|
 | `encoder_layers` | Neuronas de cada capa entre las entradas y el latente, p. ej. `[20, 10]`; `[]` si no hay |
 | `latent_dim`     | Neuronas de la capa latente, p. ej. `2`                                      |
+| `variational_beta` | Opcional. Con ella el autoencoder es variacional (VAE): peso β del término KL, ≥ 0 (con 0 no hay KL). La capa del medio pasa a tener `2·latent_dim` neuronas (medias y log-varianzas) y `latent.csv` trae `mean_*` y `log_variance_*` |
 
 Van juntas y no se mezclan con `hidden_layers`. El decoder es el espejo del encoder: el config carga
 `hidden_layers` = encoder, latente, encoder al revés, así que el resto del código (red, entrenamiento,

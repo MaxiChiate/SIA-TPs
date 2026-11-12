@@ -1023,6 +1023,28 @@ static const char * OPTIMIZER_CONFIGS[][2] = {
 
 #define N_OPTIMIZER_CONFIGS ((int) (sizeof(OPTIMIZER_CONFIGS) / sizeof(OPTIMIZER_CONFIGS[0])))
 
+static void test_variational_config(void) {
+  Config config;
+  // the middle layer holds the means and the log-variances: 2 * latent_dim
+  check(load_config_with_architecture(",\"encoder_layers\":[20,10],\"latent_dim\":2,\"variational_beta\":0.5", &config));
+  check(config.variational == 1 && config.variational_beta == 0.5);
+  check(config.n_hidden_layers == 5);
+  check(config.hidden_layers[0] == 20 && config.hidden_layers[1] == 10 && config.hidden_layers[2] == 4);
+  check(config.hidden_layers[3] == 10 && config.hidden_layers[4] == 20);
+  check(config.n_encoder_layers == 2 && config.latent_dim == 2);
+
+  // beta = 0 is still a VAE (the control without the KL term); no beta is a plain autoencoder
+  check(load_config_with_architecture(",\"encoder_layers\":[],\"latent_dim\":3,\"variational_beta\":0", &config));
+  check(config.variational == 1 && config.n_hidden_layers == 1 && config.hidden_layers[0] == 6);
+  check(load_config_with_architecture(",\"encoder_layers\":[4],\"latent_dim\":2", &config));
+  check(config.variational == 0 && config.hidden_layers[1] == 2);
+
+  fprintf(stderr, "  (expected errors follow)\n");
+  check(!load_config_with(",\"variational_beta\":1", &config)); // with hidden_layers, no autoencoder
+  check(!load_config_with_architecture(",\"encoder_layers\":[4],\"latent_dim\":2,\"variational_beta\":-1", &config));
+}
+
+
 static void test_optimizer_config(void) {
   Config config;
   check(load_config_with("", &config) && strcmp(config.optimizer, "gd") == 0); // the default
@@ -1134,6 +1156,7 @@ int main(void) {
     { "dataset split", test_dataset_split },
     { "config loading", test_config_loading },
     { "autoencoder config", test_autoencoder_config },
+    { "variational config", test_variational_config },
     { "optimizer config", test_optimizer_config },
     { "weights.csv write/read roundtrip", test_weights_file_roundtrip },
   };
