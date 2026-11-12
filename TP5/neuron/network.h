@@ -14,6 +14,22 @@ typedef struct network * Network;
 Network network_new(int n_layers, const int sizes[], const Activation * activation, const OptimizerConfig * optimizer,
                     double (*draw_weight)(void * context), void * context);
 
+// Variational autoencoder (VAE). sizes[variational_layer] is 2L: that layer is linear and its first L outputs are
+// the means of the latent code, the next L the log-variances. The layer after it takes the L-vector
+//   z = mean + exp(log_variance / 2) * epsilon,   epsilon ~ N(0, 1)
+// as its input instead of the 2L outputs (so the layer after it has sizes[variational_layer] / 2 inputs).
+// Training minimizes E + beta * KL per sample, with E the usual energy and KL the divergence between the latent
+// distribution N(mean, exp(log_variance)) and N(0, 1). epsilon is drawn from noise only while training
+// (network_train, network_variational_loss); everywhere else z = mean. noise may be NULL: z is then always the
+// mean and the KL term is the only difference with a plain autoencoder. noise must outlive the network.
+Network network_new_variational(int n_layers, const int sizes[], int variational_layer, double beta, Rng * noise,
+                                const Activation * activation, const OptimizerConfig * optimizer,
+                                double (*draw_weight)(void * context), void * context);
+
+// E + beta * KL summed over the samples, drawing epsilon from the network's noise like training does.
+// Doesn't train. Only for a variational network.
+double network_variational_loss(Network network, const double inputs[], const double zetas[], int n_samples);
+
 void network_free(Network network);
 
 int network_n_inputs(const Network network);
@@ -45,7 +61,8 @@ int network_n_layers(const Network network);
 int network_layer_size(const Network network, int layer);
 
 // Layer holding the latent code of an autoencoder built as encoder, latent, mirrored decoder, output
-// (config_load builds it that way): the middle one, n_layers / 2.
+// (config_load builds it that way): the middle one, n_layers / 2. For a variational network, its variational layer
+// (2L neurons: means and log-variances).
 int network_latent_layer(const Network network);
 
 // Outputs of layer (1..n_layers) for input; out has room for network_layer_size(layer) elements.
@@ -55,6 +72,7 @@ void network_encode(Network network, const double input[], int layer, double out
 // Feeds activations (network_layer_size(from_layer) values, as network_encode gives them) into from_layer
 // and runs the layers after it; output gets network_n_outputs elements.
 // With from_layer = network_latent_layer(network) this is the decoder: latent code -> reconstruction.
+// In a variational network the code is z, with L values (half of network_layer_size(from_layer)).
 // Any point works, not only codes the encoder produced, which is how new samples are generated.
 void network_decode(Network network, int from_layer, const double code[], double output[]);
 

@@ -382,6 +382,81 @@ static void test_latent_and_decoder(void) {
 }
 
 
+// VAE: one full-batch step of gd moves every weight by -eta * d(E + beta * KL)/dw. Each numeric evaluation of the
+// loss restarts the noise generator, so epsilon is the same in training and in every probe.
+static void test_variational_gradient_matches_numeric(void) {
+  const double betas[] = {0.0, 0.7};
+  for (int b = 0; b < 2; b++) {
+    int sizes[] = {3, 4, 4, 3, 3}; // layer 2 is variational: L = 2 means and 2 log-variances; layer 3 takes z (2)
+    double eta = 0.01;
+    OptimizerConfig gd = { .name = "gd", .eta = eta };
+    Rng weight_rng = rng_new(11), noise;
+    Network network = network_new_variational(4, sizes, 2, betas[b], &noise, activation_find("tanh"), &gd,
+                                              random_weight, &weight_rng);
+    int n = network_n_weights(network);
+    check(n == 4 * (3 + 1) + 4 * (4 + 1) + 3 * (2 + 1) + 3 * (3 + 1)); // layer 3 has 2 inputs, not 4
+    check(network_latent_layer(network) == 2);
+
+    double weights[n], trained[n];
+    network_get_weights(network, weights);
+    const double inputs[] = {0.2, -0.4, 0.9,  -0.7, 0.5, 0.1,  0.3, 0.3, -0.8};
+    const double zetas[] = {0.5, -0.5, 0.1,  -0.2, 0.6, 0.0,  0.9, 0.2, -0.4};
+
+    noise = rng_new(7);
+    network_train(network, inputs, zetas, 3, 1, 3, NULL, NULL, NULL);
+    network_get_weights(network, trained);
+
+    for (int i = 0; i < n; i++) {
+      double probe[n];
+      memcpy(probe, weights, sizeof(probe));
+      probe[i] = weights[i] + 1e-6;
+      set_weights(network, probe);
+      noise = rng_new(7);
+      double up = network_variational_loss(network, inputs, zetas, 3);
+      probe[i] = weights[i] - 1e-6;
+      set_weights(network, probe);
+      noise = rng_new(7);
+      double down = network_variational_loss(network, inputs, zetas, 3);
+      check_close(trained[i] - weights[i], -eta * (up - down) / 2e-6, 1e-8);
+    }
+    network_free(network);
+  }
+}
+
+
+// Outside training z is the mean: predictions don't depend on the noise, and decoding the means gives the prediction
+static void test_variational_prediction_is_deterministic(void) {
+  int sizes[] = {3, 4, 4, 3, 3};
+  OptimizerConfig gd = { .name = "gd", .eta = 0.01 };
+  Rng weight_rng = rng_new(3), noise = rng_new(5);
+  Network network = network_new_variational(4, sizes, 2, 1.0, &noise, activation_find("tanh"), &gd, random_weight,
+                                            &weight_rng);
+  double input[] = {0.2, -0.4, 0.9}, first[3], second[3], decoded[3], code[4];
+  network_predict(network, input, first);
+  network_predict(network, input, second);
+  for (int i = 0; i < 3; i++) check_close(first[i], second[i], 0);
+
+  network_encode(network, input, network_latent_layer(network), code); // means, then log-variances
+  network_decode(network, network_latent_layer(network), code, decoded); // takes the 2 means
+  for (int i = 0; i < 3; i++) check_close(decoded[i], first[i], 1e-12);
+  network_free(network);
+}
+
+
+static void test_rng_normal(void) {
+  Rng rng = rng_new(1);
+  double sum = 0, sum_squares = 0;
+  int n = 100000;
+  for (int i = 0; i < n; i++) {
+    double x = rng_normal(&rng);
+    sum += x;
+    sum_squares += x * x;
+  }
+  check_close(sum / n, 0.0, 0.02);
+  check_close(sum_squares / n, 1.0, 0.02);
+}
+
+
 static void test_same_seed_same_result(void) {
   int sizes[] = {2, 3, 1};
   Network a = new_network(2, sizes, "tanh", 0.1, 9), b = new_network(2, sizes, "tanh", 0.1, 9);
@@ -1036,6 +1111,9 @@ int main(void) {
     { "XOR [2,3,2,1] converges", test_xor_multilayer_converges },
     { "autoencoder learns identity", test_autoencoder_learns_identity },
     { "latent code and decoder", test_latent_and_decoder },
+    { "rng normal", test_rng_normal },
+    { "variational gradient vs numeric", test_variational_gradient_matches_numeric },
+    { "variational prediction is deterministic", test_variational_prediction_is_deterministic },
     { "same seed, same result", test_same_seed_same_result },
     { "shuffled training", test_shuffled_training },
     { "relu network learns", test_relu_network_learns },

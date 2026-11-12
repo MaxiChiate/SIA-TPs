@@ -15,6 +15,7 @@ TP5/
   scripts/noisy_font.py       dataset de denoising: letras con ruido de entrada y la letra limpia como ζ
   scripts/study_1b.py         estudio de 1.b (latente, ruido de entrenamiento, test final)
   scripts/denoise_figure.py   figura de 1.b: limpia, entrada ruidosa y salida (docs/denoising.png)
+  scripts/digits_to_csv.py    dígitos de TP3 (28x28) -> CSV de autoencoder, para el VAE (ejercicio 2)
   scripts/seed_sweep.py       un config con varias semillas: cuántas cumplen el objetivo y el MSE
   scripts/generate_letters.py letras nuevas decodificando puntos entre dos letras (generated.png y .svg)
   neuron/                     la red; su README documenta todas las claves del config
@@ -212,4 +213,9 @@ autoencoder chico aprende a reconstruir su entrada.
 
 - 1.a.2: el estudio de arriba cubre arquitectura y optimizador sobre `tanh`. No se probó el tamaño del latente (el
   enunciado fija 2), `batch_size` ni `adaptive_eta` con `tanh`, y el único η de las arquitecturas es 0,001.
-- Ejercicio 2 (VAE).
+- Ejercicio 2 (VAE), con los dígitos de TP3 (12449 imágenes de 28x28; no hay ningún 8 y los 5 son solo 271).
+  Hecho: `scripts/digits_to_csv.py` (`--n 3000` arma un subconjunto) y, en `neuron/network.h`, `network_new_variational`:
+  una capa de medias y log-varianzas, la muestra z = media + exp(log-varianza / 2)·ε y el término KL con peso β, con
+  la retropropagación verificada contra el gradiente numérico (`make -C neuron test`). Falta conectarlo al config y a
+  `main.c` (claves, ε solo al entrenar, guardar medias y log-varianzas), el entrenamiento con los dígitos, las figuras
+  (espacio latente, grilla decodificada, muestras nuevas) y la comparación con el autoencoder común.
