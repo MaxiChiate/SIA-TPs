@@ -213,12 +213,27 @@ autoencoder chico aprende a reconstruir su entrada.
 
 - 1.a.2: el estudio de arriba cubre arquitectura y optimizador sobre `tanh`. No se probó el tamaño del latente (el
   enunciado fija 2), `batch_size` ni `adaptive_eta` con `tanh`, y el único η de las arquitecturas es 0,001.
-- Ejercicio 2 (VAE), con los dígitos de TP3 (12449 imágenes de 28x28; no hay ningún 8 y los 5 son solo 271).
-  Hecho: `scripts/digits_to_csv.py` (`--n 3000` arma un subconjunto), `network_new_variational` en `neuron/network.h`
-  (capa de medias y log-varianzas, z = media + exp(log-varianza / 2)·ε y el término KL con peso β, con la
-  retropropagación verificada contra el gradiente numérico) y su conexión al config: la clave `variational_beta`
-  (ver `neuron/config.json.vae.example`, y `neuron/README.md`). Con ella `main.c` entrena el VAE, deja las medias y
-  log-varianzas en `latent.csv` y `--decode` decodifica z. En un VAE se guardan los pesos de la última época, no los de
-  menor MSE (ese MSE no incluye el KL). Falta entrenar con los dígitos y ver que aprende (cuidado con el desborde de
-  `exp()` de la log-varianza), las figuras (espacio latente, grilla decodificada, muestras nuevas), el barrido de β y la
-  comparación con el autoencoder común.
+- Ejercicio 2 (VAE), con los dígitos de TP3. `digits.csv` solo no sirve: no tiene ningún 8 y casi no tiene 5. Se une con
+  `more_digits.csv` (comparten 3689 imágenes) y quedan 24501 únicas, aunque el 8 (585) y el 5 (785) siguen siendo pocos
+  contra ~2800 de cada uno de los demás. `scripts/digits_to_csv.py --val-n 500 --val-out neuron/data/digits_val.csv
+  --balanced` aparta 500 imágenes para validación y arma un train con 577 de cada dígito (5770). `digits_test.csv`
+  queda sin tocar, para una evaluación final.
+  Hecho: ese script, `network_new_variational` en `neuron/network.h` (capa de medias y log-varianzas, z = media +
+  exp(log-varianza / 2)·ε y el término KL con peso β, con la retropropagación verificada contra el gradiente
+  numérico), su conexión al config con la clave `variational_beta` (ver `neuron/config.json.vae.example` y
+  `neuron/README.md`; en un VAE se guardan los pesos de la última época, no los de menor MSE, porque ese MSE no incluye
+  el KL) y `scripts/study_vae.py`, que mide β y épocas (`docs/estudio_vae.csv`).
+  Primeras corridas (784-128-2-128-784, tanh, Adam, 30 épocas, 1 semilla, validación con z = media; predecir siempre la
+  imagen media da MSE 0,0680):
+
+  | β | 0 | 0,01 | 0,1 | 1 |
+  |---|---|---|---|---|
+  | MSE de validación | 0,0509 | 0,0504 | 0,0507 | 0,0549 |
+  | KL por imagen | 27,6 | 12,9 | 5,7 | 1,9 |
+
+  β ≤ 0,1 rinde casi igual y β = 1 empeora un poco, pero el latente no colapsa (desvío de las medias cerca de 1).
+  Mirado a ojo (β = 0,1, 60 épocas), la grilla decodificada pasa suavemente entre todos los dígitos, 8 incluido, pero
+  las reconstrucciones son borrosas y varias salen de otra clase: con 2 dimensiones los dígitos se solapan. Los
+  primeros números que se probaron con `digits.csv` solo (sin 8) ya no valen y se descartaron. Faltan las figuras
+  definitivas (espacio latente, grilla, muestras nuevas), más semillas y épocas, y la comparación con el autoencoder
+  común.
