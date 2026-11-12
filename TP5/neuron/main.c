@@ -26,9 +26,21 @@ static void die(const char * format, ...) {
 }
 
 
-static const char * config_path(int argc, char * argv[]) {
-  if (argc > 2) die("usage: %s [config.json]", argv[0]);
-  return argc == 2 ? argv[1] : DEFAULT_CONFIG_PATH;
+// usage: neuron [config.json] [--decode points.csv]
+static void parse_args(int argc, char * argv[], const char ** config_path, const char ** decode_path) {
+  *config_path = DEFAULT_CONFIG_PATH;
+  *decode_path = NULL;
+  int has_config = 0;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--decode") == 0 && i + 1 < argc && *decode_path == NULL) {
+      *decode_path = argv[++i];
+    } else if (argv[i][0] != '-' && !has_config) {
+      *config_path = argv[i];
+      has_config = 1;
+    } else {
+      die("usage: %s [config.json] [--decode points.csv]", argv[0]);
+    }
+  }
 }
 
 
@@ -395,10 +407,67 @@ static void save_latent(Network network, const Dataset validation, const Results
 }
 
 
+// Points of the latent space, one per line with latent_dim comma-separated values after a header line.
+// Returns them row-major and sets *n_points.
+static double * read_points(const char * path, int latent_dim, int * n_points) {
+  FILE * file = fopen(path, "r");
+  if (file == NULL) die("couldn't open %s", path);
+  char line[4096];
+  if (fgets(line, sizeof(line), file) == NULL) die("%s is empty", path);
+
+  int capacity = 64, n = 0;
+  double * points = malloc((size_t) capacity * latent_dim * sizeof(double));
+  if (points == NULL) die("couldn't allocate points");
+  while (fgets(line, sizeof(line), file) != NULL) {
+    if (line[0] == '\n' || line[0] == '\0') continue;
+    if (n == capacity) {
+      capacity *= 2;
+      points = realloc(points, (size_t) capacity * latent_dim * sizeof(double));
+      if (points == NULL) die("couldn't allocate points");
+    }
+    char * cursor = line;
+    for (int j = 0; j < latent_dim; j++) {
+      char * end;
+      points[n * latent_dim + j] = strtod(cursor, &end);
+      if (end == cursor) die("%s, point %d: expected %d values", path, n + 1, latent_dim);
+      cursor = end + (*end == ',' ? 1 : 0);
+    }
+    n++;
+  }
+  fclose(file);
+  *n_points = n;
+  return points;
+}
+
+
+// Autoencoders only: runs every point of points.csv through the decoder, so it also makes samples that
+// aren't in the dataset
+static void save_generated(Network network, const char * points_path, const Results * results) {
+  int layer = network_latent_layer(network);
+  int latent_dim = network_layer_size(network, layer);
+  int n_outputs = network_n_outputs(network);
+  int n_points;
+  double * points = read_points(points_path, latent_dim, &n_points);
+
+  double * outputs = malloc((size_t) n_points * n_outputs * sizeof(double));
+  if (outputs == NULL) die("couldn't allocate outputs");
+  for (int i = 0; i < n_points; i++) {
+    network_decode(network, layer, &points[i * latent_dim], &outputs[i * n_outputs]);
+  }
+
+  int ok = results_write_generated(results, latent_dim, n_outputs, points, outputs, n_points);
+  free(points);
+  free(outputs);
+  if (!ok) exit(EXIT_FAILURE);
+}
+
+
 int main(int argc, char * argv[]) {
 
-  const char * path = config_path(argc, argv);
+  const char * path, * decode_path;
+  parse_args(argc, argv, &path, &decode_path);
   Config config = load_config(path);
+  if (decode_path != NULL && config.latent_dim == 0) die("--decode needs an autoencoder config");
   const Activation * activation = load_activation(config.activation);
   Dataset train, validation;
   load_datasets(&config, &train, &validation);
@@ -424,6 +493,7 @@ int main(int argc, char * argv[]) {
   save_weights(&results, n_layers, sizes, initial_weights, network);
   validate_network(network, validation, &results);
   if (config.latent_dim > 0) save_latent(network, validation, &results);
+  if (decode_path != NULL) save_generated(network, decode_path, &results);
   printf("results -> %s\n", results.dir);
 
   free_training_history(&history);

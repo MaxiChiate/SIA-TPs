@@ -7,6 +7,7 @@
 //   weights.csv      one row per weight: layer, neuron, weight (0 = bias), initial and final value
 //   predictions.csv  validation inputs, zeta and the network's prediction
 //   latent.csv       autoencoders only: the latent code of every validation sample (latent_0, latent_1, ...)
+//   generated.csv    only with --decode: the decoder's output (output_0, ...) for each latent point given
 //   epochs.csv       E, MSE, MAE and max |e| on train and validation after every epoch (0 = initial weights),
 //                    the seconds spent training so far and the learning rate the epoch trained with
 //   predictions_by_epoch.csv  validation zeta and the prediction at a few epochs, one column per epoch
@@ -42,6 +43,10 @@ int results_write_predictions(const Results * results, int n_inputs, int n_outpu
 
 // codes is row-major n_samples x latent_dim: the latent code of every validation sample, in dataset order
 int results_write_latent(const Results * results, int latent_dim, const double codes[], int n_samples);
+
+// points is row-major n_points x latent_dim and outputs n_points x n_outputs: what the decoder gave for each
+int results_write_generated(const Results * results, int latent_dim, int n_outputs, const double points[],
+                            const double outputs[], int n_points);
 
 // train, validation, elapsed and eta have n_epochs + 1 elements; epoch 0 is the untrained network
 int results_write_epochs(const Results * results, int n_epochs, const ErrorMetrics train[],

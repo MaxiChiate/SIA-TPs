@@ -231,6 +231,26 @@ int results_write_latent(const Results * results, int latent_dim, const double c
 }
 
 
+int results_write_generated(const Results * results, int latent_dim, int n_outputs, const double points[],
+                            const double outputs[], int n_points) {
+  FILE * file = open_in_run_dir(results, "generated.csv");
+  if (file == NULL) return 0;
+
+  write_output_names(file, "latent", latent_dim);
+  fputc(',', file);
+  write_output_names(file, "output", n_outputs);
+  fputc('\n', file);
+  for (int i = 0; i < n_points; i++) {
+    fprintf(file, "%.10g", points[i * latent_dim]);
+    write_values(file, &points[i * latent_dim + 1], latent_dim - 1);
+    write_values(file, &outputs[i * n_outputs], n_outputs);
+    fputc('\n', file);
+  }
+
+  return fclose(file) == 0;
+}
+
+
 static void write_metrics(FILE * file, const ErrorMetrics * metrics) {
   fprintf(file, ",%.10g,%.10g,%.10g,%.10g", metrics->energy, metrics->mse, metrics->mae, metrics->max_abs_error);
 }
