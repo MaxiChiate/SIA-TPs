@@ -383,8 +383,10 @@ OUTLINE: tuple[Slide, ...] = (
         "1 / ({pca17.eta_factor} · λ₁) = {pca17.eta_bound} que da para asegurar la convergencia, donde "
         "λ₁ = {pca17.lambda1} es el mayor autovalor de la matriz de correlación, lo que explica PC1; como ese "
         "autovalor no se conoce de antemano, el curso recomienda estandarizar y empezar con una tasa chica. "
-        "Cuando converge, el vector de pesos final es la primera componente principal, como se vio en clase, y en "
-        "{oja.n_abs_cos_above} de las {oja.n_seeds} seeds el vector quedó prácticamente paralelo a PC1.",
+        "Cuando converge, el vector de pesos final es la primera componente principal, como se vio en clase, y para "
+        "comprobarlo medimos el coseno entre w y PC1, que vale 1 cuando los dos vectores apuntan en la misma dirección: en "
+        "{oja.n_abs_cos_above} de las {oja.n_seeds} seeds quedó prácticamente en 1, y entre pares de seeds el mínimo es "
+        "{oja.abs_cos_min}.",
     ),
     Slide(
         "oja-pc1", 1, "Oja aprendió PC1: su índice y el score de PC1 ordenan igual a los creadores",
