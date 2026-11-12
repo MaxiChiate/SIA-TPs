@@ -375,6 +375,26 @@ static void validate_network(Network network, const Dataset validation, const Re
 }
 
 
+// Autoencoders only: the latent code of every validation sample, for plotting the latent space
+static void save_latent(Network network, const Dataset validation, const Results * results) {
+  int n_inputs = dataset_n_inputs(validation);
+  int n_samples = dataset_n_samples(validation);
+  int layer = network_latent_layer(network);
+  int latent_dim = network_layer_size(network, layer);
+  const double * inputs = dataset_inputs(validation);
+
+  double * codes = malloc((size_t) n_samples * latent_dim * sizeof(double));
+  if (codes == NULL) die("couldn't allocate latent codes");
+  for (int i = 0; i < n_samples; i++) {
+    network_encode(network, &inputs[i * n_inputs], layer, &codes[i * latent_dim]);
+  }
+
+  int ok = results_write_latent(results, latent_dim, codes, n_samples);
+  free(codes);
+  if (!ok) exit(EXIT_FAILURE);
+}
+
+
 int main(int argc, char * argv[]) {
 
   const char * path = config_path(argc, argv);
@@ -403,6 +423,7 @@ int main(int argc, char * argv[]) {
   save_history(&results, &history);
   save_weights(&results, n_layers, sizes, initial_weights, network);
   validate_network(network, validation, &results);
+  if (config.latent_dim > 0) save_latent(network, validation, &results);
   printf("results -> %s\n", results.dir);
 
   free_training_history(&history);

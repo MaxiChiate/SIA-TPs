@@ -11,12 +11,20 @@ TP5/
   src/font.h                  las 32 letras
   scripts/font_to_csv.py      font.h -> neuron/data/font.csv
   scripts/wrong_pixels.py     píxeles incorrectos por letra de una corrida
+  scripts/latent_plot.py      gráfico del espacio latente de una corrida (latent.png y .svg)
   neuron/                     la red; su README documenta todas las claves del config
 ```
 
 ## Requisitos
 
-`gcc` (o `clang`), `make` y `python3` (sin paquetes extra). Todo desde `TP5/`.
+`gcc` (o `clang`), `make` y `python3`. La red y `font_to_csv.py`/`wrong_pixels.py` no necesitan paquetes extra; los
+gráficos usan `matplotlib` (fijado en `requirements.txt`):
+
+```sh
+python3.12 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
+```
+
+Todo desde `TP5/`.
 
 ## Cómo correrlo
 
@@ -44,8 +52,17 @@ letras con a lo sumo 1 píxel incorrecto: 32/32
 ```
 
 Cada corrida guarda en su carpeta el config usado, `weights.csv`, `epochs.csv` (error por época),
-`predictions.csv` y `predictions_by_epoch.csv`; `results/` no se versiona. `make run` de `neuron/` también quiere armar
+`predictions.csv`, `predictions_by_epoch.csv` y, si es un autoencoder, `latent.csv` (código latente de cada letra); `results/` no se versiona. `make run` de `neuron/` también quiere armar
 un reporte HTML con `../scripts/run_report.py`, que todavía no está en TP5: usá el binario directo, como arriba.
+
+## Espacio latente (1.a.3)
+
+```sh
+.venv/bin/python scripts/latent_plot.py [neuron/results/<corrida>]   # sin argumento, la última corrida
+```
+
+Lee `latent.csv` y escribe `latent.png` y `latent.svg` en la carpeta de la corrida: un punto por letra en el plano 2D,
+con el nombre de la letra tomado de los comentarios de `src/font.h`.
 
 ## Arquitectura del autoencoder
 
@@ -84,6 +101,6 @@ autoencoder chico aprende a reconstruir su entrada.
 
 - 1.a.2: comparar arquitecturas y optimizadores. Con este ejemplo ya se llega a 32/32, pero depende de la elección:
   con Adam y η = 0,005 la red se vuelve inestable y con `adaptive_eta` (GD) llega a 24/32 en 100000 épocas.
-- 1.a.3 y 1.a.4: el gráfico del espacio latente y generar letras nuevas. Hace falta exponer en `Network` el código latente
-  de una muestra y la decodificación de un punto 2D.
+- 1.a.4: generar letras nuevas. `Network` ya expone `network_decode` para decodificar un punto 2D; falta una forma de
+  correrlo desde un `weights.csv` y dibujar el resultado.
 - 1.b (denoising) y el ejercicio 2 (VAE).

@@ -215,6 +215,22 @@ int results_write_predictions(const Results * results, int n_inputs, int n_outpu
 }
 
 
+int results_write_latent(const Results * results, int latent_dim, const double codes[], int n_samples) {
+  FILE * file = open_in_run_dir(results, "latent.csv");
+  if (file == NULL) return 0;
+
+  write_output_names(file, "latent", latent_dim);
+  fputc('\n', file);
+  for (int i = 0; i < n_samples; i++) {
+    fprintf(file, "%.10g", codes[i * latent_dim]);
+    write_values(file, &codes[i * latent_dim + 1], latent_dim - 1);
+    fputc('\n', file);
+  }
+
+  return fclose(file) == 0;
+}
+
+
 static void write_metrics(FILE * file, const ErrorMetrics * metrics) {
   fprintf(file, ",%.10g,%.10g,%.10g,%.10g", metrics->energy, metrics->mse, metrics->mae, metrics->max_abs_error);
 }
