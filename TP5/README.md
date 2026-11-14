@@ -16,6 +16,8 @@ TP5/
   scripts/study_1b.py         estudio de 1.b (latente, ruido de entrenamiento, test final)
   scripts/denoise_figure.py   figura de 1.b: limpia, entrada ruidosa y salida (docs/denoising.png)
   scripts/digits_to_csv.py    dígitos de TP3 (28x28) -> CSV de autoencoder, para el VAE (ejercicio 2)
+  scripts/study_vae.py        barrido de β y épocas del VAE (docs/estudio_vae.csv)
+  scripts/vae_figures.py      figuras del VAE: latente, imágenes nuevas, reconstrucciones (docs/vae_*.png)
   scripts/seed_sweep.py       un config con varias semillas: cuántas cumplen el objetivo y el MSE
   scripts/generate_letters.py letras nuevas decodificando puntos entre dos letras (generated.png y .svg)
   neuron/                     la red; su README documenta todas las claves del config
@@ -176,6 +178,95 @@ Límites: el ruido de entrenamiento son 100 realizaciones fijas por letra y la r
 menor que el de validación); no se probó generar ruido nuevo en cada época, otro tipo de ruido (gaussiano) ni otras
 arquitecturas que la de encoder 35-20.
 
+## VAE sobre los dígitos (ejercicio 2)
+
+**Datos.** `digits.csv` de TP3 solo no sirve: no tiene ningún 8 y casi no tiene 5. Se une con `more_digits.csv`
+(comparten 3689 imágenes) y quedan 24501 únicas, aunque el 8 (585) y el 5 (785) siguen siendo pocos contra ~2800 de cada
+uno de los demás. `scripts/digits_to_csv.py --val-n 500 --val-out neuron/data/digits_val.csv --balanced` aparta 500
+imágenes de ese pozo para validación y arma un train con 577 de cada dígito (5770). `digits_test.csv` queda sin tocar,
+para una evaluación final que todavía no se hizo.
+
+**Modelo.** `variational_beta` en el config (ver `neuron/config.json.vae.example`) vuelve variacional al autoencoder:
+la capa del medio da L medias y L log-varianzas, z = media + exp(log-varianza / 2)·ε con ε ~ N(0, 1) y el error es
+½·Σ(ζ − O)² + β·KL, con KL = −½·Σ(1 + log-varianza − media² − exp(log-varianza)). La retropropagación a través del
+muestreo está verificada contra el gradiente numérico (`make -C neuron test`). En un VAE se guardan los pesos de la
+última época, no los de menor MSE, porque ese MSE no incluye el KL.
+
+**β** (784-128-L-128-784, L = 2, tanh, Adam, 30 épocas, 1 semilla; predecir siempre la imagen media da MSE 0,0680):
+
+| β | 0 | 0,01 | 0,1 | 1 |
+|---|---|---|---|---|
+| MSE de validación | 0,0509 | 0,0504 | 0,0507 | 0,0549 |
+| KL por imagen | 27,6 | 12,9 | 5,7 | 1,9 |
+
+β ≤ 0,1 rinde casi igual y con β = 1 el latente no colapsa. Se usó β = 0,1: reconstruye como los β más chicos y deja el
+latente más cerca de una normal.
+
+**Latente de 2 y de 10, con y sin KL** (`scripts/vae_figures.py`, 100 épocas, β = 0,1 o 0, 1 semilla, validación):
+
+| Modelo | MSE de validación | KL por imagen |
+|---|---|---|
+| VAE, latente 2 | 0,0480 | 5,6 |
+| VAE, latente 10 | 0,0359 | 15,1 |
+| Sin KL (β = 0), latente 2 | 0,0491 | 27,7 |
+| Sin KL (β = 0), latente 10 | 0,0373 | 204,3 |
+
+- `docs/vae_reconstructions.png`: con latente 10 se reconocen la mayoría de los dígitos; con 2 varios salen de otra
+  clase (el 2 como 7, el 3 como 8) porque en el plano los dígitos se solapan (`docs/vae_latent.png`). El KL no empeora la
+  reconstrucción, pero con una semilla las diferencias de MSE entre VAE y sin KL no son concluyentes.
+- `docs/vae_latent.png`: con KL los códigos de 2 dimensiones quedan en unos ±3, como una normal; sin KL llegan a ±10. La
+  grilla decodificada pasa suavemente entre 0, 6, 9, 7, 1, 3, 5, 8 y 2.
+- `docs/vae_samples.png` (z ~ N(0, I) decodificado): el VAE con latente 10 da dígitos reconocibles con algo de ruido (1,
+  0, 8, 3, 9, 4, 6); el modelo sin KL con latente 10 da **solo ruido**, porque la normal cae lejos de donde su decoder
+  aprendió. Es lo que el término KL resuelve (2.b). Con latente 2 el modelo sin KL también da dígitos borrosos, porque su
+  rango de códigos alcanza a cubrir la normal. Que una muestra sea un dígito se juzga a ojo, no hay otra medida.
+
+Un autoencoder no variacional con `tanh` en la capa latente **no sirve como control** acá: con 784 entradas satura esa
+capa (el 100% de los códigos en ±1) y no entrena, cae al MSE de la imagen media. Por eso el control es el mismo VAE con
+β = 0 (que sigue inyectando el ruido ε y por lo tanto no es un autoencoder determinista).
+
+## Evaluación final del VAE sobre `digits_test.csv` (protocolo fijado antes de correr)
+
+Una sola corrida, con los modelos y la configuración ya elegidos con la validación, sin tocarlos después de ver estos
+números (`scripts/final_eval_vae.py`):
+
+- Modelos: VAE con β = 0,1 y el mismo modelo sin KL (β = 0), cada uno con latente 2 y 10; encoder 784-128, tanh, Adam,
+  η = 0,001, 100 épocas, train de 5770 imágenes balanceado. Semillas 1, 2 y 3.
+- Datos: las 2497 imágenes de `digits_test.csv` (de `digits.csv` y `more_digits.csv` no comparte ninguna).
+- Medidas: MSE de reconstrucción con z = media, total y por dígito, y KL por imagen; referencia: predecir siempre la
+  imagen media del train.
+- Predicción: el MSE de test queda cerca del de validación (0,048 con latente 2 y 0,036 con latente 10), salvo que
+  `digits_test.csv` venga de otra distribución. Si queda más de un 20% por encima, se informa así y no se reajusta nada.
+
+**Resultado** (una sola corrida, `docs/evaluacion_final_vae.csv`; media y desvío de las 3 semillas; referencia: predecir
+siempre la imagen media del train, MSE 0,0676):
+
+| Modelo | MSE de test | contra la validación | KL por imagen |
+|---|---|---|---|
+| VAE, latente 2 | 0,0492 ± 0,0001 | +2% | 5,5 |
+| VAE, latente 10 | 0,0371 ± 0,0006 | +3% | 14,9 |
+| Sin KL (β = 0), latente 2 | 0,0498 ± 0,0003 | +1% | 28,3 |
+| Sin KL (β = 0), latente 10 | 0,0376 ± 0,0004 | +1% | 200,5 |
+
+MSE por dígito, VAE con latente 2 y con latente 10 (referencia entre paréntesis):
+
+| Dígito | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| latente 2 | 0,053 | 0,021 | 0,067 | 0,054 | 0,050 | 0,058 | 0,051 | 0,042 | 0,057 | 0,043 |
+| latente 10 | 0,041 | 0,019 | 0,046 | 0,039 | 0,038 | 0,044 | 0,040 | 0,033 | 0,043 | 0,033 |
+| referencia | 0,091 | 0,050 | 0,077 | 0,070 | 0,064 | 0,068 | 0,071 | 0,063 | 0,068 | 0,058 |
+
+- La predicción se cumplió: el MSE de test queda entre 1% y 3% por encima del de validación (el criterio era 20%), así que
+  `digits_test.csv` no trae un corrimiento de distribución que se note en la reconstrucción.
+- El latente de 10 reconstruye mejor que el de 2 (0,037 contra 0,049) y las dos mejoran la referencia (0,068).
+- El VAE y el modelo sin KL reconstruyen casi igual: con latente 10 la diferencia (0,0005) es menor que la variación entre
+  semillas, y con latente 2 (0,0006) está en el borde. Lo que el KL cambia es la escala del latente (KL de 15 contra 200
+  con latente 10) y con ella la calidad de las imágenes nuevas, que no se mide acá.
+- Por dígito, el 1 es el que más mejora respecto de la referencia (−58% con latente 2) y el 2, el 5 y el 8 los que menos
+  (entre −12% y −16% con latente 2). El 8 y el 5, que en el train se balancearon a la fuerza, no salen peor que el resto
+  en términos absolutos.
+- Esto mide solo la reconstrucción de imágenes de test. La calidad de las imágenes nuevas (2.c) se sigue juzgando a ojo.
+
 ## Arquitectura del autoencoder
 
 Se define en el JSON con dos claves:
@@ -213,27 +304,6 @@ autoencoder chico aprende a reconstruir su entrada.
 
 - 1.a.2: el estudio de arriba cubre arquitectura y optimizador sobre `tanh`. No se probó el tamaño del latente (el
   enunciado fija 2), `batch_size` ni `adaptive_eta` con `tanh`, y el único η de las arquitecturas es 0,001.
-- Ejercicio 2 (VAE), con los dígitos de TP3. `digits.csv` solo no sirve: no tiene ningún 8 y casi no tiene 5. Se une con
-  `more_digits.csv` (comparten 3689 imágenes) y quedan 24501 únicas, aunque el 8 (585) y el 5 (785) siguen siendo pocos
-  contra ~2800 de cada uno de los demás. `scripts/digits_to_csv.py --val-n 500 --val-out neuron/data/digits_val.csv
-  --balanced` aparta 500 imágenes para validación y arma un train con 577 de cada dígito (5770). `digits_test.csv`
-  queda sin tocar, para una evaluación final.
-  Hecho: ese script, `network_new_variational` en `neuron/network.h` (capa de medias y log-varianzas, z = media +
-  exp(log-varianza / 2)·ε y el término KL con peso β, con la retropropagación verificada contra el gradiente
-  numérico), su conexión al config con la clave `variational_beta` (ver `neuron/config.json.vae.example` y
-  `neuron/README.md`; en un VAE se guardan los pesos de la última época, no los de menor MSE, porque ese MSE no incluye
-  el KL) y `scripts/study_vae.py`, que mide β y épocas (`docs/estudio_vae.csv`).
-  Primeras corridas (784-128-2-128-784, tanh, Adam, 30 épocas, 1 semilla, validación con z = media; predecir siempre la
-  imagen media da MSE 0,0680):
-
-  | β | 0 | 0,01 | 0,1 | 1 |
-  |---|---|---|---|---|
-  | MSE de validación | 0,0509 | 0,0504 | 0,0507 | 0,0549 |
-  | KL por imagen | 27,6 | 12,9 | 5,7 | 1,9 |
-
-  β ≤ 0,1 rinde casi igual y β = 1 empeora un poco, pero el latente no colapsa (desvío de las medias cerca de 1).
-  Mirado a ojo (β = 0,1, 60 épocas), la grilla decodificada pasa suavemente entre todos los dígitos, 8 incluido, pero
-  las reconstrucciones son borrosas y varias salen de otra clase: con 2 dimensiones los dígitos se solapan. Los
-  primeros números que se probaron con `digits.csv` solo (sin 8) ya no valen y se descartaron. Faltan las figuras
-  definitivas (espacio latente, grilla, muestras nuevas), más semillas y épocas, y la comparación con el autoencoder
-  común.
+- Ejercicio 2 (VAE): las comparaciones de β, de latente 2 y 10 y con o sin KL son de una sola semilla (la evaluación final
+  usa 3, para reconstrucción); falta probar más épocas y otras arquitecturas, y elegir y justificar una muestra nueva
+  para el 2.c.

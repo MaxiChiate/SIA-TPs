@@ -1,0 +1,5 @@
+model,latent,beta,train_mse,validation_mse,kl
+"VAE, latente 2",2,0.1,0.0472689,0.0480376,5.566
+"VAE, latente 10",10,0.1,0.0361818,0.0358744,15.06
+"Sin KL, latente 2",2,0.0,0.0464296,0.0490849,27.7
+"Sin KL, latente 10",10,0.0,0.0373158,0.0373115,204.3
