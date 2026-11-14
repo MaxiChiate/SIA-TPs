@@ -1,0 +1,22 @@
+model,digit,belongs_and_new,belongs
+"VAE, latente 2",0,10,10
+"VAE, latente 2",1,2,2
+"VAE, latente 2",2,2,2
+"VAE, latente 2",3,5,5
+"VAE, latente 2",4,3,3
+"VAE, latente 2",5,0,0
+"VAE, latente 2",6,15,15
+"VAE, latente 2",7,14,14
+"VAE, latente 2",8,44,44
+"VAE, latente 2",9,0,0
+"VAE, latente 10",0,10,10
+"VAE, latente 10",1,2,2
+"VAE, latente 10",2,14,14
+"VAE, latente 10",3,11,11
+"VAE, latente 10",4,9,9
+"VAE, latente 10",5,3,3
+"VAE, latente 10",6,3,3
+"VAE, latente 10",7,11,11
+"VAE, latente 10",8,8,8
+"VAE, latente 10",9,1,1
+"referencia: validación real, clase correcta",,0.7900,0.9440

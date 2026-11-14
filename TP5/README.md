@@ -267,6 +267,46 @@ MSE por dígito, VAE con latente 2 y con latente 10 (referencia entre paréntesi
   en términos absolutos.
 - Esto mide solo la reconstrucción de imágenes de test. La calidad de las imágenes nuevas (2.c) se sigue juzgando a ojo.
 
+## Muestras nuevas del VAE (2.c, protocolo fijado antes de correr)
+
+El enunciado pide una muestra nueva que se pueda juzgar como parte del dataset. Para no elegir a ojo la que mejor
+se ve, se fija un criterio antes de generar (`scripts/new_samples.py`, una sola corrida):
+
+- Se generan 300 muestras z ~ N(0, I) con cada VAE (latente 2 y latente 10, β = 0,1, 100 épocas, semilla 1, como en las
+  figuras), con una semilla fija.
+- Pertenece a la clase d si un clasificador de dígitos (784-64-10, logistic, Adam, 30 épocas, entrenado con el mismo
+  train de 5770 imágenes) da salida máxima ≥ 0,8 para d y la segunda mayor ≤ 0,2.
+- Es nueva (no una copia del train) si su distancia euclídea al píxel más cercano del train es al menos la del percentil
+  5 de las distancias al train de las 500 imágenes de validación, que son reales y no se vieron.
+- Referencia: qué fracción de esas 500 imágenes reales pasa el criterio de pertenecer (y lo hace con la clase correcta).
+- Se muestra, por clase, la muestra que cumple ambas con mayor margen. Nada se reajusta después de ver el resultado.
+
+**Resultado** (una sola corrida; `docs/muestras_2c.csv` y `docs/vae_muestras_2c.png`):
+
+| | Pertenecen (de 300) | Nuevas (de 300) | Ambas | Clases sin ninguna |
+|---|---|---|---|---|
+| VAE, latente 2 | 95 (32%) | 300 | 95 | 5, 9 |
+| VAE, latente 10 | 72 (24%) | 300 | 72 | ninguna |
+| imágenes reales de validación (referencia) | 79% con la clase correcta | | | |
+
+El clasificador acierta el 94,4% de la validación, pero con el criterio exigente (≥ 0,8 y segunda ≤ 0,2) solo el 79% de
+las imágenes reales lo pasa con su clase.
+
+- **Pocas muestras del prior pasan el criterio.** El 32% (latente 2) y el 24% (latente 10), contra el 79% de las
+  imágenes reales. La mayoría de las muestras z ~ N(0, I) no se reconocen como un dígito con esa exigencia.
+- **El criterio de "nueva" no discrimina:** las 300 muestras de ambos modelos lo cumplen. Son borrosas y quedan lejos
+  de cualquier imagen nítida del train, así que "no es una copia" se cumple sin que eso diga mucho. La imagen más
+  cercana del train suele ser de otro dígito (la "2" de latente 2 tiene como más cercana un "1"), o sea que la
+  distancia en píxeles es una medida pobre.
+- **Con latente 2 las que pasan se concentran:** 44 de las 95 son 8, y no hay ningún 5 ni 9. Una mancha borrosa tiende
+  a leerse como un 8, así que el criterio puede estar sobreestimando la calidad de ese modelo.
+- **Con latente 10 pasan menos, pero hay de todas las clases** y se ven más variadas y más nítidas; el clasificador
+  descarta más las que tienen ruido.
+- **El margen del clasificador no es lo mismo que reconocer un dígito a ojo.** En `docs/vae_muestras_2c.png`, de las
+  elegidas: se leen bien el 0, 6 y 7 de latente 2 y el 3, 4 y 6 de latente 10; son dudosas la "2" y la "3" de latente 2
+  (parecen un 7 y un 8) y la "7" y la "8" de latente 10. Ese es el juicio de quien escribe esto: el enunciado pide
+  el de ustedes sobre la figura.
+
 ## Arquitectura del autoencoder
 
 Se define en el JSON con dos claves:
@@ -305,5 +345,5 @@ autoencoder chico aprende a reconstruir su entrada.
 - 1.a.2: el estudio de arriba cubre arquitectura y optimizador sobre `tanh`. No se probó el tamaño del latente (el
   enunciado fija 2), `batch_size` ni `adaptive_eta` con `tanh`, y el único η de las arquitecturas es 0,001.
 - Ejercicio 2 (VAE): las comparaciones de β, de latente 2 y 10 y con o sin KL son de una sola semilla (la evaluación final
-  usa 3, para reconstrucción); falta probar más épocas y otras arquitecturas, y elegir y justificar una muestra nueva
-  para el 2.c.
+  usa 3, para reconstrucción); falta probar más épocas y otras arquitecturas, y que ustedes juzguen y elijan la muestra
+  del 2.c sobre `docs/vae_muestras_2c.png`.
