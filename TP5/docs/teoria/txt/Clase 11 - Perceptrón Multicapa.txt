@@ -1,0 +1,636 @@
+Perceptrón
+Multicapa
+Sistemas de
+Inteligencia Artificial
+Segundo Cuatrimestre 2026
+
+Rodrigo Ramele
+Eugenia Piñeiro
+Alan Pierri
+Santiago Reyes
+Marina Fuster
+Paula Oseroff
+RESUMEN DE LA CLASE ANTERIOR
+
+ ● ¿Quiénes son McCulloch y Pitts? ¿Cuál fue su aporte?
+
+
+ ● ¿Qué tipo de problemas podemos resolver con el perceptrón
+   simple escalón?
+
+ ● ¿Con qué mecanismo encuentro los pesos sinápticos y el bias?
+
+
+ ● ¿Qué tipo de problemas puedo resolver al cambiar la función de
+   activación? Por ejemplo: por una lineal o no lineal de la familia
+   de sigmoideas.
+LIMITACIONES DEL PERCEPTRÓN SIMPLE
+
+
+
+
+     1
+
+
+
+
+         1     2
+BUSCANDO ALTERNATIVAS…
+BUSCANDO ALTERNATIVAS…
+
+
+
+                         1000
+
+                         -1000
+
+                                 1
+
+
+
+
+                                 -1
+
+
+
+                         1000
+
+                         -2000
+¿CÓMO PUEDO COMBINAR LOS PERCEPTRONES?
+¿Qué clase de problemas
+  puedo representar?
+TEOREMA DE APROXIMACIÓN UNIVERSAL
+1989 - Cybenko, G.
+(expansión en 1990, Hornik, K.)
+TEOREMA DE APROXIMACIÓN UNIVERSAL
+1989 - Cybenko, G.
+(expansión en 1990, Hornik, K.)
+TEOREMA DE APROXIMACIÓN UNIVERSAL
+1989 - Cybenko, G.
+(expansión en 1991, Hornik, K.)
+PERCEPTRÓN MULTICAPA
+
+
+
+   DISCLAIMER: nos
+ olvidamos del bias por
+        un rato
+¿CÓMO CALCULAMOS LA SALIDA DE LA RED? FEED-FORWARD PASS
+¿CÓMO CALCULAMOS LA SALIDA DE LA RED? FEED-FORWARD PASS
+
+Salida de la neurona:
+
+
+
+
+Salida de la neurona de una capa intermedia:
+
+
+
+
+Salida de la neurona de la primera capa intermedia:
+¿CÓMO CALCULAMOS LA SALIDA DE LA RED? FEED-FORWARD PASS
+   ¿CÓMO VA
+CAMBIANDO EL
+ ALGORITMO?
+AHORA… ¿CÓMO LO ENTRENAMOS? 👀
+AHORA… ¿CÓMO LO ENTRENAMOS? 👀   Recordemos…
+AHORA… ¿CÓMO LO ENTRENAMOS? 👀   Recordemos…
+ENTRENAMIENTO: EXPLICACIÓN CONCEPTUAL
+
+
+
+
+                                         0.1
+                                         -3.4
+                                          2
+                                         0.6
+                                        0.34
+                                         -1.2
+                                        -0.01
+                                        0.86
+                                         -1.9
+                                         -2.3
+                                         0.7
+                                        0.02
+                                          …
+ENTRENAMIENTO: EXPLICACIÓN CONCEPTUAL
+
+
+
+
+  Mecanismo de optimización:    Regla de la cadena de la
+     por ahora, gradiente      derivada para capas ocultas
+        descendente.
+ENTRENAMIENTO: EXPLICACIÓN CONCEPTUAL
+
+
+
+
+                                        ❓
+ENTRENAMIENTO: EXPLICACIÓN CONCEPTUAL
+
+
+
+
+ Aplicamos la regla de la cadena:
+
+
+
+
+                                        ❓
+ENTRENAMIENTO: EXPLICACIÓN CONCEPTUAL
+
+
+
+
+                                        ❓
+ENTRENAMIENTO: EXPLICACIÓN CONCEPTUAL
+
+
+
+
+ Aplicamos la regla de la cadena:
+
+
+
+
+                                        ❓
+ENTRENAMIENTO: EXPLICACIÓN CONCEPTUAL
+
+
+
+
+                                        ❓
+ENTRENAMIENTO: EXPLICACIÓN CONCEPTUAL
+
+
+
+
+ Aplicamos la regla de la cadena:
+
+
+
+
+                                        ❓
+RUMELHART, HINTON, WILLIAMS (1986)
+
+                                     ●   Trabajan en un nuevo
+                                         algoritmo para actualizar los
+                                         pesos de una red neuronal
+                                         usando retropropagación
+                                         (backpropagation)
+
+
+                                     ●   Para calcular la
+                                         actualización de los pesos
+                       0.1
+                                         utilizaremos el algoritmo del
+                       -3.4
+                        2
+                       0.6
+                                         gradiente descendente y la
+                      0.34
+                       -1.2              regla de la cadena para la
+                      -0.01
+                      0.86
+                       -1.9
+                                         diferenciación.
+                       -2.3
+                       0.7
+                      0.02
+                        …
+RUMELHART, HINTON, WILLIAMS (1986)
+
+
+
+
+                       0.1
+                       -3.4
+                        2
+                       0.6
+                      0.34
+                       -1.2
+                      -0.01
+                      0.86
+                       -1.9
+                       -2.3
+                       0.7
+                      0.02
+                        …
+DELTA: EXPLICACIÓN CONCEPTUAL
+
+
+
+
+ Aplicamos la regla de la cadena:
+
+
+
+
+                                    ❓
+DELTA: EXPLICACIÓN CONCEPTUAL
+
+
+
+
+ Aplicamos la regla de la cadena:
+
+
+
+
+                                    ❓
+DELTA: EXPLICACIÓN CONCEPTUAL
+
+
+
+
+ Aplicamos la regla de la cadena:
+
+
+
+
+                                    ❓
+   ¿CÓMO VA
+CAMBIANDO EL
+ ALGORITMO?
+¿POR QUÉ FUE TAN IMPORTANTE?
+
+ ● Permite resolver el problema de determinar cuánto
+   contribuye cada neurona al error del perceptrón
+   multicapa de manera eficiente.
+
+ ● Herramienta práctica para aportar evidencia empírica al
+   Teorema de Aproximación Universal
+
+ ● Renueva el interés en el área de inteligencia artificial
+
+ ● El concepto de entrenar redes “deep” se hace posible
+   con back propagation
+                    PERCEPTRÓN SIMPLE   PERCEPTRÓN MULTICAPA
+
+Proceso para
+obtener la salida
+de la neurona
+(“predecir”)
+                                                   ?
+Función de costo
+(medir error con
+respecto a la
+salida esperada)
+                                                   ?
+Proceso de
+“aprendizaje”
+para ajustar los
+pesos
+                                                   ?
+                    PERCEPTRÓN SIMPLE   PERCEPTRÓN MULTICAPA
+
+Proceso para
+obtener la salida
+de la neurona
+(“predecir”)
+
+
+
+Función de costo
+(medir error con
+respecto a la
+salida esperada)
+                                                   ?
+Proceso de
+“aprendizaje”
+para ajustar los
+pesos
+                                                   ?
+                    PERCEPTRÓN SIMPLE   PERCEPTRÓN MULTICAPA
+
+Proceso para
+obtener la salida
+de la neurona
+(“predecir”)
+
+
+
+Función de costo
+(medir error con
+respecto a la
+salida esperada)
+
+
+
+Proceso de
+“aprendizaje”
+para ajustar los
+pesos
+                                                   ?
+RETROPROPAGACIÓN: NOTACIÓN
+Índice   Descripción
+i        índice de la neurona de la capa de salida (o siguiente)
+
+j        índice de la neurona de la capa intermedia
+
+k        índice de la neurona de entrada o de la capa anterior
+
+m        índice de la capa intermedia
+
+p        cantidad datos
+
+𝜇        dato en particular
+RETROPROPAGACIÓN: CAPA DE SALIDA (j = M)
+
+
+
+
+                              Notar que el ejemplo está hecho para un dato de entrada. Se deberá extender al conjunto.
+RETROPROPAGACIÓN: CAPA DE SALIDA (j = M)
+
+
+
+
+                              Notar que el ejemplo está hecho para un dato de entrada. Se deberá extender al conjunto.
+RETROPROPAGACIÓN: CAPA DE SALIDA (j = M)
+
+
+
+
+                              Notar que el ejemplo está hecho para un dato de entrada. Se deberá extender al conjunto.
+RETROPROPAGACIÓN: CAPA DE SALIDA (j = M)
+
+
+
+
+                              Notar que el ejemplo está hecho para un dato de entrada. Se deberá extender al conjunto.
+RETROPROPAGACIÓN: CAPA DE SALIDA (j = M)
+
+
+
+
+                              Notar que el ejemplo está hecho para un dato de entrada. Se deberá extender al conjunto.
+RETROPROPAGACIÓN: CAPA OCULTA (j = M-1 , j in [M-1, …, 1])
+
+
+
+
+                                 Notar que el ejemplo está hecho para un dato de entrada. Se deberá extender al conjunto.
+RETROPROPAGACIÓN: CAPA OCULTA (j = M-1 , j in [M-1, …, 1])
+
+
+
+
+                                 Notar que el ejemplo está hecho para un dato de entrada. Se deberá extender al conjunto.
+RETROPROPAGACIÓN: CAPA OCULTA (j = M-1 , j in [M-1, …, 1])
+
+
+
+
+                                 Notar que el ejemplo está hecho para un dato de entrada. Se deberá extender al conjunto.
+RETROPROPAGACIÓN: CAPA OCULTA (j = M-1 , j in [M-1, …, 1])
+
+
+
+
+                                 Notar que el ejemplo está hecho para un dato de entrada. Se deberá extender al conjunto.
+RETROPROPAGACIÓN: CAPA OCULTA (j = M-1 , j in [M-1, …, 1])
+RETROPROPAGACIÓN: CAPA OCULTA (j = M-1 , j in [M-1, …, 1])
+RETROPROPAGACIÓN: CAPA OCULTA (j in [M-1, …, 1])
+
+
+
+
+                                Notar que el ejemplo está hecho para un dato de entrada. Se deberá extender al conjunto.
+                    PERCEPTRÓN SIMPLE   PERCEPTRÓN MULTICAPA
+
+Proceso para
+obtener la salida
+de la neurona
+(“predecir”)
+
+
+
+Función de costo
+(medir error con
+respecto a la
+salida esperada)
+
+
+
+Proceso de
+“aprendizaje”
+para ajustar los
+pesos
+                 ¿CÓMO VA
+              CAMBIANDO EL
+               ALGORITMO?
+
+
+
+TIP: expresar todo de
+   manera matricial
+   utilizando alguna
+librería como numpy.
+INCREMENTAL/ONLINE        La actualización de los pesos de
+(Gradiente Descendente    la red se hace luego de calcular el
+                          Δw para un elemento del
+      Estocástico)
+                          conjunto de datos
+
+
+MINI LOTE/MINI BATCH      La actualización de los pesos de
+                          la red se hace luego de calcular el
+(Gradiente Descendente
+                          Δw para un subconjunto de
+      Estocástico)        elementos del conjunto de datos
+
+
+
+                          La actualización de los pesos de
+     LOTE/BATCH
+                          la red se hace luego de calcular el
+(Gradiente Descendente)   Δw para todos los elementos
+                          del conjunto de datos
+                 ¿CÓMO VA
+             CAMBIANDO EL
+              ALGORITMO?
+            VERSIÓN BATCH
+
+TIP: expresar todo de
+   manera matricial
+   utilizando alguna
+librería como numpy.
+                    PERCEPTRÓN SIMPLE          PERCEPTRÓN MULTICAPA
+
+Proceso para
+obtener la salida
+de la neurona
+(“predecir”)
+                        Puede usarse Mean
+                        Square Error (MSE)
+Función de costo       como función de costo
+(medir error con
+respecto a la
+salida esperada)
+
+
+
+Proceso de
+“aprendizaje”
+para ajustar los
+pesos
+ESTRATEGIAS DE ENTRENAMIENTO: ONLINE / BATCH
+
+
+  ● ¿Cuál es el costo de cada época? (aprendizaje)
+
+  ● ¿Cuáles son los requerimientos de memoria?
+
+  ● ¿Cómo manejan el “ruido”? (ejemplo, outliers)
+
+  ● ¿Cuánto tarda en converger?
+
+  ● …
+ Ejercicio: ¿por qué
+inicializar w a valores
+ random pequeños y
+ no dejarlos en cero?
+Con respecto a la inicialización de pesos              What are the best weight initialization
+                                                       techniques for deep neural networks?
+
+
+
+
+             Inicializar los pesos en cero
+           lleva al problema de simetría
+
+
+
+
+    Recomendado inicializar los pesos con valores
+  aleatorios de una distribución uniforme/gaussiana,
+                 en valores pequeños
+EJERCICIO
+RESUMEN
+
+● El perceptrón multicapa me permite modelar
+  transformaciones complejas. En teoría, cualquier función
+  continua puede modelarse con un perceptrón multicapa.
+
+● La arquitectura del perceptŕon multicapa debe realizarse
+  manualmente. A priori, no tenemos una receta que nos
+  permita definir “la mejor arquitectura”.
+
+● Retropropagación es un algoritmo que define el “error” a
+  nivel de las capas ocultas.
+¿Qué estoy
+optimizando
+cuando quiero
+usar una red
+neuronal?
+BIBLIOGRAFÍA
+
+Cybenko, G (1989) Approximation by Superpositions of a Sigmoidal Function,
+https://link.springer.com/article/10.1007/BF02551274
+
+
+Hornik, Kurk (1990) Approximation capabilities of multilayer feedforward networks,
+https://www.sciencedirect.com/science/article/abs/pii/089360809190009T?via%3Dihub
+
+
+Rumelhart D., Hinton G. & Williams R., Learning representations by back-propagating
+errors. Nature 323, 533-536 (1986), https://doi.org/10.1038/323533a0
+
+
+Rodrigo Ramele (2024) Reglamento y Apuntes de Sistemas de Inteligencia Artificial,
+Capítulo 7.
+
+Aggarwal, C. C. (2018). Neural Networks and Deep Learning: A Textbook. Springer, pp.
+1–37.
+  BIAS EN
+PERCEPTRÓN
+ MULTICAPA
+EXTRA: ¿CÓMO INCLUYO EL BIAS?
+
+
+  Recordemos que el bias (o umbral) nos permite flexibilizar la forma de la salida
+  de la neurona, porque permite desplazamiento de la función (ver clase 8)
+EXTRA: ¿CÓMO INCLUYO EL BIAS?
+
+
+  Recordemos que el bias (o umbral) nos permite flexibilizar la forma de la salida
+  de la neurona, porque permite desplazamiento de la función (ver clase 8)
+
+
+
+
+                  WolframAlpha Link                                   WolframAlpha Link
+EXTRA: ¿CÓMO INCLUYO EL BIAS?
+
+           Podemos incluir un x0 que permita
+           ajustar un peso w0. Este peso será
+               equivalente al bias pero puede
+      incorporarse en los cálculos de manera
+                                     matricial.
+EXTRA: ¿CÓMO INCLUYO EL BIAS?
+EXTRA: ¿CÓMO INCLUYO EL BIAS?   Podemos incluir, capa a capa, un valor
+                                     constante para todos los datos de
+                                  entrada, de manera tal que podamos
+                                ajustar w0 (bias) como si fuera un peso
+                                      sináptico más de la red neuronal.
+
+
+
+
+     1
+
+
+
+
+     1
+
+
+
+
+     1
+RETROPROPAGACIÓN: NOTACIÓN
+Índice   Descripción                                        A partir de
+                                                              ahora
+i        índice de la neurona de la capa de salida (o siguiente)
+                                                            comienza
+                                                             desde 0
+j        índice de la neurona de la capa intermedia
+         índice de la neurona de entrada o de la capa
+k        anterior                                                         1
+m        índice de la capa intermedia
+
+p        cantidad datos
+
+𝜇        dato en particular
+
+                                                                          1
+
+
+
+
+                                                                          1
+EXTRA: ¿CÓMO INCLUYO EL BIAS?       ¿Es estrictamente necesario en
+                                       input o en todas las capas?
+
+                                    No necesariamente, esto pueden
+                                 probarlo. Recordar que el rol del bias
+                                     permite mayor flexibilidad y más
+                                     parámetros libres para aprender
+                                   patrones cada vez más complejos.
+
+     1                          Quizás es posible alcanzar soluciones
+                                en determinadas situaciones sin hacer
+                                  uso del mismo. Pueden probar ¿qué
+                                 ocurre si no lo incluyo? ¿si lo incluyo
+                                    solo en la capa de entrada? ¿si lo
+                                           incluyo en todas las capas?
+     1
+
+
+
+
+     1
+

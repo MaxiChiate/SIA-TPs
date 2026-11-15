@@ -1,0 +1,87 @@
+SIA - Optimización (extras)
+Aprendizaje en redes neuronales
+
+
+● El método del gradiente descendente nos da una
+  dirección en la cual lograremos navegar esa superficie
+  bajando cada vez el costo.
+
+
+● Esa dirección es ∆W
+Aprendizaje en redes neuronales
+
+
+● El problema que tiene el método del gradiente descendente es que la
+   información que dispone es local.
+
+● Esto es, porque la dirección de descenso es, justamente, la derivada de
+   E(W) respecto a cada uno de los pesos de las conexiones en el punto
+   obtenido hasta ese momento.
+Aprendizaje en redes neuronales
+momentum
+eta adaptativo
+eta adaptativo
+
+
+
+
+         * ‘en forma consistente’ se puede parametrizar de muchas formas.
+         Por ejemplo, si en K épocas el error varía menos de P%
+RMSProp
+
+
+
+
+          gt^2 es el cuadrado aplicado
+          miembro a miembro en el vector gt
+
+
+
+          ϵ es un parámetro para evitar
+          divisiones por 0 (en las primeras
+          iteraciones)
+RMSProp - Intuición
+
+
+
+                      Se ajusta el learning rate de acuerdo
+                      a la root mean square (RMS).
+
+                      Alta RMS: learning rate mas bajo
+                      ‘amortigua’ los cambios.
+                      Reduce ‘oscilaciones’
+
+                      Baja RMS: LR mas alto evita
+                      mínimos locales, aprende mas
+                      rápido
+RMSProp - Intuición
+
+
+ Promedio? Donde?
+
+
+
+
+ Al desarrollar varias iteraciones, toma la forma de un promedio.
+ Los términos mas recientes tienen mas peso que los viejos.
+Adam
+
+ ● Presentado en el paper Adam: A method for stochastic
+    optimization (Kingma, Ba. 2015)
+
+
+ ● Combinación de las ideas de RMSProp y Momentum
+
+
+ ● Muy usado en la práctica
+Adam
+Adam
+
+
+       Los términos bias-corrected
+       son necesarios para
+       compensar el bias generado
+       por los beta en las primeras
+       iteraciones (ya que mt y vt se
+       inicializan en 0)
+

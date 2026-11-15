@@ -1,0 +1,431 @@
+MÉTRICAS DE
+EVALUACIÓN
+Métricas, sobreajuste y normalización.
+
+
+
+
+                 Sistemas de Inteligencia Artiﬁcial - 2026
+TABLA DE CONTENIDOS
+
+                   03. MÉTRICAS
+01. INTRODUCCIÓN
+
+    MATRIZ DE
+                   04. SOBREAJUSTE
+02. CONFUSIÓN
+                   05. NORMALIZACIÓN
+
+                                       2
+01
+INTRODUCCIÓN
+
+
+
+               3
+INTRODUCCIÓN
+                           Tenemos el error que comete el método, pero :
+
+                            ●   ¿Cuántos ejemplos del conjunto de
+                                entrenamiento clasiﬁca correctamente?
+
+¿De qué manera puedo        ●   ¿Cuántos ejemplos que NO pertenecen al
+medir el desempeño de mi        conjunto de entrenamiento clasiﬁca
+                                correctamente?
+modelo?
+                            ●   ¿Qué signiﬁca “clasiﬁcar correctamente”?
+
+
+
+
+                                                                           4
+OBJETIVOS
+
+
+
+     01                    02                    03                    04
+Evaluar un método      Comparar varios      Analizar un mismo     Medir el efecto del
+de clasiﬁcación con      métodos de             método de            cambio de
+métricas estándar.    clasiﬁcación en un      clasiﬁcación en     parámetros en un
+                        mismo dataset      diferentes datasets.       método.
+
+
+
+
+                                                                                        5
+EVALUACIÓN
+
+●   Dividir el conjunto de datos disponible en
+     ○ Conjunto de Entrenamiento (training set)
+     ○ Conjunto de Prueba (testing set)
+
+                                    DATASET
+
+                  TEST                    TRAIN
+
+
+    Luego, entrenar y evaluar
+
+    1.   Entrenar la red con el conjunto de entrenamiento.
+    2.   Evaluar el método con el conjunto de entrenamiento.
+    3.   Evaluar el método con el conjunto de prueba
+
+
+                                                               6
+EVALUACIÓN
+
+
+
+  1.   ¿Cómo sabemos si esta división es apropiada?
+  2.   ¿Cómo evaluamos cuantitativamente la capacidad de clasiﬁcación?
+  3.   ¿Es verdad que si E (w ) ≡ 0, entonces es un clasiﬁcador perfecto?
+
+
+
+
+                                                                            7
+METODOLOGÍAS
+
+
+Matriz de Confusión
+
+
+                      Métricas para la evaluación del rendimiento
+
+
+Diseño del experimento para la evaluación
+
+
+
+
+                                                                    8
+02
+MATRIZ DE
+CONFUSIÓN
+
+
+
+            9
+MATRIZ DE CONFUSIÓN
+
+Tabla que permite evaluar el desempeño de un algoritmo de clasiﬁcación.
+
+ ●   Columna → cantidad de instancias en la clase dada por el método. (Predicción)
+
+ ●   Fila → cantidad de instancias en la clase verdadera. (Real/Actual)
+
+
+                                                 Prediction
+
+                                         Positive          Negative
+
+                Actual    Positive          TP                FN
+
+                          Negative          FP                TN
+
+                                                                                     10
+EJEMPLO
+
+Consideremos un modelo de clasiﬁcación que fue entrenado para distinguir entre:
+perros y gatos.
+
+Se toma una muestra de 27 animales:
+ ● 15 perros
+ ● 12 gatos
+Después de clasiﬁcar se obtiene la siguiente matriz de confusión:
+
+
+                                   Perro             Gato
+
+                     Perro           11                4
+
+                     Gato             2               10
+
+                                                                                  11
+MATRIZ DE CONFUSIÓN MULTICLASE
+
+
+ Supongamos
+ que tenemos
+   5 clases
+
+
+
+
+                                 12
+03
+MÉTRICAS
+
+
+
+
+           13
+MÉTRICAS
+
+Criterios para evaluar la clasiﬁcación
+
+Métricas estándar:
+ ● Accuracy
+ ● Precision
+ ● Recall
+ ● F1-Score
+ ● Tasa de TP
+ ● Tasa de FP
+
+
+
+
+                                         14
+MÉTRICAS
+
+      ACCURACY   PRECISION
+
+
+
+
+       RECALL    F1-SCORE
+
+
+
+
+                             15
+TASAS
+
+
+  Tasa de Verdaderos Positivos   Tasa de Falsos Positivos
+
+
+
+
+                                                            16
+PROCEDIMIENTO
+
+Teniendo los dos conjuntos de datos, el de entrenamiento y el de prueba:
+
+
+Dada una cantidad de épocas: epoch
+ 1.   Calcular los w utilizando el conjunto de entrenamiento.
+ 2.   Clasiﬁcar los datos del conjunto de prueba utilizando los w encontrados en el paso 1
+ 3.   Calcular el valor de las métricas para los ejemplos del conjunto de entrenamiento y
+      luego para los del conjunto de prueba.
+
+
+Realizar el mismo experimento para epoch = 1, 10, 20, . . . , 300
+
+
+
+                                                                                             17
+04
+SOBREAJUSTE
+Overﬁtting
+
+
+
+
+              18
+DATASET
+
+
+
+
+          19
+UNDERFITTING
+
+
+
+
+               20
+OVERFITTING
+
+
+
+
+              21
+OVERFITTING / SOBREAJUSTE
+
+En cualquier método de aprendizaje:
+
+Es el efecto de sobreentrenar un algoritmo de aprendizaje con datos para los que se conoce
+el resultado deseado.
+
+El método clasiﬁca con gran precisión los datos del conjunto de entrenamiento
+
+Pero… no puede generalizar
+
+
+
+
+                                                                                             22
+EJEMPLO ACCURACY
+
+
+
+
+                   23
+EJEMPLO SOBREAJUSTE
+
+
+
+
+                      24
+EJEMPLO SOBREAJUSTE
+
+
+
+
+                      25
+CAUSAS
+
+El sobreajuste puede deberse a diversos factores:
+
+
+ ●   Conjunto de datos de entrenamiento no balanceado.
+ ●   Pocos registros en el conjunto de entrenamiento.
+ ●   Conjunto de datos de entrenamiento con mucho ruido.
+
+
+
+
+                                                           26
+TRAIN/TEST SPLIT
+
+¿Cómo sabemos si la partición train/test es apropiada?
+
+
+
+                        Utilizamos métodos de experimentación
+
+                 Validación Cruzada (K-Fold Cross Validation)
+
+
+
+
+Nota: NO es la única técnica
+
+
+                                                                27
+K-FOLD CROSS-VALIDATION
+
+1.   Se divide aleatoriamente el dataset en k partes “iguales”.
+
+2.   Tomar k −1 partes y usarlas para entrenar (training_set) y el remanente como testing_set
+
+
+                   TEST
+                 TAIN                                                    it 0
+
+
+                              TEST                                       it 1
+
+
+                                         TEST                            it 2
+
+
+                                                    TEST                 it 3
+
+                                                                  TEST   it k-1
+                                                                                                28
+K-FOLD CROSS-VALIDATION
+
+for j=1…T (generalmente T=k)
+
+ 1.   Entrenamiento con el j-ésimo conjunto
+
+2.    Evaluación del método usando como testing set la parte separada para tal efecto.
+
+3.    Se calcula alguna medida de la precisión del método.
+
+Finalmente se obtienen parámetros de desempeño del promedio de las T iteraciones.
+
+
+
+
+                                                                                         29
+RESUMEN
+
+            Error alto      SI
+                                 UNDERFITTING
+          en training set
+
+
+                  NO
+
+
+            Error alto      SI
+                                 OVERFITTING
+          en testing set
+
+
+                  NO
+
+          BUEN MODELO
+
+                                                30
+05
+NORMALIZACIÓN
+
+
+
+
+                31
+FEATURE SCALING
+Se utiliza para escalar los datos dentro un intervalo [a; b]
+
+
+                               MIN-MAX FEATURE SCALING
+
+
+
+
+Entre [0; 1 ] sería:
+
+
+
+
+                                                               32
+ESTANDARIZACIÓN
+Tomamos las variables del conjunto P={X1, …, Xp}. Cada Xi tiene n registros.
+Se calculan los siguientes estadísticos unidimensionales:
+
+                  MEDIA                                      DESVÍO ESTÁNDAR
+
+           __
+
+
+
+
+                             VARIABLE ESTANDARIZADA
+                                              __
+                                ~
+
+Nota: También llamada Z-Score                                                  33
+EJEMPLO
+
+
+
+
+   A   B   C   D   E   F   G   H   I   J
+
+
+                                           34
+EJEMPLO
+Si estandarizamos las variables
+
+
+
+
+                A       B         C       D   E   F   G   H       I   J
+            A       B        C        D       E   F   G   H   I       J
+                                                                          35
+UNIT LENGTH SCALING
+Si bien todas las anteriores son formas de normalización de datos, se le suele llamar
+“normalizar” o unit length scaling a dividir por la norma 2:
+
+
+                             UNIT LENGTH SCALING
+
+
+
+
+                                                                                        36
+

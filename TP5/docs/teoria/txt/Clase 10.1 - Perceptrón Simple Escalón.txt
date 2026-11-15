@@ -1,0 +1,441 @@
+Redes Neuronales
+Sistemas de Inteligencia Artificial
+        Primer Cuatrimestre 2026
+                  Alan Pierri
+               Rodrigo Ramele
+               Eugenia Piñeiro
+                Marina Fuster
+               Luciano Bianchi
+               Santiago Reyes
+                Marco Scilipoti
+                Paula Oseroff
+                Joaquín Girod
+      ¿Qué
+ entienden
+   por red
+neuronal?
+“Una red neuronal es un tipo de algoritmo de
+aprendizaje automático que está modelado según la
+estructura y función del cerebro humano.
+
+Consiste en una gran cantidad de nodos de
+procesamiento interconectados (neuronas) que
+trabajan juntos para procesar y analizar datos.
+
+Cada neurona recibe uno o más inputs, los procesa
+utilizando un conjunto de pesos aprendidos y produce
+una salida que se transmite a otras neuronas en la
+red.”
+EVENTOS EN EL ÁREA DE REDES NEURONALES
+
+     McCulloch y Pitts
+                                                Investigación declina
+ introducen las bases del
+                                                 por limitaciones de
+      campo de redes                                                                                 Autoencoder variacional
+                                                       hardware
+        neuronales
+                                                                                                                         SORA
+
+          1940          1950           1960            1970             1980           1990   2000      2010          2020          2030
+
+
+                                                                                                          Redes GAN      Dall-E 2
+                        Frank Rosenblatt                      Se desarrolla el MLP y
+                      desarrolla el algoritmo                    el algoritmo de                                           GPT 3
+                                                                                                           Alpha GO       GPT 4
+                         del perceptrón                           entrenamiento
+                                                                                                            Transformers
+                                                                  Redes de Hopfield
+                                                                  (redes recurrentes)
+
+
+                                                                    Redes Convolucionales
+
+                                                                   Primeras
+                                                              implementaciones de
+                                                                  autoencoder
+EVENTOS EN EL ÁREA DE REDES NEURONALES
+
+     McCulloch y Pitts
+                                                Investigación declina
+ introducen las bases del
+                                                 por limitaciones de
+      campo de redes                                                                                           Autoencoder variacional
+                                                       hardware
+        neuronales
+                                                                                                                                   SORA
+
+          1940          1950           1960            1970             1980           1990           2000         2010          2020         2030
+
+
+                                                                                                                     Redes GAN     Dall-E 2
+                        Frank Rosenblatt                      Se desarrolla el MLP y
+                      desarrolla el algoritmo                    el algoritmo de                                                     GPT 3
+                                                                                                                      Alpha GO      GPT 4
+                         del perceptrón                           entrenamiento
+                                                                                                                       Transformers
+                                                                                                                                                     LLM BOOM
+                                                                  Redes de Hopfield
+                                                                  (redes recurrentes)
+
+
+                                                                    Redes Convolucionales
+
+                                                                   Primeras
+                                                              implementaciones de
+                                                                  autoencoder
+
+
+
+
+                                                                                              LLM Explained: The LLM Training Landscape
+¿QUÉ IDEAS ESTUDIAMOS DURANTE EL TP3?
+
+     McCulloch y Pitts
+ introducen las bases del
+      campo de redes
+        neuronales
+
+
+
+          1940          1950           1960     1970           1980             1990   2000       2010      2020       2030
+
+
+                        Frank Rosenblatt
+                      desarrolla el algoritmo          Se desarrolla el MLP y
+                         del perceptrón                   el algoritmo de
+                                                           entrenamiento
+
+
+
+
+                                                                                       ●   Por el momento no vamos a profundizar el
+                                                                                           área de “Deep Learning” (se ve más
+                                                                                           adelante en la materia)
+                                                                                       ●   Objetivo: entender qué problemas se
+                                                                                           pueden resolver, los conceptos básicos que
+                                                                                           componen a una red neuronal y su
+                                                                                           entrenamiento
+ Clase 1: Modelo básico     Clase 2: Modelo básico
+de neurona (capítulo 6) y      de red neuronal
+arranque de red neuronal         (capítulo 7)
+
+
+
+
+  Clase 3: Métricas de
+                             Clase 4: Métodos de
+ evaluación (capítulo 8),
+                               Regularización,
+  Optimización para RN
+                             Backpropagation II,
+       (capítulo 7),
+        Consultas                 Consultas
+DE LA CLASE DE OPTIMIZACIÓN
+
+
+
+
+                                    Redes
+                                  Neuronales
+                              APRENDIZAJE
+                              AUTOMÁTICO /
+                                MACHINE
+                                LEARNING
+APRENDIZAJE SUPERVISADO   vs.   APRENDIZAJE NO SUPERVISADO
+Perceptrón Simple
+Sistemas de Inteligencia Artificial
+        Primer Cuatrimestre 2026
+                  Alan Pierri
+               Rodrigo Ramele
+               Eugenia Piñeiro
+                Marina Fuster
+               Luciano Bianchi
+               Santiago Reyes
+                Marco Scilipoti
+                Paula Oseroff
+                Joaquín Girod
+MODELO DE NEURONA - 1943
+MODELO DE NEURONA - 1943
+
+
+
+
+                                             Donald Hebb
+
+
+
+
+                           “Neurons that
+                             fire together
+                                      wire
+                                 together”
+                                                                      Función de
+Warren McCulloch & Walter Pitts 1943                                  activación
+                                                                                     umbral
+                                                         Estado de
+                                                         excitación
+
+
+
+
+                                                                               Salida de la
+                                                                               neurona
+                                                  Pesos sinápticos
+
+
+                                       Entradas
+FORMALIZACIÓN MATEMÁTICA
+
+
+
+
+                           Función de activación escalón o signo.
+Un cliente acaba de expandir su negocio
+a Canadá. Con todo el quilombo de
+tarifas entre Canadá y Estados Unidos,
+le interesa saber qué candidato se
+encuentra más favorecido en las
+encuestas, ya que la votación de Abril
+probablemente afecte su negocio.
+
+Los datos de los ciudadanos de los
+cuales dispone son:
+
+ -   Edad
+ -   Ingreso económico
+                                          Carney vs Poilievre
+         Conservative
+         Liberal
+
+
+
+
+1   -1
+         Conservative
+         Liberal
+
+
+
+
+1   -1
+                                     Problemas linealmente
+HIPERPLANO DE SEPARACIÓN                   separables
+
+
+
+
+                      Conservative
+                      Liberal
+                                     REPRESENTACIÓN DEL HIPERPLANO
+HIPERPLANO DE SEPARACIÓN
+
+
+
+                      Conservative
+                      Liberal
+HIPERPLANO DE SEPARACIÓN
+
+
+                           Conservative
+                           Liberal        Proyección de un punto sobre el
+                                          hiperplano, correspondiente a la recta
+                                          que pasa por el origen:
+HIPERPLANO DE SEPARACIÓN
+
+
+                           Conservative
+                           Liberal        Proyección de un punto sobre el
+                                          hiperplano, correspondiente a la recta
+                                          que pasa por el origen:
+
+
+
+
+                                          Si la proyección es negativa, la clase
+                                          del dato será (-1), mientras que si es
+                                          positiva la clase será (1)
+HIPERPLANO DE SEPARACIÓN
+
+
+                           Conservative
+                           Liberal
+¿QUÉ SUCEDE SI MODIFICAMOS EL
+CONJUNTO DE DATOS?
+
+
+       Conservative
+       Liberal
+¿QUÉ SUCEDE SI MODIFICAMOS EL
+CONJUNTO DE DATOS?
+
+
+       Conservative
+       Liberal
+¿QUÉ SUCEDE SI MODIFICAMOS EL
+CONJUNTO DE DATOS?
+
+
+       Conservative
+       Liberal
+¿QUÉ SUCEDE SI MODIFICAMOS EL
+CONJUNTO DE DATOS?
+
+
+       Conservative
+       Liberal
+¿QUÉ SUCEDE SI MODIFICAMOS EL
+CONJUNTO DE DATOS?
+
+
+       Conservative
+       Liberal
+
+
+
+
+                                Formalización del
+                                                    perceptrón
+¿QUÉ TENEMOS HASTA AHORA?
+
+ ● Modelo matemático de neurona biológica
+
+ ● Herramienta para resolver problemas linealmente
+   separables en Rn
+
+¿QUÉ NOS FALTA?
+REPASO
+p es la cantidad de datos.   representa el dato (0…p-1)
+
+
+
+
+                                     Conservative
+                                     Liberal
+Frank Rosenblatt 1957
+
+                        Cada vez que la neurona recibe un estímulo, los pesos sinápticos
+                        pueden actualizarse (proceso iterativo):
+
+
+
+
+                        ¿Cómo calculamos el delta?
+
+                                                       salida esperada
+
+
+                                                     entrada o dato
+
+
+                              tasa de aprendizaje                        salida obtenida
+                                   (escalar)
+ACTUALIZACIÓN DE LOS PESOS SINÁPTICOS
+¿Cómo calculamos el delta?
+
+
+
+
+Si consideramos que la salida puede ser 1 o -1, podemos reformular:
+
+
+
+
+donde la salida de la neurona está representada por
+EJEMPLO NUMÉRICO
+
+
+
+
+                   Conservative
+                   Liberal
+EJEMPLO NUMÉRICO
+
+
+
+
+                   Conservative
+                   Liberal
+                   Decision Boundary: -x1 + x2 + 1 = 0
+EJEMPLO NUMÉRICO
+EJEMPLO NUMÉRICO
+
+
+
+
+El valor esperado es (-1)
+EJEMPLO NUMÉRICO
+EJEMPLO NUMÉRICO
+
+
+
+
+                   Conservative
+                   Liberal
+GRAFICAR ACTUALIZACIÓN DE LOS PESOS SINÁPTICOS
+ALGORITMO DE ENTRENAMIENTO DEL PERCEPTRÓN SIMPLE
+AGREGAR EL UMBRAL/BIAS
+
+
+                         Conservative
+                         Liberal
+ALGORITMO DE ENTRENAMIENTO DEL PERCEPTRÓN SIMPLE
+
+
+
+
+                                    Calcular el error del perceptrón
+
+                                    Distintas formas:
+
+                                      ●   La suma del valor absoluto de los
+                                          errores devuelve cero
+
+                                      ●   Accuracy es del 100% (para
+                                          problemas de clasificación)
+
+                                      ●   …
+¿PARA QUÉ NOS SIRVE ESTA HERRAMIENTA?
+
+      Aprendizaje                              Generalización
+
+      Refiere al proceso de entrenar un        Refiere a la habilidad del perceptrón
+      perceptrón sobre un conjunto de          de desempeñarse correctamente sobre
+      datos, con el objetivo de minimizar el   datos que no fueron alimentados
+      error o la función de costo de la red    durante el entrenamiento
+      sobre las entradas del conjunto de
+      datos.
+RESUMEN
+
+ ● McCulloch y Pitts sientan las bases del modelo de
+   neurona que se utiliza en el área de redes neuronales.
+   Este modelo se denomina Perceptrón.
+
+ ● El modelo de McCulloch y Pitts permite resolver
+   problemas linealmente separables.
+
+ ● Rosenblatt provee el mecanismo que permite obtener los
+   pesos del perceptrón de manera iterativa
+
+ ● No es lo mismo aprendizaje que generalización
+BIBLIOGRAFÍA
+
+Rodrigo Ramele (2024) Reglamento y Apuntes de Sistemas de Inteligencia Artificial,
+Capítulo 6.
+
+Aggarwal, C. C. (2018). Neural Networks and Deep Learning: A Textbook. Springer, pp.
+1–37.
+
+McCulloch, W.S., Pitts, W. A logical calculus of the ideas immanent in nervous activity.
+Bulletin of Mathematical Biophysics 5, 115–133 (1943). https://doi.org/10.1007/BF02478259
+
+
+Rosenblatt, F. (1958). The perceptron: A probabilistic model for information storage
+and organization in the brain. Psychological Review, 65(6), 386–408.
+https://doi.org/10.1037/h0042519
+
+
+Łukasz Gebel (2021), Why We Need Bias in Neural Networks.
+https://towardsdatascience.com/why-we-need-bias-in-neural-networks-db8f7e07cb98
+

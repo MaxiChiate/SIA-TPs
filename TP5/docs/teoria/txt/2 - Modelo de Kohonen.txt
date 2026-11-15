@@ -1,0 +1,545 @@
+APRENDIZAJE
+NO SUPERVISADO
+Modelo de Kohonen
+
+
+
+
+               Sistemas de Inteligencia Artiﬁcial - 2026
+TABLA DE CONTENIDOS
+01. INTRODUCCIÓN   04. COMPONENTES
+                       PRINCIPALES
+
+
+    MODELO DE          REGLA DE OJA Y
+02. KOHONEN        05. SANGER
+
+    MODELO DE
+03. HOPFIELD       06. BIBLIOGRAFÍA
+
+                                        2
+02.1
+MODELO DE
+KOHONEN
+
+
+
+            3
+REDES DE KOHONEN
+
+Aprendizaje No Supervisado
+No existe información externa que indique si la red neuronal está operando correcta o
+incorrectamente.
+
+
+
+                                  Red de Kohonen
+              Durante el proceso de aprendizaje descubre por sı́ misma
+                  regularidades (patrones) en los datos de entrada.
+
+                           SOM: Mapas Auto-Organizados
+
+
+
+
+                                                                                        4
+REDES DE KOHONEN
+
+El autor es un investigador ﬁnlandés, Teuvo Kohonen, que publicó su idea por primera vez
+en 1982 [1] y luego siguió trabajando mucho tiempo [2].
+
+
+
+
+                                                                                           5
+ARQUITECTURA
+
+Las neuronas están conectadas
+
+ ●   con sı́ mismas positivamente
+
+ ●   con las neuronas vecinas. (R=n)
+
+
+
+INPUT: elemento del training set
+
+OUTPUT: grilla/mapa (M)
+
+
+
+
+                                       6
+ARQUITECTURA
+
+
+
+
+               7
+APRENDIZAJE COMPETITIVO
+
+Las neuronas compiten unas con otras
+
+Objetivo → ﬁnalmente sólo una de las
+neuronas de salida se activa
+
+Las demás son forzadas a valores de
+respuesta mínimos.
+
+
+
+
+                                 NEURONA
+                                GANADORA
+
+
+
+
+                                           8
+NEURONA GANADORA
+
+A lo largo del tiempo (épocas), algunas unidades toman un nivel de activación mayor
+mientras que el nivel de las demás se anula.
+
+
+
+                         NEURONA GANADORA
+    Dada la unidad de entrada x, la neurona que tenga vector de pesos w
+                    “más parecido” a x será ganadora.
+
+
+Aprendizaje Competitivo
+
+Esto implica una clasiﬁcación
+(las entradas parecidas van hacia la misma neurona)
+                                                                                      9
+APRENDIZAJE COMPETITIVO
+
+
+El objetivo de este aprendizaje es agrupar los datos que se introducen en la
+red.
+
+El mapa nos mostrará un agrupamiento.
+
+Las informaciones similares son clasiﬁcadas formando parte de la misma
+categoría o grupo y deben activar la misma neurona de salida.
+
+
+
+
+                                                                               10
+RED DE KOHONEN
+
+
+
+
+Red de una sola capa, en forma de grilla bidimensional (k × k) y en la que
+cada neurona está conectada a todas las componentes de un vector de
+                        entrada n-dimensional.
+
+
+
+
+Entonces pasa de un espacio multidimensional a un espacio bidimensional.
+
+
+
+                                                                             11
+GRILLA
+
+
+
+        Dimensión KxK
+
+  Si los datos de entrada tienen
+dimensión N → cada neurona de la
+     grilla tiene N conexiones.
+                                   K
+
+
+
+                                       K
+
+                                           12
+GRILLA RECTANGULAR
+
+
+
+
+                     13
+GRILLA HEXAGONAL
+
+
+
+
+                   14
+VECINDARIO
+
+
+Se deﬁne un radio R, donde, para una grilla rectangular:
+
+4-vecinos → R = 1
+
+8-vecinos → R = sqrt(2)
+
+
+
+
+Entradas similares
+En cada neurona se concentran datos similares,
+Neuronas vecinas contienen datos con algún grado de similitud entre sı́.
+
+
+
+
+                                                                           15
+CARACTERÍSTICAS
+
+
+●   Elegir la cantidad de neuronas de la grilla k × k.
+
+●   Cada neurona de salida j ∈ {1, . . . , k² } tiene asociado un vector de pesos
+    Wj = (wj1 , . . . , wjn ) (el representante de esa neurona).
+
+●   Wj de cada neurona de salida tiene la misma dimensión que los datos de entrada.
+
+
+
+
+                                                                                      16
+02.2
+ESTANDARIZACIÓN
+
+
+
+
+                  17
+FEATURE SCALING
+Se utiliza para escalar los datos dentro un intervalo [a; b]
+
+
+                               MIN-MAX FEATURE SCALING
+
+
+
+
+Entre [0; 1 ] sería:
+
+
+
+
+                                                               18
+ESTANDARIZACIÓN
+Tomamos las variables del conjunto P={X1, …, Xp}. Cada Xi tiene n registros.
+Se calculan los siguientes estadísticos unidimensionales:
+
+                  MEDIA                                      DESVÍO ESTÁNDAR
+
+           __
+
+
+
+
+                             VARIABLE ESTANDARIZADA
+                                              __
+                                ~
+
+Nota: También llamada Z-Score                                                  19
+EJEMPLO
+
+
+
+
+   A   B   C   D   E   F   G   H   I   J
+
+
+                                           20
+EJEMPLO
+Si estandarizamos las variables
+
+
+
+
+            A       B        C    D   E   F   G   H   I   J
+                                                              21
+UNIT LENGTH SCALING
+Si bien todas las anteriores son formas de normalización de datos, se le suele llamar
+“normalizar” o unit length scaling a dividir por la norma 2:
+
+
+                             UNIT LENGTH SCALING
+
+
+
+
+                                                                                        22
+02.3
+ALGORITMO
+
+
+
+
+            23
+ALGORITMO
+
+INICIALIZACIÓN
+
+ 1.   Xp = {x1p , . . . , xnp}, p = 1, . . . , P son los registros de entrada con dimensión n.
+
+2.    Deﬁnir la cantidad de neuronas de salida: k × k.
+
+3.    Inicializar los pesos Wj , j = 1, . . . , k² , cada
+      Wj = (wj1 , . . . , wjn ):
+       ●    Con valores aleatorios con distribución uniforme.
+       ●    Con ejemplos al azar del conjunto de entrenamiento.
+
+4.    Seleccionar un tamaño de entorno inicial con radio R(0).
+
+5.    Seleccionar la tasa de aprendizaje inicial η(0) < 1.
+
+
+                                                                                                 24
+ALGORITMO
+
+ITERACIÓN i
+
+ 1.   Seleccionar un registro de entrada Xp .
+
+ 2.   Encontrar la neurona ganadora ̂ k que tenga el vector de pesos Wk̂ más cercano a Xp .
+      Se deﬁne una medida de similitud d
+
+                                       Wk̂ = arg min {d(Xp − Wj )}
+                                               1≤j≤N
+
+ 3.   Actualizar los pesos de las neuronas vecinas según la regla de Kohonen.
+
+Se activa la neurona ̂ k (nk̂), que es la neurona ganadora.
+
+
+
+                                                                                              25
+ALGORITMO
+
+REGLA DE KOHONEN (ITERACIÓN i, paso 3)
+
+Está deﬁnido por el radio en la iteración, R(i), se actualiza el vecindario:
+
+                                 Nk̂(i) = {n/||n − nk̂ || < R(i)}
+
+Donde:
+ ● nk̂ es la neurona ganadora
+ ● n es una neurona
+ ● Nk̂(i) es el vecindario
+
+R(0) es un dato de entrada
+R(i) → 1 cuando i → ∞,
+aunque también puede permanecer constante durante todo el proceso.
+
+
+                                                                               26
+ACTUALIZACIÓN DE PESOS
+
+
+Actualización de los pesos del vecindario de nk̂ utilizando la Regla de Kohonen:
+
+                             i+1
+ ●   Si j ∈ Nk̂(i) → W
+                         j
+                                   = Wji + η(i)* (Xp - Wji)
+
+                             i+1
+ ●   Si j ɇ Nk̂(i) → W
+                         j
+                                   = Wji
+
+Donde η(i) → 0. Por ejemplo η(i) = 1/i
+
+
+
+
+                                                                                   27
+CONVERGENCIA                                                       Regla de Kohonen
+
+                                                                Wji+1 = Wji + η(i)* (Xp -
+                                                                Wji)
+
+
+¿Por qué converge?
+
+  Wk̂i+1 − Xp = Wk̂ i + η(i)(Xp − Wk̂ i ) − Xp
+               = (1−η(i))(Wk̂ i − Xp )
+
+
+Entonces
+                             || W i+1 − Xp || ≤ ||W i − Xp ||
+                                 k̂                k̂
+
+
+                     Los pesos se parecen a los datos de entrada
+
+                                                                                            28
+SIMILITUD
+
+
+Medidas de similitud (o funciones de propagación)
+
+Distancia Euclı́dea:
+     Wk̂ = arg min {∥Xp − Wj ∥}
+            1≤j≤N
+
+Exponencial
+     Wk̂ = arg min {e-∥Xp −Wj∥²}
+           1≤j≤N
+
+
+
+Importante: estandarizar todos los vectores
+                                                    29
+INICIALIZACIÓN
+
+
+Valores iniciales de los pesos
+
+ ●   Se pueden inicializar con valores aleatorios
+     Problema: algunas unidades quedan lejos de los valores iniciales y entonces nunca
+     ganan.
+     Se dice que son unidades muertas.
+
+
+ ●   Para evitar eso es mejor inicializar los pesos con muestras de los datos de entrada
+
+
+
+
+                                                                                           30
+INICIALIZACIÓN
+
+
+Cantidad total de iteraciones
+
+En función de la cantidad de neuronas de entrada (N)
+Por ejemplo: 500*N.
+
+
+
+Radio del vecindario
+
+ ●   R(0) puede ser el tamaño total de la grilla y va decreciendo hasta llegar a R = 1, donde
+     solamente se actualizan las neuronas vecinas pegadas.
+ ●   Constante
+
+
+
+                                                                                                31
+02.4
+RESULTADOS
+
+
+
+
+             32
+VISUALIZACIÓN DE RESULTADOS
+
+
+
+Las neuronas de salida forman
+         una matriz
+
+    Se puede ver en qué
+coordenadas se encuentra la
+  neurona asociada a cada
+ ejemplo de entrenamiento.
+
+
+
+
+                                33
+VISUALIZACIÓN DE RESULTADOS
+
+Ejemplo: Se desea hacer un censo de la población teniendo en cuenta.
+
+ ●   Cantidad de habitantes
+ ●   Promedio de edad
+ ●   Promedio de nivel de educación
+ ●   Número de autos registrados
+ ●   Número de personas desempleadas
+ ●   Número de personas subempleadas
+
+¿Qué ciudades son parecidas?
+Se utiliza una Red de Kohonen de 20x20
+
+
+
+
+                                                                       34
+VISUALIZACIÓN DE RESULTADOS
+
+
+
+
+Contar la cantidad de registros
+  que van a cada neurona.
+
+
+
+
+                                  35
+VISUALIZACIÓN DE RESULTADOS
+
+MATRIZ                               U
+(Uniﬁed Distance Matrix)
+
+Para cada neurona el promedio la
+distancia euclídea entre:
+ ● el vector de pesos de la neurona
+ ● el vector de pesos de las neuronas
+     vecinas.
+
+Si el método funciona entonces deberían
+observarse distancias pequeñas
+
+
+
+
+                                          36
+VISUALIZACIÓN DE RESULTADOS
+
+OBSERVAR UNA SOLA VARIABLE
+Se observa el valor promedio de una sola variable en cada neurona
+
+
+
+
+                                                                    37
+RED DE KOHONEN
+
+
+            VENTAJAS                          DESVENTAJAS
+
+
+   ●   Puede ser más rápida que el   ●   Si el conjunto de variables es
+       perceptrón multicapa.             muy grande puede ser difı́cil
+                                         asociarlo con un conjunto
+   ●   Aplicarse en casos donde el       bidimensional.
+       conjunto de datos no está
+       etiquetado.                   ●   Solo puede realizarse con
+                                         variables numéricas.
+   ●   Espacio multidimensional a
+       bidimensional                 ●   No hay un criterio
+                                         demostrado para deﬁnir el
+                                         tamaño de la grilla.
+
+
+                                                                          38
+BIBLIOGRAFÍA
+
+[1] T. Kohonen. Self-organized formation of topologically correct feature maps. Biological
+Cybernetics,                               1(43):59–69,                              1982.
+
+[2] T. Kohonen. The self-organizing map. Neurocomputing, pages 1–6, 1998.
+
+
+
+
+                                                                                             39
+

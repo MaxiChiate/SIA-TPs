@@ -1,0 +1,642 @@
+ Sistemas de Inteligencia Artificial
+Algoritmos Genéticos
+Antes de la
+Revolución Industrial
+                               Después de la
+                        Revolución Industrial
+                  Motivación
+
+John H. Holland   ●   Tengo una función a optimizar y no
+                      necesariamente una función de goal.
+                  ●   Combinando buenos estados puedo encontrar
+                      mejores.
+                  ●   Mi problema varía en el tiempo.
+                  ●   Mi problema es compuesto y delegable.
+                  ●   Detección de esquemas.
+Introducción
+
+●   Algoritmo de optimización/adaptabilidad basados
+    en la mecánica de la selección natural y la evolución
+
+
+●   La implementación es altamente paralelizable
+
+
+●   Múltiples parámetros, variables y/o conﬁguraciones
+
+
+    ⇒ Resultado sub-óptimo!
+Componentes
+Básicos
+de Algoritmos Genéticos
+●   Estructura / Arquitectura ~ Genotipo
+●   Población Inicial
+●   Función de adaptabilidad - ﬁtness o aptitud
+●   Método de selección de padres
+●   Método de cruza
+●   Método de mutación
+●   Método de selección de nueva generación
+     ○ Se pueden usar los mismos métodos de selección de
+         padres
+●   Condición de corte ( opcional )
+Definiciones
+Nomenclatura
+Genotipo
+
+
+    Gen Color                       Gen Forma
+
+   [ 0/1 ] [ 0/1 ]            [ 0/1 ] [ 0/1 ] [ 0/1 ]
+
+
+
+
+                     “Estructura”
+Nomenclatura
+Locus
+
+
+     #1               #2
+
+
+
+
+           Posición
+Nomenclatura
+Cromosoma
+
+
+  Amarillo Patito           Triángulo
+
+     [1][0]                [1][0][1]
+
+
+               Representación
+
+
+
+
+      En este caso el CROMOSOMA sería “10101”
+Nomenclatura
+Fenotipo
+
+
+
+
+      Características Observables
+           Nomenclatura
+           Alelos
+
+Amarillo Patito             Cuadrado        Círculo
+
+   [1][0]                  [0][0][0]      [0][0][1]
+
+  Turquesa                  Octágono      Pentágono
+
+   [0][1]                  [0][1][0]      [0][1][1]
+
+   Cerúleo                Paralelogramo    Triángulo
+
+   [0][0]                  [1][0][0]      [1][0][1]
+Población Inicial
+●   Generalmente inicializados con alelos al azar
+●   De un tamaño de población N
+●   También llamada Población de la Generación 0
+Fitness / Aptitud
+ ●   Función de evaluación de los individuos.
+ ●   Mientras más alto, más adaptado al problema.
+
+
+Fitness Relativo
+Selección
+Muestreo Directo | Elite
+ ● Selecciona los individuos con mayor aptitud.
+
+Muestreo Aleatorio
+ ● Selecciona individuos al azar.
+
+Muestreo Estocástico
+ ● Selecciona los individuos combinando la aptitud y el azar.
+ Selección
+ Elite
+Teniendo que seleccionar K individuos de un conjunto de tamaño N,
+los ordena según el ﬁtness y elije cada uno n(i) veces, según la
+siguiente formula:
+
+
+
+
+            Puede ser muy restrictivo, pero es muy
+            performante!
+     Selección
+     Elite (ejemplo)
+N         K=4          K=12
+
+78        78      78          2
+
+68        68      68          78
+
+62        62      62          68
+
+39        39      39          62
+
+25                25          39
+
+12                12          25
+
+2
+Selección
+Estocástica
+●   Por Ruleta
+●   Universal
+●   Por Ranking
+●   Boltzmann
+●   Por Torneos
+     ○ Determinísticos
+     ○ Probabilísticos
+  Selección
+  Por Ruleta
+Se calculan las aptitudes relativas pj . Luego, se calculan las
+aptitudes relativas acumuladas qi de la siguiente forma:
+
+
+
+
+Se generan K números aleatorios
+y se seleccionan los K individuos xi que cumplen:
+     Ejercicio                                             K=3
+
+                                                           r0 = 0.276
+
+                                                           r1 = 0.095
+                        Aptitudes                          r2 = 0.893
+      Individual(fi )    Relativa (pi )   Acumulada(qi )
+
+x0          3               0.086             0.086
+
+x1          6               0.171             0.257
+
+x2          11              0.314             0.571
+
+x3          14              0.400             0.971
+
+x4          1               0.029             1.000
+     Ejercicio                               K=3
+
+                                             r0 = 0.276 = x2
+
+                                             r1 = 0.095 = x1
+                    Aptitudes                r2 = 0.893 = x3
+       Individual     Relativa   Acumulada
+
+x0         3           0.086       0.086
+
+x1         6           0.171       0.257
+
+x2        11           0.314       0.571
+
+x3        14           0.400       0.971
+
+x4         1           0.029       1.000
+  Selección
+  Universal
+Igual que en ruleta, pero la forma de calcular los rj es la siguiente:
+     Ejercicio
+                                             K=4 y r = 0.084
+
+
+                    Aptitudes
+       Individual     Relativa   Acumulada
+
+x0         3           0.086       0.086
+
+x1         6           0.171       0.257
+
+x2        11           0.314       0.571
+
+x3        14           0.400       0.971
+
+x4         1           0.029       1.000
+     Ejercicio
+                                             K=4 y r = 0.084
+
+                                             r0 = 0.021
+                    Aptitudes                r1 = 0.271
+       Individual     Relativa   Acumulada
+                                             r2 = 0.521
+x0         3           0.086       0.086
+                                             r3 = 0.771
+x1         6           0.171       0.257
+
+x2        11           0.314       0.571
+
+x3        14           0.400       0.971
+
+x4         1           0.029       1.000
+     Ejercicio
+                                             K=4 y r = 0.084
+
+                                             r0 = 0.021 = x0
+                    Aptitudes                r1 = 0.271 = x2
+       Individual     Relativa   Acumulada
+                                             r2 = 0.521 = x2
+x0         3           0.086       0.086
+                                             r3 = 0.771 = x3
+x1         6           0.171       0.257
+
+x2        11           0.314       0.571
+
+x3        14           0.400       0.971
+
+x4         1           0.029       1.000
+  Selección
+  Por Ranking
+Se denomina una pseudo-aptitud con una función
+f ’ (i) como una función proporcional al ranking de ﬁtness real del
+individuo respecto de sus pares.
+Un ejemplo de función a tomar es la siguiente:
+
+
+
+
+rank(i): ranking ordenado de mayor a menor aptitud real.
+Luego se utiliza ruleta con este pseudo-aptitud redeﬁnida.
+                                                          En rigor, ExpVal es Expected Value
+
+ Selección                                                (esperanza matemática).
+
+                                                          Utilizando dichos valores en ruleta se
+
+ Entrópica - Boltzmann                                    logra cumplir con sus esperanzas.
+
+
+
+
+También se deﬁne una pseudo-aptitud, pero con la siguiente
+función:
+
+
+
+
+Luego, se utiliza esta pseudo-aptitud ExpVal como aptitud para
+seleccionar con el método de selección Ruleta.
+              Selección
+              Entrópica - Boltzmann
+              Ejemplo de función de decrecimiento de temperatura
+
+
+
+
+                                                                   k: constante
+Temperatura
+
+
+
+
+                                 Generación (t)
+ Selección
+ Por Torneos Determinísticos
+1.   De la población de tamaño N, se eligen M individuos al azar.
+2.   De los M individuos, se elige el mejor.
+3.   Se repite el proceso (1.) hasta conseguir los K individuos que
+     se precisan.
+ Selección
+ Por Torneos Probabilísticos
+1.   Se elige un valor de Threshold en [0.5 , 1]
+2.   De la población de tamaño N, se eligen 2 individuos al azar.
+3.   Se toma un valor r al azar uniformemente en [0,1].
+      a. Si r < Threshold se selecciona el más apto.
+      b. Caso contrario, se selecciona el menos apto.
+4.   Se repite el proceso (1.) hasta conseguir los K individuos que
+     se precisan.
+ Selección
+ Por Torneos
+Ventajas
+
+ ●   Velocidad de ejecución
+      ○ No se procesa toda la población
+      ○ No requiere variables intermedias, se utiliza el ﬁtness
+           directamente.
+ ●   Facilidad de implementación.
+
+
+Desventaja
+
+ ●   Según como esté conﬁgurado, puede introducir una presión
+     de selección muy alta.
+ ●   No considerar todos los individuos puede afectar la eﬁciencia
+     de nuestra implementación
+Crossover
+(Cruza / Recombinación)
+Una vez que se seleccionan los individuos, se los aparea y se
+realiza la recombinación de genes.
+
+Tipos de Crossover:
+ ● Cruce de Un Punto
+ ● Cruce de Dos Puntos
+ ● Cruce Anular
+ ● Cruce Uniforme
+                                                              Para estos ejercicios se
+  Cruce de                                                    asume un bit por gen, lo cual
+                                                              no siempre es correcto.
+
+  Un Punto
+                                                              (Muchas veces no lo es)
+
+
+
+
+Se elige un locus al azar y se intercambian los alelos a partir de ese
+locus. P = [0,S-1] ; S: Cantidad de genes
+
+
+
+
+                 X1: 011011001110
+
+                 X2: 101001110010
+                        P = 4
+                 X3: 011001110010
+
+                 X4: 101011001110
+                                                               Para estos ejercicios se
+  Cruce de                                                     asume un bit por gen, lo cual
+                                                               no siempre es correcto.
+
+  Dos Puntos
+                                                               (Muchas veces no lo es)
+
+
+
+
+Se elige dos locus al azar y se intercambian los alelos entre ellos. P1
+= [0,S-1] ; P2 = [0, S-1] ; P1 ≤ P2
+
+
+
+
+                 X1: 011011001110
+
+                 X2: 101001110010
+                  P1 = 4 ; P2 = 6
+                 X3: 011001001110
+
+                 X4: 101011110010
+                                                             Para estos ejercicios se
+  Cruce                                                      asume un bit por gen, lo cual
+                                                             no siempre es correcto.
+
+  Anular
+                                                             (Muchas veces no lo es)
+
+
+
+
+Se elige un locus al azar P y una longitud L. Se intercambia el
+segmento de longitud L a partir de P.
+P = [0,S-1] ; L = [0, ⎾S/2⏋]
+
+
+
+                 X1: 011011001110
+
+                 X2: 101001110010
+                  P = 11 ; L = 5
+                 X3: 101011001110
+
+                 X4: 011001110010
+                                                                              Para estos ejercicios se
+                      Cruce                                                   asume un bit por gen, lo cual
+                                                                              no siempre es correcto.
+
+                      Uniforme
+                                                                              (Muchas veces no lo es)
+
+
+
+
+                     Se produce un intercambio de alelos en cada gen con probabilidad
+                     P [0, 1]. (Por lo general P = 0.5).
+
+
+
+
+Abuso de Notación             X1: 0 1 1 0 1 1 0 0 1 1 1 0                     Es el único tipo de cruce visto
+       Pi                                                                     que no mantiene correlación
+                              X2: 1 0 1 0 0 1 1 1 0 0 1 0
+ Tiene 2 valores:                                                             posicional entre alelos.
+>: Se mantienen               Pi: > > < < > < > > < > < <
+los alelos
+                              X3: 0 1 1 0 1 1 0 0 0 1 1 0
+<: Se intercambian
+los alelos
+                              X4: 1 0 1 0 0 1 1 1 1 0 1 0
+ Probabilidad de
+ Recombinación
+Es muy común también implementar Pc como una probabilidad de
+recombinación de genes.
+
+Si los genes no se recombinan, los genes de los hijos serán una
+copia idéntica a los padres, pero pasando por la etapa de
+mutación.
+ Mutación
+
+Se deﬁne mutación como una variación en la información genética
+que se almacena en el cromosoma.
+
+Para que la mutación sea más eﬁciente, una correcta arquitectura y
+separación de genes es necesaria.
+
+Motivación:
+ ● Enriquecer la diversidad genética.
+ ● Evitar máximos locales.
+ ● Mantener un grado de exploración.
+ Mutación
+ Variantes
+
+Dado una probabilidad de mutación Pm:
+Mutación de Gen: Se altera un solo gen con una probabilidad Pm.
+Mutación Multigen Limitada: Se selecciona una cantidad [1,M]
+(azarosa) de genes para mutar, con probabilidad Pm.
+Mutación Multigen Uniforme: Cada gen tiene una probabilidad Pm
+de ser mutado.
+Mutación Completa: Con una probabilidad Pm se mutan todos los
+genes del individuo, acorde a la función de mutación deﬁnida para
+cada gen.
+ Mutación
+ Sobre Genes
+
+También hace falta deﬁnir QUÉ es una mutación sobre un alelo de
+un gen.
+
+Algunas posibilidades son:
+ ●   Tomar un nuevo alelo aleatorio sobre el gen.
+ ●   Aplicar un delta al alelo, en algún sentido y con alguna
+     distribución.
+ Convergencia
+ Prematura
+Si la población converge en sus características, sin presentar más
+variedad de la que introduce la mutación y sin haber llegado a una
+aptitud aceptable, decimos que la población sufrió una
+convergencia prematura.
+
+Esto suele provocar que la solución del método arroje un subóptimo
+deﬁciente, a menos que dicho punto de convergencia sea el
+máximo global (diﬁcil o imposible de analizar) ó que la población
+escape de dicho máximo local por mutación (también, muy diﬁcil de
+analizar).
+
+
+
+   A la variedad de alelos representados en la
+   población se la llama Diversidad.
+                Causas de
+                Convergencia Prematura
+             La correcta conﬁguración es esencial para evitar una convergencia
+             prematura.
+
+             Algunas de las causas son:
+              ● Una presión de selección muy alta*
+              ● Una probabilidad de mutación muy baja*
+              ● Un tamaño de población muy escaso*
+
+
+
+
+*) Depende del problema 🌈
+  Convergencia
+  Prematura
+Implementamos la selección RULETA en nuestro AG. Si en una
+población inicial, la diferencia entre el mejor individuo y el resto es
+de algunos órdenes de magnitud (sin ser buena solución), esto
+llevará a perdida de diversidad y a la convergencia prematura.
+¿Por qué? ¿Cómo lo resolverías?
+Implementación
+Supervivencia
+Aditiva
+Generando K hijos de K padres…
+La nueva generación se formará seleccionando N
+individuos del conjunto de [ N (individuos de la generación
+actual) + K (hijos) ].
+Supervivencia
+Exclusiva
+Generando K hijos de K padres…
+ ●   K > N : La nueva generación se genera
+     seleccionando N de los K hijos exclusivamente.
+ ●   K ≤ N : La nueva generación se conformará por los K
+     hijos generados + (N-K) individuos seleccionados de
+     la generación actual.
+ Brecha
+ Generacional
+Determina la cantidad de individuos introducidos entre generación
+y generación.
+
+ ●   G = 1 : Toda la población es reemplazada.
+ ●   G = 0 : Ningún individuo es reemplazado.
+ ●   G ϵ (0,1) : La nueva generación se compone de:
+      ○   (1-G) * N de individuos de la generación anterior.
+      ○   G * N de los individuos generados.
+ Criterios de Corte
+
+●     Tiempo
+●     Cantidad de generaciones
+●     Solución aceptable
+●     Estructura: Una parte relevante(1) de la población no
+      cambia(2) en una cantidad de generaciones(1).
+●     Contenido: El mejor ﬁtness no cambia(2) en una cantidad de
+      generaciones(1).
+
+(1)   Parametrizable
+(2)   Según la estructura, hay genes que se pueden deﬁnir un criterio con el cuál se
+      consideran que no cambia.
+Esquemas
+( no es necesario para el Trabajo Práctico )
+                                                  Para estos ejercicios se
+ Esquemas                                         asume un bit por gen, lo cual
+                                                  no siempre es correcto.
+                                                  (Muchas veces no lo es)
+
+
+
+
+Es un patrón de similitud entre cromosomas.
+Ejemplo:
+
+El esquema      *01001*01           representa:
+
+                001001001
+                001001101
+                101001001
+                101001101
+ Orden
+ de los esquemas
+
+o(*01*) = 2
+o(**0*1***1) = 3
+o(011010*0) = 7
+
+Mientras más alto el orden del esquema, mayor probabilidad de
+perderlo frente a una mutación.
+ Teorema de los
+ esquemas
+
+      Aquellos esquemas con un ﬁtness medio superior a la media
+de la población y con un orden bajo aumentarán su presencia de
+manera exponencial en las sucesivas generaciones.
+ Bloques
+ Constructivos
+Esquemas de bajo orden y con un ﬁtness alto serán elegidos,
+recombinados y re-elegidos para ir formando cromosomas con
+mayor ﬁtness. Llamamos a estos esquemas Bloques
+Constructivos.
+
+Esto permite reducir la complejidad del problema, dividiéndolo en
+sub-problemas.
+ 1. Optimizar esquema
+ 2. Encontrar esquemas
+ 3. Agrupar esquemas
+Horizontes
+de los Algoritmos Genéticos
+Horizontes
+de los Algoritmos Genéticos
+★   NEAT: Neuroevolution of Augmented Topologies
+★   Algorítmos Meméticos
+★   Búsqueda de frontera de Pareto
+     ○   NSGA: Non-dominated Sorting Genetic Algorithm
+          ■   NSGA-II
+          ■   NSGA-III
+          ■   SPEA2: Strength Pareto Evolutionary Algorithm… 2
+★   Programación Genética
+★   Coevolución
+★   Y mucho más!
+ Horizontes
+ de los Algoritmos Genéticos
+★   NEAT: Neuroevolution of Augmented Topologies
+                                                 D O
+                                         Z     A
+★   Algorítmos Meméticos
+★ Búsqueda de frontera de Pareto A  L  I
+                          T  U
+                  A   C
+   ○ NSGA: Non-dominated    Sorting Genetic Algorithm
+
+           E   S
+       ■ NSGA-II
+        D ■   NSGA-III
+          ■   SPEA2: Strength Pareto Evolutionary Algorithm… 2
+★   Programación Genética
+★   Coevolución
+★   Y mucho más!
+NUEVOS Horizontes
+de los Algoritmos Genéticos
+★   LLMs para diseñar operadores evolutivos
+★   Algoritmos evolutivos para mejorar/entrenar LLMs
+★   Agentes de IA para conﬁgurar algoritmos genéticos
+★   Modelos surrogate con Deep Learning
+★   Reinforcement Learning para adaptar parámetros del GA
+★   Nuevos mecanismos de diversidad y crossover
+★   Optimización de circuitos cuánticos con GAs
+★   Algoritmos genéticos cuánticos
+★   Evolución interactiva con feedback humano
+★   Y mucho más?!
+

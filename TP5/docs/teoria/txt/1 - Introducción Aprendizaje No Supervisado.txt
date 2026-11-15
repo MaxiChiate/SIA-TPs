@@ -1,0 +1,335 @@
+APRENDIZAJE
+NO SUPERVISADO
+Introducción
+
+
+
+
+               Sistemas de Inteligencia Artiﬁcial - 2026
+TABLA DE CONTENIDOS
+01. INTRODUCCIÓN   04. AUTOVALORES Y
+                       AUTOVECTORES
+
+
+    MODELO DE
+02. KOHONEN        05. COMPONENTES
+                       PRINCIPALES
+
+
+    MODELO DE
+03. HOPFIELD       06. REGLA
+                       SANGER
+                             DE OJA Y
+
+
+                                        2
+01
+INTRODUCCIÓN
+¿Qué es el Aprendizaje
+No Supervisado?
+
+
+
+
+                         3
+SUPERVISADO vs NO SUPERVISADO
+
+         APRENDIZAJE                APRENDIZAJE
+         SUPERVISADO               NO SUPERVISADO
+
+    El agente tiene acceso a   La variable de respuesta no
+           etiquetas            es información disponible
+
+      Conocimiento de la        Puede resolver problemas
+     variable de respuesta          menos deﬁnidos
+
+   Tareas bien deﬁnidas que
+   no cambian mucho en el        Clustering, Asociación y
+            tiempo             Reducción de Dimensionalidad
+
+    Clasiﬁcación y regresión
+
+                                                              4
+¿QUÉ ES EL
+APRENDIZAJE NO SUPERVISADO?
+
+
+                       No se conoce el valor de verdad
+
+¿Cómo sabemos si los resultados que obtenemos son signiﬁcativos?
+
+Construye modelos de predicción
+Estrategias para obtener características o patrones y sacar conclusiones
+
+
+
+
+                                                                           5
+EJEMPLO
+
+Para una investigación se seleccionan al azar 3500 pacientes hipertensos sobre los que
+se midieron las siguiente variables:
+
+ ●   Edad
+ ●   Duración de los síntomas (cantidad de días)
+ ●   Colesterol (mg/dl)
+ ●   Sexo
+ ●   Peso (kg)
+ ●   Presión arterial media (mm Hg)
+ ●   Medida del estrés
+
+Se desea saber cuál es el riesgo de que un paciente presente una enfermedad arterial
+
+
+
+
+                                                                                         6
+EJEMPLO
+
+          La dimensión inicial
+          del problema es 7.
+
+
+          Si consideramos 2 variables:
+           ● Presión
+           ● Edad
+
+          ¿Qué nos dice este gráﬁco?
+
+
+
+
+                                         7
+EJEMPLO
+La dimensión inicial
+del problema es 7.
+
+
+Si consideramos 3 variables:
+ ● Presión
+ ● Edad
+ ● Peso
+
+¿Qué nos dice este gráﬁco?
+
+
+
+
+                               8
+EJEMPLO
+
+
+           ¿Se puede deﬁnir un índice que cuantiﬁque la situación
+         de riesgo cardíaco de un paciente con hipertensión arterial,
+                  teniendo en cuenta todas las variables?
+
+
+
+ PROBLEMAS A RESOLVER:
+  ● Agrupamiento o Clustering
+  ● Asociaciones
+  ● Reducción de dimensionalidad
+
+                                                                        9
+APRENDIZAJE NO SUPERVISADO
+
+
+
+
+                           MODELO
+
+
+
+
+           INPUT                         OUTPUT
+    Datos no etiquetados        Datos similares agrupados
+
+
+                                                            10
+CLUSTERING
+●   Agrupar observaciones de forma tal que el grado de
+    similitud entre miembros de un mismo grupo sea lo
+    más fuerte posible
+
+
+●   Identiﬁcar similitudes entre los datos y asignarlos a
+    un grupo (cluster)
+
+
+●   Implica               deﬁnir                similitud
+
+
+
+
+                                                            11
+CLUSTERING
+
+
+Ej:
+Medicina: Datos: edad, sexo, peso, colesterol ¿hay ciertos
+patrones en el conjunto de entrada que me indican si
+responderá bien ante cierto tratamiento médico?
+
+Detección de anomalías: identiﬁcar outliers dentro de los
+clusters
+
+Estrategias de marketing: ¿a qué tipos de usuarios está
+dirigida mi aplicación y cómo puedo mejorar su
+experiencia?
+
+
+
+
+                                                             12
+ASOCIACIÓN
+
+●   Encontrar relaciones entre los atributos del conjunto
+    de                                              datos
+
+●   Memorias                             Asociativas:
+    El almacenamiento y recuperación de información
+    por      asociación    con      otros      datos
+
+    Ej:
+    Modelo               de               Hopﬁeld
+
+
+
+
+                                                            13
+ASOCIACIÓN
+
+Aplicaciones
+
+Sistemas de recomendación
+ ● identiﬁcar qué artículos los clientes compran juntos
+     con frecuencia. Se puede utilizar para mejorar la
+     organización de productos y aumentar las ventas
+
+
+Identiﬁcar relaciones   entre   diferentes   síntomas   y
+enfermedades
+
+
+
+
+                                                            14
+REDUCCIÓN DE DIMENSIÓN
+
+                                                  N
+La reducción de la dimensionalidad proyecta   variables
+el conjunto de datos en un espacio menor,
+dejando de lado las características menos
+relevantes
+
+
+Ej: PCA, Autoencoders
+                                                  2
+                                              variables
+
+
+
+
+                                                          15
+REDUCCIÓN DE DIMENSIÓN
+
+Aplicaciones                                                 N
+                                                         variables
+ ●   Identiﬁcar qué variables afectan más a cada
+     país para luego invertir (educación, agricultura,
+     inﬂación, etc)
+
+ ●   Comprimir una imagen y reducir el costo
+     computacional                                           2
+                                                         variables
+
+
+
+
+                                                                     16
+PROBLEMAS DEL APRENDIZAJE SUPERVISADO
+
+Etiquetas
+Es costo generar/obtener un gran conjunto de datos donde todos estén etiquetados
+El      Aprendizaje       No      Supervisado      no      necesita      etiquetas
+
+
+
+Dimensionalidad
+Cuando tenemos muchas características (features) es costoso encontrar un buena aproximación
+El Aprendizaje No Supervisado permite la reducción de la dimensionalidad
+
+
+
+Outliers
+La calidad del conjunto de datos es importante. Si se ignoran los outliers aprenderá de ellos y
+cometerá más errores
+El Aprendizaje No Supervisado agrupa los outliers por un lado y el resto los datos por el otro
+                                                                                                  17
+APLICACIONES
+
+
+
+
+               18
+EJEMPLO
+Variables:
+ ● Positive Actions: Likes and Saves
+ ● Negative Actions: “See Fewer Posts Like This” (SFPLT)
+
+Modelo: ResNets
+
+
+
+
+                                                           19
+EJEMPLO
+
+
+
+
+ TU COMPORTAMIENTO         COMPORTAMIENTO DE OTROS                AUDIO
+
+ ●   Playlists             ●   Playlists                 ●    Song spectogram
+ ●   Skips                 ●   Trending artists          ●    Tempo
+ ●   Favorites             ●   Artists similar to your   ●    Loudness
+ ●   Shares                    favorite artists          ●    Amplitude
+ ●   Listening frequency   ●   New songs of your liked   ●    Lyrics
+ ●   Listening time            artists
+                                                             Modelo: CNN        20
+REDES NEURONALES
+
+
+     En esta materia se estudiarán Métodos de Aprendizaje No Supervisado
+                    usando modelos de Redes Neuronales
+
+
+ ●   Red de Kohonen
+ ●   Red de Hopﬁeld
+ ●   Modelo de Oja
+ ●   Modelo de Sanger
+
+
+
+
+                                                                           21
+BIBLIOGRAFÍA
+
+[1] McKay D.J.C. Hopﬁeld Networks. Information Theory, Inference and Learning
+Algorithms,                         Cambridge,                           2003.
+
+[2] Anders Krogh John Hertz and Richard Palmer. Introduction to the Theory of Neural
+Computation.                          Addison-Wesley,                           1991.
+
+[3] T. Kohonen. Self-organized formation of topologically correct feature maps. Biological
+Cybernetics,                               1(43):59–69,                              1982.
+
+[4] T. Kohonen. The self-organizing map. Neurocomputing, pages 1–6, 1998.
+
+[5] Hiran, K. K., Jain, R. K., Lakhwani, K., & Doshi, R. (2021). Machine Learning: Master
+Supervised and Unsupervised Learning Algorithms with Real Examples (English Edition).
+BPB Publications.
+
+
+                                                                                             22
+

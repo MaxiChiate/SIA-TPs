@@ -1,0 +1,331 @@
+ Redes Generativas
+ Adversarias (GAN)
+Sistemas de Inteligencia Artiﬁcial 2026
+                                  Generación de datos
+Cada imagen 64x64x3
+(alto, ancho, canales)   R12288
+                                              Función de distribución de probabilidad
+                          200
+
+                           30
+
+                           58
+
+
+                          220
+
+
+                          196
+
+
+
+                           .
+                           .
+                           .
+                           .
+                                                   Espacio 12288-dimensional
+Sea Pdata la función de distribución de los datos
+Busco generar x’ / x’ ~ Pdata
+Sea Pdata la función de distribución de los datos
+Busco generar x’ / x’ ~ Pdata
+
+
+
+
+                                              ¡No conocemos
+                                                   esta
+                                               distribución!
+Generative Adversarial Networks
+                   Ian J. Goodfellow,
+                   Jean Pouget-Abadie ,
+                   Mehdi Mirza,
+                   Bing Xu,
+                   David Warde-Farley,
+                   Sherjil Ozair†,
+                   Aaron Courville,
+                   Yoshua Bengio
+
+
+                   Año: 2014
+                                                        Imágenes: 64x64x3
+Muestras de distribución             Muestras de        Espacio: 12288-dimensional
+       uniforme                 distribución de gatos
+
+
+
+
+                       ¡Transformación!                     Reconstrucción
+         Generative Adversarial Networks
+
+                                                    REAL
+
+                               DISCRIMINATOR
+
+                                                    FAKE
+
+           GENERATOR
+
+
+Noise                                    FEEDBACK
+Vector
+El objetivo del
+generador es que el
+                         VERDADERO
+discriminador
+reconozca las              FALSO
+imágenes reales como
+falsas y las generadas
+como reales.
+¿Cómo armamos el discriminador?
+Generative Adversarial Networks
+         200
+
+         30                Discriminador
+
+         58
+
+
+         220
+                                           0.95
+
+         196
+
+
+
+          .
+          .
+          .
+          .     12228
+                neuronas
+¿Cómo armamos el generador?
+         Generador                                     Discriminador
+
+
+
+     z                      G(z)
+
+
+
+
+pz                   12228
+                     neuronas
+                                            12228
+                                            neuronas
+
+
+
+
+                            Conjunto de Datos
+
+                                pdata (?)
+              Generador                                          Discriminador
+
+
+                                                                                 ¿Cuál es la función de costo?
+z                                      G(z)
+
+
+
+
+p(yi) es la probabilidad de que el discriminador diga que la etiqueta es yi.
+Durante la               VERDADERO
+actualización de pesos
+del generador, no se       FALSO
+modiﬁcan los pesos del
+discriminador.
+FUNCIÓN DE COSTO
+
+
+
+
+     Dato “real”   1    Quiero     (1 - 1)
+                       que sea
+                        lo más
+                       cercano
+                         a log 1
+FUNCIÓN DE COSTO
+
+
+
+
+       Dato        0   (1 - 0)    Quiero
+     generado                    que sea lo
+                                   más
+                                 cercano a
+                                   log 1
+FUNCIÓN DE COSTO
+
+
+
+
+       Dato        0   (1 - 0)    Quiero
+     generado                    que sea lo
+                                   más
+                                 cercano a
+                                   log 1
+ JUEGO MINIMAX (dinámica adversarial)
+
+                                                  2 jugadores
+                                      D busca maximizar y G busca minimizar.
+
+
+
+
+  Punto de convergencia: la salida del
+  discriminador es 0.5 para cualquier dato de
+  entrada (real o generado).
+
+https://arxiv.org/pdf/1406.2661.pdf
+El generador utiliza
+|X-X'| (la diferencia       VERDADERO
+entre imágenes
+generadas y imágenes          FALSO
+reales) como feedback
+para actualizar los pesos
+En la convergencia
+exitosa de la red GAN, la
+                            VERDADERO
+salida de la
+discriminadora
+                              FALSO
+devuelve 1/2 para todas
+las imágenes (reales o
+no)
+Demo práctica
+Para obtener el
+objetivo, se puede        VERDADERO
+entrenar la generadora
+hasta la convergencia y     FALSO
+luego entrenar la
+discriminadora.
+Siempre que disminuye      VERDADERO
+la pérdida del
+generador, la                FALSO
+distribución obtenida
+se parece más a la real.
+Una vez ﬁnalizado el
+entrenamiento, necesito   VERDADERO
+ambas redes
+(generadora y               FALSO
+discriminadora) para
+crear un nuevo dato.
+Colapso Modal
+
+
+                       x          x
+
+
+                G(z)       G(z)
+
+
+                       z          z
+Colapso Modal
+
+
+
+
+                Fuente: https://arxiv.org/pdf/1611.02163.pdf
+La situación de colapso
+                          VERDADERO
+modal se genera
+cuando el                   FALSO
+discriminador puede
+identiﬁcar rápidamente
+las imágenes falsas.
+¿Por qué ½?   FUNCIÓN OBJETIVO
+¿Por qué ½?
+              ¿Cuál es el D* que maximiza?
+¿Por qué ½?
+
+
+
+
+ ¿Qué pasa si reemplazo?
+¿Por qué ½?
+
+              ¿Cuándo es mínima esta expresión? (V)
+¿Por qué ½?
+
+                    ¿Cuándo es mínima esta expresión? (V)
+
+
+
+
+        Constante             Cuando las distribuciones son iguales
+¿Por qué ½?
+                                                                  D* = 0.5
+
+                    ¿Cuándo es mínima esta expresión? (V)
+
+
+
+
+        Constante             Cuando las distribuciones son iguales
+Las redes GAN se     VERDADERO
+encuentran basadas
+en la dinámica del     FALSO
+juego minimax.
+RESUMEN
+● El enfoque se basa en Teoría de Juegos: se modela como un problema
+  con dos jugadores, minimax.
+
+● Permite entrenar la red iniciando con muestras de una distribución
+  simple (ej: uniforme).
+
+● Para la mejora de generación de nuevos datos no se realiza
+  comparación directa con los datos originales.
+
+● Difícil de entrenar y esta es la MAYOR desventaja. Requiere atención
+  manual para analizar las salidas de las imágenes.
+VARIANTES: https://github.com/hindupuravinash/the-gan-zoo
+ ● Conditional GAN
+ ● Deep Convolutional GAN (DCGAN)
+ ● Progressive Growing GAN (PGGAN)
+ ● StyleGan
+ ● …
+
+
+
+APLICACIONES
+ ● Traducción texto a imagen (ej: DCGAN)
+    (Lab. https://creator.nightcafe.studio/)
+ ● Traducción bordes a imagen (Pix2Pix)
+ ● Generación de imágenes (especialmente importante en el área médica)
+ ● …
+Caso de Aplicación
+
+
+
+
+                     LINK
+
+
+
+
+                            LINK
+Lección Importante!
+
+GAN modela un formato o estrategia de entrenamiento, no
+es una arquitectura de red neuronal
+
+Alternativas a GAN en el problema de generación:
+- Modelos autorregresivos
+- Modelos autoencoders
+- Modelos de difusión
+The End
+GAN Lab: https://poloclub.github.io/ganlab/
+Paper original Generative Adversarial Networks: https://arxiv.org/pdf/1406.2661.pdf
+Sobre Binary Cross Entropy:
+https://towardsdatascience.com/understanding-binary-cross-entropy-log-loss-a-visual-explanation-a3ac6025181a
+
+Optimización y Convergencia de la red GAN:
+https://arxiv.org/pdf/1406.2661.pdf
+https://www.youtube.com/watch?v=Gib_kiXgnvA (favorito personal)
+https://srome.github.io/An-Annotated-Proof-of-Generative-Adversarial-Networks-with-Implementation-Notes/
+https://jonathan-hui.medium.com/proof-gan-optimal-point-658116a236fb
+https://arxiv.org/pdf/1705.07215.pdf
+
+Sobre el origen de la idea:
+https://www.technologyreview.com/2018/02/21/145289/the-ganfather-the-man-whos-given-machines-the-gift-of-imagination/
+https://www.deeplearning.ai/the-batch/ian-goodfellow-a-man-a-plan-a-gan/
+

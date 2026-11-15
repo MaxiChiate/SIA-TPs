@@ -1,0 +1,804 @@
+TRANSFORMERS
+SISTEMAS DE INTELIGENCIA ARTIFICIAL - 2026
+TABLA DE CONTENIDOS
+01. INTRODUCCIÓN    04. APLICACIONES
+
+
+02. ARQUITECTURA    05. INDUSTRIA
+
+
+03. ENTRENAMIENTO   06. BIBLIOGRAFÍA
+
+                                       2
+01
+INTRODUCCIÓN
+¿Qué es un Transformer?
+
+
+
+
+                          3
+TRANSFORMERS
+
+
+
+       TRANSFORMER
+
+
+
+
+                     Paper
+                             4
+                       ¿QUÉ ES UN
+Soy un estudiante
+                       TRANSFORMER?
+         TRANSFORMER
+
+
+                       Red neuronal utilizada para transformar
+ I am a student        una secuencia en otra basada en un
+                       mecanismo de atención.
+
+
+
+
+                                                                 5
+                    02
+ARQUITECTURA
+       ¿Cuáles son las capas
+ ocultas de un Transformer?
+
+
+
+
+                               6
+                                I am a student   OUTPUT
+
+        TRANSFORMER
+
+
+
+
+               ENCODERS          DECODERS
+
+
+
+
+INPUT       Soy un estudiante
+
+                                                          7
+                                I am a student   OUTPUT
+
+        TRANSFORMER
+
+               ENCODER n         DECODER n
+
+
+
+
+                 ...
+
+
+
+
+                                   ...
+               ENCODER 3         DECODER 3
+
+
+               ENCODER 2         DECODER 2
+
+
+               ENCODER 1         DECODER 1
+
+
+               ENCODER 0         DECODER 0
+
+
+
+
+INPUT       Soy un estudiante
+
+                                                          8
+                                              I am a student          OUTPUT
+
+        TRANSFORMER
+
+                  ENCODER n                     DECODER n
+
+
+
+
+                    ...
+
+
+
+
+                                                  ...
+                                        Feed-Forward Neural Network
+          Feed-Forward Neural Network
+
+
+                                         Encoder-Decoder Attention
+
+              Self-Attention Layer
+                                            Self-Attention Layer
+
+
+
+
+INPUT         Soy un estudiante
+
+                                                                               9
+SELF-ATTENTION LAYER
+
+Ayudar al Encoder a mirar otras palabras en la secuencia de input mientras analiza una
+palabra en particular.
+
+En el Decoder solo puede mirar palabras previas en la secuencia de output.
+
+
+
+
+           INPUT      The animal didn’t cross the street because it was tired
+
+
+
+
+                       ¿La palabra “it” se reﬁere al animal o a la calle ?
+
+
+
+                                                                                         10
+EMBEDDING
+●   Cada token es representado en un vector de números reales de dimensión 512.
+    A esto se lo llama embedding (algoritmos: GloVe o word2vec: SkipGram - CBOW)
+
+●   El primer encoder recibe como input el embedding.
+
+
+                     INPUT            Soy un estudiante
+
+                                                 TOKENIZATION
+
+
+                                Soy       un        estudiante
+
+
+                                                 EMBEDDING
+
+
+
+                                x0          x1            x2                       11
+CÁLCULO DE SELF-ATTENTION
+                                                               WQ
+                                                      xi                qi
+                                                           x        =
+
+1.   Por cada embedding xi , se calculan 3 vectores
+                                                      xi       WK
+     llamados query, key y value                                        ki
+     multiplicando los embeddings por 3 matrices           x        =
+     de pesos (Attention Weights) WQ, WK y WV
+
+
+                                                      xi       WV       vi
+                                                           x        =
+
+
+                                                                             12
+ CÁLCULO DE SELF-ATTENTION
+                                                             x0                x1
+
+
+2.   Se calcula un “score” por cada embedding que
+determina cuánta atención se le pone a ese             q0             q1
+
+embedding mientras se está procesando otro.                           k1
+                                                       k0
+
+Se hace el producto escalar entre q y el vector k de
+                                                        q0 ● k = s         q0 ● k = s
+                                                              0   0              1   1
+cada embedding.
+
+
+
+
+                                                                                         13
+ CÁLCULO DE SELF-ATTENTION
+                                                                x0                          x1
+
+
+3.   Se dividen los scores por la raíz de la dimensión
+de vector k (dk)                                         q0                        q1
+
+                                                         k0                        k1
+4.   Usando Softmax para los scores se obtienen
+probabilidades (pi).
+                                                           q0 ● k = s                   q0 ● k = s
+                                                                 0   0                        1   1
+
+
+                                                         SoftMax(s0/√dk ) = p0   SoftMax(s1/√dk ) = p1
+
+
+
+
+                                                                                                      14
+ CÁLCULO DE SELF-ATTENTION
+                                                                 x0                     x1
+
+
+5.   Se multiplica cada vector v por lo obtenido
+en la función de Softmax.                             q0                       q1
+
+                                                      k0                       k1
+6.   Se suman los vectores ponderados v’
+obteniendo el output de la capa de Self-Attention
+                                                        q0 ● k = s                  q0 ● k = s
+                                                              0   0                       1   1
+para cada token (en este ejemplo, para el primero)
+
+                                                     SoftMax(s0/√dk ) = p0   SoftMax(s1/√dk ) = p1
+
+                                                     v’0= p0 *                v’1= p1 * v1
+                                                     v0
+                                                     v’0+v’1 = z0
+                                                                                                  15
+CÁLCULO DE SELF-ATTENTION
+                                                               X       WQ       Q
+                                                        Soy
+                                                         un        x        =
+  Para implementarlo se calcula de forma          estudiante
+ matricial para un procesamiento más rápido
+                                                               X       WK       K
+
+                                                                   x        =
+Attention(K,Q,V) = SoftMax( QK’ / √dk ) * V = Z
+
+                                                               X       WV       V
+
+                                                                   x        =
+
+
+                                                                                    16
+     ENCODER 0
+
+
+              Feed-Forward           Feed-Forward            Feed-Forward
+              Neural Network         Neural Network          Neural Network
+
+
+                          z0                       z1                       z2
+
+
+                                      Self-Attention Layer
+
+
+
+
+                   Soy                    un                   estudiante
+
+●   Cada token sigue su propio camino en el encoder.
+●   Hay dependencias entre los caminos en la self-attention layer pero no en la red feed-forward.
+●   Los caminos se pueden ejecutar en paralelo, pasando por redes feed-forward idénticas
+                                                                                                17
+MULTI-HEADED ATTENTION
+
+Mecanismo que mejora la performance de la capa de self-attention:
+
+ ●   El Encoder se puede enfocar en distintas posiciones de la secuencia simultáneamente
+
+ ●   Se tienen múltiples sets K Q V, llamados “heads”
+
+
+                 HEAD 0           HEAD 1                    HEAD n
+
+                  K0                K1                        Kn
+                   Q0                Q1                        Qn
+
+                      V0                   V1       ...             Vn
+
+
+
+
+                                                                                           18
+MULTI-HEADED ATTENTION
+
+
+
+
+                         Multi-Headed Attention
+                                                  19
+POSITIONAL ENCODING
+Representa el orden de los tokens en la secuencia tomada como input
+
+A cada embedding se le agrega un vector p
+
+Los vectores p siguen un patrón que el modelo aprende para determinar la distancia entre tokens
+
+
+ INPUT DEL ENCODER          x0’               x1’              x2’
+                                     =                =                =
+
+     POSITIONAL             p0                p1               p2
+      ENCODING
+                                     +                +                +
+
+                            x0                x1               x2
+     EMBEDDING
+
+                                   Soy              un           estudiante
+   TOKENIZATION                                                                              20
+POSITIONAL ENCODING
+
+                      PE(pos, 2i)    = sen(pos/ 10000²i/d )
+
+                      PE(pos, 2i+1) = cos(pos/ 10000²i/d )
+
+Donde:
+pos es la posición del token en la secuencia
+i es el índice del vector de posición
+d es la dimensión de un embedding, la misma del vector de posición pi
+
+                                    i=0   i=1    i=2    i=3
+
+                         p0                                   pos=0
+
+
+
+                                                d=4                     21
+                                                                I am a student                    OUTPUT
+
+                     Probabilidad de cada token     0.1   ...   0.0    ...   0.9            ...
+
+
+                                                                      SOFTMAX
+
+
+                    logits: puntaje de cada token   -2    ...   1      ...   7     -3   4   ...
+
+
+LINEAR
+Red neuronal fully-connected que proyecta el                          LINEAR
+output del último decoder en un vector más
+grande llamado logits
+
+
+
+
+                                                                 DECODERS
+
+                                                                                                           22
+                            I am a student   OUTPUT
+
+
+
+
+                              SOFTMAX
+
+
+
+                               LINEAR
+TRANSFORMER
+
+
+
+
+        N ENCODERS          N DECODERS
+
+
+
+
+  Soy     un   estudiante
+                                                      23
+03
+ENTRENAMIENTO
+¿Cómo aprende un
+Transformer?
+
+
+
+
+                   24
+CASO DE USO - TRADUCCIÓN
+
+
+
+                  Se quiere traducir “gracias” a “thanks”.
+
+  Se tiene un vocabulario de salida v = (a, am, i, thanks, student, <eof>).
+
+
+
+
+                                                                              25
+ENTRENAMIENTO
+
+Los pesos se inicializan de forma aleatoria, entonces el modelo sin entrenar devuelve una
+distribución de probabilidades con valores arbitrarios para cada token
+
+Se pueden comparar las probabilidades y por backpropagation nos vamos acercando al
+output deseado.
+
+
+
+
+          OUTPUT OBTENIDO          0.2     0.2      0.1      0.2     0.2      0.1
+
+
+          OUTPUT DESEADO           0.0     0.0      0.0      1.0     0.0      0.0
+
+                                   a       am        i    thanks    student   <eof>
+                                                                                            26
+COSTO
+Entrenar un Transformer requiere de gran costo computacional
+
+
+
+
+Vaswani, A., et al. (2017). Attention is all you need. Advances in neural information processing systems, 30.   27
+VARIACIÓN DE PARÁMETROS
+
+
+
+
+Vaswani, A., et al. (2017). Attention is all you need. Advances in neural information processing systems, 30.   28
+                  04
+APLICACIONES
+  ¿Para qué puedo usar un
+             Transformer?
+
+
+
+
+                            29
+4.1
+TEXTO
+Aplicaciones
+
+
+
+
+               30
+BARD TEXT GENERATOR
+
+
+
+                      TRANSFORMER
+
+
+
+
+ Gutenberg   Corpus   Red Neuronal   Nueva Historia
+
+
+
+
+                                                      31
+CORPUS
+
+
+
+    POPULAR
+
+
+
+
+              32
+GENERACIÓN
+
+Época 1/100: “This story is about a woman”
+
+Época 2/100: “This story is about a jungle for one , that he was the”
+
+…
+
+Época 20/100: “This story is about a good fortune and messages”
+
+…
+
+Época 60/100: “This story is about a to new truth , and be impossible for _us _ to visit”
+
+…
+
+Época 100/100: this story is about a man of the to names of ten years say ,
+                                                                                     33
+GENERACIÓN                                                    ÉPOCAS
+                                                              MODELO
+                                                                          10
+                                                                          FineTuned
+
+
+                                                                MYSTERY CORPUS
+
+
+
+
+A small, tightly wound body found in San Bernardino County that police say may have
+
+come from the former San Bernardino shooter.
+
+Police at San Bernardino County State Police began searching for the 32-month-old San
+
+Bernardino resident, who it said was in the early morning hours of Nov. 7, 2015.
+
+Authorities were also interviewing a man the county's ﬁrst responders found at the scene.
+
+The woman's death is the latest in a string of shootings in
+
+
+
+
+                                                                                            34
+GENERACIÓN                                                    ÉPOCAS
+                                                              MODELO
+                                                                           10
+                                                                           FineTuned
+
+
+                                                                 VAMPYRE CORPUS
+
+
+
+
+A dark shadow has been found in the sky. The ghostly creature's name has not been found
+
+in the sky with no explanation, and no one knows the cause of it.
+
+You can see it coming out of your mouth on this little piece of paper. It's tiny, yet you need
+
+only look at it to know if it actually was the ghost of the man who had killed the Earth
+
+She was in the throes of madness and insanity. He had her hands clenched around her
+
+neck and she could hear her breathing on the ﬂoor of his room.
+
+"Ahm…what's your name?" I looked over at her face. "Ahm…you haven't seen me like before."
+
+
+                                                                                                 35
+TEXT COMPLETION                                             ÉPOCAS
+                                                            MODELO
+                                                                        10
+                                                                        FineTuned
+
+
+                                                                LOVE CORPUS
+
+
+
+
+He loved her so much that she cried and tried again to express her grief and to let that
+
+tears fall upon her heart; not only because of the great loss on which she took at once to
+
+love herself, but because of the great sorrow that had had arisen upon her by accident; and
+
+because of the great grief she had caused at once to love herself, as an expression of
+
+remorse when she was taken as such; when she cried and cried again, because of the
+
+great joy that had arisen upon
+
+
+
+
+                                                                                              36
+CHAT-GPT
+Generative Pre-trained Transformer
+
+
+
+
+                                     37
+OPEN AI
+OpenAI - Playground
+OpenAI - API Docs
+OpenAI - Examples
+
+
+
+
+                      38
+Large Language Models (LLMs)
+GPT = Generative Pre-trained Transformer
+
+
+
+
+GPT 5 Developers Demo
+
+
+                                           39
+4.2
+IMÁGENES
+Aplicaciones
+
+
+
+
+               40
+APLICACIONES GENERALES
+
+
+
+
+                         41
+                                                 https://ieeexplore.ieee.org/document/11058724
+
+
+
+PAPERS
+
+
+ https://ieeexplore.ieee.org/document/10178851
+
+
+
+
+                                                                                                 42
+                                                      Piñeiro, E. S. et al
+
+
+RETINOBLASTOMA
+Tumor intraocular caracterizado por células malignas en la retina
+
+
+
+
+RETINOPATÍA AUTOINMUNE
+
+ Alteraciones patológicas en la retina que pueden llevar a una
+ pérdida parcial o total de la visión
+
+
+
+                                                                             43
+DALL-E 3
+   Enero   Enero     Abril     Agosto    Octubre
+    2021   2022      2022       2023      2023
+
+
+  DALL-E   CLIP    DALL-E 2   DALL-E 3    DALL-E 3
+                                         + ChatGPT
+                                         y BingChat
+
+
+
+
+                                     DALL-E 3
+
+                                     Ejemplos
+                                                      44
+IMAGE GENERATION
+
+
+
+
+                   45
+GPT4-o
+OpenAI - GPT4-omni
+
+
+
+
+                     46
+4.3
+AUDIO
+Aplicaciones
+
+
+
+
+               47
+WHISPER
+Open AI - Whisper model
+
+
+
+
+                          48
+MÚSICA
+Music Transformer: Generating Music with Long-Term Structure
+
+
+
+
+                                                               49
+4.4
+APLICACIONES
+Otros
+
+
+
+
+               50
+APLICACIONES
+
+●   Comprensión, generación y traducción de textos: OpenAI Language Model
+
+●   Predecir la siguiente palabra de una oración: IntelliSense in Visual Studio Code
+
+●   Juegos de Estrategia Real-Time: AlphaStar - StarCraft II
+
+●   Detección de Anomalías: Spacecraft Anomaly Detection
+
+●   Reconocimiento de Imágenes: Patches Are All You Need?
+
+                                   An Image is Worth 16x16 Words
+
+●   Generar música: Music Transformer: Generating Music with Long-Term Structure
+
+                                                                                       51
+05.
+INDUSTRIA
+¿Cómo se usa hoy en día?
+
+
+
+
+                           52
+DEEP LEARNING FRAMEWORKS
+
+
+
+
+                           53
+HUGGING-FACE
+Existen distintos modelos de Transformers: GPT-2/3/4, BERT, RoBERTa, DistilBERT, T5
+
+
+
+
+                                                                                      54
+MLOps CLOUD
+
+
+
+
+              55
+                  06
+BIBLIOGRAFÍA
+¿Dónde puedo profundizar?
+
+
+
+
+                            56
+BIBLIOGRAFÍA
+
+ Attention Is All You Need - Paper
+
+ GPT-2 - GPT-3 - BERT
+
+ Inside Machine Learning
+
+ Illustrated Transformer
+
+ Positional Encoding - Visualization
+
+ Word Embedding - Visualization
+
+ Simple Transformer in Python - Github
+
+ Interactive Transformer
+                                         57
+PROFUNDIZAR
+
+
+
+
+    SISTEMAS DE
+   INTELIGENCIA            73.69
+     ARTIFICIAL   Large Language Models
+
+
+
+
+                                          58
+¡ GRACIAS !
+
+
+              59
+

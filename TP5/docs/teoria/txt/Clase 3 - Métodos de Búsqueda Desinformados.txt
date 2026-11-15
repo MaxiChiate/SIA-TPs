@@ -1,0 +1,2051 @@
+Sistemas de Inteligencia Artificial
+Métodos de Búsqueda
+  Desinformados
+Recapitulando…
+ Sistemas de Inteligencia Artificial
+Agentes y Ambientes
+ El Agente y su Ambiente
+                           Sensores
+
+
+            Percepciones
+                           ?
+Ambiente     Acciones      Agente
+
+
+
+
+           Efectores
+          El Agente y su Ambiente
+
+                !
+
+Sistemas de detección de
+         fraude                                        Agentes de inteligencia
+                                                        artificial generativa
+                           Sistemas de recomendación
+Agentes
+Todo aquello que puede considerarse que percibe y responde o actúa en un
+ambiente, de forma independiente (autónomo).
+
+
+
+
+              Racionales vs No Racionales
+
+            Omniscientes vs No Omniscientes
+
+                     Sin vs Con estado interno
+Ambientes
+Es un conjunto de componentes que conforman al entorno del problema.
+Pueden contener uno o más agentes.
+
+
+     1.      Totalmente vs Parcialmente Observable
+
+     2.   Determinístico vs Estocástico    (vs Estratégico)
+
+     3.       Episódico vs Secuencial
+
+     4.         Estático vs Dinámico       (vs Semidinámico)
+
+     5.         Discreto vs Continuo
+
+     6.        Conocido vs Desconocido
+
+     7.        Individual vs Multiagente
+
+     8.      Adversarial vs Colaborativo
+Sistemas de Inteligencia Artificial
+Métodos de Búsqueda
+  Desinformados
+Definiciones
+●   Estado: Conjunto de valores del ambiente en un momento
+    dado.
+●   Acción: Una función que toma un estado y retorna otro
+    estado, si es aplicable.
+●   Espacio de estados: Conjunto de estados que incluye todos
+    los estados alcanzables desde el estado inicial.
+●   Espacio de acciones: Conjunto de acciones que incluye todas
+    las acciones aplicables a por lo menos un estado en el
+    espacio de estados.
+  Problema
+Información que se utiliza para crear al agente que realiza un
+método de búsqueda.
+ ●   Se analizan los objetivos a lograr.
+ ●   Se formulan las acciones posibles y los estados (o su
+     arquitectura).
+ ●   Se elabora un algoritmo de búsqueda que:
+       ○   Recibe un estado inicial (ambiente).
+       ○   Ejecuta indeﬁnidamente o hasta llegar a cierto(s)
+           estado(s).
+  Problemas
+  Bien Definidos                                                     Condición de
+                                                                     solución:
+
+                                                                     goal: S -> { 0, 1 }
+
+Estado Inicial: Estado en el cual, generalmente, el problema no
+está resuelto.
+
+Conjunto de posibles acciones: Dado un estado particular
+S, retorna el conjunto de acciones que pueden
+ejecutarse en S.
+
+Modelo de Transición: Describe el efecto de aplicar A (acción) a S
+(estado).
+
+Función de costo: Determina el costo para el modelo de transición.
+
+Condición de solución: Función que nos indica si un estado S es
+solución.
+                                                           s1
+
+ Problemas                                            a1   n1   a2
+
+
+ Bien Definidos                                       s2        s3
+
+                                                 a4   n2        n3
+El modelo de transición es:
+δ: S⨯A -> S o también δ(sx, ay) = sz
+                                                 sG
+                                                 n4
+ δ           a1          a2            a3   a4
+
+ s1          s2          s3            ∅    ∅
+
+ s2          s1           ∅            ∅    sG
+
+ s3          ∅            ∅            ∅    s1
+
+ sG          ∅            ∅            ∅    ∅
+                                                                                            g(n1) = 0
+                                                                                   s1
+                                                                           a1                a2
+      Problemas                                                      w=7
+                                                                                       n1
+                                                                                                  w=2
+
+
+      Bien Definidos                                          g(n2) = 7
+                                                                           s2                s3
+                                                                   a4      n2                n3
+                                                              w=3
+     Existe un costo asociado a aplicar una acción sobre un                                  g(n3) = 2
+     estado:
+     g: S⨯A -> ℝ o también g(sx, ay) = w                          sG      g(n4) = 10
+
+                                                                   n4
+δ          a1       a2        a3       a4
+                   g         a1       a2        a3       a4
+s1         s2       s3        ∅        ∅
+                   s1        7        2         ∅         ∅
+s2         s1        ∅        ∅        sG
+                   s2        7        ∅         ∅         3
+s3          ∅        ∅        ∅        s1
+                   s3        ∅        ∅         ∅         2
+sG          ∅        ∅        ∅        ∅
+                   sG        ∅        ∅         ∅         ∅
+                                 Información que se utiliza para crear al agente que realiza un método de
+                                 búsqueda.
+
+
+
+Problema                             ●
+
+                                     ●
+                                            Se analizan los objetivos a lograr.
+
+                                            Se formulan las acciones posibles y los estados (o su arquitectura).
+
+
+
+
+Ejemplo
+                                     ●      Se elabora un algoritmo de búsqueda que:
+
+                                                ○      Recibe un estado inicial (ambiente).
+
+                                                ○      Ejecuta indeﬁnidamente o hasta llegar a cierto(s) estado(s).
+
+
+
+
+                           Objetivo: ¿?
+
+                           ○    Conseguir todos los items
+
+                           ○    Ganar todos los concursos
+
+                           ○    Ganar el frente de batalla
+                                (obtener todos los símbolos)
+
+                           ○    Ganar las 8 medallas
+
+                           ○    Ganar la liga Pokémon
+
+ Pokémon Emerald Version
+                     Información que se utiliza para crear al agente que realiza un método de
+                     búsqueda.
+
+
+
+Problema                 ●
+
+                         ●
+                                Se analizan los objetivos a lograr.
+
+                                Se formulan las acciones posibles y los estados (o su arquitectura).
+
+
+
+
+Ejemplo
+                         ●      Se elabora un algoritmo de búsqueda que:
+
+                                    ○      Recibe un estado inicial (ambiente).
+
+                                    ○      Ejecuta indeﬁnidamente o hasta llegar a cierto(s) estado(s).
+
+
+
+
+               Objetivo:
+
+                 ●        Llegar a la bolsita de cereales
+
+
+
+               Estado inicial:
+
+                 ●        Estoy en el tazón de cereales
+
+
+
+
+   Laberinto
+                             ●    Estado: Conjunto de valores del ambiente en un momento
+                                  dado.
+
+
+Definiciones                 ●    Acción: Una función que toma un estado y retorna otro
+                                  estado, si es aplicable.
+
+                                  Espacio de estados: Conjunto de estados que incluye todos
+
+
+Ejemplo
+                             ●
+                                  los estados alcanzables desde el estado inicial.
+
+                             ●    Espacio de acciones: Conjunto de acciones que incluye todas
+                                  las acciones aplicables a por lo menos un estado en el espacio
+                                  de estados.
+
+
+
+
+               ●   Espacio de acciones
+
+                   ¿Qué deﬁnimos como acción en este
+                   contexto?
+                     ○
+
+               ●   Espacio de estados
+
+                   ¿Cómo deﬁnimos un estado en este
+                   contexto?
+
+
+
+                   deﬁnir // en este contexto
+   Laberinto
+                                 ●      Estado: Conjunto de valores del ambiente en un momento
+                                        dado.
+
+
+Definiciones                     ●      Acción: Una función que toma un estado y retorna otro
+                                        estado, si es aplicable.
+
+                                        Espacio de estados: Conjunto de estados que incluye todos
+
+
+Ejemplo
+                                 ●
+                                        los estados alcanzables desde el estado inicial.
+
+                                 ●      Espacio de acciones: Conjunto de acciones que incluye todas
+                                        las acciones aplicables a por lo menos un estado en el espacio
+                                        de estados.
+
+
+
+
+               ●   Espacio de acciones
+
+                   A = {a | a sea un movimiento del trazo
+                   que no cruce lo blanco}
+                     ○    Muevo hacia abajo
+
+               ●   Espacio de estados
+
+                   S = { s | s contenga P, L y O }
+                     ○    P: posición del trazo
+
+                     ○    L: límites del laberinto
+
+                     ○    O: posiciones bloqueadas (paredes)
+
+
+   Laberinto
+                            Información que se utiliza para crear al agente que realiza un método de
+                            búsqueda.
+
+
+
+Problema                        ●
+
+                                ●
+                                       Se analizan los objetivos a lograr.
+
+                                       Se formulan las acciones posibles y los estados (o su arquitectura).
+
+
+
+
+Ejemplo
+                                ●      Se elabora un algoritmo de búsqueda que:
+
+                                           ○         Recibe un estado inicial (ambiente).
+
+                                           ○         Ejecuta indeﬁnidamente o hasta llegar a cierto(s) estado(s).
+
+
+
+
+               ●   Espacio de acciones
+
+                   A = {a | a sea un movimiento del trazo
+                   que no cruce lo blanco}
+                     ○    Muevo hacia abajo
+
+               ●   Espacio de estados
+
+                   S = { s | s contenga P, L y O }
+                     ○    P: posición del trazo
+
+                     ○    L: límites del laberinto
+
+                     ○    O: posiciones bloqueadas (paredes)
+
+
+   Laberinto
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Estado inicial
+
+                   Estoy en el tazón de cereales
+                      ○    P = tazón
+
+                      ○    L = franjas blancas más externas
+
+                      ○    O = todo aquello pintado de blanco
+                           dentro de L
+
+               ●   Espacio de estados
+
+                   S = { s | s contenga P, L y O }
+                     ○    P: posición del trazo
+
+                     ○    L: límites del laberinto
+
+   Laberinto         ○    O: posiciones bloqueadas (paredes)
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Espacio de acciones
+
+                   A = {a | a sea un movimiento del trazo
+                   que no cruce lo blanco}
+                     ○    Muevo hacia abajo
+
+               ●   Espacio de estados
+
+                   S = { s | s contenga P, L y O }
+                     ○    P: posición del trazo
+
+                     ○    L: límites del laberinto
+
+                     ○    O: posiciones bloqueadas (paredes)
+
+
+   Laberinto
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Espacio de acciones
+
+                   A = {a | a sea un movimiento del trazo
+                   que no cruce lo blanco}
+                     ○    Muevo hacia abajo
+
+               ●   Espacio de estados
+
+                   S = { s | s contenga P, L y O }
+                     ○    P: posición del trazo
+
+                     ○    L: límites del laberinto
+
+                     ○    O: posiciones bloqueadas (paredes)
+
+
+   Laberinto
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Espacio de acciones
+
+                   A = {a | a sea un movimiento del trazo
+                   que no cruce lo blanco}
+                     ○    Muevo hacia abajo
+
+               ●   Espacio de estados
+
+                   S = { s | s contenga P, L y O }
+                     ○    P: posición del trazo
+
+                     ○    L: límites del laberinto
+
+                     ○    O: posiciones bloqueadas (paredes)
+
+
+   Laberinto
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Espacio de acciones
+
+                   A = {a | a sea un movimiento del trazo
+                   que no cruce lo blanco}
+                     ○    Muevo hacia abajo
+
+               ●   Espacio de estados
+
+                   S = { s | s contenga P, L y O }
+                     ○    P: posición del trazo
+
+                     ○    L: límites del laberinto
+
+                     ○    O: posiciones bloqueadas (paredes)
+
+
+   Laberinto
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Espacio de acciones
+
+                   A = {a | a sea un movimiento del trazo
+                   que no cruce lo blanco}
+                     ○    Muevo hacia abajo
+
+               ●   Espacio de estados
+
+                   S = { s | s contenga P, L y O }
+                     ○    P: posición del trazo
+
+                     ○    L: límites del laberinto
+
+                     ○    O: posiciones bloqueadas (paredes)
+
+
+   Laberinto
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Espacio de acciones
+
+                   A = {a | a sea un movimiento del trazo
+                   que no cruce lo blanco}
+                     ○     Muevo hacia abajo
+
+               ●   Costo
+
+                     ○     Longitud del trazo
+
+
+
+
+   Laberinto
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Espacio de acciones
+
+                   A = {a | a sea un movimiento del trazo
+                   que no cruce lo blanco}
+                     ○     Muevo hacia abajo
+
+               ●   Costo
+
+                     ○     Longitud del trazo
+
+
+
+
+   Laberinto
+                               Estado Inicial: Estado en el cual, generalmente, el problema no
+                               está resuelto.
+
+
+Problema                       Conjunto de posibles acciones: Dado un estado particular
+                               S, retorna el conjunto de acciones que pueden
+                               ejecutarse en S.
+
+
+
+Ejemplo
+                               Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                               Función de costo: Determina el costo para el modelo de transición.
+
+                               Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Objetivo:
+
+                     ○    Llegar a la bolsita de cereales
+
+               ●   Espacio de estados
+
+                   S = { s | s contenga P, L y O }
+                     ○    P: posición del trazo
+
+                     ○    L: límites del laberinto
+
+                     ○    O: posiciones bloqueadas (paredes)
+
+               ●   Condición de solución
+
+                     ○    goal(s) == 1 ⟺ Ps == bolsita de cereales
+   Laberinto
+Representación de
+Problema
+●   Deﬁnición de arquitectura de estados...
+     ○   Estratégicamente, entendiendo los operadores entre
+         ellos.
+     ○   De forma tal que representen todo el espacio de
+         estados.
+     ○   Entendiendo el costo computacional de dicha
+         representación y de sus operadores.
+     ○   Buscando simetría de estados.
+     ○   El conjunto de acciones es más reducido (manteniendo
+         utilidad).
+Representación de
+                                                        Puede resultar costoso
+
+Problema                                                computacionalmente
+                                                        detectar si en x
+                                                        posición hay un
+                                                        obstáculo
+                ● Difícil representar
+                  computacionalmente
+                ● Acciones: Continuo de
+                  posibilidades para el trazo
+                  (¡INFINITAS ACCIONES!)
+                     ○   Muevo hacia abajo 0.123º
+                         respecto de la vertical a la
+                         izquierda (-0.123º)
+
+                     ○   ¿Cuánto muevo? ¿2cm?
+                         ¿2 pixeles?
+
+                ● Estados: Posición en un
+                  continuo (¡INFINITOS
+    Laberinto
+                  ESTADOS!)
+Representación de
+Problema
+                ● ¡Podemos discretizar el
+                  problema!
+                     ○   Si hay blanco en el cuadrado,
+                         esta bloqueado
+
+                ● A = { arriba, abajo, izquierda,
+                  derecha }
+                ● S = { s | s = (P, L) } donde
+                     ○   P es el cuadradito en el que se
+                         encuentra el jugador
+
+                     ○   L tiene la disponibilidad de
+                         cada cuadradito (matriz, mapa,
+                         etc.)
+    Laberinto
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Objetivo: llegar a la bolsita de cereales
+               ●   Estado inicial: tazón de cereales
+               ●   A = { arriba, abajo, izquierda, derecha }
+               ●   S = { s | s = (P, L) }
+               ●   δ(s, a): mueve P según a
+               ●   ∀ a ∈ A, g(a) = 1
+               ●   goal(s) == 1 ⟺ Ps == bolsita de cereales
+
+
+   Laberinto
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Objetivo: llegar a la bolsita de cereales
+               ●   Estado inicial: tazón de cereales
+               ●   A = { arriba, abajo, izquierda, derecha }
+               ●   S = { s | s = (P, L) }
+               ●   δ(s, a): mueve P según a
+               ●   ∀ a ∈ A, g(a) = 1
+               ●   goal(s) == 1 ⟺ Ps == bolsita de cereales
+
+
+   Laberinto
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Objetivo: llegar a la bolsita de cereales
+               ●   Estado inicial: tazón de cereales
+               ●   A = { arriba, abajo, izquierda, derecha }
+               ●   S = { s | s = (P, L) }
+               ●   δ(s, a): mueve P según a
+               ●   ∀ a ∈ A, g(a) = 1
+               ●   goal(s) == 1 ⟺ Ps == bolsita de cereales
+
+
+   Laberinto
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Objetivo: llegar a la bolsita de cereales
+               ●   Estado inicial: tazón de cereales
+               ●   A = { arriba, abajo, izquierda, derecha }
+               ●   S = { s | s = (P, L) }
+               ●   δ(s, a): mueve P según a
+               ●   ∀ a ∈ A, g(a) = 1
+               ●   goal(s) == 1 ⟺ Ps == bolsita de cereales
+
+
+   Laberinto
+                              Estado Inicial: Estado en el cual, generalmente, el problema no
+                              está resuelto.
+
+
+Problema                      Conjunto de posibles acciones: Dado un estado particular
+                              S, retorna el conjunto de acciones que pueden
+                              ejecutarse en S.
+
+
+
+Ejemplo
+                              Modelo de Transición: Describe el efecto de aplicar A (acción) a S (estado).
+
+                              Función de costo: Determina el costo para el modelo de transición.
+
+                              Condición de solución: Función que nos indica si un estado S es solución.
+
+
+
+
+               ●   Objetivo: llegar a la bolsita de cereales
+               ●   Estado inicial: tazón de cereales
+               ●   A = { arriba, abajo, izquierda, derecha }
+               ●   S = { s | s = (P, L) }
+               ●   δ(s, a): mueve P según a
+               ●   ∀ a ∈ A, g(a) = 1
+               ●   goal(s) == 1 ⟺ Ps == bolsita de cereales
+
+
+   Laberinto
+    Representación de
+    Problema
+
+8        6              2   5   8
+              90º
+5    4   7              3   4
+
+2    3   1              1   7   6
+
+             8 puzzle
+Representación de              Los estados
+                               podrían deﬁnirse
+
+
+Problema
+                               cómo los
+                               números
+                               adyacentes a un
+                               número
+
+
+
+
+                   2   5   8
+         90º
+                   3   4
+
+                   1   7   6
+
+        8 puzzle
+Definiendo
+Acciones ...
+●   Teniendo en cuenta las suposiciones de la descripción
+    informal del problema.
+
+●   Eligiendo entre acciones particulares o meta-acciones*.
+     ○ Meta-acciones es una forma de deﬁnir genéricamente
+          un conjunto de acciones.
+
+●   Decidiendo cuanto debe ser resuelto en el precálculo de
+    acciones y cuánto debe ser resuelto por el método de
+    búsqueda.
+Definiendo                    Mirar en una
+                              dirección puede
+
+Acciones ...                  resultar una
+                              acción sin
+                              utilidad
+
+
+
+
+    Pokémon Emerald Version
+    Definiendo
+    Acciones ...
+                                                       Deﬁno una meta
+                                                       acción de
+                                                       moverme a la
+                                                       izquierda
+
+
+
+
+                   Pokémon Emerald Version
+
+3 acciones, una unica acción: Moverse a la izquierda
+ ● Mirar a la izquierda
+ ● Moverse a la izquierda
+ ● Mirar al frente
+Definiendo
+Acciones ...
+               4 acciones:
+               arriba, abajo,
+               izquierda,
+               derecha
+Definiendo     ¿Podría deﬁnir
+
+Acciones ...   las meta
+               acciones de
+               movimiento
+               diagonal?
+Definiendo
+Acciones ...                 SÍ pero OJO. Si la deﬁnimos cómo
+                             arriba-izquierda o izquierda-arriba CAMBIA.
+                             Tener en cuenta las implicancias.
+
+
+
+
+   Pokémon Emerald Version
+ Eficiencia
+Forma de medir la eﬁciencia de una búsqueda:
+ ● Encuentra solución.
+ ● Optimiza el costo de la solución.
+      ○ Mínimo
+      ○ Máximo
+      ○ Promedio
+ ● Optimiza la cantidad de acciones a tomar.
+ ● Optimiza el costo computacional de encontrar una solución.
+      ○ Tiempo
+      ○ Memoria
+      ○ …
+ ● Combinación
+ ● Otros, según lo requiera el problema
+            Direcciones
+            de búsqueda
+         Forward / “data-driven”
+             La raíz es el estado inicial.
+
+         Backward / “goal-driven”
+             La raíz es la solución (o una de las soluciones).
+
+
+
+                                                         Podemos comenzar:
+En el caso del laberinto, ¿cómo sería
+                                                         ● desde el tazón (data-driven)
+una forma de resolverlo “data-driven”?
+¿y una “goal-driven”?                                    ● o la bolsita (goal-driven)
+
+
+
+
+                                             Laberinto
+ Estrategias
+ de búsqueda
+Completa
+    Encuentra una solución (de existir y ser alcanzable).
+
+Óptima
+     Encuentra la solución alcanzable con menor costo.
+
+Complejidad computacional
+ ● Temporal
+ ● Espacial
+ Búsquedas
+ Desinformadas
+ ●   No tienen más información de los estados que los que otorga
+     la deﬁnición del problema.
+
+ ●   Sólo se distinguen estados “goal” de los que no lo son.
+
+ ●   Poco eﬁcientes en problemas donde podemos realizar
+     estimaciones.
+
+Algunos de ellos son:
+ ● BFS
+ ● DFS
+ ● IDDFS
+ ● Costo Uniforme
+ Búsquedas
+ Informadas
+ ●   Tienen más información para comparar entre dos estados
+     cuál es “mejor”.
+
+ ●   Pueden estimar cuánto les falta para solucionar el problema.
+     La estimación a la solución desde un estado se llama
+     HEURÍSTICA.
+
+ ●   Pueden estimar cuál es el costo del problema.
+
+ ●   En problemas complejos, suelen ser más eﬁcientes que los
+     métodos no informados.
+
+Algunos de ellos son:
+ ● Greedy
+ ● A*
+    Representación de
+    Problema
+  De esta forma se genera un árbol donde:
+
+   ●   La raíz representa al estado inicial
+   ●   Cada nodo representa (contiene) un estado
+        ○ Los nodos hoja son estados sin acciones aplicables o
+             estados que no fueron expandidos.
+
+
+
+
+Un estado es expandido cuando dentro del método de búsqueda se le
+han aplicado todas las acciones aplicables.
+                                                                             s1
+
+
+    Representación de
+                                                                     a1      n1        a2
+
+
+
+    Problema                                                   a4
+                                                                     s2
+                                                                     n2
+                                                                                       s3
+                                                                                       n3
+
+  De esta forma se genera un árbol donde:                                 Árbol de
+                                                                          búsqueda
+                                                               sG         totalmente
+   ●   La raíz representa al estado inicial                               expandido
+   ●   Cada nodo representa (contiene) un estado                n4
+        ○ Los nodos hoja son estados sin acciones aplicables o
+             estados que no fueron expandidos.
+
+
+
+
+Un estado es expandido cuando dentro del método de búsqueda se le
+han aplicado todas las acciones aplicables.
+              Representación de
+              Problema
+                                                                     Nodos no explorados
+                                                                     Nodos explorados
+                       s1                            s1
+                  a1   n1   a2                a1      n1        a2
+
+
+                  s2        s3                s2                s3
+
+Árbol de     a4   n2        n3               n2                 n3
+búsqueda
+totalmente
+expandido
+             sG                  ¿Qué nodos están expandidos?
+
+             n4
+Representación de
+Problema
+ Nodo ≠ Estado
+No confundir NODO con ESTADO!
+
+Un nodo contiene un estado. De esta forma, un estado puede estar
+representado en diferentes nodos.
+
+Siendo g(n) el costo acumulado del nodo (la suma del arco desde
+n0 hasta n), podemos encontrar dos nodos n1 y n2, que pueden
+contener al mismo estado, de forma tal que:
+
+     g(n1) ≠ g(n2)
+
+
+
+    En rigor, n1 y n2 tienen diferentes antecesores.
+ Nodo ≠ Estado
+Imaginemos que queremos ir de Plaza Italia a Congreso de
+Tucumán. Analicemos estos estados:
+ Nodo ≠ Estado                                              La sombra
+                                                            representa el camino
+                                                            solución desde mi
+                                                            estado inicial al ﬁnal.
+
+                                                            El estado puede ser
+Imaginemos que queremos ir de Plaza Italia a Congreso de    la posición del
+Tucumán. ¿Son contenidos por nodos iguales? NO              colectivo en un
+                                                            momento dado.
+
+
+
+
+      Línea 152 (Olivos)          Línea 29 (Pte Saavedra)
+             Nodo ≠ Estado
+            Imaginemos que queremos ir de Plaza Italia a Congreso de
+            Tucumán. ¿Son contenidos por nodos iguales? NO
+
+
+   Por el                                                               Por el
+SURESTE                                                                 NORESTE
+
+
+
+
+                  Línea 152 (Olivos)          Línea 29 (Pte Saavedra)
+ Nodo ≠ Estado
+Imaginemos que queremos ir de Plaza Italia a Congreso de
+Tucumán. ¿Son contenidos por nodos iguales? NO
+
+
+                                                            Recorre MÁS
+                                                            distancia.
+
+                                                            Tiene MAYOR
+                                                            costo.
+
+                                                            NO es lo
+                                                            mismo.
+
+
+
+
+      Línea 152 (Olivos)          Línea 29 (Pte Saavedra)
+ Algoritmo
+ de Búsqueda
+Dados Árbol de búsqueda Tr ; Conjunto frontera Fr ; Conjunto de
+nodos explorados Exp ...
+
+1.   Crear Tr, Fr (y Exp) inicialmente vacíos.
+2.   Insertar nodo inicial n0 en Tr y Fr.
+3.   Mientras Fr no esté vacía… (6 en caso de estar vacía)
+      a. Extraer primer nodo de Fr => Nodo n
+      b. Si n es goal
+             i. Devolver la solución, formada por el arco entre la
+                 raíz n0 y el nodo n en Tr. Termina Algoritmo.
+      c. Expandir el nodo n, generando los sucesores. Ingresar
+           dichos sucesores en Fr y colocarlos en Tr como nodos
+           sucesores de n. (Agregar n a Exp.)
+  Algoritmo
+  de Búsqueda
+ 4.   Reordenar Fr según un criterio dado (depende del método de
+      búsqueda).
+
+ 5.   Ir al paso 3.
+
+Si Fr está vacía en el paso 3…
+
+ 6.   No existe solución alcanzable.
+
+
+
+
+      También se puede tomar Fr como un conjunto
+      ordenado, donde no haga falta reordenar.
+                  Algoritmo
+                                                      Nodos no explorados
+                  de Búsqueda                         Nodos frontera
+
+                                 n1                   Nodos explorados
+                            a1         a2
+
+Tr = { n1, n2, n3 }
+                            n2         n3
+Fr = { n2, n3 }
+                       a4        a2         a3
+Exp = { n1 }
+
+                       n4         n5        n6
+                                                 a1
+
+                                                 n7
+                  Algoritmo
+                                                                           Nodos no explorados
+                  de Búsqueda                                              Nodos frontera
+
+                                                            n1             Nodos explorados
+                                                   a1               a2
+
+Tr = { n1, n2, n3 }
+                                                   n2               n3
+Fr = { n2, n3 }
+Exp = { n1 }
+
+
+
+
+                      En realidad, desconozco los estados futuros.
+                      Al explorar un nodo, obtengo qué acciones le
+                      puedo aplicar a su estado y, con ello, consigo los
+                      siguientes estados
+                  Algoritmo
+                                                      Nodos no explorados
+                  de Búsqueda                         Nodos frontera
+
+                                 n1                   Nodos explorados
+                            a1         a2
+
+Tr = { n1, n2, n3 }
+                            n2         n3
+Fr = { n2, n3 }
+                       a4        a2         a3
+Exp = { n1 }
+
+                       n4         n5        n6
+                                                 a1
+
+                                                 n7
+                Algoritmo
+                                                             Nodos no explorados
+                de Búsqueda                                  Nodos frontera
+
+                                        n1                   Nodos explorados
+                                   a1         a2
+
+Tr = { n1, n2, n3, n5, n6 }
+                                   n2         n3
+Fr = { n2, n5, n6 }
+                              a4        a2         a3
+Exp = { n1, n3 }
+
+                              n4         n5        n6
+                                                        a1
+
+                                                        n7
+Breadth First
+Search
+●   Expande los nodos de menor profundidad primero.
+
+●   Es completa si el factor de ramiﬁcación es ﬁnito.
+
+●   Encuentra la solución con menor profundidad.
+
+●   Es Óptima cuando el problema es de costo uniforme (*).
+     ○ (*) Las acciones tienen todas el mismo costo.
+Breadth First
+Search
+             0         n1
+                  a1         a2
+
+
+         1        n2         n3
+
+             a4        a2         a3
+
+
+     2       n4         n5        n6
+                                       a1
+
+ 3                                     n7
+                  Breadth First
+                  Search                               Nodos no explorados
+
+                                                       Nodos frontera
+
+                                  n1                   Nodos explorados
+                             a1         a2
+
+Tr = { n1, n2, n3 }
+                             n2         n3
+Fr = { n2, n3 }
+                        a4        a2         a3
+Exp = { n1 }
+
+                        n4         n5        n6
+                                                  a1
+
+                                                  n7
+                Breadth First
+                Search                                       Nodos no explorados
+
+                                                             Nodos frontera
+
+                                        n1                   Nodos explorados
+                                   a1         a2
+
+Tr = { n1, n2, n3, n5, n6 }
+                                   n2         n3
+Fr = { n2, n5, n6 }
+                              a4        a2         a3
+Exp = { n1, n3 }
+
+                              n4         n5        n6
+                                                        a1
+
+                                                        n7
+                Breadth First
+                Search                                           Nodos no explorados
+
+                                                                 Nodos frontera
+
+                                            n1                   Nodos explorados
+                                       a1         a2
+
+Tr = { n1, n2, n3, n5, n6, n4 }
+                                       n2         n3
+Fr = { n5, n6, n4 }
+                                  a4        a2         a3
+Exp = { n1, n3, n2 }
+
+                                  n4         n5        n6
+                                                            a1
+
+                                                            n7
+                  Breadth First
+                  Search                                         Nodos no explorados
+
+                                                                 Nodos frontera
+
+                                            n1                   Nodos explorados
+                                       a1         a2
+
+Tr = { n1, n2, n3, n5, n6, n4 }
+                                       n2         n3
+Fr = { n6, n4 }
+                                  a4        a2         a3
+Exp = { n1, n3, n2, n5 }
+
+                                  n4         n5        n6
+                                                            a1
+
+                                                            n7
+                Breadth First
+                Search                                           Nodos no explorados
+
+                                                                 Nodos frontera
+
+                                            n1                   Nodos explorados
+                                       a1         a2
+
+Tr = { n1, n2, n3, n5, n6, n4 }
+                                       n2         n3
+Fr = { n6 }
+                                  a4        a2         a3
+Exp = { n1, n3, n2, n5, n4 }
+
+                                  n4         n5        n6
+                                                            a1
+
+                                                            n7
+                Breadth First
+                Search                                             Nodos no explorados
+
+                                                                   Nodos frontera
+
+                                              n1                   Nodos explorados
+                                         a1         a2
+
+Tr = { n1, n2, n3, n5, n6, n4, n7
+}                                        n2         n3
+
+Fr = { n7 }                         a4        a2         a3
+Exp = { n1, n3, n2, n5, n4, n6 }
+                                    n4         n5        n6
+                                                              a1
+
+                                                              n7
+                Breadth First
+                Search                                               Nodos no explorados
+
+                                                                     Nodos frontera
+
+                                                n1                   Nodos explorados
+                                           a1         a2
+
+Tr = { n1, n2, n3, n5, n6, n4, n7 }
+                                           n2         n3
+Fr = { }
+                                    a4          a2         a3
+Exp = { n1, n3, n2, n5, n4, n6, n7 }
+
+                                      n4         n5        n6
+                                                                a1
+
+                                                                n7
+Uniform Cost
+Search
+●   Expande el nodo con menor costo acumulado.
+
+●   Idéntico a BFS en problemas de costo uniforme.
+
+●   Óptima si sucede alguna de las siguientes:
+     ○ g(sucesor(n)) ≥ g(n) ; ∀n
+
+         Dicho de otra forma..
+
+         g(a) ≥ 0 ; ∀ a: acción
+
+         (si el costo de una acción es < 0, no es óptima)
+                  Uniform Cost
+                                                                                                    Nodos no explorados
+                  Search                                                                            Nodos frontera
+
+                                                  n1      g(n1) = 0                                 Nodos explorados
+                                          a1                a2
+
+Tr = { n1, n2, n3 }
+                              g(n2) = 3
+                                          n2                n3        g(n3) = 7
+Fr = { n2, n3 }
+                                   a4              a2                  a3
+Exp = { n1 }
+
+
+                      g(n4) = 11   n4                n5                n6    g(n6) = 8
+
+                                                                              a1
+                                               g(n5) = 17
+
+                                                                                  n7
+                                                                                       g(n7) = 12
+                  Uniform Cost
+                                                                                                        Nodos no explorados
+                  Search                                                                                Nodos frontera
+
+                                                      n1      g(n1) = 0                                 Nodos explorados
+                                              a1                a2
+
+Tr = { n1, n2, n3, n4 }
+                                  g(n2) = 3
+                                              n2                n3        g(n3) = 7
+Fr = { n3, n4 }
+                                       a4              a2                  a3
+Exp = { n1, n2 }
+
+
+                          g(n4) = 11   n4                n5                n6    g(n6) = 8
+
+                                                                                  a1
+                                                   g(n5) = 17
+
+                                                                                      n7
+                                                                                           g(n7) = 12
+                Uniform Cost
+                                                                                                        Nodos no explorados
+                Search                                                                                  Nodos frontera
+
+                                                      n1      g(n1) = 0                                 Nodos explorados
+                                              a1                a2
+
+Tr = { n1, n2, n3, n4, n5, n6 }
+                                  g(n2) = 3
+                                              n2                n3        g(n3) = 7
+Fr = { n4, n5, n6 }
+                                      a4               a2                  a3
+Exp = { n1, n2, n3 }
+
+
+                        g(n4) = 11    n4                 n5                n6    g(n6) = 8
+
+                                                                                  a1
+                                                   g(n5) = 17
+
+                                                                                      n7
+                                                                                           g(n7) = 12
+                Uniform Cost
+                                                                                                      Nodos no explorados
+                Search                                                                                Nodos frontera
+
+                                                    n1      g(n1) = 0                                 Nodos explorados
+                                            a1                a2
+
+Tr = { n1, n2, n3, n4, n5, n6, n7 }
+                                g(n2) = 3
+                                            n2                n3        g(n3) = 7
+Fr = { n4, n5, n7 }
+                                      a4             a2                  a3
+Exp = { n1, n2, n3, n6 }
+
+
+                        g(n4) = 11    n4               n5                n6    g(n6) = 8
+
+                                                                                a1
+                                                 g(n5) = 17
+
+                                                                                    n7
+                                                                                         g(n7) = 12
+                  Uniform Cost
+                                                                                                      Nodos no explorados
+                  Search                                                                              Nodos frontera
+
+                                                    n1      g(n1) = 0                                 Nodos explorados
+                                            a1                a2
+
+Tr = { n1, n2, n3, n4, n5, n6, n7 }
+                                g(n2) = 3
+                                            n2                n3        g(n3) = 7
+Fr = { n5, n7 }
+                                      a4             a2                  a3
+Exp = { n1, n2, n3, n6, n4 }
+
+
+                        g(n4) = 11    n4               n5                n6    g(n6) = 8
+
+                                                                                a1
+                                                 g(n5) = 17
+
+                                                                                    n7
+                                                                                         g(n7) = 12
+                Uniform Cost
+                                                                                                      Nodos no explorados
+                Search                                                                                Nodos frontera
+
+                                                    n1      g(n1) = 0                                 Nodos explorados
+                                            a1                a2
+
+Tr = { n1, n2, n3, n4, n5, n6, n7 }
+                                g(n2) = 3
+                                            n2                n3        g(n3) = 7
+Fr = { n5 }
+                                      a4             a2                  a3
+Exp = { n1, n2, n3, n6, n4, n7 }
+
+
+                        g(n4) = 11    n4               n5                n6    g(n6) = 8
+
+                                                                                a1
+                                                 g(n5) = 17
+
+                                                                                    n7
+                                                                                         g(n7) = 12
+Depth First
+Search
+●   Expande el nodo de mayor profundidad.
+
+●   Suele ser de menor complejidad espacial, sobre todo en su
+    version sin estados repetidos (más adelante).
+
+●   Suele ser más rápido que BFS cuando existen muchas
+    soluciones.
+
+●   No es óptima.
+Depth First
+Search
+             1         n1
+                  a1         a2
+
+
+         2        n2         n3
+
+             a4        a2         a3
+
+
+     3       n4         n5        n6
+                                       a1
+
+ 4                                     n7
+                  Depth First
+                                                       Nodos no explorados
+                  Search                               Nodos frontera
+
+                                  n1                   Nodos explorados
+                             a1         a2
+
+Tr = { n1, n2, n3 }
+                             n2         n3
+Fr = { n2, n3 }
+                        a4        a2         a3
+Exp = { n1 }
+
+                        n4         n5        n6
+                                                  a1
+
+                                                  n7
+                Depth First
+                                                             Nodos no explorados
+                Search                                       Nodos frontera
+
+                                        n1                   Nodos explorados
+                                   a1         a2
+
+Tr = { n1, n2, n3, n5, n6 }
+                                   n2         n3
+Fr = { n2, n5, n6 }
+                              a4        a2         a3
+Exp = { n1, n3 }
+
+                              n4         n5        n6
+                                                        a1
+
+                                                        n7
+                Depth First
+                                                                 Nodos no explorados
+                Search                                           Nodos frontera
+
+                                            n1                   Nodos explorados
+                                       a1         a2
+
+Tr = { n1, n2, n3, n5, n6, n7 }
+                                       n2         n3
+Fr = { n2, n5, n7 }
+                                  a4        a2         a3
+Exp = { n1, n3, n6 }
+
+                                  n4         n5        n6
+                                                            a1
+
+                                                            n7
+                  Depth First
+                                                                 Nodos no explorados
+                  Search                                         Nodos frontera
+
+                                            n1                   Nodos explorados
+                                       a1         a2
+
+Tr = { n1, n2, n3, n5, n6, n7 }
+                                       n2         n3
+Fr = { n2, n5 }
+                                  a4        a2         a3
+Exp = { n1, n3, n6, n7 }
+
+                                  n4         n5        n6
+                                                            a1
+
+                                                            n7
+                Depth First
+                                                                 Nodos no explorados
+                Search                                           Nodos frontera
+
+                                            n1                   Nodos explorados
+                                       a1         a2
+
+Tr = { n1, n2, n3, n5, n6, n7 }
+                                       n2         n3
+Fr = { n2 }
+                                  a4        a2         a3
+Exp = { n1, n3, n6, n7, n5 }
+
+                                  n4         n5        n6
+                                                            a1
+
+                                                            n7
+Depth Limited
+Search
+●   Idem DFS sólo que se limita la profundidad.
+
+●   No es completa ni óptima.
+                Depth Limited
+                Search
+                       1         n1
+                            a1         a2
+
+
+                   2        n2         n3
+
+                       a4        a2         a3
+
+Por ejemplo,
+solo llego a           n4         n5        n6
+profundidad 2
+                                                 a1
+
+                                                 n7
+                  Depth Limited
+                                                      Nodos no explorados
+                  Search                              Nodos frontera
+
+                                 n1                   Nodos explorados
+                            a1         a2
+
+Tr = { n1, n2, n3 }
+                            n2         n3
+Fr = { n2, n3 }
+                       a4        a2         a3
+Exp = { n1 }
+
+                       n4         n5        n6
+                                                 a1
+
+                                                 n7
+                Depth Limited
+                                                                               Nodos no explorados
+                Search                                                         Nodos frontera
+
+                                        n1                                     Nodos explorados
+                                   a1         a2
+                                                        Alcanzó el límite.
+                                                        No puede tomar nodos
+Tr = { n1, n2, n3, n5, n6 }                             frontera de mayor
+                                   n2         n3        profundidad.
+Fr = { n2, n5, n6 }
+                              a4        a2         a3
+Exp = { n1, n3 }
+
+                              n4         n5        n6
+                                                          a1
+
+                                                           n7
+                Depth Limited
+                                                                                     Nodos no explorados
+                Search                                                               Nodos frontera
+
+                                            n1                                       Nodos explorados
+                                       a1         a2
+                                                            TODOS los nodos
+                                                            frontera se encuentran
+Tr = { n1, n2, n3, n5, n6, n4 }                             a mayor profundidad.
+                                       n2         n3        FIN de DLS.
+Fr = { n5, n6, n4 }
+                                  a4        a2         a3
+Exp = { n1, n3, n2 }
+
+                                  n4         n5        n6
+                                                              a1
+
+                                                               n7
+Iterative Deepening
+Depth First Search
+●   DLS donde la profundidad varía según cierto criterio.
+
+●   Se puede implementar manteniendo los nodos hoja que no
+    fueron expandidos por cota de profundidad entre cada
+    iteración.
+
+●   Por ejemplo, podría conﬁgurarse con un profundidad inicial de
+    1 y creciente en 1 en cada iteración - sería un BFS (más
+    costoso si no mantiene el árbol al reiniciar).
+
+●   Con un valor inﬁnito, es un DFS.
+                  Iterative Deepening
+                  Depth First Search
+                               1         n1
+                                    a1         a2
+
+
+                           2        n2         n3
+
+                               a4        a2         a3
+Primero llego a
+profundidad 2.
+
+Luego, llego a
+profundidad 4.
+                       3       n4         n5        n6
+                                                         a1
+
+                   4                                     n7
+                  Iterative Deepening
+                                                      Nodos no explorados
+                  Depth First Search                  Nodos frontera
+
+                                 n1                   Nodos explorados
+                            a1         a2
+
+Tr = { n1, n2, n3 }
+                            n2         n3
+Fr = { n2, n3 }
+                       a4        a2         a3
+Exp = { n1 }
+
+                       n4         n5        n6
+                                                 a1
+
+                                                 n7
+                Iterative Deepening
+                                                                               Nodos no explorados
+                Depth First Search                                             Nodos frontera
+
+                                        n1                                     Nodos explorados
+                                   a1         a2
+                                                        Alcanzó el límite.
+                                                        No puede tomar nodos
+Tr = { n1, n2, n3, n5, n6 }                             frontera de mayor
+                                   n2         n3        profundidad.
+Fr = { n2, n5, n6 }
+                              a4        a2         a3
+Exp = { n1, n3 }
+
+                              n4         n5        n6
+                                                          a1
+
+                                                           n7
+                Iterative Deepening
+                                                                                     Nodos no explorados
+                Depth First Search                                                   Nodos frontera
+
+                                            n1                                       Nodos explorados
+                                       a1         a2
+                                                            TODOS los nodos
+                                                            frontera se encuentran
+Tr = { n1, n2, n3, n5, n6, n4 }                             a mayor profundidad.
+                                       n2         n3        FIN de 1ra iteración.
+Fr = { n5, n6, n4 }
+                                  a4        a2         a3
+Exp = { n1, n3, n2 }
+
+                                  n4         n5        n6
+                                                              a1
+
+                                                               n7
+                Iterative Deepening
+                                                                                 Nodos no explorados
+                Depth First Search                                               Nodos frontera
+
+                                            n1                                   Nodos explorados
+                                       a1         a2
+
+Tr = { n1, n2, n3, n5, n6, n4 }
+                                       n2         n3
+Fr = { n5, n6, n4 }
+                                  a4        a2         a3
+Exp = { n1, n3, n2 }
+
+                                  n4         n5        n6
+                                                            a1
+
+                                                            n7   Límite de la segunda
+                                                                 iteración
+                   Iterative Deepening
+                                                                                  Nodos no explorados
+                   Depth First Search                                             Nodos frontera
+
+                                             n1                                   Nodos explorados
+                                        a1         a2
+
+ Tr = { n1, n2, n3, n5, n6, n4 }
+                                        n2         n3
+ Fr = { n5, n6, n4 }
+                                   a4        a2         a3
+ Exp = { n1, n3, n2 }
+
+A partir de la frontera
+de la iteración anterior.          n4         n5        n6
+                                                             a1
+
+                                                             n7   Límite de la segunda
+                                                                  iteración
+                Iterative Deepening
+                                                                     Nodos no explorados
+                Depth First Search                                   Nodos frontera
+
+                                                n1                   Nodos explorados
+                                           a1         a2
+
+Tr = { n1, n2, n3, n5, n6, n4, n7 }
+                                           n2         n3
+Fr = { n5, n4, n7 }
+                                      a4        a2         a3
+Exp = { n1, n3, n2, n6 }
+
+                                      n4         n5        n6
+                                                                a1
+
+                                                                n7
+                  Iterative Deepening
+                                                                     Nodos no explorados
+                  Depth First Search                                 Nodos frontera
+
+                                                n1                   Nodos explorados
+                                           a1         a2
+
+Tr = { n1, n2, n3, n5, n6, n4, n7 }
+                                           n2         n3
+Fr = { n5, n4 }
+                                      a4        a2         a3
+Exp = { n1, n3, n2, n6, n7 }
+
+                                      n4         n5        n6
+                                                                a1
+
+                                                                n7
+                Iterative Deepening
+                                                                     Nodos no explorados
+                Depth First Search                                   Nodos frontera
+
+                                                n1                   Nodos explorados
+                                           a1         a2
+
+Tr = { n1, n2, n3, n5, n6, n4, n7 }
+                                           n2         n3
+Fr = { n4 }
+                                      a4        a2         a3
+Exp = { n1, n3, n2, n6, n7, n5 }
+
+                                      n4         n5        n6
+                                                                a1
+
+                                                                n7
+ Estados
+ Repetidos
+Motivación:
+ ●   No regresar a estados ancestros.
+ ●   No crear rutas que tengan ciclos.
+ ●   No volver a expandir estados ya expandidos previamente
+      ○   Muy útil para DFS y BFS
+      ○   Ojo con DLS e IDDFS !!
+              ■   Si existe una solución a profundidad N, podemos
+                  no encontrarla.
+ ●   Compromiso vs el costo de almacenar y chequear estados.
+                  Estados
+                                                                 Nodos no explorados
+                  Repetidos                                      Nodos frontera
+
+                                       n1                        Nodos explorados
+                                  a1         a2
+                                                            s2
+Tr = { n1, n2, n4, n3, … }
+                                  n2         n3
+Fr = { n3, … }
+                             a4        a2         a3
+Exp = { n1, n2, n4 }
+                 s2
+                             n4         n5        n6
+                                                       a1
+
+                                                       n7
+                  Estados
+                                                                 Nodos no explorados
+                  Repetidos                                      Nodos frontera
+
+                                       n1                        Nodos explorados
+                                  a1         a2
+                                                            s2
+Tr = { n1, n2, n4, n3, … }
+                                  n2         n3
+Fr = { n3, … }
+                             a4        a2         a3
+Exp = { n1, n2, n4 }
+                 s2
+                             n4         n5        n6
+                                                       a1
+
+                                                       n7
+                  Estados
+                                                                 Nodos no explorados
+                  Repetidos                                      Nodos frontera
+
+                                       n1                        Nodos explorados
+                                  a1         a2
+                                                            s2
+Tr = { n1, n2, n4, n3, … }
+                                  n2         n3
+Fr = { n3, … }
+                             a4        a2         a3
+Exp = { n1, n2, n4 }
+                 s2
+                             n4         n5        n6
+                                                       a1
+
+                                                       n7
+                Estados                                                        Nodos ignorados
+
+                                                                               Nodos no explorados
+                Repetidos                                                      Nodos frontera
+
+                                       n1                                      Nodos explorados
+                                  a1         a2
+                                                            s2
+Tr = { n1, n2, n4, n3, … }
+                                  n2         n3
+Fr = { … }
+                             a4        a2         a3    Quito n3 de la frontera.
+Exp = { n1, n2, n4 }                                    No lo exploro al ser
+                                                        repetido.
+              s2
+                             n4         n5        n6
+                                                       a1
+
+                                                       n7
+                                                                                Goal
+
+                Estados                                                         Nodos ignorados
+
+                                                                                Nodos no explorados
+                Repetidos                                                       Nodos frontera
+
+                                       n1                                       Nodos explorados
+                                  a1         a2
+                                                            s2
+Tr = { n1, n2, n4, n3, … }
+                                  n2         n3
+Fr = { … }
+                             a4        a2         a3     Me perdí n5 que es goal
+Exp = { n1, n2, n4 }                                     dentro del límite actual.
+              s2                                         n3, además, me
+                             n4         n5        n6     conducía a una
+                                                       a solución óptima.
+                                                        1
+
+
+                                                       n7
+ Trivia
+Tratándose de un problema de costo uniforme, se sabe que la
+solución tiene una profundidad < 1000. El problema tiene un factor
+de ramiﬁcación de 10.
+Se quiere hallar una solución óptima. Unos colegas hacen unos
+cálculos y encuentran que el hardware no cuenta con la memoria
+suﬁciente para correr BFS.
+
+¿ Qué solución propondrían al equipo ?
+
+
+
+
+ Por supuesto, omitir la solución trivial
+ “mejorar el hardware”.
+Práctica
+
+Para el problema dado, deﬁnir las siguientes características:
+
+1.   Arquitectura de estado
+2.   Acciones
+3.   Estado Inicial
+4.   Espacio de estados
+5.   Condición de terminación
+
+ ●   8 reinas
+ ●   8 Puzzle
+ ●   Misioneros y Caníbales
+ ●   Sudoku (1-4)
+ ●   Laberinto
+ ●   Travelling Salesman
+

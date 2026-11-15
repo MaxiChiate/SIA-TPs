@@ -1,0 +1,286 @@
+Convolutional Neural Networks
+El NeoCognitrón Convolucional
+
+
+
+
+Sistemas de Inteligencia Arti cial, 72.27
+                       fi
+Hubel & Wisel
+
+
+
+
+                Hubel & Wiesel, 1962
+Hubel & Wisel
+
+
+
+
+                Hubel & Wiesel, 1962
+Hubel & Wisel
+
+
+                •S-Cells: Simple cells, line detectors.
+                •C-Cells: motion detectors or aggregators.
+
+
+
+
+                                       Hubel & Wiesel, 1962
+Neocognitron
+
+
+
+
+               Fukushima, 1980
+Neocognitron
+
+
+
+
+               Fukushima, 1980
+     LeNet 1989
+     •De ned by convolution operation
+     •Trained by back propagation
+     •LeNet-5 (1998) 0.95 % on MNIST (equal to SVM :)
+
+
+
+
+                                                        LeCun, 1989
+fi
+Convolución Matemática
+Convolución Matemática
+Convolución Matemática
+Convolución Matemática
+Convolución Matemática
+Convolución Matemática
+Convolución Matemática
+Convolución Matemática
+Convolución Matemática
+Convolutional Neural Networks
+Convolutional Neural Networks
+Representational Learning
+
+
+                            Handcrafted Feature
+Representational Learning
+
+
+                            Handcrafted Feature
+                            Learned Feature
+Representational Learning
+
+
+                            Handcrafted Feature
+                            Learned Feature
+                            Parameter
+Convolutional Neural Network
+Convolutional Layer
+Convolutional Layer
+Convolutional Layer - Feature Maps
+Convolutional Layer - Feature Maps
+Activation Function - ReLU
+Pooling Layers
+Pooling Layers - Downsampling
+Fully Connected Layer
+Convolutional Neural Network
+Convolutional Neural Network
+Training
+Sparse Matrix Representation
+Convolutional Neural Network - Success
+                Convolutional Neural Network
+
+                          Im ge Recognition
+                          Object Recognition
+                          Sem ntic Segment tion
+                          Pl ce Recognition
+                          Im ge Gener tion
+                          Im ge-to-im ge tr nsl tion
+                          Inp inting
+a
+    a
+    a
+    a
+        a
+            a
+                  a
+                      a
+                             a
+                                 a
+                                     a
+    Convolutional Neural Networks
+
+
+                          Represent tion l Le rning
+
+                          Tr nsfer Le rning
+
+                          xAI
+
+                          Composition l Architecture
+a
+      a
+          a
+              a
+                  a
+                      a
+Representational Learning
+Feature Learning
+Representational Learning
+Feature Learning
+Transfer Learning
+Transfer Learning
+
+
+
+
+            Fixed   Free
+Compositional Architecture
+        xAI - Explainable Arti icial Intelligence
+
+                                                                    Inteligibilid d: c p cid d del un esquem de ofrecer un
+                                                                    represent ción que permit    un ser hum no entender cu l
+                                                                    es l c r cterístic que el lgoritmo identi icó p r tom r un
+                                                                    decisión.
+
+                                                                    Explic bilid d: c p cid d del sistem de explic r el p so
+                                                                    p so, l c den de r zon miento, que llev   tom r un
+                                                                    decisión p rticul r.
+
+                                                                    Responsible AI: diseñ r sistem s ofreciendo g r ntí s y
+                                                                    cot s de funcion miento, line ndolos con est nd res éticos
+                                                                    y regul torios.
+a
+    a
+    a
+        a
+            a
+                a
+                a
+                    a
+                        a
+                            a
+                                a
+                                    a
+                                        a
+                                            a
+                                                a
+                                                    a
+                                                        a
+                                                            a
+                                                                a
+                                                                     a
+                                                                         a
+                                                                             a
+                                                                                 a
+                                                                                     a
+                                                                                         a
+                                                                                             a
+                                                                                                 a
+                                                                                                 a
+                                                                                                     a
+                                                                                                         a
+                                                                                                             á
+                                                                                                                 a
+                                                                                                                     a
+                                                                                                                         a
+                                                                                                                             f
+                                                                                                                                 a
+                                                                                                                                     a
+                                                                                                                                         a
+                                                                                                                                             á
+                                                                                                                                                 a
+                                                                                                                                                     a
+                                                                                                                                                         a
+                                                                                                                                                             a
+                                                                                                                                                                 a
+                                                                                                                                                                     f
+                                                                                                                                                                         a
+                                                                                                                                                                             a
+                                                                                                                                                                                 a
+                                                                                                                                                                                     a
+                                                                                                                                                                                     a
+                                                                                                                                                                                         a
+                                                                                                                                                                                             a
+                                                                                                                                                                                                 á
+                                                                                                                                                                                                     a
+                                                                                                                                                                                                         a
+AlexNet
+•ReLU
+•Layer Normalization / Local Response Normalizer
+•Dropout Layers
+•2 NVIDIA GTX 580
+•Data Augmentation
+AlexNet
+AlexNet
+
+
+
+
+       MNIST handwritten digit dataset                                      ImageNet Classi cation Error
+
+
+
+                       Iris 10^2 , ImageNet 5000 images per category, WMT 10^9 total size,
+  fi
+ImageNet Architectures
+
+
+
+
+   [9] GoogLeNet Szegedy 2014   [18] MultiGPU ConvNet Krizhevsky 2012
+VGG - Visual Geometry Group
+
+
+
+
+                              Simonyan, 2013
+DeconvNet
+
+
+
+
+            Learning Deconvolution Network for Semantic Segmentation, Noh 2013
+DeconvNet - Transposed Convolution
+
+
+
+
+              Learning Deconvolution Network for Semantic Segmentation, Noh 2013
+ResNet
+
+
+
+
+         U-Net: Convolutional Networks for Biomedical Image Segmentation, Ronneberger 2015
+ResNet
+
+
+
+
+         U-Net: Convolutional Networks for Biomedical Image Segmentation, Ronneberger 2015
+                                                  Understanding Deep Learning, Prince 2024
+U-Net
+
+
+
+
+        U-Net: Convolutional Networks for Biomedical Image Segmentation, Ronneberger 2015
+U-Net
+
+
+
+
+        U-Net: Convolutional Networks for Biomedical Image Segmentation, Ronneberger 2015
+Convolutional Autoencoder
+Convolutional Autoencoder
+CNN Versatility
+どうもありがとう
+
+
+
+
+ Gracias !
+
