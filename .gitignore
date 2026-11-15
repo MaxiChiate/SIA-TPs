@@ -50,6 +50,3 @@ TP2/config.json
 
 # GSD: snapshot generado a partir de ROADMAP.md y STATE.md
 TP4/.planning/state.json
-
-# TP5: slides de la materia (PDF, pesadas); se versiona solo su texto en docs/teoria/txt/
-TP5/docs/teoria/*.pdf

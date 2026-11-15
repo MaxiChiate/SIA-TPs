@@ -8,7 +8,7 @@ autoencoder, es un multicapa que se entrena para devolver su entrada.
 ```
 TP5/
   docs/SIATP5.pdf             enunciado
-  docs/teoria/                texto de las slides de la materia (txt/; los PDF no se versionan)
+  docs/teoria/                slides de la materia (PDF) y su texto extraído (txt/)
   src/font.h                  las 32 letras
   scripts/font_to_csv.py      font.h -> neuron/data/font.csv
   scripts/wrong_pixels.py     píxeles incorrectos por letra de una corrida

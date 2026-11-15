@@ -7,9 +7,7 @@ Enunciado: `docs/SIATP5.pdf`. Cómo correr todo: `README.md`.
 
 Están todas las slides de la cursada en `docs/teoria/*.pdf`, con su texto extraído en `docs/teoria/txt/*.txt` (con
 `pdftotext -layout`) para poder buscar con `grep` sin abrir los PDF. Antes de usar un método, una métrica o un término en
-la presentación, buscarlo ahí. Los PDF no se versionan (`.gitignore`, pesan 65 MB): en el repo solo está el texto; si
-faltan, se copian de la carpeta de slides de la cursada.
-
+la presentación, buscarlo ahí.
 ## Regla para la presentación (slides y notas)
 
 - **Lo que está en `docs/teoria/` se asume sabido**: no se explica (ni MSE, ni retropropagación, ni Adam, ni el
