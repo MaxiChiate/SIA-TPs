@@ -18,3 +18,10 @@ la presentación, buscarlo ahí.
   justificación, como sacados de la galera.
 - Lo trivial no hace falta explicarlo aunque no esté en las slides (un promedio, un porcentaje, contar píxeles).
 - Si algo no está en `docs/teoria/` y no es trivial, avisar al usuario antes de agregarlo a la presentación.
+
+## Presentación de referencia
+
+`docs/Slides_TP4_G9 (recu).pdf` (las slides de TP4, recuperatorio) quedó muy buena: usarla como referencia de
+estructura y estilo para las slides de TP5. `docs/Slides_TP4_G9_recu.md` resume cómo está armada (títulos que dicen la
+conclusión, una idea por slide, poco texto y explicación en las notas, separadores por ejercicio, hiperparámetros en
+una slide propia) y el contenido de cada slide.
