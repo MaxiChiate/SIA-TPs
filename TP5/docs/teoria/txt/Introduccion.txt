@@ -1,0 +1,1638 @@
+Referencias
+
+
+
+
+              Sistemas de Inteligencia artificial
+                       Introducción
+
+                             ITBA
+
+
+                             2026
+
+
+
+
+                                    1/89
+Referencias
+
+
+
+
+SIA 2026 - 2Q
+
+
+       Clase Hı́brida
+            Ing. Eugenia Sol Piñeiro: Profesora/Dsc/Investigadora
+            Ing. Marina Fuster: Profesora/MLEng/Investigadora
+            Ing. Santiago Reyes: Profesor/Tecla Academy
+            Ing. Alan Pierri: Viejo Profe/Bol@Utrech, Netherlands
+            Ing. Paula Oseroff: Profesora
+            Ing. Francisco Sanmartin: Profesor / SWEng@Salesforce
+            Dr. Rodrigo Ramele: Profesor/Investigador
+
+
+
+                                         2/89
+Referencias
+
+
+
+
+Sistemas de Inteligencia Artificial
+
+
+
+       Clases
+            Horarios de las clases Mar 15-18, Jue 9-12
+            Cinco TPs: Grupos de 4.
+            Final Obligatorio.
+
+
+
+
+                                          3/89
+Referencias
+
+
+
+
+Preguntas respecto a la inteligencia artificial
+
+
+
+       ¿Qué es la inteligencia artificial?
+           En general, nosotros vivimos sin profundizar demasiado en
+           qué es la inteligencia.
+           Podemos no tener una definición clara y precisa de
+           inteligencia, aunque sı́ confiamos en tener una idea
+           aproximada de lo que es la inteligencia.
+
+
+
+
+                                         4/89
+Referencias
+
+
+
+
+Preguntas respecto a la inteligencia artificial
+
+
+
+       ¿Qué es la inteligencia artificial?
+           Para esta materia es una cuestión importante, dado que
+           vamos a estudiar la disciplina Inteligencia Artificial
+           Serı́a interesante saber qué estamos ”artificializando”.
+
+
+
+
+                                          5/89
+Referencias
+
+
+
+
+Preguntas respecto a la inteligencia artificial
+
+
+
+       ¿Qué es la inteligencia artificial?
+           Dicho en otro términos:
+           ¿Es la inteligencia artifical una disciplina que trata de
+           producir máquinas que emulen la inteligencia humana?
+           ¿o es alguna otra cosa? (y que se parece bastante a lo
+           que esperarı́amos una máquina inteligente haga)
+
+
+
+
+                                           6/89
+Referencias
+
+
+
+
+Preguntas respecto a la inteligencia artificial
+
+
+
+       ¿Porqué la materia de Sistemas de IA está en el programa de
+       Ingenierı́a en informática?
+            En otras palabras: ¿porqué estudiamos esto?
+            ¿Es la informática la única disciplina que estudia esto?
+
+
+
+
+                                           7/89
+Referencias
+
+
+
+
+Preguntas respecto a la inteligencia artificial
+       Veamos qué aplicaciones dicen que usan Inteligencia artificial
+           Diagnóstico médico
+           Demostrador de teoremas
+           Manejo de jurisprudencia para obtener chances de ganar
+           un caso.
+           Modelar sistemas usando redes neuronales artificiales
+           (financieros, meteorológicos, para control otros sistemas,
+           etc).
+           Extracción de información en grandes volúmenes de datos
+           (agrupamiento, relaciones entre clases).
+           Visión por computadora (para clasificar imágenes,
+           identificar caracterı́siticas en la imagen, etc).
+                                           8/89
+Referencias
+
+
+
+
+Preguntas respecto a la inteligencia artificial
+
+
+       Veamos qué aplicaciones dicen que usan Inteligencia artificial
+           Logı́stica (determinación de recorridos, asignación de
+           recursos, etc).
+           Agentes de conversación (chat-bots).
+           Jugadores exitosos (ajedrez, go, backgamon, juegos de
+           animación por computadora, etc).
+           Chats, Agentes, Asistentes, etc, etc, etc
+
+
+
+
+                                           9/89
+Referencias
+
+
+
+
+Preguntas respecto a la inteligencia artificial
+
+
+       La Sociedad IA
+           Hoy (circa 2026) parecerı́a que todo debe tener
+           inteligencia artificial.
+           Estamos en el pico (?) de la revolución de la inteligencia
+           artificial.
+           Los cambios que están ocurriendo es posible que marquen
+           un antes y un después incluso a nivel social.
+
+
+
+
+                                          10/89
+Referencias
+
+
+
+
+Preguntas respecto a la inteligencia artificial
+
+
+       ¿Y Uds. qué piensan de esto...?
+           ¿Es importante artificializar la inteligencia?
+           ¿La humanidad, lo ha conseguido?
+           ¿Los robots chinos, son inteligentes?
+           ¿Conseguir programar adecuadamente, es una marca de
+           la inteligencia? ¿Y resolver problemas matemáticos?
+
+
+
+
+                                        11/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+       Inicios...
+             ¿Cómo surgió todo esto?[7]
+             ¿A quién se le ocurrió que estaban haciendo inteligencia
+             artificial?
+             ¿Por qué se llama ası́?
+
+
+
+
+                                            12/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+
+                        13/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+       La Computabilidad: La Máquina de Turing
+           En los orı́genes de la computación, ya con las ideas de la
+           Máquina de Turing de 1936 aparece de la mano de la
+           computabilidad la idea de la automatización y su
+           vinculación con la inteligencia.
+
+
+
+
+                                           14/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+       La IA surge de manera directa en el propio inicio de la
+       materialización de las computadoras digitales: WWII
+            Criptoanálisis: Bletchley Park en UK, y MAGIC en USA
+            Control Remoto de Torpedos
+            Señales de Radares
+
+
+
+
+                                         15/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+       Biomimesis
+           En 1943, Warren McCulloch y Walter Pitts proponen un
+           modelo de neurona cuya salida era 1 o 0.
+           Lo interesante fue que dichas neuronas organizadas en
+           una estructura ¡podı́an resolver cualquier función
+           computable!
+           Sin embargo, habı́a que calcular la forma en que estas se
+           conectaban (esto es, como unas influenciaban a otras).
+
+
+
+
+                                          16/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+       Inicios de la sintetización del aprendizaje
+             En 1949, Donald Hebb enuncia su conjetura acerca de
+             cómo cambia la influencia de una neurona sobre otra de
+             acuerdo al estado de actividad de ambas: Regla de Hebb.
+
+
+
+
+                                          17/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+       Alexander Bain, 1873
+       ”When two impressions concur, or closely succeed one
+       another, the nerve currents find some bridge or place of
+       continuity. In the cells where the currents meet there is, in
+       consequence of the meeting, a strengthened connexion.”
+
+       Hebbian Learning, 1949
+       ”When an axon of cell A is near enough to excite cell B and
+       repeatedly or persistently takes part in firing it, some growth
+       process or metabolic change takes place in one or both cells
+       such that A’s efficiency, as one of the cells firing B, is
+       increased.”
+
+                                            18/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+
+       El Test de Turing
+            En 1950, Alan Turing escribe ”Computing Machinery and
+            Intelligence.”
+
+
+
+
+                                        19/89
+Referencias
+
+
+
+
+Computing Machinery and Intelligence.
+
+
+
+       El Test de Turing
+       ”I propose to consider the question, Can Machines Think?”
+       ”An important feature of a learning machine is that its teacher
+       will often be very largely ignorant of quite what is going on
+       inside, although he may still be able to some extent to predict
+       his pupil’s behaviour.”
+
+
+
+
+                                          20/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+       El simbolismo
+            Inicio del Simbolismo: Newell and Simon (1956) crearon
+            un software llamado Logic Theorist.
+            Este software está basado en el método de Árbol de
+            decisión.
+            Se coloca la hipótesis en la raı́z del árbol y en cada rama
+            se genera una deducción a partir del postulado anterior.
+            En alguna de ellas se encuentra la demostración de la
+            hipótesis. Lo único que el programa debe hacer es seguir
+            las ramas hasta encontrar la respuesta.
+
+
+                                             21/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+       ¿Porqué tanto entusiasmo?
+           El punto importante de este antecedente fue el uso de la
+           inferencia lógica.
+       Notas:
+           Se introdujo la idea de heurı́stica que permitı́a evitar
+           tener que explorar todas las posibles ramas y elegir cuales
+           eran mas prometedoras.
+           Logic Theorist fue exitoso en demostrar varios teoremas
+           planteados por Whitehead y Russell en Principia
+           Mathematica.
+
+
+                                           22/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+       Nos vemos en Dartmouth...
+           Se habı́a empezado a crear un estado de optimismo y
+           expectativas sobre la comunidad cientı́fica respecto de los
+           alcances de estos trabajos ...
+           Arriba de la ola, en 1956 John McCarthy convence a
+           otros investigadores como Minsky, Shannon y Rochester a
+           promover una escuela de verano para tratar temas como
+           autómatas, redes neuronales e inteligencia:
+           Este el inicio de la Inteligencia Artificial: Dartmouth
+           Summer Research Project on Artificial Intelligence [8].
+
+
+                                          23/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+       Nos vemos en Dartmouth...
+       ”Proponemos que se lleve a cabo un estudio a lo largo de 2 meses
+       sobre inteligencia artificial, con 10 personas durante el verano de
+       1956 en el Dartmouth College en Hanover, New Hampshire.
+       ...
+       Se intentará encontrar cómo hacer que las máquinas usen el
+       lenguaje, formen abstracciones y conceptos, resuelvan tipos de
+       problemas ahora reservados para los humanos y se mejoren por sı́
+       mismas.
+       Creemos que se puede lograr un avance significativo en uno o
+       más de estos problemas si un grupo de cientı́ficos
+       cuidadosamente seleccionados trabajan juntos durante un
+       verano.”
+
+                                             24/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+       Nos vemos en Dartmouth...
+       ”McCarthy has given a couple of reasons for using the term
+       artificial intelligence. The first was to distinguish the subject
+       matter proposed for the Dartmouth workshop from that of a prior
+       volume of solicited papers, titled Automata Studies, co-edited by
+       McCarthy and Shannon, which (to McCarthy’s disappointment)
+       largely concerned the esoteric and rather narrow mathematical
+       subject called automata theory. The second, according to
+       McCarthy, was to escape association with cybernetics. Its
+       concentration on analog feedback seemed misguided, and I wished
+       to avoid having either to accept Norbert Wiener as a guru or
+       having to argue with him”[5, 1, 4].
+
+                                            25/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+       Nos vemos en Dartmouth...
+
+
+
+
+                                   26/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+       Nos vemos en Dartmouth..[6].
+           Oliver Selfridge, Nathaniel Rochester, Marvin Minsky,
+           John McCarthy
+           Ray Solomonoff, Unknown Guy (Peter Milner or someone
+           from the future), Claude Shannon
+
+
+
+
+                                       27/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+       Nos vemos en Dartmouth..[6].
+           Surge:
+               Inteligencia Artificial
+               Cibernética
+               Machine Learning
+               Pattern recognition
+
+
+
+
+                                         28/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+       El auge del simbolismo - GPS
+            Simon, Shaw, and Newell in 1959 crearon una evolución
+            de los trabajos con Logic Theorist.
+            El Resolvedor general de problemas (GPS) permitió
+            tratar con problemas que originalmente no estaban
+            descriptos en un lenguaje formal.
+            La estrategia fue expresar en forma simbólica el
+            problema y luego tratarlo usando recursos similares al de
+            Logic Theorist.
+            Es decir, nuevamente un sistema basado en la lógica.
+
+
+                                          29/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+       ¡Lo tenemos!
+            Existı́a una fuerte confianza en la representación
+            simbólica y la lógica como recursos para construir
+            sistemas que emularan la inteligencia humana.
+            Descomponer un objetivo en sub-objetivos y considerar
+            las acciones posibles para alcanzarlos, podı́a representar la
+            manera en que los humanos tratabamos un problema.
+
+
+
+
+                                            30/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+       ¡Lo tenemos!
+       Fue tal el entusiasmo que se vivı́a en esa época que, Herbert
+       Simon declaraba:
+       ”No es mi itención sosprender o producir un shock en uds. pero, la
+       forma más simple en que puedo resumir el estado del arte actual
+       (en el mundo) es que hoy dı́a hay máquinas que piensan, que
+       aprenden y que crean.
+       Mas aún, sus habilidades para hacer estas cosas está
+       incrementándose rápidamente y en un futuro cercano, el
+       conjunto de problemas que podrán manejar co-existirá con el
+       rango de problemas que la mente humana ha tratado”.
+
+
+                                             31/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+       ¿Lo tenemos?
+       ¿Es la inferencia lógica una herramienta construida para
+       manejar formal y conscientemente una solución? o ¿es el
+       mecanismo innato del pensar?
+
+
+
+
+                                          32/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+       La Loterı́a del Hardware
+           Los sistemas desarrollados, basados en el método de
+           resolución, fueron exitosos cuando trataban con
+           problemas no demasiado exigentes (i.e. algunas pocas
+           decenas de axiomas o hechos o verdades) pero cuando el
+           tamaño aumentaba podı́an fracasar en encontrar
+           una solución.
+           La respuesta era: el problema es que las computadoras
+           son muy lentas y tienen poca memoria.
+
+
+
+                                        33/89
+Referencias
+
+
+
+
+La implementación de la biomimesis
+
+
+
+       El Perceptrón
+            Inspirado en McCulloch, Pitts, y Hebb, Rosenblatt
+            desarrolla un circuito biomimético que tiene la capacidad
+            de aprender.
+
+
+
+
+                                           34/89
+Referencias
+
+
+
+
+El Perceptrón
+
+
+
+
+                 35/89
+Referencias
+
+
+
+
+El Perceptrón: el uso militar y su lı́mite
+
+
+
+
+                               36/89
+Referencias
+
+
+
+
+El lı́mite a lo fı́sico
+
+
+       Robótica: Informática en Acción
+       Paradoja de Moravec: el mundo real, parcialmente
+       observable, estocástico, con infinitos estados, plantea un
+       problema muchı́simo más complejo que cualquiera de los
+       problemas lógicos que pudieron resolverse inicialmente. Esto
+       era difı́cil de percibir porque para nosotros esas actividade son
+       muy automáticas y subconcientes.
+
+
+
+
+                                            37/89
+Referencias
+
+
+
+
+El lı́mite a lo fı́sico
+
+       Robótica: Informática en Acción
+           1959 Shakey (SRI Internationaltional) el primer robot
+           móvil que tenı́a caracterı́sticas de autonomı́a.
+
+
+
+
+                                          38/89
+Referencias
+
+
+
+
+Otras alternativas
+
+
+       El enfoque evolutivo
+            A principio de los 70, John H Holland introduce los
+            algoritmos genéticos.
+            Estos fueron una representación de la teorı́a evolutiva de
+            Darwin.
+            La estrategia estaba respaldada en una técnica de
+            optimización basada en una heurı́stica aleatoria.
+
+
+
+
+                                            39/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+       El enfoque evolutivo
+            Se define un población de cromosomas.
+            Cada cromosoma está formado por valores aleatorios de
+            los parámetros.
+
+
+
+
+                                         40/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+       El enfoque evolutivo
+            El algortimo genético itera a través de generaciones.
+            En cada generación, los cromosomas se cruzan entre sı́
+            dando lugar a nuevos cromosomas.
+            Cada vez que se cruzan, se puede aplicar dos operadores:
+            - Entrecruzamiento
+            - Mutación
+
+
+
+
+                                          41/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+       El enfoque evolutivo
+            Cuando se obtienen los cromosomas de cada generación
+            se evalua una Función de Aptitud.
+            Se seleccionan los cromosomas con mayor Aptitud y ası́
+            se forma una nueva generación.
+            El algortimo termina según algún criterio, por ejemplo, el
+            número de generaciones en las cuales evolucionó la
+            población.
+
+
+
+                                            42/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+
+       El enfoque evolutivo
+       Pero, nuevamente, la respuesta era: el problema es que las
+       computadoras son muy lentas y tienen poca memoria.
+
+
+
+
+                                         43/89
+Referencias
+
+
+
+
+Vuelta al simbolismo
+
+
+
+       Los sistemas expertos
+       En la misma época, un trabajo, denominado DENDRAL,
+       realizado por Ed Feigenbaum (estudiante de Simon), B.
+       Buchanan (filósofo que trabaja en ciencias de la computación)
+       y J. Lederberg (genetista) remozó la idea de de Logic Theorist
+       o GPS pero aplicado a un campo especifico.
+
+
+
+
+                                           44/89
+Referencias
+
+
+
+
+Vuelta al simbolismo
+
+
+
+       Los sistemas expertos
+       El caso fue inferir la estructura de una molécula (de una
+       sustancia) valiéndose de un espectrómetro de masa (mediante
+       el bombardeo de un haz de electrones se registra la masa de
+       diferentes componentes de la molécula).
+
+
+
+
+                                          45/89
+Referencias
+
+
+
+
+Vuelta al simbolismo
+
+
+
+       Los sistemas expertos
+            Esta táctica de usar información especı́fica (de expertos
+            humanos) y a partir de ahı́ realizar inferencias lógicas
+            tuvo muchı́sima repercusión en varias áreas (i.e. Mycin en
+            medicina para diagnóstico médico)
+
+
+
+
+                                            46/89
+Referencias
+
+
+
+
+Vuelta al simbolismo
+
+
+
+       Los sistemas expertos
+            Pero ¿que pasa con la representación simbólica?
+            ¿Qué ocurre con una imagen con demasiado ruido?
+            ¿Qué ocurre con una información incompleta?
+
+
+
+
+                                         47/89
+Referencias
+
+
+
+
+Deep Blue Jeopardy
+
+
+
+
+                     48/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+       El abordaje conexionista
+            En 1986, Rumelhart et al en ”Procesamiento paralelo
+            distribuı́do” introducen un nuevo enfoque.
+            Tiene la particularidad de integrar el conocimiento previo
+            de modelos de neuronas (Rosenblatt , 1960) y estructuras
+            de neuronas (McCulloch y Pitts, 1943).
+
+
+
+
+                                          49/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+       El abordaje conexionista
+            La propuesta resuelve las crı́ticas de Minsky y Pappert
+            respecto al modelo de neurona de Rosenblatt .
+            El perceptron multicapa tomó mucha fuerza y el
+            conexionismo se extendió hacia otros modelos de
+            aprendizaje en redes neuronales (Hopfield, Kohonen,
+            Grossberg, etc).
+
+
+
+
+                                           50/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+       El abordaje conexionista
+            Este campo, que se conoce como el de Redes neuronales
+            artificiales, se abrió en dos ramas:
+            - el estudio de los modelos formales y sus
+            propiedades, y
+            - el de modelización cuidadosa de los sistemas
+            nerviosos.
+
+
+
+
+                                        51/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+       El abordaje conexionista
+            Esta idea generó muchas soluciones a problemas que
+            debı́an trabajar con datos ruı́dosos, pero sin embargo
+            fallaron a la hora de escalar a problemas un poco más
+            complejos como el de la identificación de los dı́gitos
+            manuscritos de los código postales en los servicios de
+            correo fı́sico.
+
+       La loterı́a del hardware
+       Nuevamente, la respuesta era: el problema es que las
+       computadoras son muy lentas y tienen poca memoria.
+
+
+                                           52/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+       Aprendizaje automático
+           La definición de aprendizaje está fuertemente vinculada
+           a la definición de inteligencia.
+           Pero por lo que vimos hasta aquı́, fueron varias las
+           instancias y los autores que se animaron a hacer
+           inteligencia artificial sin tener claramente una definición
+           de inteligencia.
+           ¿Porqué, entonces, no hacer aprendizaje automático?
+
+
+
+                                            53/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+       Aprendizaje automático
+           No obstante, se ha englobado en Aprendizaje automático
+           un conjunto de métodos y algoritmos que se valen desde
+           el teorema de Bayes (siglo XVII) hasta los arboles de
+           decisión pasando por métodos de programación
+           cuadrática, regresión y métodos de clasificación clásicos.
+
+
+
+
+                                             54/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+
+       Definición: Aprendizaje automático
+            Aprendizaje Automático: técnicas para identificar
+            relaciones entre datos (X ) o mapeos (X → Y ) basadas
+            en algoritmos que dada una serie de parámetro libres que
+            estructuran esas relaciones o mapeos, pueden ajustarse
+            mediante algún proceso de optimización matemática [11].
+
+
+
+
+                                           55/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+       Aprendizaje automático (Machine learning)
+              Esta disciplina tomó cuerpo propio (de hecho es una
+              materia separada en el programa de Ingenierı́a
+              informática) y tuvo un apogeo significativo en la primera
+              década del siglo 21 asociada al procesamiento de
+              información visual en imágenes (Computer Vision CV). Y
+              se lograron grandes avances significativos, pero no
+              revolucionarios, justamente en el procesamiento de ese
+              tipo de información.
+
+       La loterı́a del Hardware
+       Obviamente, las computadoras son muy lentas y tienen
+       poca memoria.
+                                             56/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+       Aprendizaje profundo (Deep learning)
+           La posibilidad de disponer procesadores cada vez más
+           poderosos, expresados no sólo por su velocidad y su
+           memoria sino fundamentalmente por la cantidad de
+           núcleos promovió la intensificación del uso y estudio en
+           redes neuronales artificiales.
+           Esto dió lugar a un tópico muy vibrante en la actualidad
+           que es el aprendizaje profundo.
+       Ganó esa loteria
+       En este caso todavı́a, pareciera que las computadoras NO
+       son muy lentas y NO tienen tan poca memoria.
+
+                                           57/89
+Referencias
+
+
+
+
+¿Cómo surgió la IA?
+
+
+       Aprendizaje profundo (Deep learning)
+              Por ejemplo, las redes GAN (Redes generativas
+              antagónicas), los autoencoders, las redes neuronales
+              convolucionales han demostrado su aplicabilidad a un
+              conjunto de problemas que hasta ahora no habı́an sido
+              tratados con tanto éxito con las redes neuronales
+              artificiales y representan una tendencia de la investigación
+              en el área.
+
+
+
+
+                                              58/89
+Referencias
+
+
+
+
+Inteligencia Artificial
+
+
+
+
+                          59/89
+Referencias
+
+
+
+
+Inteligencia Artificial
+
+
+
+
+                          60/89
+Referencias
+
+
+
+
+Preguntas respecto a la inteligencia artificial
+
+
+
+       La tecnologı́a va muy lenta ...
+       Ante las distintas propuestas que fueron surgiendo a lo largo
+       del tiempo hay, subyacente, una idea de que lo que falta es
+       máquinas más rápidas, más poderosas, esto es, falta que la
+       tecnologı́a avance ...
+
+
+
+
+                                           61/89
+Referencias
+
+
+
+
+Preguntas respecto a la inteligencia artificial
+
+
+
+
+       Considermos una hipótesis
+       Permitanme considerar la hipótesis de Tim Urban expresada en
+       su página ”Wait but why”[10].
+
+
+
+
+                                         62/89
+Referencias
+
+
+
+
+Algunas especulaciones respecto a la inteligencia
+artificial
+
+
+       Wait but why - Dificultad de la predicción
+           La idea es que el desarrollo tecnológico y cientı́fico no se
+           comporta en forma lineal.
+           Esa no linealidad es mucho más marcada que la que
+           nuestra intuición nos señala.
+
+
+
+
+                                            63/89
+Referencias
+
+
+
+
+Algunas especulaciones respecto a la inteligencia
+artificial
+
+       Wait but why - AI Superintelligence
+           El ser humano tardó algo ası́ como unos 2 millones de
+           años en construir una máquina que le permitiera volar,
+           pero ...
+           luego de eso, tardó unos 50 años más para salir con un
+           cohete al espacio, y desde ese momento,tardo unos 50
+           años para llegar con una sonda a los confines del sistema
+           solar.
+
+
+
+                                          64/89
+Referencias
+
+
+
+
+Algunas especulaciones respecto a la inteligencia
+artificial
+
+       Wait but why - AI Superintelligence
+           O, tardó unos 2 millones de años para formalizar un
+           sistema numérico, o hacer cálculos simples,
+           pero ...
+           tardó 5000 años en tener una computadora, y menos de
+           80 en tener una computadora que hiciera tantos cálculos
+           por segundo como los que se estima hace el cerebro
+           humano.
+
+
+
+                                         65/89
+Referencias
+
+
+
+
+Algunas especulaciones respecto a la inteligencia
+artificial
+
+       Wait but why - AI Superintelligence
+       Consideremos que podamos describir los sistemas de
+       inteligencia artificial en:
+             Inteligencia artificial especı́fica// (Artificial Narrow
+             Intelligence, ANI)
+             Inteligencia artificial general// (Artificial General
+             Intelligence, AGI[9])
+             Inteligencia artificial superior// (Artificial Super
+             Intelligence, ASI)
+
+                                              66/89
+Referencias
+
+
+
+
+Algunas especulaciones respecto a la inteligencia
+artificial
+
+
+
+       ¿Y Uds. qué piensan de esto...?
+       Y consideremos, también, que el curso de evolución de la
+       inteligencia artificial estará dado por el orden en que
+       presentamos a esos sistemas: ANI, AGI y ASI.
+
+
+
+
+                                           67/89
+Referencias
+
+
+
+
+Algunas especulaciones respecto a la inteligencia
+artificial
+       Un continuo
+
+
+
+
+       ANI, AGI, ASI, son milestones en este continuo. Y es en
+       realidad un moving goalpost, una montaña inaccesible.
+                                          68/89
+Referencias
+
+
+
+
+Algunas especulaciones respecto a la inteligencia
+artificial
+
+       ¿Y Uds. qué piensan de esto...?
+       La forma en que dicho curso de evolución se dé está
+       ı́ntimamente relacionado con el abordaje que se pueda tener
+       para producir sistemas de inteligencia artificial.
+       Vamos a mencionar tres:
+             Simular el cerebro.
+             Simular la evolución (en la naturaleza)
+             Producir sistemas que siempre se auto-mejoren.
+
+
+                                          69/89
+Referencias
+
+
+
+
+Algunas especulaciones respecto a la inteligencia
+artificial
+       ¿Y Uds. qué piensan de esto...?
+           Consideremos que el camino sigue la senda de producir
+           sistemas que siempre se auto-mejoren.
+           (Esto no deberı́a implicar excluir la simulación del cerebro
+           o de la naturaleza)
+           Podrı́amos inferir que, a medida que un sistema se hace
+           más inteligente, tiene más recursos para mejorar más aún
+           su inteligencia y, por lo tanto, el curso de ANI a ASI
+           podrı́a ser de carácter exponencial.
+           Esto es: la explosión de la inteligencia, la
+           Singularidad
+                                            70/89
+Referencias
+
+
+
+
+Algunas especulaciones respecto a la inteligencia
+artificial
+
+
+
+       ¿Y Uds. qué piensan de esto...?
+       Sin embargo, en cada instante, para valorar el alcance
+       obtenido en ese camino deberı́amos tener un método para
+       medir la inteligencia.
+
+
+
+
+                                         71/89
+Referencias
+
+
+
+
+Algunas especulaciones respecto a la inteligencia
+artificial
+
+
+
+       ¿Y Uds. qué piensan de esto...?
+       Y para medir la inteligencia deberı́amos saber qué es la
+       inteligencia.
+
+
+
+
+                                           72/89
+Referencias
+
+
+
+
+Definición de Inteligencia artificial
+
+
+       ¿Alguién se ha ocupado de esto? [2]
+              Shane Legg y Marcus Hutter (2007) se hicieron está
+              pregunta.
+              En su artı́culo ”A Collection of Definitions of Intelligence”
+              ellos resumen 70 definiciones de inteligencia extraidas de
+              un número mayor de definiciones que encontraron en la
+              bibliografı́a a lo largo del tiempo.
+
+
+
+
+                                              73/89
+Referencias
+
+
+
+
+Definición de Inteligencia artificial
+
+
+       ¿Alguién se ha ocupado de esto?
+       Ellos las organizaron de acuerdo de donde provenı́an.
+       Definiciones que provienen de una organización o grupo:
+            Individuos difieren unos de otros en su habilidad para
+            enteder ideas complejas, adaptarse efectivamente al
+            entorno, aprender a partir de la experiencia, adoptar
+            varias formas de razonamiento, superar obstáculos através
+            de pensar. American Psychological Association
+
+
+
+                                           74/89
+Referencias
+
+
+
+
+Definición de Inteligencia artificial
+
+
+       ¿Alguién se ha ocupado de esto?
+       Definiciones que provienen de una organización o grupo:
+            Inteligencia es una muy general capacidad mental que,
+            entre otras cosas, involucra la habilidad de razonar,
+            planear, resolver problemas, pensar en forma abstracta,
+            comprender ideas complejas, aprender rápido y aprender a
+            partir de la experiencia. Declaración firmada por 52
+            expertos.
+
+
+
+
+                                          75/89
+Referencias
+
+
+
+
+Definición de Inteligencia artificial
+
+
+       ¿Alguién se ha ocupado de esto?
+       Definiciones que provienen de psicólogos:
+            Inteligencia no es una única habilidad sino una
+            composición de varias funciones. El término denota
+            aquella combinación de habilidades requeridas para
+            supervivir y avanzar en una cultura particular. A. Anastasi
+            Inteligencia es lo que es medido por los test de
+            inteligencia. E. Boring.
+
+
+
+                                           76/89
+Referencias
+
+
+
+
+Definición de Inteligencia artificial
+
+
+       ¿Alguién se ha ocupado de esto?
+       Definiciones que provienen de investigadores de IA:
+            ”... the ability of a system to act appropriately in an
+            uncertain environment, where appropriate action is that
+            which increases the probability of success, and success is
+            the achievement of behavioral subgoals that support the
+            ultimate goal of the system.” J. S. Albus
+
+
+
+
+                                           77/89
+Referencias
+
+
+
+
+Definición de Inteligencia artificial (de AGI)
+
+
+
+       ¿Alguién se ha ocupado de esto?
+       Definición según la fundación ARC [2]
+            ”Una AGI es un sistema que puede adquirir de manera
+            eficiente nuevas habilidades por fuera de sus datos de
+            entrenamiento.”
+
+
+
+
+                                          78/89
+Referencias
+
+
+
+
+Definición de Inteligencia artificial
+       Definición desde la perspectiva de la robótica
+       Que puede ser IA:
+            Un sistema que sensa, procesa y actúa de manera que es
+            adecuada en un contexto fı́sico y temporal particular.
+            Requiere una corporizacion para manifestarse con
+            claridad.
+            Es un continuo, un ”moving goalpost”.
+            Autonomı́a: como comportamiento emergente.
+            Conciencia: manifiesta comportamientos que representan
+            un conocimiento sobre su propia existencia, en relación al
+            contexto fı́sico y temporal, y una diferenciación en
+            relación a los otros.
+                                           79/89
+Referencias
+
+
+
+
+Definición de Inteligencia artificial
+       La Inteligencia inalcanzable
+
+
+
+
+              Trazas en esa montaña; senderos puntuales pero que no
+              la logran enmarcar en una perspectiva holı́stica.
+              Cualquier ser vivo relativamente avanzado, manifiesta un
+              comportamiento mucho más avanzado del que puede
+              ofrecer hoy cualquier agente sintético de IA.
+                                            80/89
+Referencias
+
+
+
+
+Definición de Inteligencia artificial
+       ARC-AGI-1 [3]
+
+
+
+
+                                81/89
+Referencias
+
+
+
+
+Inteligencia Artificial: Automatización
+
+
+
+
+                              82/89
+Referencias
+
+
+
+
+Linea de Tiempo de la Inteligencia Artificial
+
+
+
+
+                             83/89
+Referencias
+
+
+
+
+Y los LLMs
+
+       Make it until you fake it
+          Exquisito manipulador del lenguaje natural y del
+          conocimiento humano.
+          La manipulación de tokens permite aproximar palabras a
+          un lenguaje.
+          Una palabra, una tokenización es una representación de
+          una solución de un problema: increı́ble herramienta.
+          Esa manipulación ofrece una percepción profunda de la
+          existencia de una inteligencia.
+
+
+
+                                         84/89
+Referencias
+
+
+
+
+Y los LLMs
+
+
+
+
+       ¿Es está simulación de inteligencia, inteligencia?
+
+                                             85/89
+Referencias
+
+
+
+
+Sub-Areas ?
+
+       Subareas de IA
+           Búsqueda y planeamiento: Métodos de búsqueda
+           Knowledge Representation and Reasoning: IBM Watson
+           (sin materia).
+           Machine Learning: algoritmos de optimización que ajustan
+           parámetros libres en base a datos (Aprendizaje
+           Automático)
+           Multi-Agent Systems
+           Robotics (Robótica Reactiva, NeuroRobótica)
+           Computer Vision (ATI) y Natural Language Processing
+           (NLP) (Materia)
+
+                                         86/89
+Referencias
+
+
+
+
+Referencias I
+
+        [1] Brian Bloomfield. The question of artificial intelligence.
+            https://www-formal.stanford.edu/jmc/reviews/
+            bloomfield/bloomfield.html, 2024 (accessed Jan 10, 2025).
+        [2] François Chollet. On the measure of intelligence. arXiv preprint
+            arXiv:1911.01547, 2019.
+        [3] François Chollet. On the measure of intelligence. arXiv preprint
+            arXiv:1911.01547, 2019.
+        [4] Nils Nillson. The quest for Artificial Intelligence. Standford
+            University, 2010.
+        [5] Ray Solomonoff. Dartmouth archives.
+            https://raysolomonoff.com/dartmouth/, 2024 (accessed Jan
+            10, 2025).
+
+
+                                                  87/89
+Referencias
+
+
+
+
+Referencias II
+        [6] IEEE Spectrum. The Meeting of the Minds that launched AI, 2023
+            (accessed July 1, 2023).
+            https://spectrum.ieee.org/dartmouth-ai-workshop.
+        [7] Peter Stone. The Artificial Intelligence Papers. Sebtel Press, 2024.
+        [8] Peter Stone, Rodney Brooks, Erik Brynjolfsson, Ryan Calo, Oren
+            Etzioni, Greg Hager, Julia Hirschberg, Shivaram Kalyanakrishnan,
+            Ece Kamar, Sarit Kraus, et al. Artificial intelligence and life in 2030:
+            the one hundred year study on artificial intelligence. 2016.
+        [9] Eliza Strickland. The turbulent past and uncertain future of ai: Is
+            there a way out of ai’s boom-and-bust cycle? IEEE Spectrum,
+            58(10):26–31, 2021.
+       [10] Tim Urban. Wait but Why: AI Superintelligence, 2022 (accessed
+            July 1, 2022). https://waitbutwhy.com/2015/01/
+            artificial-intelligence-revolution-1.html.
+
+                                                  88/89
+Referencias
+
+
+
+
+Referencias III
+
+
+
+
+       [11] Vladimir Vapnik. The nature of statistical learning theory. Springer
+            science & business media, 1999.
+
+
+
+
+                                                 89/89
+

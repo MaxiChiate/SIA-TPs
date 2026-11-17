@@ -1,0 +1,405 @@
+Referencias
+
+
+
+
+                Sistemas de Inteligencia Artificial
+                             Repaso
+
+              Centro de Inteligencia Computacional
+
+                               2025
+
+
+
+
+                                      1/21
+Referencias
+
+
+
+
+Autoencoder lineal
+
+
+       Descomposición Espectral
+       Repasando la clase de Aprendizaje No supervisado y PCA, si
+       una matriz X es invertible y sus autovalores son reales,
+       entonces la matriz puede ser diagonalizable y factorizarse
+
+                                X = ELE T                        (1)
+       Donde L es la matriz diagonal formada por los autovalores y E
+       es la matriz de filas formada por sus autovectores.
+
+
+
+                                         2/21
+Referencias
+
+
+
+
+Autoencoder lineal
+
+       Descomposición en valores singulares
+       Para el caso de matrices no cuadradas, existe una operación
+       similar pero más general que es la descomposición en valores
+       singulares, SVD. Dada una matriz X de n × d,
+
+                             SVD(X ) = Z̃ ΣV T                     (2)
+       Donde Z̃ son los vectores columnas singulares de izquierda, Σ
+       es una matriz diagonal positiva y V son los vectores singulares
+       derechos. El cálculo de SVD se realiza minimizando
+
+                               ||X − Z̃ ΣV T ||.                   (3)
+
+                                            3/21
+Referencias
+
+
+
+
+Regularización
+
+       Regularizar implica agregar una condición extra R sobre la
+       función objetivo L que limita el espacio de búsqueda de las
+       soluciones.
+
+                                  1
+              J = L + λR = mı́n     ||Y − X ϕ||       (+λ||f (ϕ)||)          (4)
+                            ϕ     N                   |   {z      }
+                                                    Término Regularizador
+
+
+       Desalienta las soluciones complejas o extremas en un problema
+       de optimización. El parámetro de regularización λ se usa
+       justamente para ajustar la importancia que se le da a al
+       término regularizador (Tikhonov Regularization).
+
+                                             4/21
+Referencias
+
+
+
+
+Repaso: Aproximación de una pdf
+       ¿Si tengo un generador de números pseudoaleatorios que se
+       corresponde con una distribución de probabilidad uniforme, y
+       tengo una p.d.f., ¿ Cómo puedo usar el generador para generar
+       números aleatorios que se corresponden con la p.d.f. ?
+
+       Inverse Sampling Theorem
+
+                   Y U[0, 1], F invertible y F = CDF (pdf ()),
+                             X = F −1 (Y ) tiene CDF (X ) = F
+
+
+              Y U[0, 1], F = CDF (pdf ()), X = ı́nf {x : F (x) ≥ Y }
+                                                    x
+
+                                             5/21
+Referencias
+
+
+
+
+Aproximación de una pdf
+
+       Eligen un valor de Y U[0, 1], se fijan que les da en
+       X = F −1 (Y ). La distribución de esos X va a corresponder con
+       la pdf en cuestión.
+
+       Inverse Sampling Theorem
+
+                   Y U[0, 1], F invertible y F = CDF (pdf ()),
+                             X = F −1 (Y ) tiene CDF (X ) = F
+
+
+              Y U[0, 1], F = CDF (pdf ()), X = ı́nf {x : F (x) ≥ Y }
+                                                    x
+
+
+                                             6/21
+Referencias
+
+
+
+
+Aproximación de una p.d.f.
+
+
+
+
+                              7/21
+Referencias
+
+
+
+
+Aproximación de una p.d.f.
+
+
+
+
+                              8/21
+Referencias
+
+
+
+
+Aproximación de una p.d.f.
+
+
+
+       Teorema Central del Limite
+       Para el caso de Gaussianas, se puede utilizar el TCL, obtener
+       un número grande de y ∈ U[0, 1] y con eso generar
+       correspondiente N( n2 , 12
+                               n
+                                  ).
+
+
+
+
+                                          9/21
+Referencias
+
+
+
+
+Stochastic Feedforward Neural Networks [1]
+
+
+
+       Ahora, ¿ Cómo podrı́amos hacer eso con una red neuronal ?
+
+       Una red de una capa oculta es un aproximador universal[1]
+       puede representar cualquier función computable (Arbitrary
+       Continuos Functions, Cybenki’s Theorem). Entre otras cosas,
+       puede representar una función estocástica, regida por una
+       p.d.f.
+
+
+
+
+                                         10/21
+Referencias
+
+
+
+
+Stochastic Feedforward Neural Networks
+
+
+
+                       µ Σ
+
+       x                                 y
+
+                     p(y /x)
+
+
+
+
+                               11/21
+Referencias
+
+
+
+
+Reparametrization Trick
+
+
+
+       Ahora, ¿ Cómo se construye la capa estocástica ?
+
+       La clave está en el reparametrization trick haciendo que el
+       valor de z se calcula en función de µ̄ y de Σ̄.
+
+                       z = h(X̄ ) = ϵ ⊙ Σ̄(X̄ ) + µ̄(X̄ )        (5)
+
+
+
+
+                                            12/21
+Referencias
+
+
+
+
+Colab - Reparametrization Trick
+
+
+
+
+       https://colab.research.google.com/drive/
+       1N8HMJTNgCX0flDEwbx9Um6hD1D1vS1Ha?usp=sharing
+
+
+
+
+                                   13/21
+Referencias
+
+
+
+
+Stochastic Functions[2]
+       Una función donde la asignación de x a y es estocástica,
+       regida por una p.d.f. condicional.
+
+                             f (x) = L(x) + ϵ(x)
+       y = f (x) tal que, dado x, y = f (x) según p(y /x).
+
+
+
+
+                                            14/21
+Referencias
+
+
+
+
+Stochastic Feedforward Neural Networks
+
+
+                                     r ∗ ∈ U[0, 1]
+
+       x
+                                                     y
+                    p(θ/x)     Σ
+                               µ
+                                       N ( µ, Σ )
+                         p(y /x)
+
+
+
+
+                             15/21
+Referencias
+
+
+
+
+Repaso: Teorı́a de la Información
+       Variable aleatoria: X = xi
+       Información: I = − log p(xi )
+       Entropı́a: Más o menos, cuanta info tienen todos los estados
+       posibles que puede tomar P x. Promedio ponderado.
+       H = Ep(xi ) I (xi ) = − p(xi ) log p(xi )
+       Información Mutua:             P P                  p(x,y )
+       I (x, y ) = H(y ) − H(y /x) = x y p(x, y )log p(x)p(y        )
+       H(x) = I (x, x), y se tiene que,
+             I = 0 implica que p(x) = 1 Certeza !
+             I > 0 algo de información
+             I (xk ) > I (xi ) ⇒ Pk < Pi , lo más raro (menos probable)
+             aporta más información.
+
+                                            16/21
+Referencias
+
+
+
+
+Repaso: Teorı́a de la Información
+
+
+       La entropı́a es mı́nima, cero, cuando es una situación de total
+       certeza (teniendo en cuenta que lı́mp→0+ p log p = 0), y es
+       máxima, cuando todos los eventos son equiprobables
+       (probabilidad uniforme).
+       0 <= H(x) <= log (2k + 1)
+       Entropı́a condicional: H(x/y ) P  = H(x,Pym) − H(y )
+       Entropı́a conjunta: H(x, y ) = m    i=1
+                                                                        1
+                                                 j=1 p(xi , yi ) log p(xi ,yi )
+
+
+
+
+                                                17/21
+Referencias
+
+
+
+
+Repaso: Teorı́a de la Información
+       Cross Entropy
+                  P
+       Hp (q) = − k=1 q(yk ) log p(yk )
+
+       Binary Cross Entropy
+       Hp (q) = − N1 Ni=1 {(yi ) log p(yi ) + (1 − yi ) log(1 − p(yi ))}
+                    P
+
+       q(yk ) = yi = 0|1, y representa el label, p(yi ), 1..N es la
+       probabilidad asignada a ese label para la muestra i. Binary
+       Cross Entropy sirve como una función para estimar cuál es la
+       efectividad de un clasificador que asigna el label y a cada
+       elemento de 1..N con probabilidad p(yk ). Un clasificador
+       perfecto que estima yi con probabilidad 1, genera un valor de
+       binary cross entropy de cero.
+                                              18/21
+Referencias
+
+
+
+
+KL: Kullback-Leibler Divergencia ó Entropı́a
+relativa
+
+
+       Es una ”norma”(en rigor no) que permite ver la distancia entre
+       distribuciones de probabilidad, i.e. si tiende a cero implica que
+       las distribuciones son parecidas. Una medida de similaridad.
+       KL
+                                      P              q(x)
+                       KL(q||p) = −       xi q(x)log p(x)
+
+
+       donde p(x) es la referencia a la que se compara q(x).
+
+
+
+                                             19/21
+Referencias
+
+
+
+
+KL: Kullback-Leibler Divergencia ó Entropı́a
+relativa
+
+                                       P              q(x)
+                        KL(q||p) = −       xi q(x)log p(x)
+
+                                 Propiedades:
+              KL(q||p) ̸= KL(p||q)
+              KL(q||q) = 0
+              KL(q||p) ≥ 0
+              KL(q||p) = Hp (q) − H(q) ≥ 0
+
+
+
+                                              20/21
+Referencias
+
+
+
+
+Referencias I
+
+
+
+       [1] Charlie Tang and Russ R Salakhutdinov. Learning stochastic
+           feedforward neural networks. Advances in Neural Information
+           Processing Systems, 26, 2013.
+       [2] Eric W. Weisstein. Stochastic Function, 2023 (accessed November
+           17, 2023).
+           https://mathworld.wolfram.com/StochasticFunction.html.
+
+
+
+
+                                               21/21
+

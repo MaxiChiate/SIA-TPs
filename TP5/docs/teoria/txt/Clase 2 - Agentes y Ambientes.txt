@@ -1,0 +1,346 @@
+ Sistemas de Inteligencia Artificial
+Agentes y Ambientes
+El Agente y su Ambiente
+ El Agente y su Ambiente
+                           Sensores
+
+
+            Percepciones
+                           ?
+Ambiente     Acciones      Agente
+
+
+
+
+           Efectores
+          El Agente y su Ambiente
+
+                !
+
+Sistemas de detección de
+         fraude                                        Agentes de inteligencia
+                                                        artificial generativa
+                           Sistemas de recomendación
+Agentes
+Todo aquello que puede considerarse que percibe y responde o
+actúa en un ambiente, de forma independiente (autónomo).
+  Agente
+  Racional                                                          Listado de agentes vistos
+
+
+Un agente es racional si realiza aquello que le permite obtener mejor
+desempeño en su función.
+
+Medición del desempeño:                                                        Racionales vs No Racionales
+
+
+
+
+ ●   Determina el éxito de un agente.
+ ●   Puede ser a corto o largo plazo.
+
+En cada posible secuencia de percepciones emprenderá aquella
+acción que supuestamente maximice su medida de rendimiento,
+basándose en las evidencias aportadas por la secuencia de
+percepciones y en el conocimiento que mantiene almacenado.
+
+También llamados “Agentes basados en utilidad”.
+  Agente
+  Racional
+Un agente es racional si realiza aquello que le permite obtener mejor
+desempeño en su función.
+
+Medición del desempeño:                                                 Racionales vs No Racionales
+
+
+
+
+ ●   Determina el éxito de un agente.
+ ●   Puede ser a corto o largo plazo.
+
+En cada posible secuencia de percepciones emprenderá aquella
+acción que supuestamente maximice su medida de rendimiento,
+basándose en las evidencias aportadas por la secuencia de
+percepciones y en el conocimiento que mantiene almacenado.
+
+También llamados “Agentes basados en utilidad”.
+  Agente
+  Racional
+“To prevent the game from becoming
+impossibly difficult or too boring to
+play, each of the ghosts were
+programmed to have their own            Racionales vs No Racionales
+
+distinct traits.
+
+The red ghost would directly chase
+Pac-Man, the pink and blue ghosts
+would position themselves in front of
+him, and the orange ghost would be
+random.”
+Agente
+Racional
+  Racionales
+                Racionales vs No Racionales
+
+
+
+
+  No racional
+  Agente
+  Omnisciente
+En todo momento, sabe el resultado real que producirán sus acciones
+para toda la posteridad.
+                                                                        Racionales vs No Racionales
+                                                                      Omniscientes vs No Omniscientes
+
+Es decir:
+Un agente racional podría saber el efecto de sus acciones a corto
+plazo, pero si no tiene en cuenta cada uno de los escenarios
+posibles, no estamos hablando de un agente omnisciente.
+  Agente
+  Omnisciente
+Un agente que juega al ajedrez
+observa los posibles tableros que
+se desprenden del tablero actual para
+                                          Racionales vs No Racionales
+tomar una decisión.                     Omniscientes vs No Omniscientes
+
+
+
+
+¿Es un agente omnisciente?
+  Agente
+  Omnisciente
+Un agente que juega al ajedrez
+observa los posibles tableros que
+se desprenden del tablero actual para
+                                          Racionales vs No Racionales
+tomar una decisión.                     Omniscientes vs No Omniscientes
+
+
+
+
+¿Es un agente omnisciente?
+
+Si observa todos, SÍ.
+
+Si observa algunos, NO.
+  Agente
+  Omnisciente
+“To prevent the game from becoming
+impossibly difficult or too boring to
+play, each of the ghosts were
+                                          Racionales vs No Racionales
+programmed to have their own            Omniscientes vs No Omniscientes
+
+distinct traits.
+
+The red ghost would directly chase
+Pac-Man, the pink and blue ghosts
+would position themselves in front of
+him, and the orange ghost would be
+random.”
+
+¿Es alguno omnisciente?
+  Agente
+  Omnisciente
+“To prevent the game from becoming
+impossibly difficult or too boring to
+play, each of the ghosts were
+                                          Racionales vs No Racionales
+programmed to have their own            Omniscientes vs No Omniscientes
+
+distinct traits.
+
+The red ghost would directly chase
+Pac-Man, the pink and blue ghosts
+would position themselves in front of
+him, and the orange ghost would be
+random.”
+
+¿Es alguno omnisciente? NO
+ A considerar!
+1.   No siempre se sabe de antemano cuales son todas las
+     posibles secuencias.
+                                                                     Racionales vs No Racionales
+2.   El número de secuencias puede ser exponencial e intratable.   Omniscientes vs No Omniscientes
+
+
+
+
+3.   Aún conociendo todas las posibilidades armar una tabla de
+     acciones/reacciones podría ser un trabajo demasiado costoso
+     para quien realiza la arquitectura.
+       Estado Interno
+
+Sin estado interno                Con estado interno
+ ●   Tambien llamados              ●   Con cada percepción y/o
+                                                                         Racionales vs No Racionales
+     “reactivos” o “de reflejos        acción pueden alterar su        Omniscientes vs No Omniscientes
+                                                                                Sin vs Con estado interno
+     simples”.                         estado interno.
+
+
+ ●   Acción = f(Percepción)        ●   También llamados “basados
+                                       en modelos”
+
+                                   ●   Acción = f(Percepción, Estado
+                                       Interno)
+Tipos de Agentes
+
+    Racionales vs No Racionales
+
+  Omniscientes vs No Omniscientes
+
+           Sin vs Con estado interno
+Ambientes
+Es un conjunto de componentes que conforman al entorno del
+problema.
+
+Pueden contener uno o más agentes.
+ Totalmente Observable /
+ Parcialmente Observable
+Un ambiente es Totalmente Observable si el agente tiene acceso a
+todos los aspectos relevantes del ambiente para el problema.
+
+Un ambiente es Parcialmente Observable caso contrario.             Totalmente vs Parcialmente Obs.
+
+
+
+
+En un ambiente totalmente observable, no se precisa de memoria
+interna.
+
+Totalmente Observables: Ajedrez, 8-Puzzle, Tatetí
+Parcialmente Observables: Juegos de cartas, Manejar un auto,
+Batalla naval
+Determinístico /
+Estocástico
+Un ambiente es determinı́stico si el estado siguiente de un
+ambiente se determina completamente mediante:
+ ● el estado actual y
+                                                                  Totalmente vs Parcialmente Obs.
+ ● las acciones escogidas por los agentes.                      Determinístico vs Estocástico
+
+
+
+
+Un ambiente parcialmente observable puede parecer estocástico
+para el agente.
+
+Determinístico Estratégico: Determinístico excepto para las
+acciones de otros agentes.
+
+Determinísticos: Laberinto, 8-Puzzle
+Estocásticos: Generala, Ludo, Escaleras y Serpientes
+Estratégicos: Pac-man, Tatetí
+  Episódico /
+  Secuencial
+Episódico
+La experiencia del agente se mide en “episodios”.
+ ● Cada episodio consta de un agente que percibe y actúa.     Totalmente vs Parcialmente Obs.
+                                                            Determinístico vs Estocástico
+ ● Los episodios son independientes entre sı́.                  Episódico vs Secuencial
+
+
+
+
+Secuencial
+La decisión actual puede afectar las decisiones futuras.
+
+Episódico: Torneo de ajedrez, Clasificación de imágenes
+Secuencial: Partida de ajedrez, Tatetí
+  Estático /
+  Dinámico
+Si el ambiente es estático no cambia mientras el agente está
+deliberando.
+                                                                        Totalmente vs Parcialmente Obs.
+                                                                      Determinístico vs Estocástico
+                                                                          Episódico vs Secuencial
+Si lo que cambia es la calificación asignada al desempeño, entonces         Estático vs Dinámico
+
+es semidinámico.
+
+Estático: Ajedrez, Buscaminas
+Dinámico: Auto autónomo, Pac-Man
+Semidinámico: Kahoot
+  Discreto /
+  Continuo
+Un ambiente es discreto si existe una cantidad limitada de
+percepciones y acciones distintas y claramente discernibles.     Totalmente vs Parcialmente Obs.
+                                                               Determinístico vs Estocástico
+                                                                   Episódico vs Secuencial
+                                                                     Estático vs Dinámico
+Discreto: Pac-man, Ajedrez                                           Discreto vs Continuo
+
+Continuo: Auto autónomo, Robot en laberinto
+ Amb. Conocido /
+ Amb. Desconocido
+En un ambiente conocido, se conocen las consecuencias de las
+                                                                 Totalmente vs Parcialmente Obs.
+acciones o las probabilidades en su totalidad.                 Determinístico vs Estocástico
+                                                                   Episódico vs Secuencial
+                                                                     Estático vs Dinámico
+                                                                     Discreto vs Continuo
+En un ambiente desconocido, el agente podrá aprenderlas o           Conocido vs Desconocido
+
+estimarlas.
+
+Conocido: Pac-man, Ajedrez
+Desconocido: Auto autónomo, Detección de spam, Mao
+  Individual /
+  Multiagente
+Un ambiente multiagente es aquel que se conoce de la existencia de     Totalmente vs Parcialmente Obs.
+                                                                     Determinístico vs Estocástico
+al menos otro agente.                                                    Episódico vs Secuencial
+                                                                           Estático vs Dinámico
+                                                                           Discreto vs Continuo
+                                                                          Conocido vs Desconocido
+Individual: Solitario, Laberinto, 8-Puzzle                                Individual vs Multiagente
+
+Multiagente: Pac-man, Ajedrez, Tatetí
+  Adversariales /
+  Colaborativos
+                                                                             Totalmente vs Parcialmente Obs.
+Adversariales                                                              Determinístico vs Estocástico
+                                                                               Episódico vs Secuencial
+Los objetivos de los agentes están en conflicto con los de otros agentes         Estático vs Dinámico
+                                                                                 Discreto vs Continuo
+                                                                                Conocido vs Desconocido
+                                                                                Individual vs Multiagente
+Colaborativos                                                                 Adversarial vs Colaborativo
+
+Los objetivos de los agentes están alineados con los de otros agentes
+
+Puede ser parcialmente ambos.
+
+Muy utilizado en Sistemas Multiagentes.
+
+Adversariales: Ajedrez
+Colaborativos: Drones para cosechar
+ Tipos de Ambientes
+
+1.      Totalmente vs Parcialmente Observable
+2.   Determinístico vs Estocástico    (vs Estratégico)
+3.       Episódico vs Secuencial
+4.         Estático vs Dinámico       (vs Semidinámico)
+5.         Discreto vs Continuo
+6.       Conocido vs Desconocido
+7.       Individual vs Multiagente
+8.      Adversarial vs Colaborativo
+ Tipos de Ambientes
+
+1.      Totalmente vs Parcialmente Observable
+2.   Determinístico vs Estocástico    (vs Estratégico)
+3.       Episódico vs Secuencial
+4.         Estático vs Dinámico       (vs Semidinámico)
+5.         Discreto vs Continuo
+6.       Conocido vs Desconocido
+7.       Individual vs Multiagente
+
+                                                o s má s !
+                                           much
+8.      Adversarial vs Colaborativo
+                                      ¡Y
+

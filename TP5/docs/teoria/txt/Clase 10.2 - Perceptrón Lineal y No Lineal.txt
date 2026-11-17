@@ -1,0 +1,195 @@
+Perceptrón Simple
+Sistemas de Inteligencia Artificial
+        Primer Cuatrimestre 2026
+                  Alan Pierri
+               Rodrigo Ramele
+               Eugenia Piñeiro
+                Marina Fuster
+               Luciano Bianchi
+               Santiago Reyes
+                Marco Scilipoti
+                Paula Oseroff
+                Joaquín Girod
+RESUMEN DE PERCEPTRÓN SIMPLE
+
+ ● McCulloch y Pitts sientan las bases del modelo de
+   neurona que se utiliza en el área de redes neuronales.
+   Este modelo se denomina Perceptrón.
+
+ ● El modelo de McCulloch y Pitts permite resolver
+   problemas linealmente separables.
+
+ ● Rosenblatt provee el mecanismo que permite obtener los
+   pesos del perceptrón de manera iterativa
+
+ ● No es lo mismo aprendizaje que generalización
+salary(years_of_experience):
+    return a * years_of_experience + b
+salary(years_of_experience):
+    return a * years_of_experience + b
+
+
+salary(x1):
+    return w1 * x1 + w0
+salary(x1, x2):
+    return w1 * x1 + w2 * x2 + w0
+¿CÓMO RESUELVO EL PROBLEMA?
+
+                              Necesito encontrar los
+                              valores de w que me
+                              permitan encontrar un
+                              hiperplano que ajuste lo
+                              mejor posible al
+                              conjunto de datos
+Widrow-Hoff - 1960
+                     ADALINE: ADAptive LINear Element
+                     (o perceptrón simple lineal)
+
+                     Cambiamos la función de activación por la identidad:
+
+
+
+
+                     La salida del perceptrón ya no está confinada a ser
+                     binaria: toma valores en los reales
+¿CÓMO RESUELVO EL PROBLEMA?
+
+                              Necesito encontrar los
+                              valores de w que me
+                              permitan encontrar un
+                              hiperplano que ajuste lo
+                              mejor posible al
+                              conjunto de datos
+APRENDIZAJE PARA EL PERCEPTRÓN LINEAL
+
+
+
+
+Rosenblatt: Cada vez que la neurona recibe un estímulo, los pesos
+sinápticos pueden actualizarse (proceso iterativo):
+
+
+
+
+                                              ?
+¿CÓMO DEFINIMOS QUE EL PERCEPTRÓN SE EQUIVOCA?
+
+
+
+
+  salary(x1):
+      return w1 * x1 + w0
+¿CÓMO DEFINIMOS QUE EL PERCEPTRÓN SE EQUIVOCA?
+
+Podemos usar la siguiente función de error:
+
+
+
+
+La salida del perceptrón depende, a su vez, de los pesos sinápticos.
+¿CÓMO DEFINIMOS QUE EL PERCEPTRÓN SE EQUIVOCA?
+
+Podemos usar la siguiente función de error o costo:
+
+
+
+
+La salida del perceptrón depende, a su vez, de los pesos sinápticos.
+
+
+
+
+                                                 Incluye el “umbral” o “bias”
+¿CÓMO “APRENDE” EL PERCEPTRÓN CON ESTA FUNCIÓN DE COSTO?
+
+
+
+
+Fórmula de actualización de los pesos al evaluar un dato de entrada:
+¿QUÉ FORMA TIENE LA FUNCIÓN DE COSTO?
+DESARROLLO DE
+DESARROLLO DE
+DESARROLLO DE
+DESARROLLO DE
+
+
+
+
+Fórmula de actualización de los pesos al evaluar un dato de entrada:
+EL ALGORITMO PARA EL PERCEPTRÓN LINEAL ES IGUAL AL ANTERIOR
+
+
+
+
+                                       Tip de implementación
+
+                                       Construirse un conjunto
+                                       de datos que sean
+                                       puntos pertenecientes a
+                                       una recta y ajustarlos!
+EL ALGORITMO PARA EL PERCEPTRÓN LINEAL ES IGUAL AL ANTERIOR
+
+
+
+
+                                       El tipo de entrenamiento,
+                                       tanto del algoritmo
+                                       anterior como de este
+                                       algoritmo, corresponde
+                                       al formato ONLINE (se
+                                       retoma clase próxima)
+PERCEPTRÓN SIMPLE NO LINEAL
+
+Cambiamos la función de activación por una sigmoidea, tanh o logística
+
+
+
+
+La fórmula de error se mantiene igual al
+perceptrón lineal:
+¿Cómo “aprende”? ¡Igual que el anterior!
+
+Cambiamos la función de activación por una sigmoidea, tanh o logística
+
+
+
+
+Fórmula de actualización de los pesos al evaluar un dato de entrada:
+PERCEPTRÓN SIMPLE NO LINEAL
+
+Cambiamos la función de activación por una sigmoidea, tanh o logística
+
+
+
+
+Hyperbolic Tangent Function     Logistic Function
+Funciones sigmoideas                  Variación de tanh de acuerdo a beta
+
+Tangente Hiperbólica
+Parámetro beta que cambia la forma:
+
+
+
+
+Función Logística
+Parámetro beta que cambia la forma:
+BIBLIOGRAFÍA
+
+Rodrigo Ramele (2024) Reglamento y Apuntes de
+Sistemas de Inteligencia Artificial, Capítulo 6.
+
+Bernard Widrow and Marcian E. Hoff, Adaptive switching
+circuits, 1960 IRE WESCON Convention Record, New York:
+IRE, pp. 96-104
+
+Aggarwal, C. C. (2018). Neural Networks and Deep
+Learning: A Textbook. Springer, pp. 1–37.
+
+
+PARA LA PRÓXIMA CLASE
+
+ 1.   What is a Neural Network?
+ 2.   Gradient Descent
+ 3.   What is backpropagation?
+ 4.   Backpropagation
+

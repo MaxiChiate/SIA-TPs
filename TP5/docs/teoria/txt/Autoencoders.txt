@@ -1,0 +1,1879 @@
+Referencias
+
+
+
+
+                Sistemas de Inteligencia Artificial
+                         Autoencoders
+
+              Centro de Inteligencia Computacional
+
+                               2026
+
+
+
+
+                                      1/95
+Referencias
+
+
+
+
+Autoencoders
+
+
+       Autoencoders
+           Arquitectura de Redes Neuronales No Supervisadas.
+           Reducción de la Dimensionalidad.
+           Son la base de algunos modelos de redes neuronales
+           generativas.
+
+       ¿Que pasa si la salida final de una MLP es una entrada
+                       para otra MLP inversa?
+
+
+
+                                         2/95
+Referencias
+
+
+
+
+Autoencoder
+       Arquitectura
+           Dos redes neuronales artificiales de perceptrones
+           multicapa, donde la salida de la primera red se conecta
+           con la entrada de la segunda.
+           La segunda red tiene la distribución invertida de neuronas
+           en las capas y como salida tiene la misma dimensión que
+           la entrada de la primera red.
+
+       Formulación General
+           Z = f (X ) = h(XW + b)
+           X ′ = g (Z ) = h(ZV + p)
+       Esto debe satisfacerse de manera que L(X , X ′ ) = ||X − X ′ ||2 .
+                                             3/95
+Referencias
+
+
+
+
+Autoencoder
+       Aprendizaje
+           La red es entrenada por cualquier método de aprendizaje
+           que sirva para un Multi-Layer Perceptron, pero para cada
+           patrón de entrada X se pone como salida esperada el
+           mismo patrón X .
+           La red por lo tanto aprende los pesos sinápticos que
+           generan en la salida X ′ , el mismo valor presentado a la
+           entrada.
+       Formulación General
+           Z = f (X ) = h(XW + b)
+           X ′ = g (Z ) = h(ZV + b)
+       Esto debe satisfacerse de manera que L(X , X ′ ) = ||X − X ′ ||2 .
+                                             4/95
+Referencias
+
+
+
+
+Función identidad
+
+
+
+                                       Z
+
+       X                                                            X′
+
+
+
+              |     {z      }                     |     {z      }
+                  Encoder                             Decoder
+                                Latent Code
+
+
+                                           5/95
+Referencias
+
+
+
+
+Autoencoder
+
+              ¿Qué utilidad puede representar en definitiva una
+                              función identidad?
+
+       Restricciones
+       El chiste está justamente en que es posible agregar
+       restricciones que fuercen al autoencoder a aprender algo útil
+       de la distribución del set de datos. La restricción natural que
+       tiene por la arquitectura es que al utilizar menos neuronas en
+       la capa central, fuerza a encontrar una codificación más
+       eficiente del conjunto de datos.
+
+
+                                             6/95
+Referencias
+
+
+
+
+Autoencoder lineal
+
+
+       Descomposición Espectral
+       Repasando la clase de Aprendizaje No supervisado y PCA, si
+       una matriz X es invertible y sus autovalores son reales,
+       entonces la matriz puede ser diagonalizable y factorizarse
+
+                                X = ELE T                        (1)
+       Donde L es la matriz diagonal formada por los autovalores y E
+       es la matriz de filas formada por sus autovectores.
+
+
+
+                                         7/95
+Referencias
+
+
+
+
+Autoencoder lineal
+
+       Descomposición en valores singulares
+       Para el caso de matrices no cuadradas, existe una operación
+       similar pero más general que es la descomposición en valores
+       singulares, SVD. Dada una matriz X de n × d,
+
+                             SVD(X ) = Z̃ ΣV T                     (2)
+       Donde Z̃ son los vectores columnas singulares de izquierda, Σ
+       es una matriz diagonal positiva y V son los vectores singulares
+       derechos. El cálculo de SVD se realiza minimizando
+
+                               ||X − Z̃ ΣV T ||.                   (3)
+
+                                            8/95
+Referencias
+
+
+
+
+Autoencoder lineal
+
+                      Una vez que el autoencoder aprende
+                      minimiza
+
+                                  J = ||X − ZV T ||          (4)
+
+                  Z                   X ≈ ZV T               (5)
+
+    X                     X : La matriz de datos de n × d. Hay n
+                          datos de dimensión d.
+              W   V       Z : La salida de la capa interna del
+                          autoencoder, del código de n × k.
+                          V : La matriz de pesos sinápticos
+                          asociada al Decodificador de k × d.
+                                    9/95
+Referencias
+
+
+
+
+Autoencoder lineal
+
+
+
+       Lemma: PCA
+       La salida del código interno Z del autoencoder lineal son las
+       salidas de las proyecciones de lo datos en los componentes
+       principales.
+
+
+
+
+                                           10/95
+Referencias
+
+
+
+
+Autoencoder lineal
+
+       J = ||X − ZV T ||
+       J = ||X − (Z̃ Σ)V T ||
+       SVD
+       Si V T , que tiene los pesos del decoder del Autoencoder, es
+       ortonormal, entonces X ≈ ZV T del Autoencoder puede verse
+       como la descomposición en valores singulares
+       X ≈ SVD(X ) = Z̃ Σ V T con Z̃ Σ = Z , ya que la
+       descomposición de SVD surge de resolver la minimización de
+       la Ecuación 4.
+
+
+
+                                          11/95
+Referencias
+
+
+
+
+Autoencoder lineal
+
+
+
+       PCA
+       A su vez, por la descomposición espectral, con los
+                                                 T
+       autovectores de la matriz de covarianza Xn−1X , se puede obtener
+       XTX
+        n−1
+            = E L E T donde E es la matriz de transformación de
+       PCA con los autovectores.
+
+
+
+
+                                           12/95
+Referencias
+
+
+
+
+Autoencoder lineal
+
+
+       Entonces, reemplazando X como la factorización por
+       X ≈ SVD(X ) = Z̃ Σ V T :
+       Matriz de covarianza de X
+       XTX                             1
+       n−1
+           = (Z̃ Σ V T )T (Z̃ Σ V T ) n−1
+       XTX                             1
+       n−1
+           = (V T )T ΣT Z̃ T Z̃ ΣV T n−1
+        T
+       X X                 1               1
+       n−1
+           = V ΣT ΣV T n−1     = V Σ2 V T n−1
+
+
+
+
+                                           13/95
+Referencias
+
+
+
+
+Autoencoder lineal
+
+       Matriz de covarianza de X
+       XTX             1            Σ2
+                                          
+       n−1
+           = V Σ2 V T n−1 =V       n−1
+                                              VT
+
+       Pero por la descomposiciónespectral, esto es también igual a
+                      T         Σ2
+       E (L) E T = Xn−1X = V n−1     V T por lo que si X tiene media
+       cero,
+            λi = Si2 /n − 1, con Si los valores singulares de Σ.
+            V =E
+       Entonces al transformar los datos con PCA
+       TPCA (X ) = X E = (Z̃ Σ V T ) E = Z̃ Σ = Z que corresponde
+                                  | {z }
+                                     I
+       a la salida del espacio latente.
+                                                   14/95
+Referencias
+
+
+
+
+Autoencoder lineal
+
+
+
+       Lemma: PCA
+       La salida del código interno Z del autoencoder lineal son las
+       salidas de las proyecciones de lo datos en los componentes
+       principales.
+
+                            TPCA (X ) = X E = Z                     (6)
+
+
+
+
+                                           15/95
+Referencias
+
+
+
+
+Autoencoder lineal
+
+
+       Reducción no lineal de la dimensionalidad
+       Esto no es una manera muy eficiente de obtener las
+       proyecciones en los componentes principales, pero lo que
+       permite es pensar al autoencoder como una extensión no lineal
+       de la descomposición en componentes principales (cuando se
+       usan funciones de activación no lineales). Es una asumpción
+       fuerte.
+
+
+
+
+                                          16/95
+Referencias
+
+
+
+
+              Autoencoder como herramienta
+
+
+
+
+                              17/95
+Referencias
+
+
+
+
+Compresión
+
+
+
+
+       Mecanismo de Compresión
+       Este fue el uso original que se le dio a los autoasociadores,
+       como mecanismos de compresión de información.
+
+
+
+
+                                            18/95
+Referencias
+
+
+
+
+Detección de Outliers
+
+              X′                 X
+                                                          ||Xj − Xj′ ||
+
+       Detección de outliers
+           Se entrena al autoencoder con el conjunto de
+           entrenamiento.
+           Luego se lo somete a nuevas muestras que no
+           necesariamente se encuentran en el conjunto.
+           Se mide con alguna medida la diferencia entre cada valor
+           de entrada del autoencoder y los valores obtenidos en la
+           salida.
+                                         19/95
+Referencias
+
+
+
+
+DAE - Denoising autoencoder
+
+
+
+       Usos
+       El anglicanismo Denoising hace referencia a la eliminación del
+       ruı́do. Como el autoencoder genera una aproximación de la
+       matriz de datos X en base a X ≈ X ′ = Z V T entonces esto
+       permite utilizarse para eliminar cualquier ruı́do sobre la entrada
+       X y recuperar en X ′ el original.
+
+
+
+
+                                            20/95
+Referencias
+
+
+
+
+DAE - Denoising autoencoder
+
+       Eliminación de ruido
+       Ruido se le llama a perturbaciones sobre los datos que
+       contaminan el contenido de información que se quiere
+       recuperar. Hay muchos tipos diferentes de ruidos y son
+       inherentes a cualquier proceso de obtención de información. Es
+       el mal de todos, imposible de eliminar por completo.
+
+       Eliminación de ruido
+       Los DAE pueden utilizarse para eliminar ruido ya que la
+       estructura interna del Encoder/Decoder intenta preservar el
+       contenido de información más relevante en el conjunto de
+       datos.
+
+                                           21/95
+Referencias
+
+
+
+
+DAE - Denoising autoencoder
+
+       Procedimiento
+       La idea entonces es una vez aprendido un conjunto de datos,
+       cuando aparecen nuevas muestras que pueden estar
+       contaminadas con ruido, reemplazar la muestra ruidosa por la
+       muestra obtenida en la salida del Decodificador.
+       Para esto, en vez de entrenar con los elementos obtenidos
+       directamente del conjunto de datos, se modela el ruido, es
+       decir, se lo caracteriza numericamente (e.g. salt-and-pepper) o
+       en general con una función de distribución de probabilidad
+       (e.g. Gaussiano, Rayleigh) y se agrega a los datos X
+       generando una nueva instancia X̃ . Sin embargo, la salida que
+       se pone en la red corresponde al dato X sin alterar.
+
+                                          22/95
+Referencias
+
+
+
+
+Regularización
+
+       Regularizar implica agregar una condición extra R sobre la
+       función objetivo L que limita el espacio de búsqueda de las
+       soluciones.
+
+                                  1
+              J = L + λR = mı́n     ||Y − X ϕ||      (+λ||f (ϕ)||)         (7)
+                            ϕ     N                  |   {z      }
+                                                  Término Regularizador
+
+
+       Desalienta las soluciones complejas o extremas en un problema
+       de optimización. El parámetro de regularización λ se usa
+       justamente para ajustar la importancia que se le da a al
+       término regularizador (Tikhonov Regularization).
+
+                                             23/95
+Referencias
+
+
+
+
+CAE - Contractive Autoencoder
+
+       Los CAE agregan un término regularizador a las funciones de
+       costo, que le resta sensibilidad a la entrada, intentando
+       aprender representaciones más simples y crudas de los datos.
+
+
+
+
+                                          24/95
+Referencias
+
+
+
+
+CAE - Contractive Autoencoder
+
+
+       De esa manera por ejemplo, datos en dos dimensiones pueden
+       reducirse a una dimensión, como una representación de una
+       función de dos dimensiones, que pasa a una representación
+       paramétrica (con un solo parámetro t).
+
+
+
+
+                                         25/95
+Referencias
+
+
+
+
+SAE - Sparse Autoencoder
+
+       Los SAE por otro lado, utilizan una arquitectura donde el
+       espacio latente tiene más dimensiones de la entrada. Para
+       lograr imponer restricciones que permitan adquirir información
+       de la estructura de los datos, imponen un término regularizador
+       que favorece la presencia de esparcicidad, esto es, que un
+       número de neuronas del espacio latente estén en 0 anuladas.
+       Los SAE se pueden utilizar para realizar Feature Learning, es
+       decir para identificar caracterizaciones o transformaciones de
+       los datos que son útiles para discriminarlos.
+       La Esparcididad se impone mediante una restricción
+       umbralizada, que de no superarse desactiva todas las neuronas
+       involucradas.
+
+                                           26/95
+Referencias
+
+
+
+
+              Deep Generative Model
+
+
+
+
+                           27/95
+Referencias
+
+
+
+
+Deep Generative Model
+
+
+       Modelado Generativo o Discriminativo
+          Modelo Discriminativo: es crudo en los datos. Por
+          ejemplo, una ANN busca la hiper-sábana que separa los
+          datos en dos clases sin importarle cómo se generan (o
+          como se podrı́an) generar esos datos.
+          Modelo Generativo: establece cierta relación causal. El
+          modelo hipotetiza cómo se generan los datos en sı́.
+
+
+
+
+                                         28/95
+Referencias
+
+
+
+
+Deep Generative Model
+
+
+       Modelo Generativo
+       La pregunta que surge entonces es si es posible utilizando una
+       red neuronal, implementar un mecanismo generativo causal,
+       que me permita obtener muestras que comparten
+       caracterı́sticas representativas de un conjunto de datos.
+
+       ¿Con lo que vieron hasta ahora, cómo se imaginan un
+       mecanismo ası́?
+
+
+
+
+                                          29/95
+Referencias
+
+
+
+
+Modelo Generativo
+
+
+              X = (x1 , x2 , x3 , ..., xn )
+
+               X̂ = (x̂1 , x̂2 , ..., x̂n )
+
+
+
+
+                                              30/95
+Referencias
+
+
+
+
+Generative Autoencoder
+
+
+
+
+                    |    {z   }
+                    Latent Space
+
+
+
+
+                              31/95
+Referencias
+
+
+
+
+Generative Autoencoder
+
+
+
+
+                         z1
+
+                         z2
+
+
+
+
+                              32/95
+Referencias
+
+
+
+
+Generative Autoencoder: Concept Vector
+
+
+
+
+       z1
+
+
+
+
+                     z2
+                          33/95
+Referencias
+
+
+
+
+Generative Autoencoder
+
+       Algoritmo del Autoencoder Generativo
+           Utilizamos un Autoencoder para codificar en el Espacio
+           Latente todos los patrones.
+           Luego dejamos de lado el Encoder, para movernos dentro
+           de un vector de representación.
+           Generamos muestras sucesivas especificando de manera
+           directa los valores de z1 y z2 .
+           Para cada tupla de valores de zi obtenemos una nueva
+           muestra generada por el Decodificador.
+
+
+
+                                        34/95
+Referencias
+
+
+
+
+Generative Autoencoder
+
+
+
+
+                         35/95
+Referencias
+
+
+
+
+Generative Autoencoder
+
+
+
+       La conquista del espacio latente
+       Necesitamos entonces algo más que nos permita capturar lo
+       que pasa en el espacio latente, para poder generar nuevas
+       muestras válidas a medida que nos movemos en ese espacio
+       latente.
+
+
+
+
+                                        36/95
+Referencias
+
+
+
+
+Generative Autoencoder
+       La conquista del espacio latente
+       Una manera de resolver esto, es darle una estructura
+       estadı́stica al espacio latente. Es decir en vez de ver la salida
+       que se obtiene para un único punto de z, ver las salidas que se
+       obtienen para un conjunto de puntos.
+
+
+
+
+                                            37/95
+Referencias
+
+
+
+
+Generative Autoencoder
+
+
+
+       La conquista del espacio latente
+                     p(z/x)                       p(x/z)
+                                      z
+       x                                                   x̂
+
+
+
+
+                                          38/95
+Referencias
+
+
+
+
+Repaso: Aproximación de una pdf
+       ¿Si tengo un generador de números pseudoaleatorios que se
+       corresponde con una distribución de probabilidad uniforme, y
+       tengo una p.d.f., ¿ Cómo puedo usar el generador para generar
+       números aleatorios que se corresponden con la p.d.f. ?
+
+       Inverse Sampling Theorem
+
+                   Y U[0, 1], F invertible y F = CDF (pdf ()),
+                             X = F −1 (Y ) tiene CDF (X ) = F
+
+
+              Y U[0, 1], F = CDF (pdf ()), X = ı́nf {x : F (x) ≥ Y }
+                                                     x
+
+                                             39/95
+Referencias
+
+
+
+
+Aproximación de una pdf
+
+       Eligen un valor de Y U[0, 1], se fijan que les da en
+       X = F −1 (Y ). La distribución de esos X va a corresponder con
+       la pdf en cuestión.
+
+       Inverse Sampling Theorem
+
+                   Y U[0, 1], F invertible y F = CDF (pdf ()),
+                             X = F −1 (Y ) tiene CDF (X ) = F
+
+
+              Y U[0, 1], F = CDF (pdf ()), X = ı́nf {x : F (x) ≥ Y }
+                                                     x
+
+
+                                             40/95
+Referencias
+
+
+
+
+Aproximación de una p.d.f.
+
+
+
+
+                              41/95
+Referencias
+
+
+
+
+Aproximación de una p.d.f.
+
+
+
+       Teorema Central del Limite
+       Para el caso de Gaussianas, se puede utilizar el TCL, obtener
+       un número grande de y ∈ U[0, 1] y con eso generar
+       correspondiente N( n2 , 12
+                               n
+                                  ).
+
+
+
+
+                                          42/95
+Referencias
+
+
+
+
+Stochastic Feedforward Neural Networks [17]
+
+
+
+       Ahora, ¿ Cómo podrı́amos hacer eso con una red neuronal ?
+
+       Una red de una capa oculta es un aproximador universal[17]
+       puede representar cualquier función computable (Arbitrary
+       Continuos Functions, Cybenki’s Theorem). Entre otras cosas,
+       puede representar una función estocástica, regida por una
+       p.d.f.
+
+
+
+
+                                         43/95
+Referencias
+
+
+
+
+Stochastic Feedforward Neural Networks
+
+
+
+                       µ Σ
+
+       x                                 y
+
+                     p(y /x)
+
+
+
+
+                               44/95
+Referencias
+
+
+
+
+Reparametrization Trick
+
+
+
+       Ahora, ¿ Cómo se construye la capa estocástica ?
+
+       La clave está en el reparametrization trick haciendo que el
+       valor de z se calcula en función de µ̄ y de Σ̄.
+
+                       z = h(X̄ ) = ϵ ⊙ Σ̄(X̄ ) + µ̄(X̄ )        (8)
+
+
+
+
+                                            45/95
+Referencias
+
+
+
+
+Colab - Reparametrization Trick
+
+
+
+
+       https://colab.research.google.com/drive/
+       1N8HMJTNgCX0flDEwbx9Um6hD1D1vS1Ha?usp=sharing
+
+
+
+
+                                   46/95
+Referencias
+
+
+
+
+Stochastic Functions[19]
+       Una función donde la asignación de x a y es estocástica,
+       regida por una p.d.f. condicional.
+
+                             f (x) = L(x) + ϵ(x)
+       y = f (x) tal que, dado x, y = f (x) según p(y /x).
+
+
+
+
+                                            47/95
+Referencias
+
+
+
+
+Stochastic Feedforward Neural Networks
+
+
+                                     r ∗ ∈ U[0, 1]
+
+       x
+                                                     y
+                    p(θ/x)     Σ
+                               µ
+                                       N ( µ, Σ )
+                         p(y /x)
+
+
+
+
+                             48/95
+Referencias
+
+
+
+
+Repaso: Teorı́a de la Información
+       Variable aleatoria: X = xi
+       Información: I = − log p(xi )
+       Entropı́a: Más o menos, cuanta info tienen todos los estados
+       posibles que puede tomar P x. Promedio ponderado.
+       H = Ep(xi ) I (xi ) = − p(xi ) log p(xi )
+       Información Mutua:             P P                  p(x,y )
+       I (x, y ) = H(y ) − H(y /x) = x y p(x, y )log p(x)p(y        )
+       H(x) = I (x, x), y se tiene que,
+             I = 0 implica que p(x) = 1 Certeza !
+             I > 0 algo de información
+             I (xk ) > I (xi ) ⇒ Pk < Pi , lo más raro (menos probable)
+             aporta más información.
+
+                                            49/95
+Referencias
+
+
+
+
+Repaso: Teorı́a de la Información
+
+
+       La entropı́a es mı́nima, cero, cuando es una situación de total
+       certeza (teniendo en cuenta que lı́mp→0+ p log p = 0), y es
+       máxima, cuando todos los eventos son equiprobables
+       (probabilidad uniforme).
+       0 <= H(x) <= log (2k + 1)
+       Entropı́a condicional: H(x/y ) P  = H(x,Pym) − H(y )
+       Entropı́a conjunta: H(x, y ) = m    i=1
+                                                                        1
+                                                 j=1 p(xi , yi ) log p(xi ,yi )
+
+
+
+
+                                                50/95
+Referencias
+
+
+
+
+Repaso: Teorı́a de la Información
+       Cross Entropy
+                  P
+       Hp (q) = − k=1 q(yk ) log p(yk )
+
+       Binary Cross Entropy
+       Hp (q) = − N1 Ni=1 {(yi ) log p(yi ) + (1 − yi ) log(1 − p(yi ))}
+                    P
+
+       q(yk ) = yi = 0|1, y representa el label, p(yi ), 1..N es la
+       probabilidad asignada a ese label para la muestra i. Binary
+       Cross Entropy sirve como una función para estimar cuál es la
+       efectividad de un clasificador que asigna el label y a cada
+       elemento de 1..N con probabilidad p(yk ). Un clasificador
+       perfecto que estima yi con probabilidad 1, genera un valor de
+       binary cross entropy de cero.
+                                              51/95
+Referencias
+
+
+
+
+KL: Kullback-Leibler Divergencia ó Entropı́a
+relativa
+
+
+       Es una ”norma”(en rigor no) que permite ver la distancia entre
+       distribuciones de probabilidad, i.e. si tiende a cero implica que
+       las distribuciones son parecidas. Una medida de similaridad.
+       KL
+                                      P              q(x)
+                       KL(q||p) = −       xi q(x)log p(x)
+
+
+       donde p(x) es la referencia a la que se compara q(x).
+
+
+
+                                             52/95
+Referencias
+
+
+
+
+KL: Kullback-Leibler Divergencia ó Entropı́a
+relativa
+
+                                       P              q(x)
+                        KL(q||p) = −       xi q(x)log p(x)
+
+                                 Propiedades:
+              KL(q||p) ̸= KL(p||q)
+              KL(q||q) = 0
+              KL(q||p) ≥ 0
+              KL(q||p) = Hp (q) − H(q) ≥ 0
+
+
+
+                                              53/95
+Referencias
+
+
+
+
+              Deep Generative Model
+              Variational Autoencoder
+
+
+
+
+                            54/95
+Referencias
+
+
+
+
+Deep Generative Model
+
+
+       VAE - Variational Autoencoder
+       Los VAE son la convergencia de dos ideas.
+           Una estimación variacional de un modelo
+           generativo[14, 9, 6, 11].
+           Una solución a esa estimación basada en dos redes
+           neuronales feedforward acopladas, un Encoder y un
+           Decoder, que conforman un Autoencoder.
+
+
+
+
+                                          55/95
+Referencias
+
+
+
+
+Inferencia Variacional
+
+       Inferencia Variacional
+       Los métodos variacionales son estrategias de la fı́sica
+       estadı́stica que se basa en establecer una función de costo la
+       cual es mı́nima en la solución verdadera hipotética, pero que al
+       plantear soluciones alternativas, generalmente paramétricas, es
+       posible minimizando la función evaluar y encontrar una
+       solución posible cada vez más buena.
+       Peterson, Anderson 1987 (Mean Field Theory) [2]
+       Jordan 1999 [18]
+       Hinton, Van Camp 1993 [8]
+
+
+                                            56/95
+Referencias
+
+
+
+
+Generative Autoencoder
+
+
+
+       Función estocástica
+                      p(z/x)               p(x/z)
+                               z
+       x                                            x̂
+
+
+
+
+                                   57/95
+Referencias
+
+
+
+
+Inferencia
+       Función estocástica
+                       p(z/x)                      p(x/z)
+                                       z
+          x                                                        x̂
+
+
+
+       Inferencia Variacional
+       La inferencia variacional intenta resolver el problema de
+       estimar una función de densidad de probabilidad (p.d.f.)
+       aproximandola con funciones conocidas, y optimizando los
+       parámetros de esa función mediante la solución de un
+       problema de optimización.
+                                           58/95
+Referencias
+
+
+
+
+Optimización del Problema de Inferencia
+
+
+
+
+       Objetivo
+       Tratar de aproximar p(z/x) con una q(z/x), siendo q(z) una
+       función que queremos (e.g. una Gaussiana) y controlamos.
+
+
+
+
+                                        59/95
+Referencias
+
+
+
+
+Optimización del Problema de Inferencia
+       Objetivo
+       Tratar de aproximar p(z/x) con una q(z/x).
+           p(z/x): es la pdf de los datos que desconocemos, y que la
+           vamos a aproximar por q(z/x)
+           q(z/x): es la pdf que vamos a plantear (a gusto) para
+           aproximar p(z/x).
+           q(z): vamos a asumir que los datos tienen una
+           distribución normal alrededor de cada z.
+           p(z): vamos a asumir que efectivamente
+           probabilisticamente cada x mapea multidimensionalmente
+           normal a z. Que sea normal es una restricción sobre la
+           p(·). Podrı́a ser otra.
+                                         60/95
+Referencias
+
+
+
+
+Generative Autoencoder
+
+
+
+       Función estocástica
+                      q(z/x)               p(x/z)
+                               z
+       x                                            x̂
+
+
+
+
+                                   61/95
+Referencias
+
+
+
+
+Optimización del Problema de Inferencia
+
+
+       Objetivo
+       Tratar de aproximar p(z/x) con una q(z/x), siendo q(z) una
+       función que queremos (e.g. una Gaussiana) y controlamos.
+
+       Mimización
+                                             q(x) log p(x)
+                                         P
+                     mı́n KL(q||p) = −                q(x)
+
+
+
+
+                                             62/95
+Referencias
+
+
+
+
+Optimización del Problema de Inferencia
+
+
+                                     X              p(z/x)
+              KL(q(z)||p(z/x)) = −       q(z) log
+                                                     q(z)
+                                                  p(z,x)
+                                                   p(x)
+                                     X
+                              =−         q(z) log q(z)
+                                                    1
+                                     X     p(z, x) 1
+                              =−         q(z) log
+                                            q(z) p(x)
+                                 X          p(z, x)
+                              =−   q(z){log         − log p(x)}
+                                             q(z)
+
+
+                                              63/95
+Referencias
+
+
+
+
+Optimización del Problema de Inferencia
+
+
+       KL(q(z)||p(z/x))
+                               X         p(z, x)
+                          =−       q(z){log      − log p(x)}
+                                          q(z)
+                             X          p(x, z) X
+                          =−   q(z) log         +     q(z) log p(x)
+                             z
+                                         q(z)       z
+                             X          p(x, z)            X
+                          =−   q(z) log         + log p(x)     q(z)
+                             z
+                                         q(z)              |  {z  }
+                                                              1
+
+
+
+
+                                          64/95
+Referencias
+
+
+
+
+Optimización del Problema de Inferencia
+
+
+
+                                     X              p(x, z)
+              KL(q(z)||p(z/x)) = −       q(z) log           + log p(x)      (9)
+                                     z
+                                                     q(z)
+
+
+                                              X                  p(x, z)
+              log p(x) = KL(q(z)||p(z/x)) +           q(z) log             (10)
+                                               z
+                                                                  q(z)
+
+
+
+
+                                              65/95
+Referencias
+
+
+
+
+Optimización del Problema de Inferencia
+
+
+
+
+                                                       X              p(x, z)
+              log p(x) = KL(q(z)||p(z/x)) +                    q(z) log            (11)
+              | {z } |         {z       }                  z
+                                                                       q(z)
+              fijo para x   lo más pequeño posible   |           {z       }
+                                                       L, lo más grande posible
+
+
+
+
+                                                       66/95
+Referencias
+
+
+
+
+Optimización del Problema de Inferencia
+
+
+
+
+                               L ≤ log p(x)                      (12)
+       Variational Lower Bound, tiene que ser lo más grande posible
+       y cuando KL → 0 entonces es exactamente el log p(x).
+
+
+
+
+                                          67/95
+Referencias
+
+
+
+
+Optimización del Problema de Inferencia
+
+
+                   X        p(x, z)
+              L=       q(z) log
+                             q(z)
+                 X          p(x/z)p(z)
+               =   q(z) log
+                               q(z)
+                 X                       p(z)
+               =   q(z){log p(x/z) + log       }
+                                         q(z)
+                 X                   X            p(z)
+               =   q(z) log p(x/z) +     q(z) log
+                                                  q(z)
+
+
+
+                                     68/95
+Referencias
+
+
+
+
+Optimización del Problema de Inferencia
+
+
+
+
+                   X                          X             p(z)
+              L=       q(z) log p(x/z)    +         q(z) log
+                                                            q(z)
+              L = Eq(z) log p(x/z)               −KL(q(z)||p(z))
+
+
+
+
+                                         69/95
+Referencias
+
+
+
+
+Optimización del Problema de Inferencia
+
+       Ingredientes:
+       pθ (z), qϕ (z)
+
+                          θ∗ , ϕ∗ = arg máx L(θ, ϕ, x)
+
+       Podemos asumir una distribución para pθ (z) simple, y elegir
+       otra distribución para qϕ (z), que determinará la estructura del
+       espacio latente. Con esto aproximamos pθ (z/x) con qθ (z/x).
+       Al optimizar L se encontraron los valores para los parámetros
+       de esas distribuciones, ϕ∗ , θ∗ .
+
+
+
+                                             70/95
+Referencias
+
+
+
+
+Resolución de un problema de optimización
+
+
+       Ingredientes:
+       pθ (z), qϕ (z)
+
+                        θ∗ , ϕ∗ = arg máx L(θ, ϕ, x)
+
+       Es decir, necesito en L optimizar al mismo tiempo pθ (x/z)
+       para que dado un z sampleado cualquiera, me genere un valor
+       de x válido, y necesito optimizar qϕ (z/x) para que dada un
+       valor de x real me genere parámetros para poder samplear z.
+       Todo a la vez.
+
+
+
+                                           71/95
+Referencias
+
+
+
+
+Autoencoder Variacional
+
+
+                              Σ      Sample
+              x   qϕ (z/x)    µ        z            pθ (x/z)     x̂
+
+
+
+       Puedo entonces usar un Encoder para dado un x real, generar
+       parametros para una q(z). De ahı́ sampleo z estocásticamente
+       que luego se usa en el Decoder, que los tiene que volver a
+       convertir en un x̂. Esos parámetros que se estiman θ∗ , ϕ∗ son
+       los pesos de las dos redes.
+
+
+                                           72/95
+Referencias
+
+
+
+
+Autoencoder Variacional[5]
+
+                                    Σ          Sample
+              x      qϕ (z/x)       µ            z                pθ (x/z)            x̂
+
+
+
+       Lo bueno es que el funcional L ya incluye ambas cosas que se
+       necesitan para optimizar la red.
+
+
+                  −L = − Eq(z) log p(x/z)               + KL(q(z)||p(z))
+                         |       {z     }                 |    {z      }
+                          Error de reconstrucción           Término regularizador
+
+
+       (maximizar L es equivalente a minimizar −L).
+                                                     73/95
+Referencias
+
+
+
+
+Variational Autoencoder
+
+
+
+       Asumimos que:
+           pθ (z) = N (0, I)
+           qϕ (z) = N (µ(x), Σ(x)), con Σ(x) diagonal.
+
+
+
+
+                                         74/95
+Referencias
+
+
+
+
+Variational Autoencoder
+
+       Error de Reconstrucción:
+
+                       1
+       pθ (x/z) = q           exp{(x − µ(z))T Σ(z)−1 (x − µ(z))}
+                   (2π)k Σ(z)
+                        p
+
+
+
+
+               log pθ (x/z) α (x − µ(z))T Σ(z)−1 (x − µ(z))
+                                   |{z}               |{z}
+                                    x̂                 x̂
+
+
+
+                                         75/95
+Referencias
+
+
+
+
+Variational Autoencoder
+       Término Regularizador:
+
+               KL(qϕ (z) = N (µ(x), Σ(x))||pθ (z) = N (0, I))
+
+               1
+          KL = {trace(Σ(x)) + µT µ(x) − k − log(|Σ(x)|)}
+               2
+               1 X         X            X
+             =       Σ(x) +    (µ(x))2 −     1 − log(Πk Σ(x))
+               2 k           k             k
+               1 X         X            X       X
+             =       Σ(x) +    (µ(x))2 −     1−      (log Σ(x))
+               2 k           k             k       k
+               1X
+             =     (Σ(x) + (µ(x))2 − 1 − log Σ(x))
+               2 k
+                                          76/95
+Referencias
+
+
+
+
+Variational Autoencoder
+
+       Término Regularizador:
+
+                      1X
+               KL =       (Σ(x) + (µ(x))2 − 1 − log Σ(x))
+                      2 k
+
+       Por razones numéricas, se reemplaza Σ(x) = exp(Σ(x)).
+
+                      1X
+               KL =       (exp Σ(x) + (µ(x))2 − 1 − Σ(x))
+                      2 k
+
+
+
+                                         77/95
+Referencias
+
+
+
+
+Variational Autoencoder [15]
+
+                                J = L + λR                       (13)
+
+
+        máx L = Eq(z) log p(x/z) − KL(q(z)||p(z))
+        mı́n L = −Eq(z) log p(x/z) + KL(q(z)||p(z))
+                                  1X
+        mı́n L = ||X̄ − X̄ ′ || +     (exp Σ(x) + (µ(x))2 − 1 − Σ(x))
+                                  2 k
+                                  1X
+        mı́n L = ||X̄ − X̄ ′ || −     (1 + Σ(x) − (µ(x))2 − exp Σ(x))
+                                  2 k
+
+
+                                          78/95
+Referencias
+
+
+
+
+Variational Autoencoder
+
+
+
+
+                             |    {z     }
+                             Latent Space
+
+
+              |      {z       }     |           {z        }
+              Recognition Model        Generative Model
+
+
+
+
+                                        79/95
+Referencias
+
+
+
+
+Algoritmo del Autoencoder Variacional
+                                 Pick Random Sample
+                                        ϵ                  Decoder
+
+
+                                 Σ
+              x      qϕ (z/x)    µ                    pθ (x/z)   x̂
+
+
+                  Encoder       z = h(x) = ϵ ⊙ Σ(x) + µ(x)
+       Recapitulando(1/2): Tomamos un x y lo ponemos en la
+       entrada de la red. Con ese x vemos que valores de Σ y µ
+       obtenemos en la salida del Encoder. Luego sampleamos un z
+       de p(z) = N (0, I) (esto es equivalente a obtener un ϵ
+       multiplicarlo por la varianza p.a.p. y sumarle la media).
+                                           80/95
+Referencias
+
+
+
+
+Algoritmo del Autoencoder Variacional
+                                 Pick Random Sample
+                                        ϵ                  Decoder
+
+
+                                 Σ
+              x      qϕ (z/x)    µ                    pθ (x/z)   x̂
+
+
+                  Encoder       z = h(x) = ϵ ⊙ Σ(x) + µ(x)
+       Recapitulando(2/2): Con ese z lo pasamos por el Decoder y
+       obtenemos un x̂. Entrenamos al Autoencoder ahora para que
+       minimice L actualizando primeros los pesos del Decoder, luego
+       pasando por la función h(x) y de ahı́ retropropagando el error
+       obtenido en µ y Σ hacia los pesos del Encoder.
+                                           81/95
+Referencias
+
+
+
+
+Variational Autoencoder
+       El Parametrization Trick de la capa estocástica de la red,
+       permite poder retropropagar el error manejando esa capa que
+       tiene una entrada extra que es una variable aleatoria [7]:
+
+
+
+
+       Fijense que el término regularizador, NO depende de la salida
+       del decoder (X̄ ). Depende de variables internas (Σ y µ) que
+       llegan a la capa latente.
+                                           82/95
+Referencias
+
+
+
+
+Variational Autoencoder
+       El valor de z se calcula en función de µ̄ y de Σ̄.
+                        z = h(X̄ ) = ϵ ⊙ Σ̄(X̄ ) + µ̄(X̄ )         (14)
+
+
+
+
+       Las dos salidas del encoder, actuán como entradas a la capa
+       ”z”donde está el truco de la reparametrización, que a su vez,
+       actúa como un perceptrón lineal con función de activación
+       identidad.
+                                             83/95
+Referencias
+
+
+
+
+Reparametrization Trick
+
+       ¿Cómo propagar[16] el error por el nodo estocástico?
+       Supongamos que queremos actualizar un peso particular del
+       encoder ωe en base a la función de cost:
+
+                                J = L + λR
+                                   ∂J
+       Lo que queremos calcular es ∂ω e
+                                        para poder usarlo en la
+
+                                              ∂J
+                            ωet+1 = ωet − η
+                                              ∂ωe
+
+
+
+                                          84/95
+Referencias
+
+
+
+
+Reparametrization Trick
+
+
+
+
+                          85/95
+Referencias
+
+
+
+
+Reparametrization Trick
+
+       ¿Cómo propagar[16] el error por el nodo estocástico?
+
+                    ∂J       ∂L ∂z ∂µ     ∂R ∂µ
+                        = +(           +λ        )...
+                    ∂ωe      ∂z ∂µ ∂ωe    ∂µ ∂ωe
+                             ∂L ∂z ∂σ     ∂R ∂σ
+                        = +(           +λ        )
+                             ∂z ∂σ ∂ωe    ∂σ ∂ωe
+
+
+       La ∂L
+          ∂z
+             corresponde a la retropropagación del error en el
+                              ∂z         ∂µ
+       decoder, en tanto que ∂µ  es 1, y ∂ω e
+                                              es la retropropagación
+                         ∂R
+       hacia el encoder. ∂µ corresponde a la derivada de Eq. 13.
+
+                                            86/95
+Referencias
+
+
+
+
+Reparametrization Trick
+
+       ¿Cómo propagar[16] el error por el nodo estocástico?
+
+                    ∂J       ∂L ∂z ∂µ     ∂R ∂µ
+                        = +(           +λ        )...
+                    ∂ωe      ∂z ∂µ ∂ωe    ∂µ ∂ωe
+                             ∂L ∂z ∂σ     ∂R ∂σ
+                        = +(           +λ        )
+                             ∂z ∂σ ∂ωe    ∂σ ∂ωe
+
+
+       El segundo término corresponde a los cambios x el lado del µ,
+                ∂z
+       donde la ∂σ es ϵ, la ∂R
+                            ∂σ
+                               corresponde a la derivada de Eq. 13
+                                      ∂σ
+       (ahora con respecto a σ), y la ∂ω e
+                                           es la retropropagación hacia
+       el encoder.
+                                            87/95
+Referencias
+
+
+
+
+Reparametrization Trick
+
+
+
+          1   Hay dos gradientes a retropropagar, uno es el de
+              reconstrucción y el otro de regularización.
+          2   Los pesos del DECODER se actualizan exclusivamente
+              con la contribución del gradiente de reconstrucción. Esto
+              es igual a un perceptrón multicapa.
+
+
+
+
+                                              88/95
+Referencias
+
+
+
+
+Reparametrization Trick
+          1   Hay dos gradientes a retropropagar, uno es el de
+              reconstrucción y el otro de regularización.
+          2   Los pesos del ENCODER se actualizan con la
+              contribución de los dos gradientes.
+          3   Los gradientes de reconstrucción del ENCODER se
+              obtienen multiplicando el gradiente que viene del decoder
+              por la derivada de la función del truco de la
+              reparametrización respecto de media y la variance.
+          4   Los gradientes del término de regularización del
+              ENCODER se obtienen de la derivada de la divergencia
+              KL respecto de la media y la varianza.
+          5   Se suman estos valores anteriores en cada paso del
+              ENCODER.
+                                            89/95
+Referencias
+
+
+
+
+Colab
+
+
+
+
+       https://colab.research.google.com/drive/
+       1Hobi6plfrrUQ9DCiFPZ6vaztOu5Q05ND
+
+
+
+
+                                   90/95
+Referencias
+
+
+
+
+Referencias
+
+
+
+              Inferencia Variacional [3].
+              Metodos Variacionales [13].
+              VAE [4].
+              Autoencoders [1, 12, 10].
+
+
+
+
+                                            91/95
+Referencias
+
+
+
+
+Referencias I
+
+        [1] Charu C. Aggarwal. Neural Networks and Deep Learning. Springer,
+            Cham, 2018.
+        [2] James R Anderson and Carsten Peterson. A mean field theory
+            learning algorithm for neural networks. Complex Systems,
+            1:995–1019, 1987.
+        [3] David M. Blei, Alp Kucukelbir, and Jon D. McAuliffe. Variational
+            inference: A review for statisticians. Journal of the American
+            Statistical Association, 112(518):859–877, Feb 2017.
+        [4] Carl Doersch. Tutorial on variational autoencoders, 2021.
+        [5] ErmonGroup. Variational Autoencoder, 2020 (accessed April 3,
+            2021).
+            https://ermongroup.github.io/cs228-notes/extras/vae/.
+        [6] Charles W Fox and Stephen J Roberts. A tutorial on variational
+            bayesian inference. Artificial intelligence review, 38(2):85–95, 2012.
+
+                                                  92/95
+Referencias
+
+
+
+
+Referencias II
+        [7] Gregoy Gundersen. Reparamatrization Trick, 2021 (accessed
+            October 2, 2021). https://gregorygundersen.com/blog/2018/
+            04/29/reparameterization/.
+        [8] Geoffrey E Hinton and Drew Van Camp. Keeping the neural
+            networks simple by minimizing the description length of the weights.
+            In Proceedings of the sixth annual conference on Computational
+            learning theory, pages 5–13, 1993.
+        [9] jhu edu. Variational Tutorial, 2011 (accessed September 3, 2018).
+            http:
+            //www.cs.jhu.edu/~jason/tutorials/variational.html.
+       [10] Jeremy Jordan. Autoencoders, 2022 (accessed Novemenber 1,
+            2022). https://www.jeremyjordan.me/autoencoders/.
+       [11] Mohammad Emtiyaz Khan and Guillaume Bouchard. Variational em
+            algorithms for correlated topic models. Technical report, Technical
+            report, University of British Columbia, 2009.
+                                                93/95
+Referencias
+
+
+
+
+Referencias III
+
+       [12] Diederik P Kingma and Max Welling. Auto-encoding variational
+            bayes, 2014.
+       [13] Diederik P. Kingma and Max Welling. An introduction to variational
+            autoencoders. Foundations and Trends in Machine Learning,
+            12(4):307–392, 2019.
+       [14] Kevin P Murphy. Machine learning: a probabilistic perspective. MIT
+            press, 2012.
+       [15] Stephen Odaibo. Tutorial: Deriving the standard variational
+            autoencoder (vae) loss function, 2019.
+       [16] Baptise Rocca. Stack Exchange, Machine Learning, 2021 (accessed
+            October 2, 2021).
+            https://stats.stackexchange.com/questions/420974/
+            backpropagation-on-variational-autoencoders.
+
+
+                                                94/95
+Referencias
+
+
+
+
+Referencias IV
+
+
+       [17] Charlie Tang and Russ R Salakhutdinov. Learning stochastic
+            feedforward neural networks. Advances in Neural Information
+            Processing Systems, 26, 2013.
+       [18] Martin J Wainwright and Michael Irwin Jordan. Graphical models,
+            exponential families, and variational inference. Now Publishers Inc,
+            2008.
+       [19] Eric W. Weisstein. Stochastic Function, 2023 (accessed November
+            17, 2023).
+            https://mathworld.wolfram.com/StochasticFunction.html.
+
+
+
+
+                                                 95/95
+

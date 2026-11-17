@@ -1,0 +1,587 @@
+APRENDIZAJE
+NO SUPERVISADO
+Modelo de Hopﬁeld
+
+
+
+
+               Sistemas de Inteligencia Artiﬁcial - 2026
+TABLA DE CONTENIDOS
+01. INTRODUCCIÓN   04. AUTOVALORES Y
+                       AUTOVECTORES
+
+
+    MODELO DE
+02. KOHONEN        05. COMPONENTES
+                       PRINCIPALES
+
+
+    MODELO DE
+03. HOPFIELD       06. REGLA
+                       SANGER
+                             DE OJA Y
+
+
+                                        2
+03.1
+MODELO DE
+HOPFIELD
+Arquitectura de Red
+
+
+
+
+                      3
+MEMORIAS ASOCIATIVAS
+
+
+El almacenamiento y recuperación de información por asociación con otras
+informaciones
+
+Consiste en almacenar un conjunto de p patrones tal que
+ ● cuando se presenta un nuevo patrón Pin, la red responda con el patrón
+    almacenado Pout que más se parece a Pin
+
+
+Pin                                         =              Estímulo
+
+Pout = Respuesta
+
+
+
+                                                                           4
+MODELO DE HOPFIELD
+
+Propuesto en 1982 por JJ. Hopﬁeld
+
+
+
+                 Red Recurrente
+        Existe retroalimentación entre las
+        neuronas, están todas conectadas
+                      entre sí
+     (a diferenca de las redes feed-forward)
+
+
+
+
+                                               5
+MODELO DE HOPFIELD
+
+
+
+●   Las neuronas no están conectadas con sí
+    mismas
+
+●   Conjunto de input y ouput permitido {-1, 1 }
+    (activo            o              inactivo)
+
+●   Todas las neuronas están en una sola capa de
+    entrada y salida
+
+
+
+
+En esta materia se verá el modelo discreto
+                                                   6
+OBJETIVO
+
+¿Para qué sirve?
+
+
+
+                   Asociar un patrón de consulta binario (con perturbaciones)
+                            con alguno de los patrones almacenados
+
+
+
+INPUT: patrón ruidoso
+OUTPUT: el más similar
+
+
+
+
+                                                                                7
+EJEMPLO
+
+
+
+                     1                       1       -1                  -1
+
+
+                     -1                  -1          1                       1
+
+
+                          = (1, 1, -1, -1)                = (-1, -1, 1, 1)
+                      1                               2
+
+
+
+¿Qué patrón se le asigna al siguiente vector de consulta?           = (1, -1, -1, -1)
+
+
+                                                                                        8
+ESTADOS
+
+Cada neurona tiene 2 estados
+
+ ●   Si = +1 (activo)
+
+ ●   Si = -1 (inactivo)
+
+
+Para una red de N neuronas el estado queda representado por el vector de estados
+                                     S = [S1 , S2, … ,SN]
+
+
+
+
+                                                                                   9
+PLANTEO DEL PROBLEMA
+
+
+
+Dados los patrones almacenados ξμ , μ = 1, . . . , p.
+
+
+Presentamos un nuevo patrón ζ
+Queremos encontrar el patrón almacenado más cercano a ζ (usando redes neuronales)
+
+
+
+
+                                                                                    10
+PLANTEO DEL PROBLEMA
+
+
+
+
+Buscamos los pesos sinápticos
+
+                                wij , i = 1, . . . , N, j = 1, . . . , N
+
+tal que la red nos devuelva el patrón ξμ más cercano a ζ.
+
+
+
+
+                                                                           11
+MODELO DE HOPFIELD
+
+
+
+Es una red neuronal que cumple las siguientes caracterı́sticas:
+
+ ●   Cada neurona i es un perceptrón simple con la función de activación escalón (1, -1).
+
+ ●   Cada par de neuronas (i, j) se conectan por el peso sináptico wij .
+
+
+
+
+                                                                                            12
+MODELO DE HOPFIELD
+
+
+Comenzamos con una conﬁguración Si = ζi , i = 1, . . . , n, (patrón de consulta)
+
+Queremos ver si hay un conjunto de pesos wij que hagan a la red alcanzar el estado Si = ξi μ0 ,
+donde ξi μ0 es un patrón almacenado.
+
+
+Patrón
+ξi μ0 , i = 1, . . . , n es el estado del patrón almacenado más parecido a ζi , i = 1, . . . , n.
+
+
+
+
+                                                                                                    13
+MODELO DE HOPFIELD
+
+Sea
+
+
+
+
+Donde:
+ ● wij es el peso entre la neurona i y la neurona j
+ ●    Sj es el estado de la neurona j
+ ●    N es la cantidad de neuronas
+
+                                                      14
+MODELO DE HOPFIELD
+
+La neurona i modiﬁca su estado Si de acuerdo a la regla:
+
+
+
+
+Si hi = 0 entonces la neurona i permanece en el estado previo.
+                                                                 15
+ESTADO ESTABLE
+
+
+
+
+        La red evoluciona hasta que Si no se modiﬁque más ∀i = 1, . . . n.
+
+                Quiere decir que la red alcanzó un estado estable
+
+
+
+
+El estado al que evoluciona se lo denomina atractor
+                                                                             16
+CONVERGENCIA                                                              -1         -1
+
+                                                                          1          1
+Tenemos N neuronas en la red y un único patrón almacenado ξ
+Calculamos los wij
+                                                                          = (-1, -1, 1, 1)
+
+                                                                                             ξN
+                                                                                ξ1
+
+
+
+
+debido a que ξj² = 1 ∀j = 1, . . . N
+
+Por lo tanto, se produce la convergencia: alcanza el patrón almacenado.
+                                                                                                  17
+MÚLTIPLES PATRONES                                       1          1       -1            -1
+
+                                                        -1          -1       1             1
+Sean p patrones almacenados.                            1                    2
+Podemos elegir los pesos como:                           = (1, 1, -1, -1)        = (-1, -1, 1, 1)
+
+
+
+
+ Esta ecuación incrementa los pesos entre dos neuronas i y j cuando ambos están activados
+ o ambos desactivados.
+
+ Se toma también wii = 0 y wji = wij
+
+
+
+                                                                                                    18
+MÚLTIPLES PATRONES
+
+
+
+         1                 1         -1               -1
+
+
+
+         -1               -1         1                1
+
+
+         1                                2
+             = (1, 1, -1, -1)             = (-1, -1, 1, 1)
+
+                  ξ11          ξ1N
+                                                             19
+03.2
+ALGORITMO
+
+
+
+
+            20
+ALGORITMO
+
+1.   Almacenamiento: Sean ξ 1 , ξ 2 , . . . , ξ p , patrones N-dimensionales binarios.
+
+2.   Pesos Sinápticos:
+
+
+
+
+     Donde:
+      ● wij es el peso sináptico entre la neurona i y la j.
+      ●   ξ 1 μ ∈ {−1, 1}
+                                                                                         21
+ALGORITMO
+
+3. Inicialización. Sea ζ un vector de consulta N-dimensional desconocido, presentado a la red.
+
+
+
+                                    Si(0) = ζi i = 1, . . . N
+
+
+ ●   Si(0) es el estado de la neurona i en el tiempo t = 0.
+
+ ●   ζi es el i-ésimo elemento del vector de consulta que queremos asociar con alguno de los
+     patrones almacenados.
+
+
+
+
+                                                                                                 22
+ALGORITMO
+
+4. Iteración hasta la convergencia
+
+Actualizar los elementos del vector de estado S(t) de acuerdo a la regla:
+
+
+
+
+Repetir la iteración hasta que el vector de estados S permanezca estable.
+
+
+
+                                                                            23
+MÚLTIPLES PATRONES
+
+
+5. Output
+
+Sea Sﬁjo el estado ﬁjo o estable calculado al ﬁnal del paso 3.
+
+Sﬁjo es el patrón asociado con ζ.
+
+
+
+
+Observar que el vector de pesos permanece ﬁjo y que en cada paso cambian los estados Si .
+
+
+
+
+                                                                                            24
+03.3
+EJEMPLO
+
+
+
+
+          25
+EJEMPLO
+
+Cantidad de patrones p = 2
+
+ξ1 = (1, 1, −1, −1) , ξ2 = (−1, −1, 1, 1)
+
+
+
+
+                                            26
+EJEMPLO
+
+Cantidad de patrones p = 2
+
+ξ1 = (1, 1, −1, −1) , ξ2 = (−1, −1, 1, 1)
+
+Cantidad de neuronas N = 4 (porque cada patrón tiene 4 elementos)
+
+
+
+
+                                            ¿Cuál es el valor de w12 y w13?
+                                            Calcular la matriz de pesos W
+
+
+
+
+                                                                              27
+EJEMPLO
+
+Cantidad de patrones p = 2
+
+ξ1 = (1, 1, −1, −1) , ξ2 = (−1, −1, 1, 1)
+
+Cantidad de neuronas N = 4 (porque cada patrón tiene 4 elementos)
+
+
+
+
+                                                                    28
+EJEMPLO
+
+Cantidad de patrones p = 2
+
+ξ1 = (1, 1, −1, −1) , ξ2 = (−1, −1, 1, 1)
+
+Cantidad de neuronas N = 4 (porque cada patrón tiene 4 elementos)
+
+
+
+
+                                                                    29
+EJEMPLO
+
+
+Para calcular la matriz de pesos W
+
+K = (ξ1 ξ2 ) (la matriz que se obtiene de poner los patrones en columna)
+
+Entonces
+
+
+
+
+Recordar que la diagonal debe ser 0
+                                                                           30
+EJEMPLO
+
+Pregunta: ¿Qué patrón se le asigna al vector de consulta ζ = (1, −1, −1, −1)?
+
+
+
+
+                         ζ
+
+
+
+
+                                                                          Llegó al patrón
+                                                                          almacenado ξ1
+
+                                                                    ξ1 = (1, 1, −1, −1) , ξ2 = (−1, −1, 1, 1)
+
+                                                                                                                31
+EJEMPLO
+
+
+
+
+           Se mantiene
+             estable
+
+          S1 = ξ1 = (1, 1, −1, −1)
+
+                                     32
+03.4
+CONVERGENCIA
+
+
+
+
+               33
+ESTABILIDAD
+
+¿Se llega a un estado de Estabilidad?
+
+     ν
+Sea ξi el elemento i del patrón de consulta ν.
+La condición de estabilidad es:
+
+
+
+
+                                                 Patrones almacenados
+
+
+
+
+                                                 Patron de consulta
+                                                                        34
+ESTABILIDAD
+
+
+
+
+       crosstalk = 0
+
+
+El sistema es estable si:
+ ●   el término de crosstalk es cero.
+ ●   Es decir, cuando los patrones son ortogonales
+     Esta es una de las limitaciones de esta red.
+                                                     35
+CONVERGENCIA
+
+Hopﬁeld demostró que su red está asociada a una función de Energı́a, dada por:
+
+
+
+
+Y que los mı́nimos locales de esta función son los patrones almacenados.
+
+
+
+                                                                                 36
+FUNCIÓN DE ENERGÍA
+
+
+Propiedad central de una Función de Energı́a
+
+ ●   Siempre decrece (o permanece constante) cuando el sistema evoluciona.
+
+ ●   Como los pesos sinápticos son simétricos:
+
+
+
+
+Porque wij = wji , entonces puedo sumar solo la parte superior de la matriz y multiplicar por 2
+(parte superior e inferior de la matriz W) . Además w ii = 0
+
+                                                                                                  37
+FUNCIÓN DE ENERGÍA
+
+Sea Si’ el nuevo valor de Si
+
+
+Si Si’ = Si la energı́a no se modiﬁca
+Si Si’ = −Si entonces (cambió de signo):
+
+
+                                     -
+
+
+
+
+                                                                  Si’
+Estamos considerando los Si’ con signo contrario a Si entonces la energı́a decrece cada
+vez que un Si cambia.
+                                                                                          38
+LIMITACIONES
+
+
+●   El número máximo de patrones que puede almacenar es igual al 15 % del número de
+    neuronas de la red. Es decir,
+
+                                       p ≤ 0,15 ∗ N
+
+    donde N es la dimensión de los patrones
+
+●   Los patrones deben ser “más o menos” ortogonales.
+
+
+
+
+                                                                                      39
+ESTADOS ESPURIOS
+
+
+ ●   Los patrones son atractores.
+
+ ●   La Función de Energı́a H puede tener otros mı́nimos locales que no son los
+     patrones almacenados.
+
+
+                                    Estados Espurios
+
+     También son atractores
+     Puede desembocar en ciclos
+
+
+
+
+                                                                                  40
+BIBLIOGRAFÍA
+
+[1] McKay D.J.C. Hopﬁeld Networks. Information Theory, Inference and Learning Algorithms,
+Cambridge,                                                                           2003.
+
+[2] Anders Krogh John Hertz and Richard Palmer. Introduction to the Theory of Neural
+Computation. Addison-Wesley, 1991.
+
+
+
+
+                                                                                             41
+

@@ -1,0 +1,125 @@
+Regularización
+Sistemas de Inteligencia Artificial
+
+Primer Cuatrimestre 2026
+
+Alan Pierri       Luciano Bianchi
+Rodrigo Ramele    Santiago Reyes
+Eugenia Piñeiro   Marco Scilipoti
+Marina Fuster     Paula Oseroff
+                  Joaquín Girod
+Repaso
+
+- Perceptrón simple
+   - escalón, lineal, no lineal
+- Perceptrón multicapa
+- Optimización
+- Métricas de Evaluación
+- Normalización
+Recordemos de la clase de métricas…
+Recordemos de la clase de métricas…
+
+
+
+  accuracy
+Recordemos de la clase de métricas…
+
+
+
+
+  ¿Cómo reducimos ese gap?
+Recordemos de la clase de métricas…
+
+
+
+
+         Regularización
+Recordemos de la clase de métricas…
+
+
+
+
+           Regularización
+   Conjunto de técnicas diseñadas para
+   reducir el error de test (o validación).
+Modelos de Machine Learning: capacidad
+Habilidad o “potencial” de un modelo de aproximar o alcanzar una variedad
+determinada de funciones.
+
+
+              Q: ¿Qué modelo tiene más capacidad?
+                  A. Perceptrón simple no lineal
+                    B. Perceptrón multicapa
+
+
+Algunas acciones que permiten cambiar capacidad
+ ● elección de modelo
+ ● arquitectura del modelo
+ ● cant. de características que uso como input
+Modelos de Machine Learning
+Modelos de Machine Learning
+
+
+
+
+                              ¿Qué es la capacidad
+                                 de un modelo?
+Modelos de Machine Learning
+
+
+
+            ¿Por qué menor
+           capacidad óptima
+          produce underfitting?
+Modelos de Machine Learning
+
+
+
+                    ¿Por qué mayor
+                  capacidad óptima
+                  produce overfitting?
+                              ¿Dónde ayudan las
+Modelos de Machine Learning      técnicas de
+                               regularización?
+1. Early Stopping
+2. Data Augmentation
+2. Data Augmentation
+2. Data Augmentation
+
+Muy utilizado en clasificación de objetos:
+● Agregado de ruido (gaussiano)
+● Rotaciones
+● Traslaciones
+● Cambios de escala
+● etc.
+2. Data Augmentation
+
+ ● Cuidado con no modificar el dato!
+3. L2 Penalty Norm / Weight Decay
+3. L2 Penalty Norm / Weight Decay
+3. L2 Penalty Norm / Weight Decay
+3. L2 Penalty Norm / Weight Decay
+3. L2 Penalty Norm / Weight Decay
+3. L2 Penalty Norm / Weight Decay
+3. L2 Penalty Norm / Weight Decay
+Para quien le interese la justificación matemática:
+
+●   Pre-requisitos:
+     ○   Polinomio de Taylor
+     ○   Gradiente y Hessiano
+     ○   Autovalores y Autovectores
+●   Sección 7.1.1 L2 Parameter Regularization
+     ○   Goodfellow, I., Bengio, Y., & Courville, A. (2016). Deep learning, Chapter 7. MIT Press.
+Existen otros más!
+
+● Dropout
+● Modelos de ensamble
+● Aprendizaje semi-supervisado (hoy
+  sobrevive en LLMs)
+● Entrenamiento Adversarial
+● etc!
+
+
+     Goodfellow, I., Bengio, Y., & Courville, A. (2016). Deep learning, Chapter 7. MIT Press.
+¿Preguntas?
+
